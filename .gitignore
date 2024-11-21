@@ -1,0 +1,18 @@
+# macOS
+.DS_Store
+
+# Xcode
+*.xcuserdata
+*.xccheckout
+*.xcscmblueprint
+build/
+DerivedData/
+
+# Swift Package Manager
+.build/
+
+# CocoaPods
+Pods/
+
+# Carthage
+Carthage/Build/
