@@ -117,30 +117,17 @@ struct ContentView: View {
             return
         }
 
-        let batchSize = 10_000 // Number of simulations per batch
-        let numberOfBatches = (iterations + batchSize - 1) / batchSize // Calculate number of batches
-
         DispatchQueue.global().async {
-            var allResults: [SimulationData] = []
-
-            for batch in 0..<numberOfBatches {
-                let batchStart = batch * batchSize
-                let batchEnd = min((batch + 1) * batchSize, iterations)
-                print("Processing batch \(batch + 1) of \(numberOfBatches)")
-
-                let batchResults = runMonteCarloSimulationsWithSpreadsheetData(
-                    spreadsheetData: spreadsheetData,
-                    initialBTCPriceUSD: initialBTCPriceUSD,
-                    iterations: batchEnd - batchStart
-                )
-
-                allResults.append(contentsOf: batchResults)
-                print("Batch \(batch + 1) complete.")
-            }
+            print("Running \(iterations) iterations...")
+            let result = runMonteCarloSimulationsWithSpreadsheetData(
+                spreadsheetData: spreadsheetData,
+                initialBTCPriceUSD: initialBTCPriceUSD,
+                iterations: iterations
+            )
 
             DispatchQueue.main.async {
-                monteCarloResults = allResults
-                print("Total records generated: \(allResults.count)")
+                monteCarloResults = result
+                print("Total records generated: \(result.count)")
                 isLoading = false // Stop loading
                 calculateMostProbableOutcome()
             }
@@ -148,7 +135,7 @@ struct ContentView: View {
     }
 
     private func calculateMostProbableOutcome() {
-        // Example: Calculate the average Portfolio Value EUR
+        // Calculate and log the average Portfolio Value EUR
         guard !monteCarloResults.isEmpty else { return }
 
         let averagePortfolioValue = monteCarloResults

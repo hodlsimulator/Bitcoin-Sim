@@ -28,38 +28,22 @@ func runMonteCarloSimulationsWithSpreadsheetData(
     initialBTCPriceUSD: Double,
     iterations: Int
 ) -> [SimulationData] {
-    var aggregatedResults: [SimulationData] = spreadsheetData.map { _ in
-        SimulationData(
-            id: UUID(),
-            week: 0,
-            cyclePhase: "",
-            startingBTC: 0.0,
-            btcGrowth: 0.0,
-            netBTCHoldings: 0.0,
-            btcPriceUSD: 0.0,
-            btcPriceEUR: 0.0,
-            portfolioValueEUR: 0.0,
-            contributionEUR: 0.0,
-            contributionFeeEUR: 0.0,
-            netContributionBTC: 0.0,
-            withdrawalEUR: 0.0,
-            portfolioPreWithdrawalEUR: 0.0
-        )
-    }
-
-    let D1041 = 0.002 // Growth multiplier
-    var previousBTCPriceUSD = initialBTCPriceUSD
-    var previousNetBTCHoldings = 0.0
+    let weeks = spreadsheetData.count
+    var allPortfolioValues: [[Double]] = Array(repeating: [], count: weeks) // To track portfolio values for each week across iterations
+    var allIterations: [[SimulationData]] = [] // Store all iterations
 
     for iteration in 0..<iterations {
-        print("Running simulation \(iteration + 1) of \(iterations)...")
+        var currentIteration: [SimulationData] = []
+        var previousBTCPriceUSD = initialBTCPriceUSD
+        var previousNetBTCHoldings = 0.0
+        var previousPortfolioValueEUR = 0.0
 
-        for weekIndex in 0..<spreadsheetData.count {
+        for weekIndex in 0..<weeks {
             let currentWeek = weekIndex + 1
 
-            // Hard-coded values for the first two weeks
+            // Hard-code weeks 1 and 2
             if currentWeek == 1 {
-                aggregatedResults[weekIndex] = SimulationData(
+                let week1Data = SimulationData(
                     id: UUID(),
                     week: 1,
                     cyclePhase: "Bull",
@@ -75,11 +59,16 @@ func runMonteCarloSimulationsWithSpreadsheetData(
                     withdrawalEUR: 0.0,
                     portfolioPreWithdrawalEUR: 0.0
                 )
-                previousBTCPriceUSD = 76532.03
-                previousNetBTCHoldings = 0.00469014
+                currentIteration.append(week1Data)
+                allPortfolioValues[weekIndex].append(333.83)
+                previousBTCPriceUSD = week1Data.btcPriceUSD
+                previousNetBTCHoldings = week1Data.netBTCHoldings
+                previousPortfolioValueEUR = week1Data.portfolioValueEUR
                 continue
-            } else if currentWeek == 2 {
-                aggregatedResults[weekIndex] = SimulationData(
+            }
+
+            if currentWeek == 2 {
+                let week2Data = SimulationData(
                     id: UUID(),
                     week: 2,
                     cyclePhase: "Bull",
@@ -95,57 +84,47 @@ func runMonteCarloSimulationsWithSpreadsheetData(
                     withdrawalEUR: 0.0,
                     portfolioPreWithdrawalEUR: 414.15
                 )
-                previousBTCPriceUSD = 93600.91
-                previousNetBTCHoldings = 0.00538683
+                currentIteration.append(week2Data)
+                allPortfolioValues[weekIndex].append(475.67)
+                previousBTCPriceUSD = week2Data.btcPriceUSD
+                previousNetBTCHoldings = week2Data.netBTCHoldings
+                previousPortfolioValueEUR = week2Data.portfolioValueEUR
                 continue
             }
 
             // Cycle Phase Calculation
-            let cyclePhase = (weekIndex - 1) % 208 < 60 ? "Bull" : "Bear"
+            let cyclePhase = (weekIndex % 208) < 60 ? "Bull" : "Bear"
 
             // BTC Price USD Calculation
-            let growthFactor = 0.006471775 +
-                               0.15 * NORMSINV(Double.random(in: 0.0001...0.9999)) +
-                               (Double.random(in: 0.0...1.0) < 0.01 ? log(1 - (0.3 + 0.2 * Double.random(in: 0.0...1.0))) : 0)
-
-            let btcPriceUSD = max(100.0, previousBTCPriceUSD * exp(growthFactor))
+            let btcPriceUSD = calculateBTCPriceUSD(previousBTCPriceUSD: previousBTCPriceUSD)
             let btcPriceEUR = btcPriceUSD / 1.06
-
-            if btcPriceUSD.isNaN || btcPriceEUR.isNaN {
-                print("Invalid BTC Price for week \(currentWeek). Skipping...")
-                continue
-            }
 
             // BTC Growth Calculation
             let growthMultiplier = cyclePhase == "Bull" ? 1.5 : 0.5
-            var btcGrowth = previousNetBTCHoldings * D1041 * (btcPriceUSD / previousBTCPriceUSD) * growthMultiplier
-            if Double.random(in: 0.0...1.0) > 0.8 {
+            var btcGrowth = previousNetBTCHoldings * 0.002 * (btcPriceUSD / previousBTCPriceUSD) * growthMultiplier
+            if Double.random(in: 0.0..<1.0) >= 0.8 {
                 btcGrowth *= -1
             }
 
             // Contribution and Fee
             let contributionEUR = currentWeek <= 52 ? 60.0 : 100.0
-            let contributionFeeEUR = contributionEUR * (previousBTCPriceUSD > 100000 ? 0.0007 :
-                                                        previousBTCPriceUSD > 50000 ? 0.001 :
-                                                        previousBTCPriceUSD > 5000 ? 0.0015 :
-                                                        previousBTCPriceUSD > 1000 ? 0.0025 : 0.0035)
+            let feeRate = previousPortfolioValueEUR >= 100000 ? 0.0007 :
+                          previousPortfolioValueEUR >= 50000 ? 0.001 :
+                          previousPortfolioValueEUR >= 5000 ? 0.0015 :
+                          previousPortfolioValueEUR >= 1000 ? 0.0025 : 0.0035
+            let contributionFeeEUR = contributionEUR * feeRate
             let netContributionBTC = (contributionEUR - contributionFeeEUR) / btcPriceEUR
 
             // Withdrawals and Portfolio Value
             let portfolioPreWithdrawalEUR = previousNetBTCHoldings * btcPriceEUR
-            let withdrawalEUR: Double = portfolioPreWithdrawalEUR > 60000 ? 200.0 :
-                                         portfolioPreWithdrawalEUR > 40000 ? 200.0 :
-                                         portfolioPreWithdrawalEUR > 30000 ? 100.0 : 0.0
+            let withdrawalEUR = portfolioPreWithdrawalEUR > 60000 ? 200.0 :
+                                portfolioPreWithdrawalEUR > 40000 ? 200.0 :
+                                portfolioPreWithdrawalEUR > 30000 ? 100.0 : 0.0
             let netBTCHoldings = previousNetBTCHoldings + btcGrowth + netContributionBTC - (withdrawalEUR / btcPriceEUR)
             let portfolioValueEUR = netBTCHoldings * btcPriceEUR
 
-            if portfolioValueEUR.isNaN || portfolioValueEUR.isInfinite {
-                print("Invalid portfolio value. Skipping week \(currentWeek).")
-                continue
-            }
-
-            // Aggregate Results
-            aggregatedResults[weekIndex] = SimulationData(
+            // Collect data
+            let weekData = SimulationData(
                 id: UUID(),
                 week: currentWeek,
                 cyclePhase: cyclePhase,
@@ -161,19 +140,71 @@ func runMonteCarloSimulationsWithSpreadsheetData(
                 withdrawalEUR: withdrawalEUR,
                 portfolioPreWithdrawalEUR: portfolioPreWithdrawalEUR
             )
+            currentIteration.append(weekData)
 
-            // Update Previous Values
+            // Update for next week
             previousBTCPriceUSD = btcPriceUSD
             previousNetBTCHoldings = netBTCHoldings
+            previousPortfolioValueEUR = portfolioValueEUR
+
+            // Add portfolio value to the aggregated data
+            allPortfolioValues[weekIndex].append(portfolioValueEUR)
+        }
+
+        // Add current iteration
+        allIterations.append(currentIteration)
+    }
+
+    // Calculate median portfolio values for each week
+    let medianPortfolioValues = allPortfolioValues.map { calculateMedian(values: $0) }
+
+    // Find the closest iteration to the median
+    var mostProbableIteration: [SimulationData] = []
+    var closestDistance = Double.greatestFiniteMagnitude
+
+    for iteration in allIterations {
+        let distance = zip(iteration, medianPortfolioValues).reduce(0.0) { acc, pair in
+            acc + abs(pair.0.portfolioValueEUR - pair.1)
+        }
+        if distance < closestDistance {
+            closestDistance = distance
+            mostProbableIteration = iteration
         }
     }
 
-    print("Simulation complete. Aggregated results generated.")
-    return aggregatedResults
+    print("Most Probable Iteration Found.")
+    return mostProbableIteration
+}
+
+/// Calculate BTC price in USD for the current week based on the previous week's price
+func calculateBTCPriceUSD(previousBTCPriceUSD: Double) -> Double {
+    // Define parameters
+    let baselineGrowthRate = 0.005 // 0.5% weekly growth
+    let volatilityFactor = 0.1    // Normal weekly price fluctuation
+    let extremeEventProbability = 0.01 // 1% chance of extreme event
+    let extremeEventImpact = -0.25 // Extreme event reduces price by up to 25%
+
+    // Calculate random volatility using a normal distribution
+    let randomVolatility = NORMSINV(Double.random(in: 1e-10..<1.0 - 1e-10)) * volatilityFactor
+
+    // Check if a rare extreme event occurs
+    let extremeEvent = Double.random(in: 0.0..<1.0) < extremeEventProbability
+        ? log(1 - (0.2 * Double.random(in: 0.0..<1.0))) * extremeEventImpact
+        : 0.0
+
+    // Calculate the new BTC price
+    let btcPriceUSD = max(100.0, previousBTCPriceUSD * exp(baselineGrowthRate + randomVolatility + extremeEvent))
+    return btcPriceUSD
 }
 
 /// Helper function to calculate the inverse cumulative distribution function (CDF) of the standard normal distribution
 func NORMSINV(_ p: Double) -> Double {
+    // Guard against invalid inputs
+    if p <= 0.0 {
+        return -Double.infinity
+    } else if p >= 1.0 {
+        return Double.infinity
+    }
     // Approximation for the inverse of the normal distribution
     let a1 = -39.6968302866538
     let a2 = 220.946098424521
