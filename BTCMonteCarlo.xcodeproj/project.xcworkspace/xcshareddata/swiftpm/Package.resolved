@@ -1,0 +1,15 @@
+{
+  "originHash" : "26a317d9b1fbb55ba5bc419b8c657b851c5e73326594f0a6567ca85d4950723c",
+  "pins" : [
+    {
+      "identity" : "swiftplot",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/KarthikRIyer/swiftplot",
+      "state" : {
+        "revision" : "c5424eb8688217029d44e941d3a1d2ccc18c3a82",
+        "version" : "2.0.0"
+      }
+    }
+  ],
+  "version" : 3
+}

@@ -7,23 +7,32 @@
 
 import Foundation
 
-struct SimulationData: Codable, Identifiable {
-    let id: UUID
-    var week: Int
-    var cyclePhase: String
-    var startingBTC: Double
-    var btcGrowth: Double
-    var netBTCHoldings: Double
-    var btcPriceUSD: Double // Updated to Double
-    var btcPriceEUR: Double // Updated to Double
-    var portfolioValueEUR: Double
-    var contributionEUR: Double
-    var contributionFeeEUR: Double
-    var netContributionBTC: Double
-    var withdrawalEUR: Double
-    var portfolioPreWithdrawalEUR: Double
+//
+// SimulationData.swift
+// BTCMonteCarloSimulator
+//
 
+import Foundation
+
+struct SimulationData: Identifiable {
+    let id: UUID
+    let week: Int
+    let cyclePhase: String
+    let startingBTC: Double
+    let btcGrowth: Double
+    let netBTCHoldings: Double
+    let btcPriceUSD: Double
+    let btcPriceEUR: Double
+    let portfolioValueEUR: Double
+    let contributionEUR: Double
+    let contributionFeeEUR: Double
+    let netContributionBTC: Double
+    let withdrawalEUR: Double
+    let portfolioPreWithdrawalEUR: Double
+
+    // Static placeholder for default data
     static let placeholder = SimulationData(
+        id: UUID(), // Added id field
         week: 0,
         cyclePhase: "N/A",
         startingBTC: 0.0,

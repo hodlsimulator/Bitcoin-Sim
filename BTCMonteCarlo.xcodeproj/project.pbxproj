@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		E17A47FE2CF11AC000AAC885 /* project.pbxproj in Resources */ = {isa = PBXBuildFile; fileRef = E17A47FD2CF11AC000AAC885 /* project.pbxproj */; };
+		E17A48012CF178C600AAC885 /* MonteCarloVisualisations.swift in Sources */ = {isa = PBXBuildFile; fileRef = E17A48002CF178C600AAC885 /* MonteCarloVisualisations.swift */; };
 		E1CD4B3B2CF0F35C0070E8E3 /* BTC20YearProjection.csv in Resources */ = {isa = PBXBuildFile; fileRef = E1CD4B2E2CF0F35C0070E8E3 /* BTC20YearProjection.csv */; };
 		E1CD4B3C2CF0F35C0070E8E3 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E1CD4B302CF0F35C0070E8E3 /* Preview Assets.xcassets */; };
 		E1CD4B3D2CF0F35C0070E8E3 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E1CD4B322CF0F35C0070E8E3 /* Assets.xcassets */; };
@@ -23,6 +24,7 @@
 		E11B459A2CEE8D53006B0594 /* BTCMonteCarlo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BTCMonteCarlo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E17A47FD2CF11AC000AAC885 /* project.pbxproj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.pbxproject; path = project.pbxproj; sourceTree = "<group>"; };
 		E17A47FF2CF11D3200AAC885 /* BTCMonteCarlo.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = BTCMonteCarlo.entitlements; sourceTree = "<group>"; };
+		E17A48002CF178C600AAC885 /* MonteCarloVisualisations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonteCarloVisualisations.swift; sourceTree = "<group>"; };
 		E1CD4B2E2CF0F35C0070E8E3 /* BTC20YearProjection.csv */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = BTC20YearProjection.csv; sourceTree = "<group>"; };
 		E1CD4B2F2CF0F35C0070E8E3 /* BTCMonteCarloSimulator.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = BTCMonteCarloSimulator.entitlements; sourceTree = "<group>"; };
 		E1CD4B302CF0F35C0070E8E3 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
@@ -82,6 +84,7 @@
 				E1CD4B362CF0F35C0070E8E3 /* CSVLoader.swift */,
 				E1CD4B372CF0F35C0070E8E3 /* DoubleExtensions.swift */,
 				E1CD4B382CF0F35C0070E8E3 /* MonteCarloSimulator.swift */,
+				E17A48002CF178C600AAC885 /* MonteCarloVisualisations.swift */,
 				E1CD4B392CF0F35C0070E8E3 /* SimulationData.swift */,
 				E17A47FD2CF11AC000AAC885 /* project.pbxproj */,
 				E17A47FF2CF11D3200AAC885 /* BTCMonteCarlo.entitlements */,
@@ -133,6 +136,9 @@
 				Base,
 			);
 			mainGroup = E11B45912CEE8D53006B0594;
+			packageReferences = (
+				E17A48022CF17A0300AAC885 /* XCRemoteSwiftPackageReference "swiftplot" */,
+			);
 			productRefGroup = E11B459B2CEE8D53006B0594 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -162,6 +168,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				E1CD4B432CF0F35C0070E8E3 /* SimulationData.swift in Sources */,
+				E17A48012CF178C600AAC885 /* MonteCarloVisualisations.swift in Sources */,
 				E1CD4B412CF0F35C0070E8E3 /* DoubleExtensions.swift in Sources */,
 				E1CD4B402CF0F35C0070E8E3 /* CSVLoader.swift in Sources */,
 				E1CD4B3F2CF0F35C0070E8E3 /* ContentView.swift in Sources */,
@@ -367,6 +374,17 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		E17A48022CF17A0300AAC885 /* XCRemoteSwiftPackageReference "swiftplot" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/KarthikRIyer/swiftplot";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
 	};
 	rootObject = E11B45922CEE8D53006B0594 /* Project object */;
 }
