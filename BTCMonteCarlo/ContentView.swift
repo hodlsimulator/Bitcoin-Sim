@@ -220,7 +220,7 @@ struct ContentView: View {
                     let batchStart = batchIndex * batchSize
                     let batchEnd = min(batchStart + batchSize, totalSimulations)
 
-                    for simulationIndex in batchStart..<batchEnd {
+                    for _ in batchStart..<batchEnd {
                         var results: [SimulationData] = [
                             SimulationData(
                                 id: UUID(),
@@ -237,27 +237,11 @@ struct ContentView: View {
                                 netContributionBTC: 0.00527613,
                                 withdrawalEUR: 0.0,
                                 portfolioPreWithdrawalEUR: 0.0
-                            ),
-                            SimulationData(
-                                id: UUID(),
-                                week: 2,
-                                cyclePhase: "Bull",
-                                startingBTC: 0.00469014,
-                                btcGrowth: 0.00001802,
-                                netBTCHoldings: 0.00534888,
-                                btcPriceUSD: 98_000.00,
-                                btcPriceEUR: 98_000.00 / exchangeRateEURUSD,
-                                portfolioValueEUR: 495.00,
-                                contributionEUR: 60.00,
-                                contributionFeeEUR: 0.21,
-                                netContributionBTC: 0.00064048,
-                                withdrawalEUR: 0.0,
-                                portfolioPreWithdrawalEUR: 439.37
                             )
                         ]
 
                         // Simulate for remaining weeks
-                        for i in 2..<1040 {
+                        for i in 1..<1040 {
                             let previous = results[i - 1]
 
                             let week = i + 1
@@ -275,7 +259,6 @@ struct ContentView: View {
                             let withdrawalEUR = previous.portfolioValueEUR > 60_000 ? 200.0 : 0.0
                             let netBTCHoldings = previous.netBTCHoldings + btcGrowth + netContributionBTC - (withdrawalEUR / btcPriceEUR)
                             let portfolioValueEUR = netBTCHoldings * btcPriceEUR
-                            let portfolioPreWithdrawalEUR = previous.netBTCHoldings * btcPriceEUR
 
                             results.append(
                                 SimulationData(
@@ -292,7 +275,7 @@ struct ContentView: View {
                                     contributionFeeEUR: contributionFeeEUR,
                                     netContributionBTC: netContributionBTC,
                                     withdrawalEUR: withdrawalEUR,
-                                    portfolioPreWithdrawalEUR: portfolioPreWithdrawalEUR
+                                    portfolioPreWithdrawalEUR: portfolioValueEUR
                                 )
                             )
                         }
@@ -316,8 +299,199 @@ struct ContentView: View {
                 print("Final monteCarloResults count: \(monteCarloResults.count)")
                 isLoading = false
                 print("All simulations completed. Final results assigned to UI.")
+
+                // Generate histograms after simulation completes
+                let btcPrices = monteCarloResults.map { $0.btcPriceUSD }
+                let portfolioValues = monteCarloResults.map { $0.portfolioValueEUR }
+                let btcHoldings = monteCarloResults.map { $0.netBTCHoldings }
+
+                createHistogramWithLogBins(
+                    data: btcPrices,
+                    title: "BTC Price Distribution",
+                    fileName: "/Users/conor/Desktop/PS Batch/BTC_Price_Distribution.png"
+                )
+
+                createHistogramWithLogBins(
+                    data: portfolioValues,
+                    title: "Portfolio Value Distribution",
+                    fileName: "/Users/conor/Desktop/PS Batch/Portfolio_Value_Distribution.png"
+                )
+
+                createHistogramWithLogBins(
+                    data: btcHoldings,
+                    title: "BTC Holdings Distribution",
+                    fileName: "/Users/conor/Desktop/PS Batch/BTC_Holdings_Distribution.png"
+                )
             }
         }
+    }
+
+    private func createHistogramWithLogBins(
+        data: [Double],
+        title: String,
+        fileName: String,
+        lowerPercentile: Double = 0.01,  // Adjust as needed
+        upperPercentile: Double = 0.99,  // Adjust as needed
+        binCount: Int = 20,              // Number of bins
+        rotateLabels: Bool = true        // Rotate x-axis labels
+    ) {
+        let width: CGFloat = 1000
+        let height: CGFloat = 700
+        let margin: CGFloat = 100
+
+        // Step 1: Filter data
+        let sortedData = data.sorted()
+        let lowerIndex = Int(Double(sortedData.count) * lowerPercentile)
+        let upperIndex = Int(Double(sortedData.count) * upperPercentile)
+        let filteredData = Array(sortedData[lowerIndex..<upperIndex])
+
+        guard !filteredData.isEmpty else {
+            print("No data available after filtering for \(title)")
+            return
+        }
+
+        // Step 2: Calculate bin range with logarithmic increments
+        guard let minValue = filteredData.min(), let maxValue = filteredData.max(), minValue > 0 else {
+            print("Invalid data range for \(title): minValue must be > 0.")
+            return
+        }
+
+        let logMinValue = log10(minValue)
+        let logMaxValue = log10(maxValue)
+        let binWidth = (logMaxValue - logMinValue) / Double(binCount)
+        var bins = [Int](repeating: 0, count: binCount)
+
+        // Populate bins
+        for value in filteredData {
+            let logValue = log10(value)
+            let binIndex = min(Int((logValue - logMinValue) / binWidth), binCount - 1)
+            bins[binIndex] += 1
+        }
+
+        // Step 3: Calculate the maximum percentage for dynamic height scaling
+        let maxFrequency = bins.max() ?? 1
+        let maxPercentage = Double(maxFrequency) / Double(filteredData.count) * 100.0
+
+        // Step 4: Create histogram image
+        let image = NSImage(size: NSSize(width: width, height: height))
+        image.lockFocus()
+
+        let context = NSGraphicsContext.current!.cgContext
+        context.setFillColor(NSColor.black.cgColor)
+        context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+
+        // Draw title
+        let titleAttributes: [NSAttributedString.Key: Any] = [
+            .font: NSFont.boldSystemFont(ofSize: 16),
+            .foregroundColor: NSColor.white
+        ]
+        NSString(string: title).draw(
+            at: CGPoint(x: margin, y: height - margin + 30),
+            withAttributes: titleAttributes
+        )
+
+        // Draw axes
+        context.setStrokeColor(NSColor.white.cgColor)
+        context.setLineWidth(1.5)
+
+        // X-axis
+        context.move(to: CGPoint(x: margin, y: margin))
+        context.addLine(to: CGPoint(x: width - margin, y: margin))
+        context.strokePath()
+
+        // Y-axis
+        context.move(to: CGPoint(x: margin, y: margin))
+        context.addLine(to: CGPoint(x: margin, y: height - margin))
+        context.strokePath()
+
+        // Draw Y-axis percentage labels
+        let yAxisStep = maxPercentage / 10.0 // Divide max percentage into 10 steps
+        let labelAttributes: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: 10),
+            .foregroundColor: NSColor.white
+        ]
+
+        for percentage in stride(from: 0, through: Int(maxPercentage), by: 10) {
+            let yPosition = margin + CGFloat(Double(percentage) / maxPercentage) * (height - 2 * margin)
+            let label = "\(percentage)%"
+            NSString(string: label).draw(
+                at: CGPoint(x: margin - 40, y: yPosition - 8),
+                withAttributes: labelAttributes
+            )
+
+            // Add gridlines
+            context.setStrokeColor(NSColor.gray.cgColor)
+            context.setLineWidth(0.5)
+            context.move(to: CGPoint(x: margin, y: yPosition))
+            context.addLine(to: CGPoint(x: width - margin, y: yPosition))
+            context.strokePath()
+        }
+
+        // Draw bars
+        let barWidth = (width - 2 * margin) / CGFloat(binCount)
+        for (index, frequency) in bins.enumerated() {
+            let percentage = Double(frequency) / Double(filteredData.count) * 100.0
+            let barHeight = CGFloat(percentage / maxPercentage) * (height - 2 * margin)
+            let barRect = CGRect(
+                x: margin + CGFloat(index) * barWidth,
+                y: margin,
+                width: barWidth - 2,
+                height: barHeight
+            )
+            context.setFillColor(NSColor.systemBlue.cgColor)
+            context.fill(barRect)
+        }
+
+        // Rotate and format X-axis labels
+        for i in 0...binCount {
+            let x = margin + CGFloat(i) * barWidth
+            let logLabelValue = logMinValue + Double(i) * binWidth
+            let labelValue = pow(10, logLabelValue)
+
+            // Format the label as currency
+            let formattedLabel = CurrencyFormatter.shared.string(from: NSNumber(value: labelValue)) ?? "\(labelValue)"
+
+            if rotateLabels {
+                context.saveGState()
+                let labelPosition = CGPoint(x: x - 10, y: margin - 40)
+                context.translateBy(x: labelPosition.x, y: labelPosition.y)
+                context.rotate(by: -CGFloat.pi / 4) // Rotate 45 degrees
+                NSString(string: formattedLabel).draw(at: .zero, withAttributes: labelAttributes)
+                context.restoreGState()
+            } else {
+                NSString(string: formattedLabel).draw(
+                    at: CGPoint(x: x - 15, y: margin / 2 - 10),
+                    withAttributes: labelAttributes
+                )
+            }
+        }
+
+        image.unlockFocus()
+
+        // Save histogram image
+        if let imageData = image.tiffRepresentation,
+           let bitmap = NSBitmapImageRep(data: imageData),
+           let pngData = bitmap.representation(using: .png, properties: [:]) {
+            do {
+                try pngData.write(to: URL(fileURLWithPath: fileName))
+                print("Histogram saved to \(fileName)")
+            } catch {
+                print("Failed to save histogram: \(error)")
+            }
+        } else {
+            print("Failed to generate image data for \(title).")
+        }
+    }
+    
+    struct CurrencyFormatter {
+        static let shared: NumberFormatter = {
+            let formatter = NumberFormatter()
+            formatter.numberStyle = .currency
+            formatter.maximumFractionDigits = 2
+            formatter.minimumFractionDigits = 2
+            formatter.currencySymbol = "" // Set to empty if you don't want the currency symbol
+            return formatter
+        }()
     }
     
     private func formattedBinding(for keyPath: ReferenceWritableKeyPath<PersistentInputManager, String>) -> Binding<String> {
@@ -521,6 +695,125 @@ struct PDFDocumentData: FileDocument {
 
     func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
         return FileWrapper(regularFileWithContents: data)
+    }
+}
+
+private func createRefinedHistogram(
+    data: [Double],
+    title: String,
+    fileName: String,
+    lowerDiscardPercentile: Double = 0.10, // Discard lower 10%
+    upperDiscardPercentile: Double = 0.05, // Discard upper 5%
+    rotateLabels: Bool = true
+) {
+    let width: CGFloat = 1000
+    let height: CGFloat = 700
+    let margin: CGFloat = 100
+
+    // Filter data to remove outliers
+    let sortedData = data.sorted()
+    let totalCount = sortedData.count
+    let lowerIndex = Int(Double(totalCount) * lowerDiscardPercentile)
+    let upperIndex = Int(Double(totalCount) * (1.0 - upperDiscardPercentile))
+    let filteredData = Array(sortedData[lowerIndex..<upperIndex])
+
+    let minValue = filteredData.min() ?? 0
+    let maxValue = filteredData.max() ?? 1
+    let binCount = 15
+    let binWidth = (maxValue - minValue) / Double(binCount)
+    var bins = [Int](repeating: 0, count: binCount)
+    for value in filteredData {
+        let binIndex = min(Int((value - minValue) / binWidth), binCount - 1)
+        bins[binIndex] += 1
+    }
+
+    let image = NSImage(size: NSSize(width: width, height: height))
+    image.lockFocus()
+
+    let context = NSGraphicsContext.current!.cgContext
+    context.setFillColor(NSColor.black.cgColor)
+    context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+
+    // Title
+    let titleAttributes: [NSAttributedString.Key: Any] = [
+        .font: NSFont.boldSystemFont(ofSize: 16),
+        .foregroundColor: NSColor.white
+    ]
+    NSString(string: title).draw(
+        at: CGPoint(x: margin, y: height - margin + 30),
+        withAttributes: titleAttributes
+    )
+
+    // Axes
+    context.setStrokeColor(NSColor.white.cgColor)
+    context.setLineWidth(1.5)
+
+    // X-Axis
+    context.move(to: CGPoint(x: margin, y: margin))
+    context.addLine(to: CGPoint(x: width - margin, y: margin))
+    context.strokePath()
+
+    // Y-Axis
+    context.move(to: CGPoint(x: margin, y: margin))
+    context.addLine(to: CGPoint(x: margin, y: height - margin))
+    context.strokePath()
+
+    // Draw bars
+    let barWidth = (width - 2 * margin) / CGFloat(binCount)
+    let maxFrequency = bins.max() ?? 1
+    for (index, frequency) in bins.enumerated() {
+        let barHeight = CGFloat(frequency) / CGFloat(maxFrequency) * (height - 2 * margin)
+        let barRect = CGRect(
+            x: margin + CGFloat(index) * barWidth,
+            y: margin,
+            width: barWidth - 2,
+            height: barHeight
+        )
+        context.setFillColor(NSColor.systemBlue.cgColor)
+        context.fill(barRect)
+    }
+
+    // Draw x-axis labels
+    let axisAttributes: [NSAttributedString.Key: Any] = [
+        .font: NSFont.systemFont(ofSize: 12),
+        .foregroundColor: NSColor.white
+    ]
+    for i in 0...binCount {
+        let x = margin + CGFloat(i) * barWidth
+        let labelValue = minValue + Double(i) * binWidth
+        let formattedLabel = NumberFormatter.localizedString(
+            from: NSNumber(value: labelValue),
+            number: .decimal
+        )
+
+        if rotateLabels {
+            let labelPosition = CGPoint(x: x - 10, y: margin - 40) // Adjust position upward
+            context.saveGState()
+            context.translateBy(x: labelPosition.x, y: labelPosition.y)
+            context.rotate(by: -CGFloat.pi / 4) // Rotate 45°
+            NSString(string: formattedLabel).draw(at: .zero, withAttributes: axisAttributes)
+            context.restoreGState()
+        } else {
+            NSString(string: formattedLabel).draw(
+                at: CGPoint(x: x - 15, y: margin / 2),
+                withAttributes: axisAttributes
+            )
+        }
+    }
+
+    image.unlockFocus()
+
+    if let imageData = image.tiffRepresentation,
+       let bitmap = NSBitmapImageRep(data: imageData),
+       let pngData = bitmap.representation(using: .png, properties: [:]) {
+        do {
+            try pngData.write(to: URL(fileURLWithPath: fileName))
+            print("Histogram saved to \(fileName)")
+        } catch {
+            print("Failed to save histogram: \(error)")
+        }
+    } else {
+        print("Failed to generate image data")
     }
 }
 
