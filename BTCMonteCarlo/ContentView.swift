@@ -11,6 +11,7 @@ import UniformTypeIdentifiers
 
 class PersistentInputManager: ObservableObject {
     @Published var iterations: String = "1000" // Default value
+    @Published var annualCAGR: String = "40.0" // Default annual growth rate in %
     @Published var selectedWeek: String
     @Published var btcPriceMinInput: String
     @Published var btcPriceMaxInput: String
@@ -49,9 +50,16 @@ class PersistentInputManager: ObservableObject {
             self.saveToDefaults()
         }
     }
+    
+    func getParsedIterations() -> Int? {
+        return Int(iterations.replacingOccurrences(of: ",", with: ""))
+    }
+
+    func getParsedAnnualCAGR() -> Double {
+        return Double(annualCAGR.replacingOccurrences(of: ",", with: "")) ?? 40.0 // Default to 40%
+    }
+
 }
-
-
 
 struct ContentView: View {
     @State private var monteCarloResults: [SimulationData] = [] // Holds simulation results
@@ -71,95 +79,39 @@ struct ContentView: View {
     @State private var btcHoldingsInput: String = "" // BTC holdings input
     @StateObject var inputManager = PersistentInputManager() // Use @StateObject to manage state
     
-    // Define grid column layout for the table
-    let gridColumns = [
-        GridItem(.fixed(100)), // Week column
-        GridItem(.fixed(150)), // Cycle Phase column
-        GridItem(.fixed(150)), // Starting BTC column
-        GridItem(.fixed(150)), // BTC Growth column
-        GridItem(.fixed(150)), // Net BTC Holdings column
-        GridItem(.fixed(150)), // BTC Price USD column
-        GridItem(.fixed(150)), // BTC Price EUR column
-        GridItem(.fixed(200)), // Portfolio Value EUR column
-        GridItem(.fixed(150)), // Contribution EUR column
-        GridItem(.fixed(150)), // Contribution Fee EUR column
-        GridItem(.fixed(150)), // Net Contribution BTC column
-        GridItem(.fixed(150)), // Withdrawal EUR column
-        GridItem(.fixed(200))  // Portfolio Pre-Withdrawal EUR column
+    // Define column headers and keys for dynamic access
+    let columns: [(String, PartialKeyPath<SimulationData>)] = [
+        ("Week", \SimulationData.week),
+        ("Cycle Phase", \SimulationData.cyclePhase),
+        ("Starting BTC (BTC)", \SimulationData.startingBTC),
+        ("BTC Growth (BTC)", \SimulationData.btcGrowth),
+        ("Net BTC Holdings (BTC)", \SimulationData.netBTCHoldings),
+        ("BTC Price USD", \SimulationData.btcPriceUSD),
+        ("BTC Price EUR", \SimulationData.btcPriceEUR),
+        ("Portfolio Value EUR", \SimulationData.portfolioValueEUR),
+        ("Contribution EUR", \SimulationData.contributionEUR),
+        ("Contribution Fee EUR", \SimulationData.contributionFeeEUR),
+        ("Net Contribution BTC", \SimulationData.netContributionBTC),
+        ("Withdrawal EUR", \SimulationData.withdrawalEUR),
+        ("Portfolio (Pre-Withdrawal) EUR", \SimulationData.portfolioPreWithdrawalEUR)
     ]
-    
+
     var body: some View {
-        VStack(spacing: 20) { // Add spacing between sections
-            // BTC Growth Rate Input
-            HStack {
-                Text("BTC Growth Rate (%):")
-                TextField("Enter Growth Rate", text: realTimeFormattedBinding(for: \.btcGrowthRate))
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .frame(width: 150)
-            }
-
-            // Simulation Parameters Input
-            VStack(spacing: 10) { // Group all inputs together
+        VStack(spacing: 20) {
+            // Input Section
+            VStack(spacing: 10) {
                 HStack {
-                    Group {
-                        Text("Week Number:")
-                        TextField("Enter Week Number", text: realTimeFormattedBinding(for: \.selectedWeek))
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .frame(width: 150)
-                    }
-
-                    Group {
-                        Text("BTC Price Min:")
-                        TextField("Enter Min Price", text: realTimeFormattedBinding(for: \.btcPriceMinInput))
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .frame(width: 150)
-                    }
-
-                    Group {
-                        Text("BTC Price Max:")
-                        TextField("Enter Max Price", text: realTimeFormattedBinding(for: \.btcPriceMaxInput))
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .frame(width: 150)
-                    }
+                    Text("BTC Annual CAGR (%):")
+                    TextField("Enter CAGR", text: formattedBinding(for: \.btcGrowthRate))
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .frame(width: 150)
                 }
 
                 HStack {
-                    Group {
-                        Text("Portfolio Min:")
-                        TextField("Enter Portfolio Min", text: realTimeFormattedBinding(for: \.portfolioValueMinInput))
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .frame(width: 150)
-                    }
-
-                    Group {
-                        Text("Portfolio Max:")
-                        TextField("Enter Portfolio Max", text: realTimeFormattedBinding(for: \.portfolioValueMaxInput))
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .frame(width: 150)
-                    }
-
-                    Group {
-                        Text("BTC Holdings Min:")
-                        TextField("Enter Holdings Min", text: realTimeFormattedBinding(for: \.btcHoldingsMinInput))
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .frame(width: 150)
-                    }
-                }
-
-                HStack {
-                    Group {
-                        Text("BTC Holdings Max:")
-                        TextField("Enter Holdings Max", text: realTimeFormattedBinding(for: \.btcHoldingsMaxInput))
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .frame(width: 150)
-                    }
-
-                    Group {
-                        Text("Number of Iterations:")
-                        TextField("Enter Iterations", text: realTimeFormattedBinding(for: \.iterations))
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .frame(width: 150)
-                    }
+                    Text("Number of Iterations:")
+                    TextField("Enter Iterations", text: formattedBinding(for: \.iterations))
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .frame(width: 150)
                 }
             }
 
@@ -171,176 +123,238 @@ struct ContentView: View {
 
             // Loading Indicator
             if isLoading {
-                ProgressView()
+                ProgressView("Simulating...")
                     .padding()
             }
 
-            // Results Display
-            ScrollView {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 150))]) {
-                    ForEach(monteCarloResults, id: \.id) { result in
-                        VStack {
-                            Text("Week \(result.week)")
-                            Text("BTC Price USD: \(result.btcPriceUSD.formattedWithSeparator())")
-                            Text("Portfolio Value EUR: \(result.portfolioValueEUR.formattedWithSeparator())")
+            // Results Section
+            if !monteCarloResults.isEmpty {
+                Text("Monte Carlo Simulation Results")
+                    .font(.headline)
+                    .padding()
+
+                // Scrollable Results with Sticky Header
+                GeometryReader { geometry in
+                    VStack(spacing: 0) {
+                        // Sticky Header
+                        HStack(spacing: 0) {
+                            ForEach(columns, id: \.0) { column in
+                                Text(column.0)
+                                    .bold()
+                                    .frame(width: 130, alignment: .center) // Column width remains the same
+                                    .padding(.vertical, 8)
+                                    .background(Color.gray.opacity(0.2))
+                                    .border(Color.black)
+                                    .offset(x: 20) // Move headings 2 pixels to the right
+                            }
                         }
-                        .padding()
-                        .background(Color.gray.opacity(0.2))
-                        .cornerRadius(8)
+                        .frame(width: geometry.size.width) // Match the width of the scrollable content
+
+                        // Scrollable Rows
+                        ScrollView([.vertical, .horizontal]) {
+                            LazyVStack(alignment: .leading, spacing: 0) {
+                                ForEach(monteCarloResults) { item in
+                                    HStack(spacing: 0) {
+                                        ForEach(columns, id: \.0) { column in
+                                            let value = getValue(item: item, keyPath: column.1)
+                                            Text(value)
+                                                .lineLimit(1)
+                                                .frame(width: 130, alignment: .center)
+                                                .padding(.vertical, 8)
+                                                .border(Color.black)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        .frame(height: geometry.size.height - 40)
                     }
                 }
+                .frame(maxHeight: 500) // Limit the total height of the results
             }
-            .padding()
         }
         .padding()
     }
-    
+
+    // MARK: - Functions
+
     private func runSimulation() {
         isLoading = true
-        monteCarloResults = []
+        monteCarloResults = [] // Clear previous results
 
         DispatchQueue.global(qos: .userInitiated).async {
-            let spreadsheetData = loadCSV() // Replace with actual data loading function
-            guard let totalIterations = Int(inputManager.iterations.replacingOccurrences(of: ",", with: "")) else {
-                print("Error: Invalid number of iterations: \(inputManager.iterations)")
-                DispatchQueue.main.async {
-                    isLoading = false
-                }
-                return
+            // Fetch parameters
+            let annualCAGR = inputManager.getParsedAnnualCAGR() / 100.0 // Convert % to decimal
+            let weeklyDeterministicGrowth = pow(1 + annualCAGR, 1.0 / 52.0) - 1.0
+            let weeklyVolatility = 0.15 // Weekly standard deviation
+            let rareEventProbability = 0.01 // 1% chance per week
+            let exchangeRateEURUSD = 1.06
+            let totalSimulations = inputManager.getParsedIterations() ?? 1000 // Number of simulations
+            let batchSize = 100 // Number of simulations per batch
+
+            print("Starting \(totalSimulations) simulations in batches of \(batchSize)...")
+
+            var allResults: [[SimulationData]] = [] // Store results of all simulations
+            let resultQueue = DispatchQueue(label: "com.conor.BTCMonteCarlo.resultQueue") // Synchronisation queue
+            let totalBatches = (totalSimulations + batchSize - 1) / batchSize
+
+            // Helper functions
+            func randomNormal(mean: Double, standardDeviation: Double) -> Double {
+                let u1 = Double.random(in: 0..<1)
+                let u2 = Double.random(in: 0..<1)
+                let z0 = sqrt(-2.0 * log(u1)) * cos(2.0 * .pi * u2)
+                return z0 * standardDeviation + mean
             }
 
-            // Validate BTC Growth Rate as yearly CAGR and convert to weekly growth rate
-            guard let btcGrowthRateCAGR = Double(inputManager.btcGrowthRate.replacingOccurrences(of: ",", with: "")) else {
-                print("Error: Invalid BTC Growth Rate (CAGR): \(inputManager.btcGrowthRate)")
-                DispatchQueue.main.async {
-                    isLoading = false
+            // Run simulations in batches
+            let group = DispatchGroup()
+
+            for batchIndex in 0..<totalBatches {
+                group.enter()
+                DispatchQueue.global(qos: .userInitiated).async {
+                    print("Starting batch \(batchIndex + 1) of \(totalBatches)...")
+
+                    var batchResults: [[SimulationData]] = []
+
+                    // Perform simulations for this batch
+                    let batchStart = batchIndex * batchSize
+                    let batchEnd = min(batchStart + batchSize, totalSimulations)
+
+                    for simulationIndex in batchStart..<batchEnd {
+                        var results: [SimulationData] = [
+                            SimulationData(
+                                id: UUID(),
+                                week: 1,
+                                cyclePhase: "Bull",
+                                startingBTC: 0.0,
+                                btcGrowth: 0.00469014,
+                                netBTCHoldings: 0.00469014,
+                                btcPriceUSD: 76_532.03,
+                                btcPriceEUR: 76_532.03 / exchangeRateEURUSD,
+                                portfolioValueEUR: 333.83,
+                                contributionEUR: 378.00,
+                                contributionFeeEUR: 2.46,
+                                netContributionBTC: 0.00527613,
+                                withdrawalEUR: 0.0,
+                                portfolioPreWithdrawalEUR: 0.0
+                            ),
+                            SimulationData(
+                                id: UUID(),
+                                week: 2,
+                                cyclePhase: "Bull",
+                                startingBTC: 0.00469014,
+                                btcGrowth: 0.00001802,
+                                netBTCHoldings: 0.00534888,
+                                btcPriceUSD: 98_000.00,
+                                btcPriceEUR: 98_000.00 / exchangeRateEURUSD,
+                                portfolioValueEUR: 495.00,
+                                contributionEUR: 60.00,
+                                contributionFeeEUR: 0.21,
+                                netContributionBTC: 0.00064048,
+                                withdrawalEUR: 0.0,
+                                portfolioPreWithdrawalEUR: 439.37
+                            )
+                        ]
+
+                        // Simulate for remaining weeks
+                        for i in 2..<1040 {
+                            let previous = results[i - 1]
+
+                            let week = i + 1
+                            let cyclePhase = (i % 208) < 60 ? "Bull" : "Bear"
+                            let rareEventImpact = Double.random(in: 1.2...1.5)
+                            let rareEventAdjustment = Double.random(in: 0..<1) < rareEventProbability ? rareEventImpact : 1.0
+                            let randomShock = max(randomNormal(mean: 0, standardDeviation: weeklyVolatility), -0.30)
+                            let btcPriceUSD = max(previous.btcPriceUSD * (1 + weeklyDeterministicGrowth + randomShock) * rareEventAdjustment, 1_000.0)
+                            let btcPriceEUR = btcPriceUSD / exchangeRateEURUSD
+                            let growthMultiplier = (cyclePhase == "Bull" ? 1.5 : 0.5)
+                            let btcGrowth = growthMultiplier * previous.netBTCHoldings * weeklyDeterministicGrowth
+                            let contributionEUR = i < 52 ? 60.0 : 100.0
+                            let contributionFeeEUR = contributionEUR * (previous.portfolioValueEUR >= 100_000 ? 0.0007 : 0.0035)
+                            let netContributionBTC = (contributionEUR - contributionFeeEUR) / btcPriceEUR
+                            let withdrawalEUR = previous.portfolioValueEUR > 60_000 ? 200.0 : 0.0
+                            let netBTCHoldings = previous.netBTCHoldings + btcGrowth + netContributionBTC - (withdrawalEUR / btcPriceEUR)
+                            let portfolioValueEUR = netBTCHoldings * btcPriceEUR
+                            let portfolioPreWithdrawalEUR = previous.netBTCHoldings * btcPriceEUR
+
+                            results.append(
+                                SimulationData(
+                                    id: UUID(),
+                                    week: week,
+                                    cyclePhase: cyclePhase,
+                                    startingBTC: previous.netBTCHoldings,
+                                    btcGrowth: btcGrowth,
+                                    netBTCHoldings: netBTCHoldings,
+                                    btcPriceUSD: btcPriceUSD,
+                                    btcPriceEUR: btcPriceEUR,
+                                    portfolioValueEUR: portfolioValueEUR,
+                                    contributionEUR: contributionEUR,
+                                    contributionFeeEUR: contributionFeeEUR,
+                                    netContributionBTC: netContributionBTC,
+                                    withdrawalEUR: withdrawalEUR,
+                                    portfolioPreWithdrawalEUR: portfolioPreWithdrawalEUR
+                                )
+                            )
+                        }
+
+                        batchResults.append(results)
+                    }
+
+                    // Append batch results to allResults safely
+                    resultQueue.sync {
+                        allResults.append(contentsOf: batchResults)
+                    }
+
+                    print("Batch \(batchIndex + 1) completed. Total simulations so far: \(allResults.flatMap { $0 }.count)")
+                    group.leave()
                 }
-                return
             }
-            let weeklyGrowthRate = pow(1 + btcGrowthRateCAGR / 100.0, 1.0 / 52.0) - 1.0
-            print("Yearly CAGR: \(btcGrowthRateCAGR)% -> Weekly Growth Rate: \(weeklyGrowthRate * 100)%")
 
-            // Run the Monte Carlo simulation
-            let (bestIteration, allIterations) = runMonteCarloSimulationsWithSpreadsheetData(
-                spreadsheetData: spreadsheetData,
-                initialBTCPriceUSD: 1000.0,
-                iterations: totalIterations,
-                btcGrowthRate: weeklyGrowthRate
-            )
-
-            DispatchQueue.main.async {
-                monteCarloResults = bestIteration
+            // Wait for all batches to complete
+            group.notify(queue: .main) {
+                monteCarloResults = allResults.flatMap { $0 } // Combine all batches into a single array
+                print("Final monteCarloResults count: \(monteCarloResults.count)")
                 isLoading = false
-                print("Simulation completed with \(bestIteration.count) rows")
-                
-                // Call generateGraphs after simulation
-                generateGraphs(allIterations: allIterations)
+                print("All simulations completed. Final results assigned to UI.")
             }
         }
     }
     
-    private func generateGraphs(allIterations: [[SimulationData]]) {
-        guard let week = Int(inputManager.selectedWeek.replacingOccurrences(of: ",", with: "")) else {
-            print("Error: Invalid week number: \(inputManager.selectedWeek)")
-            return
-        }
-
-        guard let btcPriceMin = Double(inputManager.btcPriceMinInput.replacingOccurrences(of: ",", with: "")) else {
-            print("Error: Invalid BTC Price Min: \(inputManager.btcPriceMinInput)")
-            return
-        }
-
-        guard let btcPriceMax = Double(inputManager.btcPriceMaxInput.replacingOccurrences(of: ",", with: "")) else {
-            print("Error: Invalid BTC Price Max: \(inputManager.btcPriceMaxInput)")
-            return
-        }
-
-        guard let portfolioValueMin = Double(inputManager.portfolioValueMinInput.replacingOccurrences(of: ",", with: "")) else {
-            print("Error: Invalid Portfolio Value Min: \(inputManager.portfolioValueMinInput)")
-            return
-        }
-
-        guard let portfolioValueMax = Double(inputManager.portfolioValueMaxInput.replacingOccurrences(of: ",", with: "")) else {
-            print("Error: Invalid Portfolio Value Max: \(inputManager.portfolioValueMaxInput)")
-            return
-        }
-
-        guard let btcHoldingsMin = Double(inputManager.btcHoldingsMinInput.replacingOccurrences(of: ",", with: "")) else {
-            print("Error: Invalid BTC Holdings Min: \(inputManager.btcHoldingsMinInput)")
-            return
-        }
-
-        guard let btcHoldingsMax = Double(inputManager.btcHoldingsMaxInput.replacingOccurrences(of: ",", with: "")) else {
-            print("Error: Invalid BTC Holdings Max: \(inputManager.btcHoldingsMaxInput)")
-            return
-        }
-
-        print("Generating graphs for Week \(week) with parameters:")
-        print("""
-        BTC Price Min: \(btcPriceMin), BTC Price Max: \(btcPriceMax),
-        Portfolio Min: \(portfolioValueMin), Portfolio Max: \(portfolioValueMax),
-        BTC Holdings Min: \(btcHoldingsMin), BTC Holdings Max: \(btcHoldingsMax)
-        """)
-
-        let directoryPath = "/Users/conor/Desktop/PS Batch/"
-        let directoryURL = URL(fileURLWithPath: directoryPath)
-
-        if !FileManager.default.fileExists(atPath: directoryPath) {
-            do {
-                try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
-                print("Created directory at \(directoryPath)")
-            } catch {
-                print("Error: Failed to create directory: \(error)")
-            }
-        }
-
-        createRefinedHistogramWithFilters(
-            data: allIterations.flatMap { $0.map { $0.btcPriceUSD } },
-            title: "BTC Price Distribution - Week \(week)",
-            fileName: "\(directoryPath)Week\(week)_BTCPrice.png",
-            minThreshold: btcPriceMin,
-            maxThreshold: btcPriceMax,
-            discardPercentile: 0.01,
-            rotateLabels: true
-        )
-
-        createRefinedHistogramWithFilters(
-            data: allIterations.flatMap { $0.map { $0.portfolioValueEUR } },
-            title: "Portfolio Value Distribution - Week \(week)",
-            fileName: "\(directoryPath)Week\(week)_PortfolioValue.png",
-            minThreshold: portfolioValueMin,
-            maxThreshold: portfolioValueMax,
-            discardPercentile: 0.01,
-            rotateLabels: true
-        )
-
-        createRefinedHistogramWithFilters(
-            data: allIterations.flatMap { $0.map { $0.netBTCHoldings } },
-            title: "BTC Holdings Distribution - Week \(week)",
-            fileName: "\(directoryPath)Week\(week)_BTCHoldings.png",
-            minThreshold: btcHoldingsMin,
-            maxThreshold: btcHoldingsMax,
-            discardPercentile: 0.01,
-            rotateLabels: true
-        )
-
-        print("Graphs generated successfully in \(directoryPath)")
-    }
-    
-    func formattedBinding(for keyPath: ReferenceWritableKeyPath<PersistentInputManager, String>) -> Binding<String> {
-        Binding<String>(
-            get: {
-                let rawValue = inputManager[keyPath: keyPath]
-                guard let number = Double(rawValue) else { return rawValue } // Return raw if invalid
-                return NumberFormatterWithSeparator.shared.string(from: NSNumber(value: number)) ?? rawValue
-            },
-            set: { newValue in
-                let cleanedValue = newValue.replacingOccurrences(of: ",", with: "") // Remove separators
-                if Double(cleanedValue) != nil || cleanedValue.isEmpty {
-                    inputManager.updateValue(keyPath, to: cleanedValue) // Update if valid or empty
+    private func formattedBinding(for keyPath: ReferenceWritableKeyPath<PersistentInputManager, String>) -> Binding<String> {
+            Binding<String>(
+                get: {
+                    let rawValue = inputManager[keyPath: keyPath]
+                    guard let number = Double(rawValue) else { return rawValue } // Return raw if invalid
+                    return NumberFormatterWithSeparator.shared.string(from: NSNumber(value: number)) ?? rawValue
+                },
+                set: { newValue in
+                    let cleanedValue = newValue.replacingOccurrences(of: ",", with: "") // Remove separators
+                    if Double(cleanedValue) != nil || cleanedValue.isEmpty {
+                        inputManager.updateValue(keyPath, to: cleanedValue) // Update if valid or empty
+                    }
                 }
+            )
+        }
+    
+    // Helper function to get value from keyPath and format it as String
+    private func getValue(item: SimulationData, keyPath: PartialKeyPath<SimulationData>) -> String {
+        if let value = item[keyPath: keyPath] as? Int {
+            return "\(value)"
+        } else if let value = item[keyPath: keyPath] as? Double {
+            // Format doubles appropriately
+            if keyPath == \SimulationData.startingBTC ||
+                keyPath == \SimulationData.btcGrowth ||
+                keyPath == \SimulationData.netBTCHoldings ||
+                keyPath == \SimulationData.netContributionBTC {
+                return value.formattedBTC()
+            } else {
+                return value.formattedWithSeparator()
             }
-        )
+        } else if let value = item[keyPath: keyPath] as? String {
+            return value
+        } else {
+            return ""
+        }
     }
     
     func realTimeFormattedBinding(for keyPath: ReferenceWritableKeyPath<PersistentInputManager, String>) -> Binding<String> {
@@ -354,24 +368,27 @@ struct ContentView: View {
             set: { newValue in
                 // Remove separator for storage
                 let cleanedValue = newValue.replacingOccurrences(of: ",", with: "")
-                if Double(cleanedValue) != nil || cleanedValue.isEmpty {
+                if let doubleValue = Double(cleanedValue), doubleValue >= 0 {
                     inputManager.updateValue(keyPath, to: cleanedValue)
+                } else if cleanedValue.isEmpty {
+                    inputManager.updateValue(keyPath, to: "")
                 }
             }
         )
     }
+}
     
-    struct NumberFormatterWithSeparator {
-        static let shared: NumberFormatter = {
-            let formatter = NumberFormatter()
-            formatter.numberStyle = .decimal
-            formatter.usesGroupingSeparator = true
-            formatter.groupingSize = 3
-            formatter.maximumFractionDigits = 2 // Allows up to two decimal places
-            formatter.minimumFractionDigits = 0 // No unnecessary decimals
-            return formatter
-        }()
-    }
+// Helper for formatting numbers with separators
+struct NumberFormatterWithSeparator {
+    static let shared: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.usesGroupingSeparator = true
+        formatter.groupingSize = 3
+        formatter.maximumFractionDigits = 8 // Allows up to 8 decimal places
+        formatter.minimumFractionDigits = 0 // Allows flexibility for no unnecessary decimals
+        return formatter
+    }()
 }
 
 private func createHistogramCoreGraphics(
@@ -514,7 +531,7 @@ private func createRefinedHistogramWithFilters(
     minThreshold: Double,
     maxThreshold: Double,
     discardPercentile: Double,
-    rotateLabels: Bool = false
+    rotateLabels: Bool = true
 ) {
     let width: CGFloat = 1000
     let height: CGFloat = 700
@@ -526,7 +543,7 @@ private func createRefinedHistogramWithFilters(
 
     // Filter data by user-defined thresholds
     let filteredData = data.filter { $0 >= minThreshold && $0 <= maxThreshold }
-    print("Data count after applying thresholds (\(minThreshold), \(maxThreshold)): \(filteredData.count)")
+    print("Filtered data for \(title): \(filteredData.count) values within range \(minThreshold)-\(maxThreshold)")
 
     // Check if data exists after filtering
     guard !filteredData.isEmpty else {
@@ -543,13 +560,13 @@ private func createRefinedHistogramWithFilters(
     print("Data count after discarding outliers: \(finalData.count)")
 
     guard !finalData.isEmpty else {
-        print("No data left after percentile filtering for \(title). Skipping graph.")
+        print("No data left after percentile filtering for \(title).")
         return
     }
 
     // Create bins for the histogram
-    let minValue = minThreshold
-    let maxValue = maxThreshold
+    let minValue = finalData.min() ?? minThreshold
+    let maxValue = finalData.max() ?? maxThreshold
     let binCount = 15
     let binWidth = (maxValue - minValue) / Double(binCount)
     var bins = [Int](repeating: 0, count: binCount)
@@ -558,6 +575,9 @@ private func createRefinedHistogramWithFilters(
         let binIndex = min(Int((value - minValue) / binWidth), binCount - 1)
         bins[binIndex] += 1
     }
+
+    print("Bins for \(title): \(bins)")
+    print("Bin Width: \(binWidth), Min: \(minValue), Max: \(maxValue)")
 
     // Calculate the maximum frequency percentage for y-axis scaling
     let maxFrequency = bins.max() ?? 1
@@ -623,7 +643,7 @@ private func createRefinedHistogramWithFilters(
         context.fill(barRect)
     }
 
-    // Format x-axis labels with thousands separators
+    // Rotate and format x-axis labels with thousands separators
     for i in 0...binCount {
         let x = margin + CGFloat(i) * barWidth
         let labelValue = minValue + Double(i) * binWidth
