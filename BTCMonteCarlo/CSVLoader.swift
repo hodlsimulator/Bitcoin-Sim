@@ -43,9 +43,7 @@ func loadCSV() -> [SimulationData] {
             // Create SimulationData
             let data = SimulationData(
                 week: week,
-                cyclePhase: columns[1],
                 startingBTC: startingBTC,
-                btcGrowth: Double(columns[3]) ?? 0.0,
                 netBTCHoldings: Double(columns[4]) ?? 0.0,
                 btcPriceUSD: btcPriceUSD,
                 btcPriceEUR: Double(columns[6].replacingOccurrences(of: ",", with: "")) ?? 0.0,
@@ -53,8 +51,7 @@ func loadCSV() -> [SimulationData] {
                 contributionEUR: Double(columns[8]) ?? 0.0,
                 contributionFeeEUR: Double(columns[9]) ?? 0.0,
                 netContributionBTC: Double(columns[10]) ?? 0.0,
-                withdrawalEUR: Double(columns[11]) ?? 0.0,
-                portfolioPreWithdrawalEUR: Double(columns[12]) ?? 0.0
+                withdrawalEUR: Double(columns[11]) ?? 0.0
             )
 
             result.append(data)
