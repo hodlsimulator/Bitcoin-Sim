@@ -33,9 +33,10 @@ struct SimulationData: Identifiable {
         contributionFeeEUR: 0.0,
         netContributionBTC: 0.0,
         withdrawalEUR: 0.0
+        
     )
 
-    // Initializer
+    // Updated initializer
     init(
         id: UUID = UUID(),
         week: Int,

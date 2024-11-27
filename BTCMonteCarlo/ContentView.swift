@@ -168,18 +168,20 @@ struct ContentView: View {
                         // Scrollable Rows
                         ScrollView([.vertical, .horizontal]) {
                             LazyVStack(alignment: .leading, spacing: 0) {
+                                // Inside your SwiftUI view, replace the rendering logic for the Contribution EUR column
                                 ForEach(monteCarloResults.indices, id: \.self) { index in
                                     HStack(spacing: 0) {
                                         ForEach(columns.indices, id: \.self) { colIndex in
                                             let column = columns[colIndex]
                                             
+                                            // Check if it's the last row and the Contribution EUR column
                                             if index == monteCarloResults.count - 1 && column.0 == "Contribution EUR" {
-                                                // Calculate total contributions outside the SwiftUI view hierarchy
+                                                // Calculate the total contributions
                                                 let totalContributions = monteCarloResults.reduce(0.0) { total, row in
                                                     total + row.contributionEUR
                                                 }
 
-                                                // Use totalContributions inside your SwiftUI view
+                                                // Display the total contributions
                                                 Text(totalContributions.formattedWithSeparator())
                                                     .frame(width: 147.5, alignment: .center)
                                                     .border(Color.black)
@@ -222,7 +224,7 @@ struct ContentView: View {
             let weeklyVolatility = annualVolatility / sqrt(52.0)
             let exchangeRateEURUSD = 1.06
             let totalWeeks = 1040
-            
+
             guard let totalIterations = inputManager.getParsedIterations(), totalIterations > 0 else {
                 DispatchQueue.main.async {
                     self.isLoading = false
@@ -230,14 +232,15 @@ struct ContentView: View {
                 print("Invalid number of iterations.")
                 return
             }
-            
+
             // Store all results
             var allResults: [[SimulationData]] = []
-            
+
             // Run simulation for the specified number of iterations
-            for _ in 1...totalIterations {
+            for iteration in 1...totalIterations {
+                print("Starting iteration \(iteration)...")
                 var results: [SimulationData] = []
-                
+
                 // Week 1 (Hardcoded)
                 results.append(SimulationData(
                     id: UUID(),
@@ -252,7 +255,7 @@ struct ContentView: View {
                     netContributionBTC: 0.00527613,
                     withdrawalEUR: 0.0
                 ))
-                
+
                 // Week 2 (Hardcoded)
                 results.append(SimulationData(
                     id: UUID(),
@@ -267,35 +270,49 @@ struct ContentView: View {
                     netContributionBTC: 0.00069130,
                     withdrawalEUR: 0.0
                 ))
-                
+
+                // Cumulative trackers
+                var cumulativeBTC: Double = 0.00530474 // Starting BTC for week 2
+                var cumulativeContributionsEUR: Double = 438.00
+
+                // Simulation loop (week 3 onwards)
                 // Simulation loop (week 3 onwards)
                 for week in 3...totalWeeks {
-                    let previous = results[week - 2]
-                    
+                    let previous = results[week - 2] // Reference to the previous week's data
+
                     // Generate random shock
                     let randomShock = randomNormal(mean: 0, standardDeviation: weeklyVolatility)
                     let adjustedGrowthFactor = 1 + weeklyDeterministicGrowth + randomShock
-                    
+
                     // Update BTC price
                     var btcPriceUSD = previous.btcPriceUSD * adjustedGrowthFactor
-                    if Double.random(in: 0..<1) < 0.02 {
-                        btcPriceUSD *= (1 - Double.random(in: 0.1...0.5))
+
+                    // Rare crash simulation
+                    if Double.random(in: 0..<1) < 0.005 { // 0.5% crash probability
+                        btcPriceUSD *= (1 - Double.random(in: 0.1...0.3)) // Moderate crash severity
                     }
-                    btcPriceUSD = max(btcPriceUSD, 10_000.0)
+
+                    // Apply price floor (adjust as needed)
+                    btcPriceUSD = max(btcPriceUSD, 1_000.0)
                     let btcPriceEUR = btcPriceUSD / exchangeRateEURUSD
-                    
+
                     // Contribution logic
                     let contributionEUR: Double = week <= 52 ? 60.0 : 100.0
-                    let contributionFeeEUR = week >= 8 ? contributionEUR * 0.0035 : contributionEUR * 0.0025
+                    let contributionFeeEUR = contributionEUR * 0.0035
                     let netContributionBTC = (contributionEUR - contributionFeeEUR) / btcPriceEUR
-                    
+                    cumulativeBTC += netContributionBTC
+                    cumulativeContributionsEUR += contributionEUR
+
                     // Withdrawal logic
                     let withdrawalEUR: Double = previous.portfolioValueEUR > 30_000 ? 100.0 : 0.0
-                    
-                    // Net holdings and portfolio value
-                    let netBTCHoldings = previous.netBTCHoldings + netContributionBTC - (withdrawalEUR / btcPriceEUR)
+                    let withdrawalBTC = withdrawalEUR / btcPriceEUR
+                    cumulativeBTC -= withdrawalBTC
+
+                    // Update net BTC holdings and portfolio value
+                    let netBTCHoldings = max(0, previous.netBTCHoldings + netContributionBTC - withdrawalBTC)
                     let portfolioValueEUR = netBTCHoldings * btcPriceEUR
-                    
+
+                    // Append simulation data for the current week
                     results.append(SimulationData(
                         id: UUID(),
                         week: week,
@@ -310,66 +327,30 @@ struct ContentView: View {
                         withdrawalEUR: withdrawalEUR
                     ))
                 }
-                
+
                 allResults.append(results)
             }
-            
-            // Calculate 90th percentile for each week
-            var percentileResults: [SimulationData] = []
-            for week in 1...totalWeeks {
-                let portfolioValues = allResults.map { $0[week - 1].portfolioValueEUR }
-                let btcPriceUSDValues = allResults.map { $0[week - 1].btcPriceUSD }
-                let btcPriceEURValues = allResults.map { $0[week - 1].btcPriceEUR }
-                let netBTCHoldingsValues = allResults.map { $0[week - 1].netBTCHoldings }
-                let startingBTCValues = allResults.map { $0[week - 1].startingBTC }
-                let netContributionBTCValues = allResults.map { $0[week - 1].netContributionBTC }
-                let contributionEURValues = allResults.map { $0[week - 1].contributionEUR }
-                let contributionFeeEURValues = allResults.map { $0[week - 1].contributionFeeEUR }
-                
-                let sortedPortfolioValues = portfolioValues.sorted()
-                let sortedBTCPriceUSDValues = btcPriceUSDValues.sorted()
-                let sortedBTCPriceEURValues = btcPriceEURValues.sorted()
-                let sortedNetBTCHoldingsValues = netBTCHoldingsValues.sorted()
-                let sortedStartingBTCValues = startingBTCValues.sorted()
-                let sortedNetContributionBTCValues = netContributionBTCValues.sorted()
-                let sortedContributionEURValues = contributionEURValues.sorted()
-                let sortedContributionFeeEURValues = contributionFeeEURValues.sorted()
-                
-                let percentileIndex = Int(Double(sortedPortfolioValues.count - 1) * 0.9)
-                
-                percentileResults.append(SimulationData(
-                    id: UUID(),
-                    week: week,
-                    startingBTC: sortedStartingBTCValues[percentileIndex],
-                    netBTCHoldings: sortedNetBTCHoldingsValues[percentileIndex],
-                    btcPriceUSD: sortedBTCPriceUSDValues[percentileIndex],
-                    btcPriceEUR: sortedBTCPriceEURValues[percentileIndex],
-                    portfolioValueEUR: sortedPortfolioValues[percentileIndex],
-                    contributionEUR: sortedContributionEURValues[percentileIndex],
-                    contributionFeeEUR: sortedContributionFeeEURValues[percentileIndex],
-                    netContributionBTC: sortedNetContributionBTCValues[percentileIndex],
-                    withdrawalEUR: 0.0 // Not meaningful for 90th percentile
-                ))
-            }
-            
-            // Update UI
+
             // Update UI
             DispatchQueue.main.async {
-                self.monteCarloResults = percentileResults
                 self.isLoading = false
-                
-                // Generate histogram
-                generateHistogramForResults(
-                    results: self.monteCarloResults,
-                    filePath: "/Users/conor/Desktop/PS Batch/portfolio_growth_histogram.png"
-                )
+                self.monteCarloResults = allResults.last ?? []
             }
         }
     }
 
-    func calculate90thPercentile(allResults: [[SimulationData]]) -> Double {
-        let finalWeekValues = allResults.map { $0.last?.portfolioValueEUR ?? 0.0 }
-        return calculatePercentile(values: finalWeekValues, percentile: 90)
+    private func calculate90thPercentile(allResults: [[SimulationData]]) -> [Double] {
+        var percentileResults: [Double] = []
+        let totalWeeks = allResults.first?.count ?? 0
+
+        for week in 0..<totalWeeks {
+            let portfolioValues = allResults.map { $0[week].portfolioValueEUR }
+            let sortedValues = portfolioValues.sorted()
+            let percentileIndex = Int(Double(sortedValues.count - 1) * 0.9)
+            percentileResults.append(sortedValues[percentileIndex])
+        }
+
+        return percentileResults
     }
 
     private func processAllIterations(_ allResults: [[SimulationData]]) -> [String: [String: Double]] {
