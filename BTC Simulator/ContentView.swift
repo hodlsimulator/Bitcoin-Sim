@@ -109,105 +109,110 @@ struct ContentView: View {
     ]
 
     var body: some View {
-        VStack(spacing: 10) {
-            HStack {
-                Text("BTC Annual CAGR (%):")
-                TextField("Enter CAGR", text: formattedBinding(for: \.annualCAGR))
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .frame(width: 150)
-            }
+        ZStack {
+            // Set global background colour
+            Color.black
+                .ignoresSafeArea()
+            
+            VStack(spacing: 10) {
+                // Input Fields
+                VStack(spacing: 10) {
+                    HStack {
+                        Text("BTC Annual CAGR (%):")
+                            .foregroundColor(.white)
+                        TextField("Enter CAGR", text: .constant("40"))
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .frame(width: 150)
+                            .background(Color.white)
+                            .foregroundColor(.black)
+                    }
 
-            HStack {
-                Text("BTC Annual Volatility (%):")
-                TextField("Enter Volatility", text: formattedBinding(for: \.annualVolatility))
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .frame(width: 150)
-            }
+                    HStack {
+                        Text("BTC Annual Volatility (%):")
+                            .foregroundColor(.white)
+                        TextField("Enter Volatility", text: .constant("80"))
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .frame(width: 150)
+                            .background(Color.white)
+                            .foregroundColor(.black)
+                    }
 
-            HStack {
-                Text("Number of Iterations:")
-                TextField("Enter Iterations", text: formattedBinding(for: \.iterations))
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .frame(width: 150)
-            }
+                    HStack {
+                        Text("Number of Iterations:")
+                            .foregroundColor(.white)
+                        TextField("Enter Iterations", text: .constant("1000"))
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .frame(width: 150)
+                            .background(Color.white)
+                            .foregroundColor(.black)
+                    }
 
-            // Run Simulation Button
-            Button("Run Simulation") {
-                runSimulation()
-            }
-            .padding()
-
-            // Loading Indicator
-            if isLoading {
-                ProgressView("Simulating...")
+                    // Run Simulation Button
+                    Button(action: {
+                        runSimulation()
+                    }) {
+                        Text("Run Simulation")
+                            .foregroundColor(.white)
+                            .padding()
+                            .background(Color.blue)
+                            .cornerRadius(8)
+                    }
                     .padding()
-            }
 
-            // Results Section
-            if !monteCarloResults.isEmpty {
-                Text("Monte Carlo Simulation Results")
-                    .font(.headline)
-                    .padding()
+                    // Loading Indicator
+                    if isLoading {
+                        ProgressView("Simulating...")
+                            .padding()
+                            .foregroundColor(.white)
+                    }
 
-                // Sticky Header with Scrollable Rows
-                GeometryReader { geometry in
-                    VStack(spacing: 0) {
-                        // Sticky Header
-                        HStack(spacing: 0) {
-                            ForEach(columns, id: \.0) { column in
-                                Text(column.0) // Access column name
-                                    .bold()
-                                    .frame(width: 147.5, height: 50, alignment: .center) // Fixed width
-                                    .background(Color.gray.opacity(0.2))
-                                    .border(Color.black)
-                                    .padding(.leading, -1.2) // Adjust header alignment
-                            }
-                        }
-                        .background(Color.gray.opacity(0.3))
+                    // Results Section
+                    if !monteCarloResults.isEmpty {
+                        Text("Monte Carlo Simulation Results")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .padding()
 
-                        // Scrollable Rows
-                        ScrollView([.vertical, .horizontal]) {
-                            LazyVStack(alignment: .leading, spacing: 0) {
-                                // Inside your SwiftUI view, replace the rendering logic for the Contribution EUR column
-                                ForEach(monteCarloResults.indices, id: \.self) { index in
-                                    HStack(spacing: 0) {
-                                        ForEach(columns.indices, id: \.self) { colIndex in
-                                            let column = columns[colIndex]
-                                            
-                                            // Check if it's the last row and the Contribution EUR column
-                                            if index == monteCarloResults.count - 1 && column.0 == "Contribution EUR" {
-                                                // Calculate the total contributions
-                                                let totalContributions = monteCarloResults.reduce(0.0) { total, row in
-                                                    total + row.contributionEUR
-                                                }
-
-                                                // Display the total contributions
-                                                Text(totalContributions.formattedWithSeparator())
-                                                    .frame(width: 147.5, alignment: .center)
-                                                    .border(Color.black)
-                                                    .padding(.leading, -0.8)
-                                                    .padding(.vertical, 8)
-                                            } else {
-                                                // Regular data rows
-                                                let value = getValue(item: monteCarloResults[index], keyPath: column.1)
-                                                Text(value)
-                                                    .frame(width: 147.5, alignment: .center)
-                                                    .border(Color.black)
-                                                    .padding(.leading, -0.8)
-                                                    .padding(.vertical, 8)
-                                            }
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 10) {
+                                ForEach(columns, id: \.0) { column in
+                                    VStack(alignment: .leading) {
+                                        Text(column.0)
+                                            .font(.headline)
+                                            .foregroundColor(.white)
+                                            .padding(.bottom, 5)
+                                        
+                                        ForEach(monteCarloResults, id: \.id) { result in
+                                            let value = getValue(item: result, keyPath: column.1)
+                                            Text(value)
+                                                .font(.body)
+                                                .padding(.vertical, 5)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                                .background(Color.gray.opacity(0.1))
+                                                .cornerRadius(5)
+                                                .foregroundColor(.white)
                                         }
                                     }
+                                    .padding()
+                                    .background(Color.black)
+                                    .cornerRadius(8)
+                                    .shadow(radius: 1)
                                 }
                             }
+                            .padding()
                         }
-                        .frame(height: geometry.size.height - 40)
+                        .background(Color.black.ignoresSafeArea()) // Consistent scroll background
+                        .scrollIndicators(.visible) // Ensure scroll grab handle is visible
+                    } else {
+                        Text("No data available. Run a simulation to display results.")
+                            .foregroundColor(.gray)
+                            .padding()
                     }
                 }
-                .frame(maxHeight: 500)
+                .padding()
+                .background(Color("LaunchBackground"))
             }
         }
-        .padding()
     }
     
     // MARK: - Functions
@@ -439,7 +444,7 @@ struct ContentView: View {
             rotateLabels: true      // Rotate x-axis labels for better readability
         )
     }
-
+    
     private func createHistogramWithLogBins(
         data: [Double],
         title: String,
@@ -449,21 +454,14 @@ struct ContentView: View {
         binCount: Int = 20,
         rotateLabels: Bool = true
     ) {
-        print("Histogram Generation Started: \(title)")
-        print("Initial Data Count: \(data.count)")
-
-        let validData = data.filter { $0 > 0 }
-        guard !validData.isEmpty else {
+        // Validate data
+        guard let minValue = data.min(), let maxValue = data.max(), minValue > 0 else {
             print("Error: No valid data to generate histogram.")
             return
         }
 
-        let sortedData = validData.sorted()
-        let lowerIndex = Int(Double(sortedData.count) * lowerPercentile)
-        let upperIndex = Int(Double(sortedData.count) * upperPercentile)
-        let filteredData = Array(sortedData[lowerIndex..<upperIndex])
-
-        guard let minValue = filteredData.min(), let maxValue = filteredData.max(), minValue > 0 else {
+        let filteredData = data.filter { $0 > minValue && $0 < maxValue }
+        guard !filteredData.isEmpty else {
             print("Error: No valid data after filtering.")
             return
         }
@@ -480,89 +478,60 @@ struct ContentView: View {
         }
 
         let totalDataCount = filteredData.count
-        let image = NSImage(size: NSSize(width: 1000, height: 700))
-        image.lockFocus()
+        let width: CGFloat = 1000
+        let height: CGFloat = 700
 
-        let context = NSGraphicsContext.current!.cgContext
-        context.setFillColor(NSColor.black.cgColor)
-        context.fill(CGRect(x: 0, y: 0, width: 1000, height: 700))
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: width, height: height))
+        let image = renderer.image { context in
+            let cgContext = context.cgContext
+            cgContext.setFillColor(UIColor.black.cgColor)
+            cgContext.fill(CGRect(x: 0, y: 0, width: width, height: height))
 
-        // Title
-        let titleAttributes: [NSAttributedString.Key: Any] = [
-            .font: NSFont.boldSystemFont(ofSize: 16),
-            .foregroundColor: NSColor.white
-        ]
-        NSString(string: title).draw(at: CGPoint(x: 100, y: 650), withAttributes: titleAttributes)
-
-        // Draw X-axis and Y-axis
-        context.setStrokeColor(NSColor.white.cgColor)
-        context.setLineWidth(1.5)
-
-        // X-axis
-        context.move(to: CGPoint(x: 100, y: 100))
-        context.addLine(to: CGPoint(x: 900, y: 100))
-        context.strokePath()
-
-        // Y-axis
-        context.move(to: CGPoint(x: 100, y: 100))
-        context.addLine(to: CGPoint(x: 100, y: 600))
-        context.strokePath()
-
-        // Add Y-axis labels (Percentages)
-        for i in 0...5 {
-            let percentage = Double(i) * 100 / 5.0
-            let yPosition = 100 + CGFloat(i) * 100
-            let labelAttributes: [NSAttributedString.Key: Any] = [
-                .font: NSFont.systemFont(ofSize: 12),
-                .foregroundColor: NSColor.white
+            // Title
+            let titleAttributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.boldSystemFont(ofSize: 16),
+                .foregroundColor: UIColor.white
             ]
-            NSString(string: "\(Int(percentage))%").draw(at: CGPoint(x: 60, y: yPosition - 8), withAttributes: labelAttributes)
-            context.setStrokeColor(NSColor.gray.cgColor)
-            context.setLineWidth(0.5)
-            context.move(to: CGPoint(x: 100, y: yPosition))
-            context.addLine(to: CGPoint(x: 900, y: yPosition))
-            context.strokePath()
-        }
+            NSString(string: title).draw(at: CGPoint(x: 100, y: height - 50), withAttributes: titleAttributes)
 
-        // Add X-axis labels (Thousands Separator)
-        let barWidth = (900 - 100) / CGFloat(binCount)
-        let numberFormatter = NumberFormatter()
-        numberFormatter.numberStyle = .decimal
-        for i in 0...binCount {
-            let logLabelValue = logMinValue + Double(i) * binWidth
-            let labelValue = pow(10, logLabelValue)
-            let formattedLabel = numberFormatter.string(from: NSNumber(value: labelValue)) ?? "\(labelValue)"
-            let xPosition = 100 + CGFloat(i) * barWidth
-            let labelAttributes: [NSAttributedString.Key: Any] = [
-                .font: NSFont.systemFont(ofSize: 12),
-                .foregroundColor: NSColor.white
-            ]
-            if rotateLabels {
-                context.saveGState()
-                let labelPosition = CGPoint(x: xPosition - 10, y: 80)
-                context.translateBy(x: labelPosition.x, y: labelPosition.y)
-                context.rotate(by: -CGFloat.pi / 4) // Rotate 45 degrees
-                NSString(string: formattedLabel).draw(at: .zero, withAttributes: labelAttributes)
-                context.restoreGState()
-            } else {
-                NSString(string: formattedLabel).draw(at: CGPoint(x: xPosition - 15, y: 80), withAttributes: labelAttributes)
+            // Draw X-axis and Y-axis
+            cgContext.setStrokeColor(UIColor.white.cgColor)
+            cgContext.setLineWidth(1.5)
+
+            // X-axis
+            cgContext.move(to: CGPoint(x: 100, y: height - 100))
+            cgContext.addLine(to: CGPoint(x: width - 100, y: height - 100))
+            cgContext.strokePath()
+
+            // Y-axis
+            cgContext.move(to: CGPoint(x: 100, y: 100))
+            cgContext.addLine(to: CGPoint(x: 100, y: height - 100))
+            cgContext.strokePath()
+
+            // Add Y-axis labels
+            for i in 0...5 {
+                let percentage = Double(i) * 100 / 5.0
+                let yPosition = height - 100 - CGFloat(i) * 100
+                let labelAttributes: [NSAttributedString.Key: Any] = [
+                    .font: UIFont.systemFont(ofSize: 12),
+                    .foregroundColor: UIColor.white
+                ]
+                NSString(string: "\(Int(percentage))%").draw(at: CGPoint(x: 60, y: yPosition - 8), withAttributes: labelAttributes)
+            }
+
+            // Draw histogram bars
+            let barWidth = (width - 200) / CGFloat(binCount)
+            for (index, frequency) in bins.enumerated() {
+                let percentage = Double(frequency) / Double(totalDataCount) * 100
+                let barHeight = CGFloat(percentage / 100.0) * (height - 200)
+                let barRect = CGRect(x: 100 + CGFloat(index) * barWidth, y: height - 100 - barHeight, width: barWidth - 2, height: barHeight)
+                cgContext.setFillColor(UIColor.systemBlue.cgColor)
+                cgContext.fill(barRect)
             }
         }
 
-        // Draw histogram bars
-        for (index, frequency) in bins.enumerated() {
-            let percentage = Double(frequency) / Double(totalDataCount) * 100
-            let barHeight = CGFloat(percentage / 100.0) * 500
-            let barRect = CGRect(x: 100 + CGFloat(index) * barWidth, y: 100, width: barWidth - 2, height: barHeight)
-            context.setFillColor(NSColor.systemBlue.cgColor)
-            context.fill(barRect)
-        }
-
-        image.unlockFocus()
-
-        if let imageData = image.tiffRepresentation,
-           let bitmap = NSBitmapImageRep(data: imageData),
-           let pngData = bitmap.representation(using: .png, properties: [:]) {
+        // Save the image as PNG
+        if let pngData = image.pngData() {
             do {
                 try pngData.write(to: URL(fileURLWithPath: fileName))
                 print("Histogram saved successfully at \(fileName)")
@@ -570,7 +539,7 @@ struct ContentView: View {
                 print("Error saving histogram: \(error)")
             }
         } else {
-            print("Error: Failed to generate image data.")
+            print("Error: Failed to generate PNG data.")
         }
     }
     
@@ -655,114 +624,97 @@ struct NumberFormatterWithSeparator {
     }()
 }
 
-private func createHistogramCoreGraphics(
+private func createHistogramWithLogBins(
     data: [Double],
     title: String,
     fileName: String,
-    rotateLabels: Bool = false
+    lowerPercentile: Double = 0.01,
+    upperPercentile: Double = 0.99,
+    binCount: Int = 20,
+    rotateLabels: Bool = true
 ) {
+    // Ensure data is valid
+    guard let minValue = data.min(), let maxValue = data.max(), minValue > 0 else {
+        print("Error: No valid data to generate histogram.")
+        return
+    }
+
+    let filteredData = data.filter { $0 > minValue && $0 < maxValue }
+    guard !filteredData.isEmpty else {
+        print("Error: No valid data after filtering.")
+        return
+    }
+
+    let logMinValue = log10(minValue)
+    let logMaxValue = log10(maxValue)
+    let binWidth = (logMaxValue - logMinValue) / Double(binCount)
+    var bins = [Int](repeating: 0, count: binCount)
+
+    for value in filteredData {
+        let logValue = log10(value)
+        let binIndex = min(Int((logValue - logMinValue) / binWidth), binCount - 1)
+        bins[binIndex] += 1
+    }
+
+    let totalDataCount = filteredData.count
     let width: CGFloat = 1000
     let height: CGFloat = 700
     let margin: CGFloat = 100
 
-    let minValue = data.min() ?? 0
-    let maxValue = data.max() ?? 1
-    let binCount = 15
-    let binWidth = (maxValue - minValue) / Double(binCount)
-    var bins = [Int](repeating: 0, count: binCount)
-    for value in data {
-        let binIndex = min(Int((value - minValue) / binWidth), binCount - 1)
-        bins[binIndex] += 1
-    }
+    let renderer = UIGraphicsImageRenderer(size: CGSize(width: width, height: height))
+    let image = renderer.image { rendererContext in
+        let context = rendererContext.cgContext
 
-    let image = NSImage(size: NSSize(width: width, height: height))
-    image.lockFocus()
+        // Background
+        context.setFillColor(UIColor.black.cgColor)
+        context.fill(CGRect(x: 0, y: 0, width: width, height: height))
 
-    let context = NSGraphicsContext.current!.cgContext
-    context.setFillColor(NSColor.black.cgColor)
-    context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+        // Axes
+        context.setStrokeColor(UIColor.white.cgColor)
+        context.setLineWidth(1.5)
 
-    // Title
-    let titleAttributes: [NSAttributedString.Key: Any] = [
-        .font: NSFont.boldSystemFont(ofSize: 16),
-        .foregroundColor: NSColor.white
-    ]
-    NSString(string: title).draw(
-        at: CGPoint(x: margin, y: height - margin + 20),
-        withAttributes: titleAttributes
-    )
+        // X-Axis
+        context.move(to: CGPoint(x: margin, y: height - margin))
+        context.addLine(to: CGPoint(x: width - margin, y: height - margin))
+        context.strokePath()
 
-    // Axes
-    context.setStrokeColor(NSColor.white.cgColor)
-    context.setLineWidth(1.5)
+        // Y-Axis
+        context.move(to: CGPoint(x: margin, y: margin))
+        context.addLine(to: CGPoint(x: margin, y: height - margin))
+        context.strokePath()
 
-    // X-Axis
-    context.move(to: CGPoint(x: margin, y: margin))
-    context.addLine(to: CGPoint(x: width - margin, y: margin))
-    context.strokePath()
+        // Add Y-axis labels
+        for i in 0...5 {
+            let percentage = Double(i) * 100 / 5.0
+            let yPosition = height - margin - CGFloat(i) * 100
+            let labelAttributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 12),
+                .foregroundColor: UIColor.white
+            ]
+            NSString(string: "\(Int(percentage))%").draw(at: CGPoint(x: margin - 40, y: yPosition - 8), withAttributes: labelAttributes)
+        }
 
-    // Y-Axis
-    context.move(to: CGPoint(x: margin, y: margin))
-    context.addLine(to: CGPoint(x: margin, y: height - margin))
-    context.strokePath()
-
-    // Draw bars
-    let barWidth = (width - 2 * margin) / CGFloat(binCount)
-    let maxFrequency = bins.max() ?? 1
-    for (index, frequency) in bins.enumerated() {
-        let barHeight = CGFloat(frequency) / CGFloat(maxFrequency) * (height - 2 * margin)
-        let barRect = CGRect(
-            x: margin + CGFloat(index) * barWidth,
-            y: margin,
-            width: barWidth - 2,
-            height: barHeight
-        )
-        context.setFillColor(NSColor.systemBlue.cgColor)
-        context.fill(barRect)
-    }
-
-    // Draw x-axis labels
-    let axisAttributes: [NSAttributedString.Key: Any] = [
-        .font: NSFont.systemFont(ofSize: 12),
-        .foregroundColor: NSColor.white
-    ]
-    for i in 0...binCount {
-        let x = margin + CGFloat(i) * barWidth
-        let labelValue = minValue + Double(i) * binWidth
-        let label = String(format: "%.2f", labelValue)
-
-        if rotateLabels {
-            let labelPosition = CGPoint(x: x - 15, y: margin / 2 - 10)
-            let paragraphStyle = NSMutableParagraphStyle()
-            paragraphStyle.alignment = .center
-            let rotatedAttributes = axisAttributes.merging([.paragraphStyle: paragraphStyle]) { _, new in new }
-
-            context.saveGState()
-            context.translateBy(x: labelPosition.x, y: labelPosition.y)
-            context.rotate(by: -CGFloat.pi / 4)
-            NSString(string: label).draw(at: .zero, withAttributes: rotatedAttributes)
-            context.restoreGState()
-        } else {
-            NSString(string: label).draw(
-                at: CGPoint(x: x - 15, y: margin / 2 - 10),
-                withAttributes: axisAttributes
-            )
+        // Draw histogram bars
+        let barWidth = (width - 2 * margin) / CGFloat(binCount)
+        for (index, frequency) in bins.enumerated() {
+            let percentage = Double(frequency) / Double(totalDataCount) * 100
+            let barHeight = CGFloat(percentage / 100.0) * (height - 2 * margin)
+            let barRect = CGRect(x: margin + CGFloat(index) * barWidth, y: height - margin - barHeight, width: barWidth - 2, height: barHeight)
+            context.setFillColor(UIColor.systemBlue.cgColor)
+            context.fill(barRect)
         }
     }
 
-    image.unlockFocus()
-
-    if let imageData = image.tiffRepresentation,
-       let bitmap = NSBitmapImageRep(data: imageData),
-       let pngData = bitmap.representation(using: .png, properties: [:]) {
+    // Save the image as PNG
+    if let pngData = image.pngData() {
         do {
             try pngData.write(to: URL(fileURLWithPath: fileName))
-            print("Histogram saved to \(fileName)")
+            print("Histogram saved successfully at \(fileName)")
         } catch {
-            print("Failed to save histogram: \(error)")
+            print("Error saving histogram: \(error)")
         }
     } else {
-        print("Failed to generate image data")
+        print("Error: Failed to generate PNG data.")
     }
 }
 
@@ -792,8 +744,8 @@ private func createRefinedHistogram(
     data: [Double],
     title: String,
     fileName: String,
-    lowerDiscardPercentile: Double = 0.10, // Discard lower 10%
-    upperDiscardPercentile: Double = 0.05, // Discard upper 5%
+    lowerDiscardPercentile: Double = 0.10,
+    upperDiscardPercentile: Double = 0.05,
     rotateLabels: Bool = true
 ) {
     let width: CGFloat = 1000
@@ -807,8 +759,11 @@ private func createRefinedHistogram(
     let upperIndex = Int(Double(totalCount) * (1.0 - upperDiscardPercentile))
     let filteredData = Array(sortedData[lowerIndex..<upperIndex])
 
-    let minValue = filteredData.min() ?? 0
-    let maxValue = filteredData.max() ?? 1
+    guard let minValue = filteredData.min(), let maxValue = filteredData.max() else {
+        print("No data available for histogram.")
+        return
+    }
+
     let binCount = 15
     let binWidth = (maxValue - minValue) / Double(binCount)
     var bins = [Int](repeating: 0, count: binCount)
@@ -817,96 +772,65 @@ private func createRefinedHistogram(
         bins[binIndex] += 1
     }
 
-    let image = NSImage(size: NSSize(width: width, height: height))
-    image.lockFocus()
+    // Use UIGraphicsImageRenderer for drawing
+    let renderer = UIGraphicsImageRenderer(size: CGSize(width: width, height: height))
+    let image = renderer.image { rendererContext in
+        let context = rendererContext.cgContext
 
-    let context = NSGraphicsContext.current!.cgContext
-    context.setFillColor(NSColor.black.cgColor)
-    context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+        // Background
+        context.setFillColor(UIColor.black.cgColor)
+        context.fill(CGRect(x: 0, y: 0, width: width, height: height))
 
-    // Title
-    let titleAttributes: [NSAttributedString.Key: Any] = [
-        .font: NSFont.boldSystemFont(ofSize: 16),
-        .foregroundColor: NSColor.white
-    ]
-    NSString(string: title).draw(
-        at: CGPoint(x: margin, y: height - margin + 30),
-        withAttributes: titleAttributes
-    )
+        // Title
+        let titleAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.boldSystemFont(ofSize: 16),
+            .foregroundColor: UIColor.white
+        ]
+        NSString(string: title).draw(at: CGPoint(x: margin, y: margin - 40), withAttributes: titleAttributes)
 
-    // Axes
-    context.setStrokeColor(NSColor.white.cgColor)
-    context.setLineWidth(1.5)
+        // Axes
+        context.setStrokeColor(UIColor.white.cgColor)
+        context.setLineWidth(1.5)
 
-    // X-Axis
-    context.move(to: CGPoint(x: margin, y: margin))
-    context.addLine(to: CGPoint(x: width - margin, y: margin))
-    context.strokePath()
+        // X-Axis
+        context.move(to: CGPoint(x: margin, y: height - margin))
+        context.addLine(to: CGPoint(x: width - margin, y: height - margin))
+        context.strokePath()
 
-    // Y-Axis
-    context.move(to: CGPoint(x: margin, y: margin))
-    context.addLine(to: CGPoint(x: margin, y: height - margin))
-    context.strokePath()
+        // Y-Axis
+        context.move(to: CGPoint(x: margin, y: margin))
+        context.addLine(to: CGPoint(x: margin, y: height - margin))
+        context.strokePath()
 
-    // Draw bars
-    let barWidth = (width - 2 * margin) / CGFloat(binCount)
-    let maxFrequency = bins.max() ?? 1
-    for (index, frequency) in bins.enumerated() {
-        let barHeight = CGFloat(frequency) / CGFloat(maxFrequency) * (height - 2 * margin)
-        let barRect = CGRect(
-            x: margin + CGFloat(index) * barWidth,
-            y: margin,
-            width: barWidth - 2,
-            height: barHeight
-        )
-        context.setFillColor(NSColor.systemBlue.cgColor)
-        context.fill(barRect)
-    }
-
-    // Draw x-axis labels
-    let axisAttributes: [NSAttributedString.Key: Any] = [
-        .font: NSFont.systemFont(ofSize: 12),
-        .foregroundColor: NSColor.white
-    ]
-    for i in 0...binCount {
-        let x = margin + CGFloat(i) * barWidth
-        let labelValue = minValue + Double(i) * binWidth
-        let formattedLabel = NumberFormatter.localizedString(
-            from: NSNumber(value: labelValue),
-            number: .decimal
-        )
-
-        if rotateLabels {
-            let labelPosition = CGPoint(x: x - 10, y: margin - 40) // Adjust position upward
-            context.saveGState()
-            context.translateBy(x: labelPosition.x, y: labelPosition.y)
-            context.rotate(by: -CGFloat.pi / 4) // Rotate 45°
-            NSString(string: formattedLabel).draw(at: .zero, withAttributes: axisAttributes)
-            context.restoreGState()
-        } else {
-            NSString(string: formattedLabel).draw(
-                at: CGPoint(x: x - 15, y: margin / 2),
-                withAttributes: axisAttributes
+        // Draw bars
+        let barWidth = (width - 2 * margin) / CGFloat(binCount)
+        let maxFrequency = bins.max() ?? 1
+        for (index, frequency) in bins.enumerated() {
+            let barHeight = CGFloat(frequency) / CGFloat(maxFrequency) * (height - 2 * margin)
+            let barRect = CGRect(
+                x: margin + CGFloat(index) * barWidth,
+                y: height - margin - barHeight,
+                width: barWidth - 2,
+                height: barHeight
             )
+            context.setFillColor(UIColor.systemBlue.cgColor)
+            context.fill(barRect)
         }
     }
 
-    image.unlockFocus()
-
-    if let imageData = image.tiffRepresentation,
-       let bitmap = NSBitmapImageRep(data: imageData),
-       let pngData = bitmap.representation(using: .png, properties: [:]) {
+    // Save the image
+    if let pngData = image.pngData() {
         do {
             try pngData.write(to: URL(fileURLWithPath: fileName))
             print("Histogram saved to \(fileName)")
         } catch {
-            print("Failed to save histogram: \(error)")
+            print("Error saving histogram: \(error)")
         }
     } else {
-        print("Failed to generate image data")
+        print("Failed to generate PNG data.")
     }
 }
-
+ 
 private func createRefinedHistogramWithFilters(
     data: [Double],
     title: String,
@@ -966,241 +890,218 @@ private func createRefinedHistogramWithFilters(
     let maxFrequency = bins.max() ?? 1
     let maxPercentage = Double(maxFrequency) / Double(finalData.count) * 100.0
 
-    // Generate the histogram
-    let image = NSImage(size: NSSize(width: width, height: height))
-    image.lockFocus()
+    // Use UIGraphicsImageRenderer for drawing
+    let renderer = UIGraphicsImageRenderer(size: CGSize(width: width, height: height))
+    let image = renderer.image { rendererContext in
+        let context = rendererContext.cgContext
 
-    let context = NSGraphicsContext.current!.cgContext
-    context.setFillColor(NSColor.black.cgColor)
-    context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+        // Background
+        context.setFillColor(UIColor.black.cgColor)
+        context.fill(CGRect(x: 0, y: 0, width: width, height: height))
 
-    // Title
-    let titleAttributes: [NSAttributedString.Key: Any] = [
-        .font: NSFont.boldSystemFont(ofSize: 16),
-        .foregroundColor: NSColor.white
-    ]
-    NSString(string: title).draw(
-        at: CGPoint(x: margin, y: height - margin + 20),
-        withAttributes: titleAttributes
-    )
-
-    // Draw axes
-    context.setStrokeColor(NSColor.white.cgColor)
-    context.setLineWidth(1.5)
-    context.move(to: CGPoint(x: margin, y: margin))
-    context.addLine(to: CGPoint(x: width - margin, y: margin)) // X-axis
-    context.strokePath()
-    context.move(to: CGPoint(x: margin, y: margin))
-    context.addLine(to: CGPoint(x: margin, y: height - margin)) // Y-axis
-    context.strokePath()
-
-    // Draw y-axis percentage labels
-    let yAxisStep = 10 // Steps in percentages (e.g., 0%, 10%, 20%)
-    let labelAttributes: [NSAttributedString.Key: Any] = [
-        .font: NSFont.systemFont(ofSize: 10),
-        .foregroundColor: NSColor.white
-    ]
-    for percentage in stride(from: 0, through: Int(maxPercentage), by: yAxisStep) {
-        let yPosition = margin + CGFloat(percentage) / 100.0 * (height - 2 * margin)
-        let label = "\(percentage)%"
-        NSString(string: label).draw(
-            at: CGPoint(x: margin - 40, y: yPosition - 8), // Align labels with the ticks
-            withAttributes: labelAttributes
+        // Title
+        let titleAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.boldSystemFont(ofSize: 16),
+            .foregroundColor: UIColor.white
+        ]
+        NSString(string: title).draw(
+            at: CGPoint(x: margin, y: margin - 40),
+            withAttributes: titleAttributes
         )
 
-        // Draw gridline
-        context.setStrokeColor(NSColor.gray.cgColor)
-        context.setLineWidth(0.5)
-        context.move(to: CGPoint(x: margin, y: yPosition))
-        context.addLine(to: CGPoint(x: width - margin, y: yPosition))
+        // Axes
+        context.setStrokeColor(UIColor.white.cgColor)
+        context.setLineWidth(1.5)
+
+        // X-Axis
+        context.move(to: CGPoint(x: margin, y: height - margin))
+        context.addLine(to: CGPoint(x: width - margin, y: height - margin))
         context.strokePath()
+
+        // Y-Axis
+        context.move(to: CGPoint(x: margin, y: margin))
+        context.addLine(to: CGPoint(x: margin, y: height - margin))
+        context.strokePath()
+
+        // Draw y-axis percentage labels
+        let yAxisStep = 10 // Steps in percentages (e.g., 0%, 10%, 20%)
+        let labelAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 10),
+            .foregroundColor: UIColor.white
+        ]
+        for percentage in stride(from: 0, through: Int(maxPercentage), by: yAxisStep) {
+            let yPosition = height - margin - CGFloat(percentage) / 100.0 * (height - 2 * margin)
+            let label = "\(percentage)%"
+            NSString(string: label).draw(
+                at: CGPoint(x: margin - 50, y: yPosition - 8), // Align labels with the ticks
+                withAttributes: labelAttributes
+            )
+
+            // Draw gridline
+            context.setStrokeColor(UIColor.gray.cgColor)
+            context.setLineWidth(0.5)
+            context.move(to: CGPoint(x: margin, y: yPosition))
+            context.addLine(to: CGPoint(x: width - margin, y: yPosition))
+            context.strokePath()
+        }
+
+        // Draw bars
+        let barWidth = (width - 2 * margin) / CGFloat(binCount)
+        for (index, frequency) in bins.enumerated() {
+            let percentage = Double(frequency) / Double(finalData.count) * 100.0
+            let barHeight = CGFloat(percentage / 100.0) * (height - 2 * margin)
+            let barRect = CGRect(
+                x: margin + CGFloat(index) * barWidth,
+                y: height - margin - barHeight,
+                width: barWidth - 2,
+                height: barHeight
+            )
+            context.setFillColor(UIColor.systemBlue.cgColor)
+            context.fill(barRect)
+        }
+
+        // Draw x-axis labels
+        for i in 0...binCount {
+            let x = margin + CGFloat(i) * barWidth
+            let labelValue = minValue + Double(i) * binWidth
+            let formattedLabel = String(format: "%.2f", labelValue)
+
+            if rotateLabels {
+                let labelPosition = CGPoint(x: x - 15, y: height - margin + 20)
+                context.saveGState()
+                context.translateBy(x: labelPosition.x, y: labelPosition.y)
+                context.rotate(by: -CGFloat.pi / 4)
+                NSString(string: formattedLabel).draw(at: .zero, withAttributes: labelAttributes)
+                context.restoreGState()
+            } else {
+                NSString(string: formattedLabel).draw(
+                    at: CGPoint(x: x - 20, y: height - margin + 10),
+                    withAttributes: labelAttributes
+                )
+            }
+        }
     }
 
-    // Draw bars
-    let barWidth = (width - 2 * margin) / CGFloat(binCount)
-    for (index, frequency) in bins.enumerated() {
-        let percentage = Double(frequency) / Double(finalData.count) * 100.0
-        let barHeight = CGFloat(percentage / 100.0) * (height - 2 * margin)
-        let barRect = CGRect(x: margin + CGFloat(index) * barWidth, y: margin, width: barWidth - 2, height: barHeight)
-        context.setFillColor(NSColor.systemBlue.cgColor)
-        context.fill(barRect)
-    }
-
-    // Rotate and format x-axis labels with thousands separators
-    for i in 0...binCount {
-        let x = margin + CGFloat(i) * barWidth
-        let labelValue = minValue + Double(i) * binWidth
-        let label = NumberFormatter.localizedString(from: NSNumber(value: labelValue), number: .decimal)
-
-        context.saveGState()
-        let labelPosition = CGPoint(x: x - 10, y: margin - 30) // Adjust label position
-        context.translateBy(x: labelPosition.x, y: labelPosition.y)
-        context.rotate(by: -CGFloat.pi / 4) // Rotate by 45°
-        NSString(string: label).draw(at: .zero, withAttributes: [
-            .font: NSFont.systemFont(ofSize: 10),
-            .foregroundColor: NSColor.white
-        ])
-        context.restoreGState()
-    }
-
-    image.unlockFocus()
-
-    if let imageData = image.tiffRepresentation,
-       let bitmap = NSBitmapImageRep(data: imageData),
-       let pngData = bitmap.representation(using: .png, properties: [:]) {
+    // Save the image
+    if let pngData = image.pngData() {
         do {
             try pngData.write(to: URL(fileURLWithPath: fileName))
             print("Histogram saved to \(fileName)")
         } catch {
-            print("Failed to save histogram: \(error)")
+            print("Error saving histogram: \(error)")
         }
     } else {
-        print("Failed to generate image data for \(title).")
+        print("Failed to generate PNG data.")
     }
 }
  
 private func generatePDFData(results: [SimulationData]) -> Data? {
     print("Starting PDF generation...")
 
-    let pdfData = NSMutableData()
+    // PDF page size
     let pageWidth: CGFloat = 1400
     let pageHeight: CGFloat = 792
     let pageRect = CGRect(x: 0, y: 0, width: pageWidth, height: pageHeight)
-    var mediaBox = pageRect
 
-    guard let consumer = CGDataConsumer(data: pdfData),
-          let pdfContext = CGContext(consumer: consumer, mediaBox: &mediaBox, nil) else {
-        print("Error creating PDF context")
-        return nil
-    }
+    // Create a UIGraphicsPDFRenderer
+    let pdfRenderer = UIGraphicsPDFRenderer(bounds: pageRect)
+    let pdfData = pdfRenderer.pdfData { context in
+        var currentY: CGFloat = 50
+        let headerFont = UIFont.boldSystemFont(ofSize: 10)
+        let rowFont = UIFont.systemFont(ofSize: 10)
 
-    pdfContext.beginPDFPage(nil)
+        // Headers
+        let headers = ["Week", "Cycle Phase", "Starting BTC", "BTC Growth", "Net BTC Holdings",
+                       "BTC Price USD", "BTC Price EUR", "Portfolio Value EUR", "Contribution EUR",
+                       "Contribution Fee EUR", "Net Contribution BTC", "Withdrawal EUR",
+                       "Portfolio Pre-Withdrawal EUR"]
 
-    NSGraphicsContext.saveGraphicsState()
-    let graphicsContext = NSGraphicsContext(cgContext: pdfContext, flipped: false)
-    NSGraphicsContext.current = graphicsContext
+        let columnWidth: CGFloat = 100
+        let columnPadding: CGFloat = 10
+        let rowHeight: CGFloat = 25
+        let initialX: CGFloat = 50
 
-    // Headers
-    let headers = ["Week", "Cycle Phase", "Starting BTC", "BTC Growth", "Net BTC Holdings",
-                   "BTC Price USD", "BTC Price EUR", "Portfolio Value EUR", "Contribution EUR",
-                   "Contribution Fee EUR", "Net Contribution BTC", "Withdrawal EUR",
-                   "Portfolio Pre-Withdrawal EUR"]
-
-    let headerFont = NSFont.boldSystemFont(ofSize: 10)
-    let headerAttributes: [NSAttributedString.Key: Any] = [
-        .font: headerFont,
-        .foregroundColor: NSColor.black
-    ]
-
-    let rowFont = NSFont.systemFont(ofSize: 10)
-    let rowAttributes: [NSAttributedString.Key: Any] = [
-        .font: rowFont,
-        .foregroundColor: NSColor.black
-    ]
-
-    // Layout dimensions
-    let initialX: CGFloat = 50
-    let initialY: CGFloat = 750
-    let rowHeight: CGFloat = 25 // Increased from 20 to 25 for more space
-    let columnWidth: CGFloat = 100
-    let columnPadding: CGFloat = 10
-    var currentY = initialY
-
-    print("Drawing headers...")
-    for (index, header) in headers.enumerated() {
-        let xPosition = initialX + CGFloat(index) * (columnWidth + columnPadding)
-        let headerRect = CGRect(x: xPosition, y: currentY, width: columnWidth, height: rowHeight)
-        let headerText = NSString(string: header)
-
-        // Draw header text centered in its column
-        let paragraphStyle = NSMutableParagraphStyle()
-        paragraphStyle.alignment = .center
-        var centeredAttributes = headerAttributes
-        centeredAttributes[.paragraphStyle] = paragraphStyle
-
-        headerText.draw(in: headerRect, withAttributes: centeredAttributes)
-    }
-
-    // Add space between the headers and the first row
-    currentY -= rowHeight + 15
-
-    print("Drawing rows...")
-    for result in results {
-        let rowData = [
-            "\(result.week)",
-            result.startingBTC.formattedBTC(),
-            result.netBTCHoldings.formattedBTC(),
-            result.btcPriceUSD.formattedWithSeparator(),
-            result.btcPriceEUR.formattedWithSeparator(),
-            result.portfolioValueEUR.formattedWithSeparator(),
-            result.contributionEUR.formattedWithSeparator(),
-            result.contributionFeeEUR.formattedWithSeparator(),
-            result.netContributionBTC.formattedBTC(),
-            result.withdrawalEUR.formattedWithSeparator()
-        ]
-
-        for (index, columnData) in rowData.enumerated() {
-            let xPosition = initialX + CGFloat(index) * (columnWidth + columnPadding)
-            let rowRect = CGRect(x: xPosition, y: currentY, width: columnWidth, height: rowHeight)
-            let rowText = NSString(string: columnData)
-
-            // Draw row data centered in its column
-            let paragraphStyle = NSMutableParagraphStyle()
-            paragraphStyle.alignment = .center
-            var centeredAttributes = rowAttributes
-            centeredAttributes[.paragraphStyle] = paragraphStyle
-
-            rowText.draw(in: rowRect, withAttributes: centeredAttributes)
+        func drawHeader() {
+            for (index, header) in headers.enumerated() {
+                let xPosition = initialX + CGFloat(index) * (columnWidth + columnPadding)
+                let headerRect = CGRect(x: xPosition, y: currentY, width: columnWidth, height: rowHeight)
+                let paragraphStyle = NSMutableParagraphStyle()
+                paragraphStyle.alignment = .center
+                let headerAttributes: [NSAttributedString.Key: Any] = [
+                    .font: headerFont,
+                    .foregroundColor: UIColor.black,
+                    .paragraphStyle: paragraphStyle
+                ]
+                NSString(string: header).draw(in: headerRect, withAttributes: headerAttributes)
+            }
+            currentY += rowHeight + 5
         }
 
-        currentY -= rowHeight
+        func drawRow(for result: SimulationData) {
+            let rowData = [
+                "\(result.week)",
+                result.startingBTC.formattedBTC(),
+                result.netBTCHoldings.formattedBTC(),
+                result.btcPriceUSD.formattedWithSeparator(),
+                result.btcPriceEUR.formattedWithSeparator(),
+                result.portfolioValueEUR.formattedWithSeparator(),
+                result.contributionEUR.formattedWithSeparator(),
+                result.contributionFeeEUR.formattedWithSeparator(),
+                result.netContributionBTC.formattedBTC(),
+                result.withdrawalEUR.formattedWithSeparator()
+            ]
+            for (index, columnData) in rowData.enumerated() {
+                let xPosition = initialX + CGFloat(index) * (columnWidth + columnPadding)
+                let rowRect = CGRect(x: xPosition, y: currentY, width: columnWidth, height: rowHeight)
+                let paragraphStyle = NSMutableParagraphStyle()
+                paragraphStyle.alignment = .center
+                let rowAttributes: [NSAttributedString.Key: Any] = [
+                    .font: rowFont,
+                    .foregroundColor: UIColor.black,
+                    .paragraphStyle: paragraphStyle
+                ]
+                NSString(string: columnData).draw(in: rowRect, withAttributes: rowAttributes)
+            }
+            currentY += rowHeight
+        }
 
-        if currentY < 50 {
-            print("Adding new page...")
-            pdfContext.endPDFPage()
-            pdfContext.beginPDFPage(nil)
-            currentY = initialY
+        // Start PDF page
+        context.beginPage()
+
+        // Draw headers
+        drawHeader()
+
+        // Draw rows
+        for result in results {
+            if currentY + rowHeight > pageHeight - 50 {
+                context.beginPage() // Start a new page if we're running out of space
+                currentY = 50
+                drawHeader() // Redraw headers on the new page
+            }
+            drawRow(for: result)
         }
     }
-
-    NSGraphicsContext.restoreGraphicsState()
-    pdfContext.endPDFPage()
-    pdfContext.closePDF()
 
     print("PDF generation complete.")
-    return pdfData as Data
+    return pdfData
 }
 
-private func createPDFPage(content: NSAttributedString, pageRect: CGRect, margin: CGFloat) -> PDFPage? {
-    let pdfData = NSMutableData()
-    var mediaBox = pageRect // Define the page size
-    guard let consumer = CGDataConsumer(data: pdfData),
-          let pdfContext = CGContext(consumer: consumer, mediaBox: &mediaBox, nil) else {
-        print("Error: Could not create PDF context")
-        return nil
+private func createPDFPage(content: NSAttributedString, pageRect: CGRect, margin: CGFloat) -> Data? {
+    let renderer = UIGraphicsPDFRenderer(bounds: pageRect)
+    let pdfData = renderer.pdfData { context in
+        context.beginPage()
+
+        // Define the drawing area with proper margins
+        let textBounds = CGRect(
+            x: margin,
+            y: margin,
+            width: pageRect.width - 2 * margin,
+            height: pageRect.height - 2 * margin
+        )
+
+        // Draw the content in the specified area
+        content.draw(with: textBounds, options: .usesLineFragmentOrigin, context: nil)
     }
 
-    pdfContext.beginPDFPage(nil)
-
-    // Create the drawing area with proper margins
-    let textBounds = CGRect(
-        x: margin,
-        y: margin,
-        width: pageRect.width - 2 * margin,
-        height: pageRect.height - 2 * margin
-    )
-
-    // Set the context for proper text rendering
-    NSGraphicsContext.saveGraphicsState()
-    NSGraphicsContext.current = NSGraphicsContext(cgContext: pdfContext, flipped: false)
-
-    // Draw the content in the specified area
-    content.draw(with: textBounds, options: .usesLineFragmentOrigin)
-
-    // Restore graphics state
-    NSGraphicsContext.restoreGraphicsState()
-    pdfContext.endPDFPage()
-    pdfContext.closePDF()
-
-    return PDFDocument(data: pdfData as Data)?.page(at: 0)
+    return pdfData
 }
