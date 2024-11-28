@@ -93,10 +93,11 @@ struct ContentView: View {
     @State private var isHeaderWidened: Bool = false // State to toggle header width
     @State private var volatilityEnabled: Bool = false // Default to enabled
     @State private var finalWeek90thPercentile: Double = 0.0
+    @State private var isSimulationRun: Bool = false // Tracks if simulation has been run
+    @State private var scrollToBottom: Bool = false // Triggers scroll to bottom
     
     // Define column headers and keys for dynamic access
     let columns: [(String, PartialKeyPath<SimulationData>)] = [
-        ("Week", \SimulationData.week),
         ("Starting BTC (BTC)", \SimulationData.startingBTC),
         ("Net BTC Holdings (BTC)", \SimulationData.netBTCHoldings),
         ("BTC Price USD", \SimulationData.btcPriceUSD),
@@ -109,108 +110,179 @@ struct ContentView: View {
     ]
 
     var body: some View {
-        ZStack {
-            // Set global background colour
-            Color.black
-                .ignoresSafeArea()
-            
-            VStack(spacing: 10) {
-                // Input Fields
+            ZStack {
+                Color.black.ignoresSafeArea()
+
                 VStack(spacing: 10) {
-                    HStack {
-                        Text("BTC Annual CAGR (%):")
-                            .foregroundColor(.white)
-                        TextField("Enter CAGR", text: .constant("40"))
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .frame(width: 150)
-                            .background(Color.white)
-                            .foregroundColor(.black)
-                    }
+                    // Conditional Logic: Inputs or Results
+                    if !isSimulationRun {
+                        // Input Fields and Run Simulation Button
+                        VStack(spacing: 10) {
+                            Text("Simulation Inputs")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                                .padding()
 
-                    HStack {
-                        Text("BTC Annual Volatility (%):")
-                            .foregroundColor(.white)
-                        TextField("Enter Volatility", text: .constant("80"))
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .frame(width: 150)
-                            .background(Color.white)
-                            .foregroundColor(.black)
-                    }
+                            VStack(spacing: 5) {
+                                InputField(
+                                    title: "BTC Annual CAGR (%)",
+                                    text: $inputManager.annualCAGR
+                                )
+                                InputField(
+                                    title: "BTC Annual Volatility (%)",
+                                    text: $inputManager.annualVolatility
+                                )
+                                InputField(
+                                    title: "Number of Iterations",
+                                    text: $inputManager.iterations
+                                )
+                            }
 
-                    HStack {
-                        Text("Number of Iterations:")
-                            .foregroundColor(.white)
-                        TextField("Enter Iterations", text: .constant("1000"))
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .frame(width: 150)
-                            .background(Color.white)
-                            .foregroundColor(.black)
-                    }
-
-                    // Run Simulation Button
-                    Button(action: {
-                        runSimulation()
-                    }) {
-                        Text("Run Simulation")
-                            .foregroundColor(.white)
-                            .padding()
-                            .background(Color.blue)
-                            .cornerRadius(8)
-                    }
-                    .padding()
-
-                    // Loading Indicator
-                    if isLoading {
-                        ProgressView("Simulating...")
-                            .padding()
-                            .foregroundColor(.white)
-                    }
-
-                    // Results Section
-                    if !monteCarloResults.isEmpty {
-                        Text("Monte Carlo Simulation Results")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .padding()
-
-                        ScrollView {
-                            VStack(alignment: .leading, spacing: 10) {
-                                ForEach(columns, id: \.0) { column in
-                                    VStack(alignment: .leading) {
-                                        Text(column.0)
-                                            .font(.headline)
-                                            .foregroundColor(.white)
-                                            .padding(.bottom, 5)
-                                        
-                                        ForEach(monteCarloResults, id: \.id) { result in
-                                            let value = getValue(item: result, keyPath: column.1)
-                                            Text(value)
-                                                .font(.body)
-                                                .padding(.vertical, 5)
-                                                .frame(maxWidth: .infinity, alignment: .leading)
-                                                .background(Color.gray.opacity(0.1))
-                                                .cornerRadius(5)
-                                                .foregroundColor(.white)
-                                        }
-                                    }
-                                    .padding()
-                                    .background(Color.black)
-                                    .cornerRadius(8)
-                                    .shadow(radius: 1)
+                            Button(action: {
+                                isLoading = true
+                                runSimulation()
+                            }) {
+                                if isLoading {
+                                    ProgressView("Running...")
+                                        .padding()
+                                        .foregroundColor(.white)
+                                } else {
+                                    Text("Run Simulation")
+                                        .foregroundColor(.white)
+                                        .padding()
+                                        .background(Color.blue)
+                                        .cornerRadius(8)
                                 }
                             }
+                            .disabled(isLoading)
                             .padding()
                         }
-                        .background(Color.black.ignoresSafeArea()) // Consistent scroll background
-                        .scrollIndicators(.visible) // Ensure scroll grab handle is visible
+                        .padding()
                     } else {
-                        Text("No data available. Run a simulation to display results.")
-                            .foregroundColor(.gray)
-                            .padding()
+                        // Back Button and Results Section
+                        HStack {
+                            Button(action: {
+                                isSimulationRun = false
+                                monteCarloResults = []
+                            }) {
+                                Image(systemName: "chevron.left")
+                                    .foregroundColor(.blue)
+                                    .padding()
+                            }
+                            Spacer()
+                            Button(action: { scrollToBottom = true }) {
+                                Image(systemName: "arrow.down")
+                                    .foregroundColor(.blue)
+                                    .padding()
+                            }
+                        }
+                        .padding()
+
+                        // Results Table
+                        ResultsTable(
+                            monteCarloResults: monteCarloResults,
+                            columns: columns,
+                            scrollToBottom: $scrollToBottom,
+                            getValue: { item, keyPath in
+                                if let value = item[keyPath: keyPath] as? Double {
+                                    return String(format: "%.8f", value)
+                                } else if let value = item[keyPath: keyPath] as? Int {
+                                    return "\(value)"
+                                } else {
+                                    return ""
+                                }
+                            }
+                        )
                     }
                 }
-                .padding()
-                .background(Color("LaunchBackground"))
+            }
+        }
+            
+    // Input Field Component
+    struct InputField: View {
+        let title: String
+        @Binding var text: String
+
+        var body: some View {
+            HStack {
+                Text(title)
+                    .foregroundColor(.white)
+                    .frame(width: 200, alignment: .leading)
+                TextField("Enter \(title)", text: $text)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .background(Color.white)
+                    .cornerRadius(5)
+                    .frame(width: 150)
+            }
+        }
+    }
+
+    struct ResultsTable: View {
+        let monteCarloResults: [SimulationData]
+        let columns: [(String, PartialKeyPath<SimulationData>)]
+        @State private var currentColumnIndex: Int = 4 // Start with Portfolio Balance column
+        @Binding var scrollToBottom: Bool
+        let getValue: (SimulationData, PartialKeyPath<SimulationData>) -> String
+
+        var body: some View {
+            GeometryReader { geometry in
+                VStack(spacing: 0) {
+                    // Sticky Headers
+                    HStack(spacing: 0) {
+                        Text("Week")
+                            .font(.headline)
+                            .frame(width: 60) // Reduced width for the "Week" column
+                            .padding()
+                            .background(Color.black.opacity(0.9))
+                            .foregroundColor(.white)
+
+                        Text(columns[currentColumnIndex].0) // Current column name
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.black.opacity(0.9))
+                            .foregroundColor(.white)
+                    }
+
+                    // Data Rows
+                    TabView(selection: $currentColumnIndex) {
+                        ForEach(columns.indices, id: \.self) { index in
+                            ScrollViewReader { proxy in
+                                ScrollView(.vertical) {
+                                    VStack(spacing: 0) {
+                                        ForEach(monteCarloResults, id: \.id) { result in
+                                            HStack(spacing: 0) {
+                                                // Week Column
+                                                Text("\(result.week)")
+                                                    .frame(width: 60) // Same reduced width
+                                                    .padding()
+                                                    .background(Color.black)
+                                                    .foregroundColor(.white)
+
+                                                // Current Data Column
+                                                Text(getValue(result, columns[index].1))
+                                                    .frame(maxWidth: .infinity)
+                                                    .padding()
+                                                    .background(Color.black)
+                                                    .foregroundColor(.white)
+                                            }
+                                        }
+                                    }
+                                    .onChange(of: scrollToBottom) { _, _ in
+                                        if scrollToBottom, let lastResult = monteCarloResults.last {
+                                            withAnimation {
+                                                proxy.scrollTo(lastResult.id, anchor: .bottom)
+                                            }
+                                            scrollToBottom = false
+                                        }
+                                    }
+                                }
+                            }
+                            .tag(index) // Tag to identify the current page
+                        }
+                    }
+                    .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never)) // Enable horizontal swipe
+                }
             }
         }
     }
@@ -229,22 +301,22 @@ struct ContentView: View {
             let weeklyVolatility = annualVolatility / sqrt(52.0)
             let exchangeRateEURUSD = 1.06
             let totalWeeks = 1040
-            
+
             guard let totalIterations = inputManager.getParsedIterations(), totalIterations > 0 else {
                 DispatchQueue.main.async {
                     self.isLoading = false
+                    print("Invalid number of iterations.")
                 }
-                print("Invalid number of iterations.")
                 return
             }
-            
+
             // Store all results
             var allResults: [[SimulationData]] = []
-            
+
             // Run simulation for the specified number of iterations
             for _ in 1...totalIterations {
                 var results: [SimulationData] = []
-                
+
                 // Week 1 (Hardcoded)
                 results.append(SimulationData(
                     id: UUID(),
@@ -259,7 +331,7 @@ struct ContentView: View {
                     netContributionBTC: 0.00527613,
                     withdrawalEUR: 0.0
                 ))
-                
+
                 // Week 2 (Hardcoded)
                 results.append(SimulationData(
                     id: UUID(),
@@ -274,7 +346,7 @@ struct ContentView: View {
                     netContributionBTC: 0.00069130,
                     withdrawalEUR: 0.0
                 ))
-                
+
                 // Week 3 (Hardcoded)
                 results.append(SimulationData(
                     id: UUID(),
@@ -289,48 +361,37 @@ struct ContentView: View {
                     netContributionBTC: 0.00078105,
                     withdrawalEUR: 0.0
                 ))
-                
-                // Cumulative trackers
-                var cumulativeBTC: Double = 0.00608283 // Starting BTC for week 3
-                var cumulativeContributionsEUR: Double = 508.00
-                
+
                 // Simulation loop (week 4 onwards)
                 for week in 4...totalWeeks {
-                    let previous = results[week - 2] // Reference to the previous week's data
-                    
+                    let previous = results[week - 2]
+
                     // Generate random shock
                     let randomShock = randomNormal(mean: 0, standardDeviation: weeklyVolatility)
                     let adjustedGrowthFactor = 1 + weeklyDeterministicGrowth + randomShock
-                    
+
                     // Update BTC price
                     var btcPriceUSD = previous.btcPriceUSD * adjustedGrowthFactor
-                    
-                    // Rare crash simulation
-                    if Double.random(in: 0..<1) < 0.005 { // 0.5% crash probability
-                        btcPriceUSD *= (1 - Double.random(in: 0.1...0.3)) // Moderate crash severity
+                    if Double.random(in: 0..<1) < 0.005 { // Rare crash simulation
+                        btcPriceUSD *= (1 - Double.random(in: 0.1...0.3))
                     }
-                    
-                    // Apply price floor (adjust as needed)
-                    btcPriceUSD = max(btcPriceUSD, 1_000.0)
+                    btcPriceUSD = max(btcPriceUSD, 1_000.0) // Apply price floor
+
                     let btcPriceEUR = btcPriceUSD / exchangeRateEURUSD
-                    
+
                     // Contribution logic
-                    let contributionEUR: Double = week <= 52 ? 60.0 : 100.0
+                    let contributionEUR = week <= 52 ? 60.0 : 100.0
                     let contributionFeeEUR = contributionEUR * 0.0035
                     let netContributionBTC = (contributionEUR - contributionFeeEUR) / btcPriceEUR
-                    cumulativeBTC += netContributionBTC
-                    cumulativeContributionsEUR += contributionEUR
-                    
+
                     // Withdrawal logic
-                    let withdrawalEUR: Double = previous.portfolioValueEUR > 30_000 ? 100.0 : 0.0
+                    let withdrawalEUR = previous.portfolioValueEUR > 30_000 ? 100.0 : 0.0
                     let withdrawalBTC = withdrawalEUR / btcPriceEUR
-                    cumulativeBTC -= withdrawalBTC
-                    
+
                     // Update net BTC holdings and portfolio value
                     let netBTCHoldings = max(0, previous.netBTCHoldings + netContributionBTC - withdrawalBTC)
                     let portfolioValueEUR = netBTCHoldings * btcPriceEUR
-                    
-                    // Append simulation data for the current week
+
                     results.append(SimulationData(
                         id: UUID(),
                         week: week,
@@ -345,21 +406,26 @@ struct ContentView: View {
                         withdrawalEUR: withdrawalEUR
                     ))
                 }
-                
                 allResults.append(results)
             }
-            
-            // Update UI
+
+            // Update UI on main thread
             DispatchQueue.main.async {
                 self.isLoading = false
                 self.monteCarloResults = allResults.last ?? []
-                
-                // Process and generate histogram
-                self.processAllResults(allResults) // Optional if you process stats here
-                self.generateHistogramForResults(
-                    results: self.monteCarloResults,
-                    filePath: "/Users/conor/Desktop/portfolio_growth_histogram.png"
-                )
+                self.isSimulationRun = true
+
+                print("Simulation complete. Total iterations: \(allResults.count)")
+                print("Example result: \(self.monteCarloResults.first ?? SimulationData.placeholder)")
+
+                // Process histograms on a background thread
+                DispatchQueue.global(qos: .background).async {
+                    self.processAllResults(allResults)
+                    self.generateHistogramForResults(
+                        results: self.monteCarloResults,
+                        filePath: "/Users/conor/Desktop/PS Batch/portfolio_growth_histogram.png"
+                    )
+                }
             }
         }
     }
@@ -570,25 +636,16 @@ struct ContentView: View {
             )
         }
     
-    // Helper function to get value from keyPath and format it as String
-    private func getValue(item: SimulationData, keyPath: PartialKeyPath<SimulationData>) -> String {
-        if let value = item[keyPath: keyPath] as? Int {
-            return "\(value)"
-        } else if let value = item[keyPath: keyPath] as? Double {
-            // Format doubles appropriately
-            if keyPath == \SimulationData.startingBTC ||
-                keyPath == \SimulationData.netBTCHoldings ||
-                keyPath == \SimulationData.netContributionBTC {
-                return value.formattedBTC()
+    // Redefine getValue inside ResultsTable
+        private func getValue(item: SimulationData, keyPath: PartialKeyPath<SimulationData>) -> String {
+            if let value = item[keyPath: keyPath] as? Double {
+                return String(format: "%.8f", value)
+            } else if let value = item[keyPath: keyPath] as? Int {
+                return "\(value)"
             } else {
-                return value.formattedWithSeparator()
+                return ""
             }
-        } else if let value = item[keyPath: keyPath] as? String {
-            return value
-        } else {
-            return ""
         }
-    }
     
     func realTimeFormattedBinding(for keyPath: ReferenceWritableKeyPath<PersistentInputManager, String>) -> Binding<String> {
         Binding<String>(
