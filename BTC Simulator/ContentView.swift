@@ -73,6 +73,44 @@ class PersistentInputManager: ObservableObject {
     }
 }
 
+extension Double {
+    /// Formats the number as currency with thousands separator and 2 decimal places
+    func formattedCurrency() -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.maximumFractionDigits = 2 // Limit to 2 decimal places
+        formatter.minimumFractionDigits = 2
+        formatter.usesGroupingSeparator = true // Use thousands separator
+        formatter.groupingSize = 3
+        return formatter.string(from: NSNumber(value: self)) ?? "\(self)"
+    }
+
+    /// Formats the number for BTC with up to 8 decimal places
+    func formattedBTC() -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.maximumFractionDigits = 8 // Limit to 8 decimal places for BTC
+        formatter.minimumFractionDigits = 0
+        formatter.usesGroupingSeparator = true
+        return formatter.string(from: NSNumber(value: self)) ?? "\(self)"
+    }
+}
+
+extension View {
+    @ViewBuilder
+    func syncWithScroll<T>(of value: T, perform action: @escaping (T) -> Void) -> some View where T: Equatable {
+        if #available(iOS 17, *) {
+            self.onChange(of: value) { _, newValue in
+                action(newValue)
+            }
+        } else {
+            self.onChange(of: value) { newValue in
+                action(newValue)
+            }
+        }
+    }
+}
+
 struct ContentView: View {
     @State private var monteCarloResults: [SimulationData] = [] // Holds simulation results
     @State private var iterations: String = "1000" // Number of iterations
@@ -95,6 +133,7 @@ struct ContentView: View {
     @State private var finalWeek90thPercentile: Double = 0.0
     @State private var isSimulationRun: Bool = false // Tracks if simulation has been run
     @State private var scrollToBottom: Bool = false // Triggers scroll to bottom
+    @State private var dataColumnsOffset: CGPoint = .zero // Add this state variable
     
     // Define column headers and keys for dynamic access
     let columns: [(String, PartialKeyPath<SimulationData>)] = [
@@ -108,101 +147,47 @@ struct ContentView: View {
         ("Net Contribution BTC", \SimulationData.netContributionBTC),
         ("Withdrawal EUR", \SimulationData.withdrawalEUR)
     ]
-
+    
     var body: some View {
-            ZStack {
-                Color.black.ignoresSafeArea()
+        ZStack {
+            Color.black.ignoresSafeArea()
 
-                VStack(spacing: 10) {
-                    // Conditional Logic: Inputs or Results
-                    if !isSimulationRun {
-                        // Input Fields and Run Simulation Button
-                        VStack(spacing: 10) {
-                            Text("Simulation Inputs")
-                                .font(.headline)
+            VStack(spacing: 10) {
+                if !isSimulationRun {
+                    // Input fields and Run Simulation button
+                    VStack(spacing: 10) {
+                        InputField(title: "Iterations", text: $inputManager.iterations)
+                        InputField(title: "Annual CAGR (%)", text: $inputManager.annualCAGR)
+                        InputField(title: "Annual Volatility (%)", text: $inputManager.annualVolatility)
+
+                        Button(action: {
+                            runSimulation()
+                        }) {
+                            Text("Run Simulation")
                                 .foregroundColor(.white)
                                 .padding()
-
-                            VStack(spacing: 5) {
-                                InputField(
-                                    title: "BTC Annual CAGR (%)",
-                                    text: $inputManager.annualCAGR
-                                )
-                                InputField(
-                                    title: "BTC Annual Volatility (%)",
-                                    text: $inputManager.annualVolatility
-                                )
-                                InputField(
-                                    title: "Number of Iterations",
-                                    text: $inputManager.iterations
-                                )
-                            }
-
-                            Button(action: {
-                                isLoading = true
-                                runSimulation()
-                            }) {
-                                if isLoading {
-                                    ProgressView("Running...")
-                                        .padding()
-                                        .foregroundColor(.white)
-                                } else {
-                                    Text("Run Simulation")
-                                        .foregroundColor(.white)
-                                        .padding()
-                                        .background(Color.blue)
-                                        .cornerRadius(8)
-                                }
-                            }
-                            .disabled(isLoading)
-                            .padding()
+                                .background(Color.blue)
+                                .cornerRadius(8)
                         }
-                        .padding()
-                    } else {
-                        // Back Button and Results Section
-                        HStack {
-                            Button(action: {
-                                isSimulationRun = false
-                                monteCarloResults = []
-                            }) {
-                                Image(systemName: "chevron.left")
-                                    .foregroundColor(.blue)
-                                    .padding()
-                            }
-                            Spacer()
-                            Button(action: { scrollToBottom = true }) {
-                                Image(systemName: "arrow.down")
-                                    .foregroundColor(.blue)
-                                    .padding()
-                            }
-                        }
-                        .padding()
-
-                        // Results Table
-                        ResultsTable(
-                            monteCarloResults: monteCarloResults,
-                            columns: columns,
-                            scrollToBottom: $scrollToBottom,
-                            getValue: { item, keyPath in
-                                if let value = item[keyPath: keyPath] as? Double {
-                                    return String(format: "%.8f", value)
-                                } else if let value = item[keyPath: keyPath] as? Int {
-                                    return "\(value)"
-                                } else {
-                                    return ""
-                                }
-                            }
-                        )
                     }
+                } else {
+                    // Results Table
+                    ResultsTable(
+                        monteCarloResults: monteCarloResults,
+                        columns: columns,
+                        scrollToBottom: $scrollToBottom,
+                        getValue: getValue
+                    )
                 }
             }
         }
-            
+    }
+    
     // Input Field Component
     struct InputField: View {
         let title: String
         @Binding var text: String
-
+        
         var body: some View {
             HStack {
                 Text(title)
@@ -216,73 +201,180 @@ struct ContentView: View {
             }
         }
     }
-
-    struct ResultsTable: View {
+    
+    struct WeeksColumn: View {
         let monteCarloResults: [SimulationData]
-        let columns: [(String, PartialKeyPath<SimulationData>)]
-        @State private var currentColumnIndex: Int = 4 // Start with Portfolio Balance column
-        @Binding var scrollToBottom: Bool
-        let getValue: (SimulationData, PartialKeyPath<SimulationData>) -> String
+        let getValue: (SimulationData, PartialKeyPath<SimulationData>) -> String // Pass getValue
+        let columns: [(String, PartialKeyPath<SimulationData>)] // Pass columns
+        @Binding var sharedScrollOffset: CGFloat
 
         var body: some View {
-            GeometryReader { geometry in
-                VStack(spacing: 0) {
-                    // Sticky Headers
-                    HStack(spacing: 0) {
+            ScrollViewReader { proxy in
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(spacing: 0) {
+                        // Sticky Week Header
                         Text("Week")
                             .font(.headline)
-                            .frame(width: 60) // Reduced width for the "Week" column
+                            .frame(width: 60)
                             .padding()
                             .background(Color.black.opacity(0.9))
                             .foregroundColor(.white)
 
-                        Text(columns[currentColumnIndex].0) // Current column name
+                        // Week Data
+                        ForEach(monteCarloResults, id: \.id) { result in
+                            Text("\(result.week)")
+                                .frame(width: 60)
+                                .padding()
+                                .background(Color.black)
+                                .foregroundColor(.white)
+                                .id(result.id)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    struct DataColumn: View {
+        let columnTitle: String
+        let monteCarloResults: [SimulationData]
+        let keyPath: PartialKeyPath<SimulationData>
+        let getValue: (SimulationData, PartialKeyPath<SimulationData>) -> String // Pass getValue
+        @Binding var sharedScrollOffset: CGFloat
+
+        var body: some View {
+            ScrollViewReader { proxy in
+                ScrollView(.vertical, showsIndicators: true) {
+                    VStack(spacing: 0) {
+                        // Sticky Column Header
+                        Text(columnTitle)
                             .font(.headline)
                             .frame(maxWidth: .infinity)
                             .padding()
                             .background(Color.black.opacity(0.9))
                             .foregroundColor(.white)
-                    }
 
-                    // Data Rows
-                    TabView(selection: $currentColumnIndex) {
-                        ForEach(columns.indices, id: \.self) { index in
-                            ScrollViewReader { proxy in
-                                ScrollView(.vertical) {
-                                    VStack(spacing: 0) {
-                                        ForEach(monteCarloResults, id: \.id) { result in
-                                            HStack(spacing: 0) {
-                                                // Week Column
-                                                Text("\(result.week)")
-                                                    .frame(width: 60) // Same reduced width
-                                                    .padding()
-                                                    .background(Color.black)
-                                                    .foregroundColor(.white)
-
-                                                // Current Data Column
-                                                Text(getValue(result, columns[index].1))
-                                                    .frame(maxWidth: .infinity)
-                                                    .padding()
-                                                    .background(Color.black)
-                                                    .foregroundColor(.white)
-                                            }
-                                        }
-                                    }
-                                    .onChange(of: scrollToBottom) { _, _ in
-                                        if scrollToBottom, let lastResult = monteCarloResults.last {
-                                            withAnimation {
-                                                proxy.scrollTo(lastResult.id, anchor: .bottom)
-                                            }
-                                            scrollToBottom = false
-                                        }
-                                    }
-                                }
-                            }
-                            .tag(index) // Tag to identify the current page
+                        // Column Data
+                        ForEach(monteCarloResults, id: \.id) { result in
+                            Text(getValue(result, keyPath)) // Use getValue here
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color.black)
+                                .foregroundColor(.white)
+                                .id(result.id)
                         }
                     }
-                    .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never)) // Enable horizontal swipe
                 }
+            }
+        }
+    }
+
+    struct ResultsTable: View {
+        let monteCarloResults: [SimulationData]
+        let columns: [(String, PartialKeyPath<SimulationData>)]
+        @Binding var scrollToBottom: Bool
+        @State private var selectedColumnIndex: Int = 0
+        let getValue: (SimulationData, PartialKeyPath<SimulationData>) -> String
+
+        var body: some View {
+            VStack(spacing: 0) {
+                // Header Row
+                HStack(spacing: 0) {
+                    // Weeks Header
+                    Text("Week")
+                        .frame(width: 60)
+                        .font(.headline)
+                        .padding()
+                        .background(Color.black)
+                        .foregroundColor(.white)
+
+                    // Main Column Header (updates based on selected column)
+                    Text(columns[selectedColumnIndex].0)
+                        .font(.headline)
+                        .padding()
+                        .background(Color.black)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                }
+
+                // Content Rows
+                ScrollView(.vertical, showsIndicators: true) {
+                    HStack(alignment: .top, spacing: 0) {
+                        // Weeks Column
+                        VStack(spacing: 0) {
+                            ForEach(monteCarloResults, id: \.id) { result in
+                                Text("\(result.week)")
+                                    .frame(width: 60)
+                                    .padding()
+                                    .background(Color.black)
+                                    .foregroundColor(.white)
+                            }
+                        }
+
+                        // Main Data Columns (swipeable)
+                        TabView(selection: $selectedColumnIndex) {
+                            ForEach(columns.indices, id: \.self) { index in
+                                VStack(spacing: 0) {
+                                    ForEach(monteCarloResults, id: \.id) { result in
+                                        Text(getValue(result, columns[index].1))
+                                            .frame(maxWidth: .infinity, alignment: .center)
+                                            .padding()
+                                            .background(Color.black)
+                                            .foregroundColor(.white)
+                                    }
+                                }
+                                .tag(index)
+                            }
+                        }
+                        .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+                        .frame(width: UIScreen.main.bounds.width - 60) // Adjust the width as needed
+                    }
+                }
+            }
+        }
+    }
+    
+    // Enum to track active ScrollView
+    enum ScrollViewType {
+        case week
+        case main
+        case none
+    }
+
+    private func synchronizeScroll(
+        weekProxy: ScrollViewProxy,
+        dataProxy: ScrollViewProxy,
+        visibleID: UUID
+    ) {
+        withAnimation {
+            weekProxy.scrollTo(visibleID, anchor: .top)
+            dataProxy.scrollTo(visibleID, anchor: .top)
+        }
+    }
+    
+    // PreferenceKey for tracking vertical scroll offset
+    struct ScrollOffsetPreferenceKey: PreferenceKey {
+        static var defaultValue: CGFloat = 0.0
+
+        static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+            value = nextValue()
+        }
+    }
+    
+    struct StickyHeader<Content: View>: View {
+        let content: Content
+
+        init(@ViewBuilder content: () -> Content) {
+            self.content = content()
+        }
+
+        var body: some View {
+            VStack(spacing: 0) {
+                content
+                    .background(Color.black.opacity(0.9))
+                    .foregroundColor(.white)
+                    .zIndex(1) // Ensure header stays on top
+                Spacer()
             }
         }
     }
@@ -636,16 +728,34 @@ struct ContentView: View {
             )
         }
     
-    // Redefine getValue inside ResultsTable
-        private func getValue(item: SimulationData, keyPath: PartialKeyPath<SimulationData>) -> String {
-            if let value = item[keyPath: keyPath] as? Double {
-                return String(format: "%.8f", value)
-            } else if let value = item[keyPath: keyPath] as? Int {
-                return "\(value)"
-            } else {
-                return ""
+    // Redefine getValue inside ContentView
+    private func getValue(_ item: SimulationData, _ keyPath: PartialKeyPath<SimulationData>) -> String {
+        if let value = item[keyPath: keyPath] as? Double {
+            // Decide the formatting based on keyPath
+            switch keyPath {
+            case \SimulationData.startingBTC,
+                 \SimulationData.netBTCHoldings,
+                 \SimulationData.netContributionBTC:
+                // Format as BTC with up to 8 decimal places
+                return value.formattedBTC()
+            case \SimulationData.btcPriceUSD,
+                 \SimulationData.btcPriceEUR,
+                 \SimulationData.portfolioValueEUR,
+                 \SimulationData.contributionEUR,
+                 \SimulationData.contributionFeeEUR,
+                 \SimulationData.withdrawalEUR:
+                // Format as currency with thousands separators and 2 decimal places
+                return value.formattedCurrency()
+            default:
+                // Default formatting
+                return String(format: "%.2f", value)
             }
+        } else if let value = item[keyPath: keyPath] as? Int {
+            return "\(value)"
+        } else {
+            return ""
         }
+    }
     
     func realTimeFormattedBinding(for keyPath: ReferenceWritableKeyPath<PersistentInputManager, String>) -> Binding<String> {
         Binding<String>(
@@ -675,8 +785,8 @@ struct NumberFormatterWithSeparator {
         formatter.numberStyle = .decimal
         formatter.usesGroupingSeparator = true
         formatter.groupingSize = 3
-        formatter.maximumFractionDigits = 8 // Allows up to 8 decimal places
-        formatter.minimumFractionDigits = 0 // Allows flexibility for no unnecessary decimals
+        formatter.maximumFractionDigits = 2 // Allows up to 2 decimal places
+        formatter.minimumFractionDigits = 2
         return formatter
     }()
 }
@@ -1068,16 +1178,16 @@ private func generatePDFData(results: [SimulationData]) -> Data? {
         let rowFont = UIFont.systemFont(ofSize: 10)
 
         // Headers
-        let headers = ["Week", "Cycle Phase", "Starting BTC", "BTC Growth", "Net BTC Holdings",
-                       "BTC Price USD", "BTC Price EUR", "Portfolio Value EUR", "Contribution EUR",
-                       "Contribution Fee EUR", "Net Contribution BTC", "Withdrawal EUR",
-                       "Portfolio Pre-Withdrawal EUR"]
+        let headers = ["Week", "Starting BTC", "Net BTC Holdings", "BTC Price USD",
+                       "BTC Price EUR", "Portfolio Value EUR", "Contribution EUR",
+                       "Contribution Fee EUR", "Net Contribution BTC", "Withdrawal EUR"]
 
-        let columnWidth: CGFloat = 100
+        let columnWidth: CGFloat = 120
         let columnPadding: CGFloat = 10
         let rowHeight: CGFloat = 25
         let initialX: CGFloat = 50
 
+        // Function to draw headers
         func drawHeader() {
             for (index, header) in headers.enumerated() {
                 let xPosition = initialX + CGFloat(index) * (columnWidth + columnPadding)
@@ -1094,18 +1204,19 @@ private func generatePDFData(results: [SimulationData]) -> Data? {
             currentY += rowHeight + 5
         }
 
+        // Function to draw a single row
         func drawRow(for result: SimulationData) {
             let rowData = [
-                "\(result.week)",
+                "\(result.week)", // Week as integer
                 result.startingBTC.formattedBTC(),
                 result.netBTCHoldings.formattedBTC(),
-                result.btcPriceUSD.formattedWithSeparator(),
-                result.btcPriceEUR.formattedWithSeparator(),
-                result.portfolioValueEUR.formattedWithSeparator(),
-                result.contributionEUR.formattedWithSeparator(),
-                result.contributionFeeEUR.formattedWithSeparator(),
+                result.btcPriceUSD.formattedCurrency(),
+                result.btcPriceEUR.formattedCurrency(),
+                result.portfolioValueEUR.formattedCurrency(),
+                result.contributionEUR.formattedCurrency(),
+                result.contributionFeeEUR.formattedCurrency(),
                 result.netContributionBTC.formattedBTC(),
-                result.withdrawalEUR.formattedWithSeparator()
+                result.withdrawalEUR.formattedCurrency()
             ]
             for (index, columnData) in rowData.enumerated() {
                 let xPosition = initialX + CGFloat(index) * (columnWidth + columnPadding)
@@ -1122,20 +1233,18 @@ private func generatePDFData(results: [SimulationData]) -> Data? {
             currentY += rowHeight
         }
 
-        // Start PDF page
+        // Start rendering the PDF
         context.beginPage()
+        drawHeader() // Draw the table header
 
-        // Draw headers
-        drawHeader()
-
-        // Draw rows
         for result in results {
             if currentY + rowHeight > pageHeight - 50 {
-                context.beginPage() // Start a new page if we're running out of space
+                // Start a new page if we run out of space
+                context.beginPage()
                 currentY = 50
-                drawHeader() // Redraw headers on the new page
+                drawHeader() // Redraw the header on the new page
             }
-            drawRow(for: result)
+            drawRow(for: result) // Draw each row
         }
     }
 

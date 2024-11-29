@@ -16,6 +16,7 @@
 		E166A8B02CF855C20003F518 /* SimulationData.swift in Sources */ = {isa = PBXBuildFile; fileRef = E166A8AF2CF855C20003F518 /* SimulationData.swift */; };
 		E166A8B22CF85B2B0003F518 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E166A8B12CF85B2B0003F518 /* ContentView.swift */; };
 		E166A8B42CF8659D0003F518 /* BTC20YearProjection.csv in Resources */ = {isa = PBXBuildFile; fileRef = E166A8B32CF8659D0003F518 /* BTC20YearProjection.csv */; };
+		E166A8B92CF955ED0003F518 /* ContentOffsetScrollView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E166A8B82CF955E80003F518 /* ContentOffsetScrollView.swift */; };
 		E17A47FE2CF11AC000AAC885 /* project.pbxproj in Resources */ = {isa = PBXBuildFile; fileRef = E17A47FD2CF11AC000AAC885 /* project.pbxproj */; };
 		E17A48012CF178C600AAC885 /* MonteCarloVisualisations.swift in Sources */ = {isa = PBXBuildFile; fileRef = E17A48002CF178C600AAC885 /* MonteCarloVisualisations.swift */; };
 		E1CD4B3B2CF0F35C0070E8E3 /* BTC20YearProjection.csv in Resources */ = {isa = PBXBuildFile; fileRef = E1CD4B2E2CF0F35C0070E8E3 /* BTC20YearProjection.csv */; };
@@ -42,6 +43,7 @@
 		E166A8B12CF85B2B0003F518 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		E166A8B32CF8659D0003F518 /* BTC20YearProjection.csv */ = {isa = PBXFileReference; lastKnownFileType = text; path = BTC20YearProjection.csv; sourceTree = "<group>"; };
 		E166A8B52CF866910003F518 /* BTCMonteCarloSimulator.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = BTCMonteCarloSimulator.entitlements; sourceTree = "<group>"; };
+		E166A8B82CF955E80003F518 /* ContentOffsetScrollView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentOffsetScrollView.swift; sourceTree = "<group>"; };
 		E17A47FD2CF11AC000AAC885 /* project.pbxproj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.pbxproject; path = project.pbxproj; sourceTree = "<group>"; };
 		E17A47FF2CF11D3200AAC885 /* BTCMonteCarlo.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = BTCMonteCarlo.entitlements; sourceTree = "<group>"; };
 		E17A48002CF178C600AAC885 /* MonteCarloVisualisations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonteCarloVisualisations.swift; sourceTree = "<group>"; };
@@ -98,6 +100,7 @@
 			children = (
 				E12CCD8A2CF8235F0059931D /* BTC_SimulatorApp.swift */,
 				E166A8B12CF85B2B0003F518 /* ContentView.swift */,
+				E166A8B82CF955E80003F518 /* ContentOffsetScrollView.swift */,
 				E166A8A92CF855B00003F518 /* CSVLoader.swift */,
 				E166A8AB2CF855B60003F518 /* DoubleExtensions.swift */,
 				E166A8AD2CF855BF0003F518 /* MonteCarloSimulator.swift */,
@@ -269,6 +272,7 @@
 				E166A8B02CF855C20003F518 /* SimulationData.swift in Sources */,
 				E166A8AC2CF855B60003F518 /* DoubleExtensions.swift in Sources */,
 				E166A8B22CF85B2B0003F518 /* ContentView.swift in Sources */,
+				E166A8B92CF955ED0003F518 /* ContentOffsetScrollView.swift in Sources */,
 				E166A8AA2CF855B00003F518 /* CSVLoader.swift in Sources */,
 				E12CCD8B2CF8235F0059931D /* BTC_SimulatorApp.swift in Sources */,
 				E166A8AE2CF855BF0003F518 /* MonteCarloSimulator.swift in Sources */,

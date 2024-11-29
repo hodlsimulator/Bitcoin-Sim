@@ -20,7 +20,6 @@ struct SimulationData: Identifiable {
     let netContributionBTC: Double
     let withdrawalEUR: Double
 
-    // Static placeholder for default data
     static let placeholder = SimulationData(
         id: UUID(),
         week: 0,
@@ -33,7 +32,6 @@ struct SimulationData: Identifiable {
         contributionFeeEUR: 0.0,
         netContributionBTC: 0.0,
         withdrawalEUR: 0.0
-        
     )
 
     // Updated initializer
