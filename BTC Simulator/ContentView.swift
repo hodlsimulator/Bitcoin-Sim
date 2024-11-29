@@ -134,6 +134,10 @@ struct ContentView: View {
     @State private var isSimulationRun: Bool = false // Tracks if simulation has been run
     @State private var scrollToBottom: Bool = false // Triggers scroll to bottom
     @State private var dataColumnsOffset: CGPoint = .zero // Add this state variable
+    @State private var isScrolling: Bool = true // Tracks if the GTB button should be visible
+    private var scrollingDebounceDelay: TimeInterval = 1.0 // Delay to hide button
+    
+    @State private var scrollTimer: Timer? // Timer to handle button visibility
     
     // Define column headers and keys for dynamic access
     let columns: [(String, PartialKeyPath<SimulationData>)] = [
@@ -171,18 +175,81 @@ struct ContentView: View {
                         }
                     }
                 } else {
-                    // Results Table
-                    ResultsTable(
-                        monteCarloResults: monteCarloResults,
-                        columns: columns,
-                        scrollToBottom: $scrollToBottom,
-                        getValue: getValue
-                    )
+                    // Wrap ResultsTable in a ZStack to overlay buttons
+                    ZStack {
+                        // Results Table with added top padding
+                        VStack {
+                            Spacer().frame(height: 40) // Add space above the table
+                            ResultsTable(
+                                monteCarloResults: monteCarloResults,
+                                columns: columns,
+                                scrollToBottom: $scrollToBottom,
+                                getValue: getValue
+                            )
+                            .onAppear {
+                                isScrolling = true // Show GTB button initially
+                            }
+                            .onChange(of: scrollToBottom) { value in
+                                if value {
+                                    isScrolling = true
+                                    startScrollTimer()
+                                }
+                            }
+                        }
+
+                        // Back button at top-left corner
+                        VStack {
+                            HStack {
+                                Button(action: {
+                                    isSimulationRun = false
+                                }) {
+                                    Image(systemName: "chevron.left")
+                                        .foregroundColor(.white)
+                                        .imageScale(.large)
+                                        .padding()
+                                }
+                                Spacer()
+                            }
+                            .padding(.top, -10) // Keep the back button moved up slightly
+                            Spacer()
+                        }
+
+                        // Go-to-bottom button at bottom center
+                        if isScrolling {
+                            VStack {
+                                Spacer()
+                                Button(action: {
+                                    scrollToBottom = true
+                                    isScrolling = true // Keep visible when button is pressed
+                                    startScrollTimer() // Reset the timer
+                                }) {
+                                    Image(systemName: "chevron.down")
+                                        .foregroundColor(.white)
+                                        .imageScale(.large)
+                                        .padding()
+                                        .background(Color.black.opacity(0.7))
+                                        .clipShape(Circle())
+                                }
+                                .padding()
+                            }
+                        }
+                    }
                 }
             }
         }
     }
-    
+
+    // MARK: - Timer Logic
+    private func startScrollTimer() {
+        // Invalidate existing timer
+        scrollTimer?.invalidate()
+
+        // Start a new timer
+        scrollTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false) { _ in
+            isScrolling = false // Hide the GTB button after 1 second of inactivity
+        }
+    }
+
     // Input Field Component
     struct InputField: View {
         let title: String
@@ -297,37 +364,52 @@ struct ContentView: View {
                         .frame(maxWidth: .infinity, alignment: .center)
                 }
 
-                // Content Rows
-                ScrollView(.vertical, showsIndicators: true) {
-                    HStack(alignment: .top, spacing: 0) {
-                        // Weeks Column
-                        VStack(spacing: 0) {
-                            ForEach(monteCarloResults, id: \.id) { result in
-                                Text("\(result.week)")
-                                    .frame(width: 60)
-                                    .padding()
-                                    .background(Color.black)
-                                    .foregroundColor(.white)
-                            }
-                        }
-
-                        // Main Data Columns (swipeable)
-                        TabView(selection: $selectedColumnIndex) {
-                            ForEach(columns.indices, id: \.self) { index in
-                                VStack(spacing: 0) {
-                                    ForEach(monteCarloResults, id: \.id) { result in
-                                        Text(getValue(result, columns[index].1))
-                                            .frame(maxWidth: .infinity, alignment: .center)
-                                            .padding()
-                                            .background(Color.black)
-                                            .foregroundColor(.white)
-                                    }
+                // Content Rows with ScrollViewReader
+                ScrollViewReader { scrollProxy in
+                    ScrollView(.vertical, showsIndicators: true) {
+                        HStack(alignment: .top, spacing: 0) {
+                            // Weeks Column
+                            VStack(spacing: 0) {
+                                ForEach(monteCarloResults) { result in
+                                    Text("\(result.week)")
+                                        .frame(width: 60)
+                                        .padding()
+                                        .background(Color.black)
+                                        .foregroundColor(.white)
+                                        .id(result.id) // Assign ID for scrolling
                                 }
-                                .tag(index)
+                            }
+
+                            // Main Data Columns (swipeable)
+                            TabView(selection: $selectedColumnIndex) {
+                                ForEach(columns.indices, id: \.self) { index in
+                                    VStack(spacing: 0) {
+                                        ForEach(monteCarloResults) { result in
+                                            Text(getValue(result, columns[index].1))
+                                                .frame(maxWidth: .infinity, alignment: .center)
+                                                .padding()
+                                                .background(Color.black)
+                                                .foregroundColor(.white)
+                                                .id(result.id) // Assign same ID for syncing
+                                        }
+                                    }
+                                    .tag(index)
+                                }
+                            }
+                            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+                            .frame(width: UIScreen.main.bounds.width - 60) // Adjust the width as needed
+                        }
+                    }
+                    .onChange(of: scrollToBottom) { value in
+                        if value {
+                            // Scroll to the last item
+                            if let lastResult = monteCarloResults.last {
+                                withAnimation {
+                                    scrollProxy.scrollTo(lastResult.id, anchor: .bottom)
+                                }
+                                scrollToBottom = false // Reset the trigger
                             }
                         }
-                        .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
-                        .frame(width: UIScreen.main.bounds.width - 60) // Adjust the width as needed
                     }
                 }
             }
