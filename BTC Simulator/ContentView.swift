@@ -234,6 +234,27 @@ struct ContentView: View {
                     }
                 }
             }
+
+            // Forward button overlay in the top-right corner
+            if !isSimulationRun && !monteCarloResults.isEmpty {
+                VStack {
+                    HStack {
+                        Spacer()
+                        Button(action: {
+                            isSimulationRun = true
+                            if let usdIndex = columns.firstIndex(where: { $0.0 == "BTC Price USD" }) {
+                                currentPage = usdIndex
+                            }
+                        }) {
+                            Image(systemName: "chevron.right")
+                                .foregroundColor(.white)
+                                .imageScale(.large)
+                                .padding()
+                        }
+                    }
+                    Spacer()
+                }
+            }
         }
     }
 
