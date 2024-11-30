@@ -10,9 +10,15 @@ import PDFKit
 import UniformTypeIdentifiers
 
 class PersistentInputManager: ObservableObject {
-    @Published var iterations: String = "1000" // Default value
-    @Published var annualCAGR: String // BTC Annual CAGR (%)
-    @Published var annualVolatility: String // BTC Annual Volatility (%)
+    @Published var iterations: String {
+            didSet { UserDefaults.standard.set(iterations, forKey: "iterations") }
+        }
+        @Published var annualCAGR: String {
+            didSet { UserDefaults.standard.set(annualCAGR, forKey: "annualCAGR") }
+        }
+        @Published var annualVolatility: String {
+            didSet { UserDefaults.standard.set(annualVolatility, forKey: "annualVolatility") }
+        }
     @Published var selectedWeek: String
     @Published var btcPriceMinInput: String
     @Published var btcPriceMaxInput: String
@@ -25,7 +31,7 @@ class PersistentInputManager: ObservableObject {
     init() {
         self.iterations = UserDefaults.standard.string(forKey: "iterations") ?? "1000"
         self.annualCAGR = UserDefaults.standard.string(forKey: "annualCAGR") ?? "40.0"
-        self.annualVolatility = UserDefaults.standard.string(forKey: "annualVolatility") ?? "80.0" // Default: 80%
+        self.annualVolatility = UserDefaults.standard.string(forKey: "annualVolatility") ?? "80.0"
         self.selectedWeek = UserDefaults.standard.string(forKey: "selectedWeek") ?? "1"
         self.btcPriceMinInput = UserDefaults.standard.string(forKey: "btcPriceMinInput") ?? ""
         self.btcPriceMaxInput = UserDefaults.standard.string(forKey: "btcPriceMaxInput") ?? ""
@@ -148,84 +154,88 @@ struct ContentView: View {
     ]
 
     var body: some View {
-            ZStack {
-                Color.black.ignoresSafeArea()
+        ZStack {
+            Color.black.ignoresSafeArea()
 
-                VStack(spacing: 10) {
-                    if !isSimulationRun {
-                        // Input fields and Run Simulation button
-                        VStack(spacing: 10) {
-                            InputField(title: "Iterations", text: $inputManager.iterations)
-                            InputField(title: "Annual CAGR (%)", text: $inputManager.annualCAGR)
-                            InputField(title: "Annual Volatility (%)", text: $inputManager.annualVolatility)
-                                
-                            Button(action: {
-                                runSimulation()
-                            }) {
-                                Text("Run Simulation")
-                                    .foregroundColor(.white)
-                                    .padding()
-                                    .background(Color.blue)
-                                    .cornerRadius(8)
-                            }
+            VStack(spacing: 10) {
+                if !isSimulationRun {
+                    // Input fields and Run Simulation button
+                    VStack(spacing: 10) {
+                        InputField(title: "Iterations", text: $inputManager.iterations)
+                        InputField(title: "Annual CAGR (%)", text: $inputManager.annualCAGR)
+                        InputField(title: "Annual Volatility (%)", text: $inputManager.annualVolatility)
+
+                        Button(action: {
+                            runSimulation()
+                        }) {
+                            Text("Run Simulation")
+                                .foregroundColor(.white)
+                                .padding()
+                                .background(Color.blue)
+                                .cornerRadius(8)
                         }
-                    } else {
-                        ZStack {
-                            // Results Table with added top padding
-                            VStack {
-                                Spacer().frame(height: 40) // Add space above the table
-                                ResultsTable(
-                                    monteCarloResults: monteCarloResults,
-                                    columns: columns,
-                                    currentPage: $currentPage, // Bind currentPage
-                                    scrollToBottom: $scrollToBottom,
-                                    isAtBottomParent: $isAtBottom, // Correct the argument label
-                                    getValue: getValue
-                                )
-                            }
+                    }
+                } else {
+                    ZStack {
+                        // Results Table with added top padding
+                        VStack {
+                            Spacer().frame(height: 40) // Add space above the table
+                            ResultsTable(
+                                monteCarloResults: monteCarloResults,
+                                columns: columns,
+                                currentPage: $currentPage, // Bind currentPage
+                                scrollToBottom: $scrollToBottom,
+                                isAtBottomParent: $isAtBottom, // Correct the argument label
+                                getValue: getValue
+                            )
+                        }
 
-                            // Back button at top-left corner
-                            VStack {
-                                HStack {
-                                    Button(action: {
-                                        isSimulationRun = false
-                                        currentPage = 0 // Reset currentPage
-                                    }) {
-                                        Image(systemName: "chevron.left")
-                                            .foregroundColor(.white)
-                                            .imageScale(.large)
-                                            .padding()
-                                    }
-                                    Spacer()
+                        // Back button at top-left corner
+                        VStack {
+                            HStack {
+                                Button(action: {
+                                    isSimulationRun = false
+                                    currentPage = 0 // Reset currentPage
+                                }) {
+                                    Image(systemName: "chevron.left")
+                                        .foregroundColor(.white)
+                                        .imageScale(.large)
+                                        .padding()
                                 }
                                 Spacer()
                             }
+                            Spacer()
+                        }
 
-                            // Go-to-bottom button at bottom center
-                            if !isAtBottom {
-                                VStack {
-                                    Spacer()
-                                    Button(action: {
-                                        scrollToBottom = true
-                                    }) {
-                                        Image(systemName: "chevron.down")
-                                            .foregroundColor(.white)
-                                            .imageScale(.large)
-                                            .padding()
-                                            .background(Color.black.opacity(0.7))
-                                            .clipShape(Circle())
-                                    }
-                                    .padding()
+                        // Go-to-bottom button at bottom center
+                        if !isAtBottom {
+                            VStack {
+                                Spacer()
+                                Button(action: {
+                                    scrollToBottom = true
+                                }) {
+                                    Image(systemName: "chevron.down")
+                                        .foregroundColor(.white)
+                                        .imageScale(.large)
+                                        .padding()
+                                        .background(Color.black.opacity(0.7))
+                                        .clipShape(Circle())
                                 }
+                                .padding()
                             }
                         }
-                        .onAppear {
-                            isAtBottom = false // Ensure GTB state is reset properly
+                    }
+                    .onAppear {
+                        // Ensure proper state reset and default column view
+                        isAtBottom = false
+                        if let usdIndex = columns.firstIndex(where: { $0.0 == "BTC Price USD" }) {
+                            currentPage = usdIndex
                         }
                     }
                 }
             }
         }
+    }
 
     // MARK: - Page Navigation
     @State private var currentPage: Int = 0 // Tracks the current page
