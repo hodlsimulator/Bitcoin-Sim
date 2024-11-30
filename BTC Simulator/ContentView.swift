@@ -316,66 +316,46 @@ struct ContentView: View {
                                         .padding()
                                         .background(Color.black)
                                         .foregroundColor(.white)
-                                        .id("week-\(result.id)") // Assign ID for scrolling
+                                        .id("week-\(result.id)")
                                 }
                             }
 
-                            // Main Data Column
-                            VStack(spacing: 0) {
-                                ForEach(monteCarloResults) { result in
-                                    Text(getValue(result, columns[currentPage].1))
-                                        .frame(maxWidth: .infinity, alignment: .center)
-                                        .padding()
-                                        .background(Color.black)
-                                        .foregroundColor(.white)
-                                        .id("data-\(result.id)") // Assign ID for scrolling
+                            // Main Data Column in a TabView
+                            TabView(selection: $currentPage) {
+                                ForEach(0..<columns.count, id: \.self) { pageIndex in
+                                    VStack(spacing: 0) {
+                                        ForEach(monteCarloResults) { result in
+                                            Text(getValue(result, columns[pageIndex].1))
+                                                .frame(maxWidth: .infinity, alignment: .center)
+                                                .padding()
+                                                .background(Color.black)
+                                                .foregroundColor(.white)
+                                                .id("data-\(result.id)")
+                                        }
+                                    }
+                                    .tag(pageIndex)
                                 }
                             }
-                            .contentShape(Rectangle()) // Define tappable area
+                            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+                            .frame(maxWidth: .infinity) // Ensure it takes available space
                         }
-                        .simultaneousGesture(
-                            DragGesture(minimumDistance: 0)
-                                .onEnded { value in
-                                    let screenWidth = UIScreen.main.bounds.width
-                                    let tapLocation = value.location.x
-                                    if tapLocation < screenWidth * 0.3 {
-                                        // Tapped on left 30%
-                                        goToPreviousPage()
-                                    } else if tapLocation > screenWidth * 0.7 {
-                                        // Tapped on right 30%
-                                        goToNextPage()
-                                    }
+                    }
+                    .onChange(of: scrollToBottom) { value in
+                        if value {
+                            // Scroll to the last item
+                            if let lastResult = monteCarloResults.last {
+                                withAnimation {
+                                    scrollProxy.scrollTo("week-\(lastResult.id)", anchor: .bottom)
                                 }
-                        )
-                        .onChange(of: scrollToBottom) { value in
-                            if value {
-                                // Scroll to the last item
-                                if let lastResult = monteCarloResults.last {
-                                    withAnimation {
-                                        scrollProxy.scrollTo("week-\(lastResult.id)", anchor: .bottom)
-                                    }
-                                    scrollToBottom = false // Reset the trigger
-                                }
+                                scrollToBottom = false // Reset the trigger
                             }
                         }
                     }
                 }
             }
         }
-
-        // Page Navigation Functions
-        private func goToNextPage() {
-            if currentPage < columns.count - 1 {
-                currentPage += 1
-            }
-        }
-
-        private func goToPreviousPage() {
-            if currentPage > 0 {
-                currentPage -= 1
-            }
-        }
     }
+
 
     // MARK: - Functions
 
