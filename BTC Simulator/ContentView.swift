@@ -307,37 +307,53 @@ struct ContentView: View {
                 // Content Rows with ScrollViewReader
                 ScrollViewReader { scrollProxy in
                     ScrollView(.vertical, showsIndicators: true) {
-                        HStack(alignment: .top, spacing: 0) {
-                            // Weeks Column
-                            VStack(spacing: 0) {
-                                ForEach(monteCarloResults) { result in
-                                    Text("\(result.week)")
-                                        .frame(width: 60)
-                                        .padding()
-                                        .background(Color.black)
-                                        .foregroundColor(.white)
-                                        .id("week-\(result.id)")
-                                }
-                            }
-
-                            // Main Data Column in a TabView
-                            TabView(selection: $currentPage) {
-                                ForEach(0..<columns.count, id: \.self) { pageIndex in
-                                    VStack(spacing: 0) {
-                                        ForEach(monteCarloResults) { result in
-                                            Text(getValue(result, columns[pageIndex].1))
-                                                .frame(maxWidth: .infinity, alignment: .center)
-                                                .padding()
-                                                .background(Color.black)
-                                                .foregroundColor(.white)
-                                                .id("data-\(result.id)")
-                                        }
+                        VStack(spacing: 0) {
+                            HStack(alignment: .top, spacing: 0) {
+                                // Weeks Column
+                                VStack(spacing: 0) {
+                                    ForEach(monteCarloResults) { result in
+                                        Text("\(result.week)")
+                                            .frame(width: 60)
+                                            .padding()
+                                            .background(Color.black)
+                                            .foregroundColor(.white)
+                                            .id("week-\(result.id)")
                                     }
-                                    .tag(pageIndex)
+                                }
+
+                                // Main Data Column in a TabView
+                                TabView(selection: $currentPage) {
+                                    ForEach(0..<columns.count, id: \.self) { pageIndex in
+                                        VStack(spacing: 0) {
+                                            ForEach(monteCarloResults) { result in
+                                                Text(getValue(result, columns[pageIndex].1))
+                                                    .frame(maxWidth: .infinity, alignment: .center)
+                                                    .padding()
+                                                    .background(Color.black)
+                                                    .foregroundColor(.white)
+                                                    .id("data-\(result.id)")
+                                            }
+                                        }
+                                        .tag(pageIndex)
+                                    }
+                                }
+                                .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+                                .frame(maxWidth: .infinity) // Ensure it takes available space
+                            }
+                            // Apply tap gesture to HStack content
+                            .contentShape(Rectangle()) // Makes the entire area tappable
+                            .onTapGesture { location in
+                                let midPoint = UIScreen.main.bounds.width / 2
+                                withAnimation {
+                                    if location.x < midPoint {
+                                        // Left half tapped, go to previous page
+                                        currentPage = (currentPage - 1 + columns.count) % columns.count
+                                    } else {
+                                        // Right half tapped, go to next page
+                                        currentPage = (currentPage + 1) % columns.count
+                                    }
                                 }
                             }
-                            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
-                            .frame(maxWidth: .infinity) // Ensure it takes available space
                         }
                     }
                     .onChange(of: scrollToBottom) { value in
@@ -355,7 +371,6 @@ struct ContentView: View {
             }
         }
     }
-
 
     // MARK: - Functions
 
