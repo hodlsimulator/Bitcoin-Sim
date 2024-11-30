@@ -344,7 +344,7 @@ struct ContentView: View {
                             .contentShape(Rectangle()) // Makes the entire area tappable
                             .onTapGesture { location in
                                 let midPoint = UIScreen.main.bounds.width / 2
-                                withAnimation {
+                                withAnimation(.easeInOut(duration: 0.8)) { // Adjust duration as needed
                                     if location.x < midPoint {
                                         // Left half tapped, go to previous page
                                         currentPage = (currentPage - 1 + columns.count) % columns.count
