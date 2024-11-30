@@ -166,6 +166,10 @@ struct ContentView: View {
                         InputField(title: "Annual Volatility (%)", text: $inputManager.annualVolatility)
 
                         Button(action: {
+                            // Reset to default column when running simulation
+                            if let usdIndex = columns.firstIndex(where: { $0.0 == "BTC Price USD" }) {
+                                currentPage = usdIndex
+                            }
                             runSimulation()
                         }) {
                             Text("Run Simulation")
@@ -195,7 +199,7 @@ struct ContentView: View {
                             HStack {
                                 Button(action: {
                                     isSimulationRun = false
-                                    currentPage = 0 // Reset currentPage
+                                    lastViewedPage = currentPage // Save the last viewed column
                                 }) {
                                     Image(systemName: "chevron.left")
                                         .foregroundColor(.white)
@@ -226,10 +230,9 @@ struct ContentView: View {
                         }
                     }
                     .onAppear {
-                        // Ensure proper state reset and default column view
-                        isAtBottom = false
-                        if let usdIndex = columns.firstIndex(where: { $0.0 == "BTC Price USD" }) {
-                            currentPage = usdIndex
+                        // Ensure data appears correctly
+                        if monteCarloResults.isEmpty {
+                            runSimulation() // Ensure simulation runs if data is missing
                         }
                     }
                 }
@@ -242,9 +245,7 @@ struct ContentView: View {
                         Spacer()
                         Button(action: {
                             isSimulationRun = true
-                            if let usdIndex = columns.firstIndex(where: { $0.0 == "BTC Price USD" }) {
-                                currentPage = usdIndex
-                            }
+                            currentPage = lastViewedPage // Restore the last viewed column
                         }) {
                             Image(systemName: "chevron.right")
                                 .foregroundColor(.white)
@@ -256,7 +257,18 @@ struct ContentView: View {
                 }
             }
         }
+        .onAppear {
+            // Ensure default column view on app load
+            if isSimulationRun, monteCarloResults.isEmpty {
+                runSimulation()
+            } else if let usdIndex = columns.firstIndex(where: { $0.0 == "BTC Price USD" }) {
+                currentPage = usdIndex
+            }
+        }
     }
+
+    // MARK: - State Variables
+    @State private var lastViewedPage: Int = 0 // Tracks the last viewed column
 
     // MARK: - Page Navigation
     @State private var currentPage: Int = 0 // Tracks the current page
