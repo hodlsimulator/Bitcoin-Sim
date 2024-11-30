@@ -37,10 +37,10 @@ func runMonteCarloSimulationsWithSpreadsheetData(
     let totalBatches = (iterations + batchSize - 1) / batchSize
     print("Total Batches: \(totalBatches), Batch Size: \(batchSize), Total Iterations: \(iterations)")
 
-    var bestIteration: [SimulationData] = []
-    var closestDistance = Double.greatestFiniteMagnitude
     var allIterations: [[SimulationData]] = []
+    var finalPortfolioValues: [(portfolioValue: Double, iteration: [SimulationData])] = []
     let lock = NSLock()
+    let finalValuesLock = NSLock()
     let dispatchGroup = DispatchGroup()
 
     print("Starting Monte Carlo simulation with \(iterations) iterations across \(totalBatches) batches...")
@@ -53,8 +53,6 @@ func runMonteCarloSimulationsWithSpreadsheetData(
         DispatchQueue.global(qos: .userInitiated).async {
             print("Batch \(batchIndex + 1) of \(totalBatches) started (Iterations \(startIteration + 1) to \(endIteration))...")
 
-            var localBestIteration: [SimulationData] = []
-            var localClosestDistance = Double.greatestFiniteMagnitude
             var localIterations: [[SimulationData]] = []
 
             for _ in startIteration..<endIteration {
@@ -66,21 +64,14 @@ func runMonteCarloSimulationsWithSpreadsheetData(
                 )
                 localIterations.append(currentIteration)
 
-                let distance = zip(currentIteration, spreadsheetData).reduce(0.0) { acc, pair in
-                    acc + abs(pair.0.portfolioValueEUR - pair.1.portfolioValueEUR)
-                }
-
-                if distance < localClosestDistance {
-                    localClosestDistance = distance
-                    localBestIteration = currentIteration
-                }
+                // Collect final portfolio value
+                let finalPortfolioValue = currentIteration.last!.portfolioValueEUR
+                finalValuesLock.lock()
+                finalPortfolioValues.append((portfolioValue: finalPortfolioValue, iteration: currentIteration))
+                finalValuesLock.unlock()
             }
 
             lock.lock()
-            if localClosestDistance < closestDistance {
-                closestDistance = localClosestDistance
-                bestIteration = localBestIteration
-            }
             allIterations.append(contentsOf: localIterations)
             lock.unlock()
 
@@ -91,7 +82,15 @@ func runMonteCarloSimulationsWithSpreadsheetData(
 
     dispatchGroup.wait()
     print("Monte Carlo simulation completed with \(iterations) iterations across \(totalBatches) batches.")
-    return (bestIteration, allIterations)
+
+    // Sort the finalPortfolioValues by portfolioValue
+    finalPortfolioValues.sort { $0.portfolioValue < $1.portfolioValue }
+
+    let totalIterations = finalPortfolioValues.count
+    let index90thPercentile = Int(Double(totalIterations - 1) * 0.90)
+    let iteration90thPercentile = finalPortfolioValues[index90thPercentile].iteration
+
+    return (iteration90thPercentile, allIterations)
 }
 
 func simulateSingleRun(
