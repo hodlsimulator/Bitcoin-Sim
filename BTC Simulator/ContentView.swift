@@ -314,7 +314,7 @@ struct ContentView: View {
 
         var body: some View {
             VStack(spacing: 0) {
-                // Header Row with Tap Gestures
+                // Header Row with Tap Gesture
                 HStack(spacing: 0) {
                     // Weeks Header
                     Text("Week")
@@ -323,8 +323,8 @@ struct ContentView: View {
                         .padding()
                         .background(Color.black)
                         .foregroundColor(.white)
-
-                    // Main Column Header with overlay of two buttons
+                    
+                    // Main Column Header with Tap Gesture
                     ZStack {
                         // Main Column Header Text
                         Text(columns[currentPage].0)
@@ -333,41 +333,67 @@ struct ContentView: View {
                             .background(Color.black)
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity, alignment: .center)
-
-                        // Overlay Buttons for Tap Gestures
+                        
+                        // Invisible Layer to Detect Taps Near Edges
                         GeometryReader { geometry in
+                            // Define tap areas as narrow regions near the edges
                             HStack(spacing: 0) {
-                                // Left Half Button
-                                Button(action: {
-                                    if currentPage > 0 {
-                                        withAnimation {
-                                            currentPage -= 1
-                                        }
-                                    }
-                                }) {
-                                    Color.clear
-                                }
-                                .frame(width: geometry.size.width / 2)
-                                .contentShape(Rectangle())
-
-                                // Right Half Button
-                                Button(action: {
-                                    if currentPage < columns.count - 1 {
-                                        withAnimation {
-                                            currentPage += 1
-                                        }
-                                    }
-                                }) {
-                                    Color.clear
-                                }
-                                .frame(width: geometry.size.width / 2)
-                                .contentShape(Rectangle())
+                                // Left Tap Area (Near Weeks Column)
+                                Color.clear
+                                    .frame(width: geometry.size.width * 0.2) // 20% width
+                                    .contentShape(Rectangle())
+                                    .gesture(
+                                        DragGesture(minimumDistance: 0)
+                                            .onEnded { value in
+                                                let drag = value.translation
+                                                let threshold: CGFloat = 10
+                                                if abs(drag.width) < threshold && abs(drag.height) < threshold {
+                                                    // Treat as tap
+                                                    let tapX = value.location.x
+                                                    if tapX < geometry.size.width * 0.2 {
+                                                        // Left tap: Navigate to Previous Page
+                                                        if currentPage > 0 {
+                                                            withAnimation {
+                                                                currentPage -= 1
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                    )
+                                
+                                Spacer() // Middle 60% where taps are ignored
+                                
+                                // Right Tap Area (Near Screen Edge)
+                                Color.clear
+                                    .frame(width: geometry.size.width * 0.2) // 20% width
+                                    .contentShape(Rectangle())
+                                    .gesture(
+                                        DragGesture(minimumDistance: 0)
+                                            .onEnded { value in
+                                                let drag = value.translation
+                                                let threshold: CGFloat = 10
+                                                if abs(drag.width) < threshold && abs(drag.height) < threshold {
+                                                    // Treat as tap
+                                                    let tapX = value.location.x
+                                                    if tapX > geometry.size.width * 0.8 {
+                                                        // Right tap: Navigate to Next Page
+                                                        if currentPage < columns.count - 1 {
+                                                            withAnimation {
+                                                                currentPage += 1
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                    )
                             }
                         }
                     }
+                    .frame(height: 50) // Adjust height as needed
                 }
-                .frame(height: 50)
-
+                .background(Color.black)
+                
                 // Content Rows inside a single ScrollView
                 ScrollViewReader { scrollProxy in
                     ScrollView(.vertical, showsIndicators: true) {
@@ -380,20 +406,73 @@ struct ContentView: View {
                                         .padding()
                                         .background(Color.black)
                                         .foregroundColor(.white)
-                                        .id(result.id)
+                                        .id("week-\(result.id)")
                                 }
                             }
-
-                            // Data Column with TabView for Sliding Animation
+                            
+                            // Data Column with TabView for Sliding Animation and Tap Gesture
                             TabView(selection: $currentPage) {
                                 ForEach(0..<columns.count, id: \.self) { index in
-                                    VStack(spacing: 0) {
-                                        ForEach(monteCarloResults) { result in
-                                            Text(getValue(result, columns[index].1))
-                                                .frame(maxWidth: .infinity, alignment: .center)
-                                                .padding()
-                                                .background(Color.black)
-                                                .foregroundColor(.white)
+                                    ZStack {
+                                        // Data Content
+                                        VStack(spacing: 0) {
+                                            ForEach(monteCarloResults) { result in
+                                                Text(getValue(result, columns[index].1))
+                                                    .frame(maxWidth: .infinity, alignment: .center)
+                                                    .padding()
+                                                    .background(Color.black)
+                                                    .foregroundColor(.white)
+                                                    .id("data-\(result.id)")
+                                            }
+                                        }
+                                        
+                                        // Invisible Layer to Detect Taps Near Edges
+                                        GeometryReader { geometry in
+                                            HStack(spacing: 0) {
+                                                // Left Tap Area (Near Weeks Column)
+                                                // Color.red.opacity(0.3) // Debug: Red for left tap area
+                                                Color.clear
+                                                    .frame(width: geometry.size.width * 0.2) // 20% width
+                                                    .contentShape(Rectangle())
+                                                    .gesture(
+                                                        DragGesture(minimumDistance: 0)
+                                                            .onEnded { value in
+                                                                let drag = value.translation
+                                                                let threshold: CGFloat = 10
+                                                                if abs(drag.width) < threshold && abs(drag.height) < threshold {
+                                                                    // Treat as tap
+                                                                    if currentPage > 0 {
+                                                                        withAnimation {
+                                                                            currentPage -= 1
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                    )
+                                                
+                                                Spacer() // Middle 60% where taps are ignored
+                                                
+                                                // Right Tap Area (Near Screen Edge)
+                                                // Color.blue.opacity(0.3) // Debug: Blue for right tap area
+                                                Color.clear
+                                                    .frame(width: geometry.size.width * 0.2) // 20% width
+                                                    .contentShape(Rectangle())
+                                                    .gesture(
+                                                        DragGesture(minimumDistance: 0)
+                                                            .onEnded { value in
+                                                                let drag = value.translation
+                                                                let threshold: CGFloat = 10
+                                                                if abs(drag.width) < threshold && abs(drag.height) < threshold {
+                                                                    // Treat as tap
+                                                                    if currentPage < columns.count - 1 {
+                                                                        withAnimation {
+                                                                            currentPage += 1
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                    )
+                                            }
                                         }
                                     }
                                     .tag(index)
@@ -407,7 +486,7 @@ struct ContentView: View {
                                 // Scroll to the last item
                                 if let lastResult = monteCarloResults.last {
                                     withAnimation {
-                                        scrollProxy.scrollTo(lastResult.id, anchor: .bottom)
+                                        scrollProxy.scrollTo("week-\(lastResult.id)", anchor: .bottom)
                                     }
                                     scrollToBottom = false // Reset the trigger
                                 }
@@ -417,7 +496,7 @@ struct ContentView: View {
                             // Automatically scroll to bottom when results appear
                             if scrollToBottom, let lastResult = monteCarloResults.last {
                                 withAnimation {
-                                    scrollProxy.scrollTo(lastResult.id, anchor: .bottom)
+                                    scrollProxy.scrollTo("week-\(lastResult.id)", anchor: .bottom)
                                 }
                                 scrollToBottom = false
                             }
@@ -437,7 +516,7 @@ struct ContentView: View {
             }
         }
     }
-
+    
     // MARK: - Functions
 
     private func runSimulation() {
