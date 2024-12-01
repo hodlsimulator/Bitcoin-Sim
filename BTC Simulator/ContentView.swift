@@ -154,118 +154,118 @@ struct ContentView: View {
     ]
 
     var body: some View {
-        ZStack {
-            Color.black.ignoresSafeArea()
+            ZStack {
+                Color.black.ignoresSafeArea()
 
-            VStack(spacing: 10) {
-                if !isSimulationRun {
-                    // Input fields and Run Simulation button
-                    VStack(spacing: 10) {
-                        InputField(title: "Iterations", text: $inputManager.iterations)
-                        InputField(title: "Annual CAGR (%)", text: $inputManager.annualCAGR)
-                        InputField(title: "Annual Volatility (%)", text: $inputManager.annualVolatility)
+                VStack(spacing: 10) {
+                    if !isSimulationRun {
+                        // Input fields and Run Simulation button
+                        VStack(spacing: 10) {
+                            InputField(title: "Iterations", text: $inputManager.iterations)
+                            InputField(title: "Annual CAGR (%)", text: $inputManager.annualCAGR)
+                            InputField(title: "Annual Volatility (%)", text: $inputManager.annualVolatility)
 
-                        Button(action: {
-                            // Reset to default column when running simulation
-                            if let usdIndex = columns.firstIndex(where: { $0.0 == "BTC Price USD" }) {
-                                currentPage = usdIndex
-                            }
-                            runSimulation()
-                        }) {
-                            Text("Run Simulation")
-                                .foregroundColor(.white)
-                                .padding()
-                                .background(Color.blue)
-                                .cornerRadius(8)
-                        }
-                    }
-                } else {
-                    ZStack {
-                        // Results Table with added top padding
-                        VStack {
-                            Spacer().frame(height: 40) // Add space above the table
-                            ResultsTable(
-                                monteCarloResults: monteCarloResults,
-                                columns: columns,
-                                currentPage: $currentPage, // Bind currentPage
-                                scrollToBottom: $scrollToBottom,
-                                isAtBottomParent: $isAtBottom, // Correct the argument label
-                                getValue: getValue
-                            )
-                        }
-
-                        // Back button at top-left corner
-                        VStack {
-                            HStack {
-                                Button(action: {
-                                    isSimulationRun = false
-                                    lastViewedPage = currentPage // Save the last viewed column
-                                }) {
-                                    Image(systemName: "chevron.left")
-                                        .foregroundColor(.white)
-                                        .imageScale(.large)
-                                        .padding()
+                            Button(action: {
+                                // Reset to default column when running simulation
+                                if let usdIndex = columns.firstIndex(where: { $0.0 == "BTC Price USD" }) {
+                                    currentPage = usdIndex
                                 }
-                                Spacer()
+                                runSimulation()
+                            }) {
+                                Text("Run Simulation")
+                                    .foregroundColor(.white)
+                                    .padding()
+                                    .background(Color.blue)
+                                    .cornerRadius(8)
                             }
-                            Spacer()
                         }
-
-                        // Go-to-bottom button at bottom center
-                        if !isAtBottom {
+                    } else {
+                        ZStack {
+                            // Results Table with added top padding
                             VStack {
-                                Spacer()
-                                Button(action: {
-                                    scrollToBottom = true
-                                }) {
-                                    Image(systemName: "chevron.down")
-                                        .foregroundColor(.white)
-                                        .imageScale(.large)
-                                        .padding()
-                                        .background(Color.black.opacity(0.7))
-                                        .clipShape(Circle())
+                                Spacer().frame(height: 40) // Add space above the table
+                                ResultsTable(
+                                    monteCarloResults: monteCarloResults,
+                                    columns: columns,
+                                    currentPage: $currentPage, // Bind currentPage
+                                    scrollToBottom: $scrollToBottom,
+                                    isAtBottomParent: $isAtBottom, // Correct the argument label
+                                    getValue: getValue
+                                )
+                            }
+
+                            // Back button at top-left corner
+                            VStack {
+                                HStack {
+                                    Button(action: {
+                                        isSimulationRun = false
+                                        lastViewedPage = currentPage // Save the last viewed column
+                                    }) {
+                                        Image(systemName: "chevron.left")
+                                            .foregroundColor(.white)
+                                            .imageScale(.large)
+                                            .padding()
+                                    }
+                                    Spacer()
                                 }
-                                .padding()
+                                Spacer()
+                            }
+
+                            // Go-to-bottom button at bottom center
+                            if !isAtBottom {
+                                VStack {
+                                    Spacer()
+                                    Button(action: {
+                                        scrollToBottom = true
+                                    }) {
+                                        Image(systemName: "chevron.down")
+                                            .foregroundColor(.white)
+                                            .imageScale(.large)
+                                            .padding()
+                                            .background(Color.black.opacity(0.7))
+                                            .clipShape(Circle())
+                                    }
+                                    .padding()
+                                }
+                            }
+                        }
+                        .onAppear {
+                            // Ensure data appears correctly
+                            if monteCarloResults.isEmpty {
+                                runSimulation() // Ensure simulation runs if data is missing
                             }
                         }
                     }
-                    .onAppear {
-                        // Ensure data appears correctly
-                        if monteCarloResults.isEmpty {
-                            runSimulation() // Ensure simulation runs if data is missing
-                        }
-                    }
                 }
-            }
 
-            // Forward button overlay in the top-right corner
-            if !isSimulationRun && !monteCarloResults.isEmpty {
-                VStack {
-                    HStack {
-                        Spacer()
-                        Button(action: {
-                            isSimulationRun = true
-                            currentPage = lastViewedPage // Restore the last viewed column
-                        }) {
-                            Image(systemName: "chevron.right")
-                                .foregroundColor(.white)
-                                .imageScale(.large)
-                                .padding()
+                // Forward button overlay in the top-right corner
+                if !isSimulationRun && !monteCarloResults.isEmpty {
+                    VStack {
+                        HStack {
+                            Spacer()
+                            Button(action: {
+                                isSimulationRun = true
+                                currentPage = lastViewedPage // Restore the last viewed column
+                            }) {
+                                Image(systemName: "chevron.right")
+                                    .foregroundColor(.white)
+                                    .imageScale(.large)
+                                    .padding()
+                            }
                         }
+                        Spacer()
                     }
-                    Spacer()
+                }
+            }
+            .onAppear {
+                // Ensure default column view on app load
+                if isSimulationRun, monteCarloResults.isEmpty {
+                    runSimulation()
+                } else if let usdIndex = columns.firstIndex(where: { $0.0 == "BTC Price USD" }) {
+                    currentPage = usdIndex
                 }
             }
         }
-        .onAppear {
-            // Ensure default column view on app load
-            if isSimulationRun, monteCarloResults.isEmpty {
-                runSimulation()
-            } else if let usdIndex = columns.firstIndex(where: { $0.0 == "BTC Price USD" }) {
-                currentPage = usdIndex
-            }
-        }
-    }
 
     // MARK: - State Variables
     @State private var lastViewedPage: Int = 0 // Tracks the last viewed column
@@ -273,20 +273,6 @@ struct ContentView: View {
     // MARK: - Page Navigation
     @State private var currentPage: Int = 0 // Tracks the current page
     let totalPages = 10 // Total number of pages (adjust as needed)
-
-    private func goToNextPage() {
-        if currentPage < totalPages - 1 {
-            currentPage += 1
-            print("Navigated to page \(currentPage + 1)")
-        }
-    }
-
-    private func goToPreviousPage() {
-        if currentPage > 0 {
-            currentPage -= 1
-            print("Navigated to page \(currentPage + 1)")
-        }
-    }
 
     // MARK: - Safeguards for NaN Errors
     private func validateValue(_ value: Double?) -> Double {
@@ -328,7 +314,7 @@ struct ContentView: View {
 
         var body: some View {
             VStack(spacing: 0) {
-                // Header Row
+                // Header Row with Tap Gestures
                 HStack(spacing: 0) {
                     // Weeks Header
                     Text("Week")
@@ -338,77 +324,114 @@ struct ContentView: View {
                         .background(Color.black)
                         .foregroundColor(.white)
 
-                    // Main Column Header (updates based on currentPage)
-                    Text(columns[currentPage].0)
-                        .font(.headline)
-                        .padding()
-                        .background(Color.black)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                }
+                    // Main Column Header with overlay of two buttons
+                    ZStack {
+                        // Main Column Header Text
+                        Text(columns[currentPage].0)
+                            .font(.headline)
+                            .padding()
+                            .background(Color.black)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity, alignment: .center)
 
-                // Content Rows with ScrollViewReader
-                ScrollViewReader { scrollProxy in
-                    ScrollView(.vertical, showsIndicators: true) {
-                        VStack(spacing: 0) {
-                            HStack(alignment: .top, spacing: 0) {
-                                // Weeks Column
-                                VStack(spacing: 0) {
-                                    ForEach(monteCarloResults) { result in
-                                        Text("\(result.week)")
-                                            .frame(width: 60)
-                                            .padding()
-                                            .background(Color.black)
-                                            .foregroundColor(.white)
-                                            .id("week-\(result.id)")
-                                    }
-                                }
-
-                                // Main Data Column in a TabView
-                                TabView(selection: $currentPage) {
-                                    ForEach(0..<columns.count, id: \.self) { pageIndex in
-                                        VStack(spacing: 0) {
-                                            ForEach(monteCarloResults) { result in
-                                                Text(getValue(result, columns[pageIndex].1))
-                                                    .frame(maxWidth: .infinity, alignment: .center)
-                                                    .padding()
-                                                    .background(Color.black)
-                                                    .foregroundColor(.white)
-                                                    .id("data-\(result.id)")
-                                            }
+                        // Overlay Buttons for Tap Gestures
+                        GeometryReader { geometry in
+                            HStack(spacing: 0) {
+                                // Left Half Button
+                                Button(action: {
+                                    if currentPage > 0 {
+                                        withAnimation {
+                                            currentPage -= 1
                                         }
-                                        .tag(pageIndex)
                                     }
+                                }) {
+                                    Color.clear
                                 }
-                                .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
-                                .frame(maxWidth: .infinity) // Ensure it takes available space
-                            }
-                            // Apply tap gesture to HStack content
-                            .contentShape(Rectangle()) // Makes the entire area tappable
-                            .onTapGesture { location in
-                                let midPoint = UIScreen.main.bounds.width / 2
-                                withAnimation(.easeInOut(duration: 0.8)) { // Adjust duration as needed
-                                    if location.x < midPoint {
-                                        // Left half tapped, go to previous page
-                                        currentPage = (currentPage - 1 + columns.count) % columns.count
-                                    } else {
-                                        // Right half tapped, go to next page
-                                        currentPage = (currentPage + 1) % columns.count
+                                .frame(width: geometry.size.width / 2)
+                                .contentShape(Rectangle())
+
+                                // Right Half Button
+                                Button(action: {
+                                    if currentPage < columns.count - 1 {
+                                        withAnimation {
+                                            currentPage += 1
+                                        }
                                     }
+                                }) {
+                                    Color.clear
                                 }
+                                .frame(width: geometry.size.width / 2)
+                                .contentShape(Rectangle())
                             }
                         }
                     }
-                    .onChange(of: scrollToBottom) { value in
-                        if value {
-                            // Scroll to the last item
-                            if let lastResult = monteCarloResults.last {
-                                withAnimation {
-                                    scrollProxy.scrollTo("week-\(lastResult.id)", anchor: .bottom)
+                }
+                .frame(height: 50)
+
+                // Content Rows inside a single ScrollView
+                ScrollViewReader { scrollProxy in
+                    ScrollView(.vertical, showsIndicators: true) {
+                        HStack(spacing: 0) {
+                            // Fixed Weeks Column
+                            VStack(spacing: 0) {
+                                ForEach(monteCarloResults) { result in
+                                    Text("\(result.week)")
+                                        .frame(width: 60)
+                                        .padding()
+                                        .background(Color.black)
+                                        .foregroundColor(.white)
+                                        .id(result.id)
                                 }
-                                scrollToBottom = false // Reset the trigger
+                            }
+
+                            // Data Column with TabView for Sliding Animation
+                            TabView(selection: $currentPage) {
+                                ForEach(0..<columns.count, id: \.self) { index in
+                                    VStack(spacing: 0) {
+                                        ForEach(monteCarloResults) { result in
+                                            Text(getValue(result, columns[index].1))
+                                                .frame(maxWidth: .infinity, alignment: .center)
+                                                .padding()
+                                                .background(Color.black)
+                                                .foregroundColor(.white)
+                                        }
+                                    }
+                                    .tag(index)
+                                }
+                            }
+                            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never)) // Disable page indicators
+                            .frame(width: UIScreen.main.bounds.width - 60) // Adjust width to account for weeks column
+                        }
+                        .onChange(of: scrollToBottom) { value in
+                            if value {
+                                // Scroll to the last item
+                                if let lastResult = monteCarloResults.last {
+                                    withAnimation {
+                                        scrollProxy.scrollTo(lastResult.id, anchor: .bottom)
+                                    }
+                                    scrollToBottom = false // Reset the trigger
+                                }
                             }
                         }
+                        .onAppear {
+                            // Automatically scroll to bottom when results appear
+                            if scrollToBottom, let lastResult = monteCarloResults.last {
+                                withAnimation {
+                                    scrollProxy.scrollTo(lastResult.id, anchor: .bottom)
+                                }
+                                scrollToBottom = false
+                            }
+                        }
+                        .background(GeometryReader { geometry -> Color in
+                            // Detect if user is at the bottom
+                            DispatchQueue.main.async {
+                                let isAtBottom = geometry.frame(in: .global).maxY <= UIScreen.main.bounds.height
+                                if isAtBottom != isAtBottomParent {
+                                    isAtBottomParent = isAtBottom
+                                }
+                            }
+                            return Color.clear
+                        })
                     }
                 }
             }
