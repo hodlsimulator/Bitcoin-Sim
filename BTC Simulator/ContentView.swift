@@ -117,6 +117,26 @@ extension View {
     }
 }
 
+// Define environment key for ScrollViewProxy
+extension EnvironmentValues {
+    var scrollProxy: ScrollViewProxy? {
+        get { self[ScrollViewProxyKey.self] }
+        set { self[ScrollViewProxyKey.self] = newValue }
+    }
+}
+
+struct ScrollViewProxyKey: EnvironmentKey {
+    static let defaultValue: ScrollViewProxy? = nil
+}
+
+struct TopRowPreferenceKey: PreferenceKey {
+    static var defaultValue: Int = 0
+    static func reduce(value: inout Int, nextValue: () -> Int) {
+        // Keep the smallest (topmost) index
+        value = min(value, nextValue())
+    }
+}
+
 struct ContentView: View {
     @State private var monteCarloResults: [SimulationData] = [] // Holds simulation results
     @State private var isLoading: Bool = false // Loading state for simulations
@@ -139,6 +159,10 @@ struct ContentView: View {
     @State private var isSimulationRun: Bool = false // Tracks if simulation has been run
     @State private var scrollToBottom: Bool = false // Triggers scroll to bottom
     @State private var isAtBottom: Bool = false // Tracks if at the bottom of the scroll
+    @State private var lastViewedRow: Int = 0 // New state variable to track the last viewed row
+    @Environment(\.scrollProxy) private var scrollProxy: ScrollViewProxy?
+    @State private var lastViewedIndex = 0
+    @State private var contentScrollProxy: ScrollViewProxy?
 
     // Define column headers and keys for dynamic access
     let columns: [(String, PartialKeyPath<SimulationData>)] = [
@@ -154,44 +178,54 @@ struct ContentView: View {
     ]
 
     var body: some View {
-            ZStack {
-                Color.black.ignoresSafeArea()
+        ZStack {
+            Color.black.ignoresSafeArea()
 
-                VStack(spacing: 10) {
-                    if !isSimulationRun {
-                        // Input fields and Run Simulation button
-                        VStack(spacing: 10) {
-                            InputField(title: "Iterations", text: $inputManager.iterations)
-                            InputField(title: "Annual CAGR (%)", text: $inputManager.annualCAGR)
-                            InputField(title: "Annual Volatility (%)", text: $inputManager.annualVolatility)
+            VStack(spacing: 10) {
+                if !isSimulationRun {
+                    // Input fields and Run Simulation button
+                    VStack(spacing: 10) {
+                        InputField(title: "Iterations", text: $inputManager.iterations)
+                        InputField(title: "Annual CAGR (%)", text: $inputManager.annualCAGR)
+                        InputField(title: "Annual Volatility (%)", text: $inputManager.annualVolatility)
 
-                            Button(action: {
-                                // Reset to default column when running simulation
-                                if let usdIndex = columns.firstIndex(where: { $0.0 == "BTC Price USD" }) {
-                                    currentPage = usdIndex
-                                }
-                                runSimulation()
-                            }) {
-                                Text("Run Simulation")
-                                    .foregroundColor(.white)
-                                    .padding()
-                                    .background(Color.blue)
-                                    .cornerRadius(8)
+                        Button(action: {
+                            // Reset to default column when running simulation
+                            if let usdIndex = columns.firstIndex(where: { $0.0 == "BTC Price USD" }) {
+                                currentPage = usdIndex
                             }
+                            runSimulation()
+                        }) {
+                            Text("Run Simulation")
+                                .foregroundColor(.white)
+                                .padding()
+                                .background(Color.blue)
+                                .cornerRadius(8)
                         }
-                    } else {
+                    }
+                } else {
+                    ScrollViewReader { scrollProxy in
                         ZStack {
-                            // Results Table with added top padding
                             VStack {
-                                Spacer().frame(height: 40) // Add space above the table
+                                Spacer().frame(height: 40)
                                 ResultsTable(
                                     monteCarloResults: monteCarloResults,
                                     columns: columns,
-                                    currentPage: $currentPage, // Bind currentPage
+                                    currentPage: $currentPage,
                                     scrollToBottom: $scrollToBottom,
-                                    isAtBottomParent: $isAtBottom, // Correct the argument label
-                                    getValue: getValue
+                                    isAtBottomParent: $isAtBottom,
+                                    getValue: getValue,
+                                    lastViewedIndex: $lastViewedIndex // Pass as a binding
                                 )
+                            }
+                            .onAppear {
+                                contentScrollProxy = scrollProxy
+
+                                // Scroll to the last viewed row when the view appears
+                                if lastViewedIndex < monteCarloResults.count {
+                                    let rowHeight: CGFloat = 50 // Replace with your actual row height
+                                    scrollToRow(scrollProxy: scrollProxy, rowIndex: lastViewedIndex, rowHeight: rowHeight)
+                                }
                             }
 
                             // Back button at top-left corner
@@ -199,7 +233,8 @@ struct ContentView: View {
                                 HStack {
                                     Button(action: {
                                         isSimulationRun = false
-                                        lastViewedPage = currentPage // Save the last viewed column
+                                        lastViewedPage = currentPage
+                                        lastViewedRow = lastViewedIndex
                                     }) {
                                         Image(systemName: "chevron.left")
                                             .foregroundColor(.white)
@@ -229,44 +264,62 @@ struct ContentView: View {
                                 }
                             }
                         }
-                        .onAppear {
-                            // Ensure data appears correctly
-                            if monteCarloResults.isEmpty {
-                                runSimulation() // Ensure simulation runs if data is missing
-                            }
-                        }
-                    }
-                }
-
-                // Forward button overlay in the top-right corner
-                if !isSimulationRun && !monteCarloResults.isEmpty {
-                    VStack {
-                        HStack {
-                            Spacer()
-                            Button(action: {
-                                isSimulationRun = true
-                                currentPage = lastViewedPage // Restore the last viewed column
-                            }) {
-                                Image(systemName: "chevron.right")
-                                    .foregroundColor(.white)
-                                    .imageScale(.large)
-                                    .padding()
-                            }
-                        }
-                        Spacer()
                     }
                 }
             }
-            .onAppear {
-                // Ensure default column view on app load
-                if isSimulationRun, monteCarloResults.isEmpty {
-                    runSimulation()
-                } else if let usdIndex = columns.firstIndex(where: { $0.0 == "BTC Price USD" }) {
-                    currentPage = usdIndex
+
+            // Forward button overlay in the top-right corner
+            if !isSimulationRun && !monteCarloResults.isEmpty {
+                VStack {
+                    HStack {
+                        Spacer()
+                        Button(action: {
+                            // Ensure we are in simulation mode and restore the last viewed column and row
+                            isSimulationRun = true
+                            currentPage = lastViewedPage
+
+                            // Scroll to the exact row by id
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                if let scrollProxy = contentScrollProxy, lastViewedRow < monteCarloResults.count {
+                                    let result = monteCarloResults[lastViewedRow]
+                                    scrollProxy.scrollTo("week-\(result.id)", anchor: .top)
+                                } else {
+                                    print("Failed to scroll: contentScrollProxy is nil or lastViewedRow is out of range")
+                                }
+                            }
+                        }) {
+                            Image(systemName: "chevron.right")
+                                .foregroundColor(.white)
+                                .imageScale(.large)
+                                .padding()
+                        }
+                    }
+                    Spacer()
                 }
             }
         }
-
+        .onAppear {
+            if isSimulationRun && monteCarloResults.isEmpty {
+                runSimulation()
+            } else if let usdIndex = columns.firstIndex(where: { $0.0 == "BTC Price USD" }) {
+                currentPage = usdIndex
+            }
+        }
+    }
+    
+    func scrollToRow(scrollProxy: ScrollViewProxy?, rowIndex: Int, rowHeight: CGFloat) {
+        guard let scrollProxy = scrollProxy else {
+            print("ScrollViewProxy is nil")
+            return
+        }
+        let targetOffset = CGFloat(rowIndex) * rowHeight
+        DispatchQueue.main.async {
+            withAnimation {
+                scrollProxy.scrollTo(targetOffset, anchor: .top)
+            }
+        }
+    }
+    
     // MARK: - State Variables
     @State private var lastViewedPage: Int = 0 // Tracks the last viewed column
 
@@ -311,6 +364,9 @@ struct ContentView: View {
         @Binding var scrollToBottom: Bool
         @Binding var isAtBottomParent: Bool
         let getValue: (SimulationData, PartialKeyPath<SimulationData>) -> String
+        @Environment(\.scrollProxy) private var scrollProxy: ScrollViewProxy?
+        @Binding var lastViewedIndex: Int
+        @State private var isUserScrolling: Bool = false
 
         var body: some View {
             VStack(spacing: 0) {
@@ -336,53 +392,32 @@ struct ContentView: View {
                         
                         // Invisible Layer to Detect Taps Near Edges
                         GeometryReader { geometry in
-                            // Define tap areas as narrow regions near the edges
                             HStack(spacing: 0) {
-                                // Left Tap Area (Near Weeks Column)
                                 Color.clear
-                                    .frame(width: geometry.size.width * 0.2) // 20% width
+                                    .frame(width: geometry.size.width * 0.2)
                                     .contentShape(Rectangle())
                                     .gesture(
-                                        DragGesture(minimumDistance: 0)
-                                            .onEnded { value in
-                                                let drag = value.translation
-                                                let threshold: CGFloat = 10
-                                                if abs(drag.width) < threshold && abs(drag.height) < threshold {
-                                                    // Treat as tap
-                                                    let tapX = value.location.x
-                                                    if tapX < geometry.size.width * 0.2 {
-                                                        // Left tap: Navigate to Previous Page
-                                                        if currentPage > 0 {
-                                                            withAnimation {
-                                                                currentPage -= 1
-                                                            }
-                                                        }
+                                        TapGesture()
+                                            .onEnded {
+                                                if currentPage > 0 {
+                                                    withAnimation {
+                                                        currentPage -= 1
                                                     }
                                                 }
                                             }
                                     )
                                 
-                                Spacer() // Middle 60% where taps are ignored
+                                Spacer()
                                 
-                                // Right Tap Area (Near Screen Edge)
                                 Color.clear
-                                    .frame(width: geometry.size.width * 0.2) // 20% width
+                                    .frame(width: geometry.size.width * 0.2)
                                     .contentShape(Rectangle())
                                     .gesture(
-                                        DragGesture(minimumDistance: 0)
-                                            .onEnded { value in
-                                                let drag = value.translation
-                                                let threshold: CGFloat = 10
-                                                if abs(drag.width) < threshold && abs(drag.height) < threshold {
-                                                    // Treat as tap
-                                                    let tapX = value.location.x
-                                                    if tapX > geometry.size.width * 0.8 {
-                                                        // Right tap: Navigate to Next Page
-                                                        if currentPage < columns.count - 1 {
-                                                            withAnimation {
-                                                                currentPage += 1
-                                                            }
-                                                        }
+                                        TapGesture()
+                                            .onEnded {
+                                                if currentPage < columns.count - 1 {
+                                                    withAnimation {
+                                                        currentPage += 1
                                                     }
                                                 }
                                             }
@@ -390,31 +425,64 @@ struct ContentView: View {
                             }
                         }
                     }
-                    .frame(height: 50) // Adjust height as needed
+                    .frame(height: 50)
                 }
                 .background(Color.black)
                 
                 // Content Rows inside a single ScrollView
-                ScrollViewReader { scrollProxy in
+                ScrollViewReader { proxy in
                     ScrollView(.vertical, showsIndicators: true) {
                         HStack(spacing: 0) {
                             // Fixed Weeks Column
                             VStack(spacing: 0) {
-                                ForEach(monteCarloResults) { result in
-                                    Text("\(result.week)")
+                                ForEach(monteCarloResults.indices, id: \.self) { index in
+                                    let result = monteCarloResults[index]
+                                    Text("\(index + 1)")
                                         .frame(width: 60)
                                         .padding()
                                         .background(Color.black)
                                         .foregroundColor(.white)
                                         .id("week-\(result.id)")
+                                        .background(
+                                            GeometryReader { geo in
+                                                Color.clear
+                                                    .preference(key: TopRowPreferenceKey.self, value: isTopRow(geo) ? index : monteCarloResults.count)
+                                            }
+                                        )
                                 }
                             }
+                            .onPreferenceChange(TopRowPreferenceKey.self) { value in
+                                if value != monteCarloResults.count {
+                                    lastViewedIndex = value
+                                }
+                            }
+                            .onChange(of: scrollToBottom) { value in
+                                if value {
+                                    if let lastResult = monteCarloResults.last {
+                                        withAnimation {
+                                            proxy.scrollTo("week-\(lastResult.id)", anchor: .bottom)
+                                        }
+                                        scrollToBottom = false
+                                    }
+                                }
+                            }
+                            .gesture(DragGesture()
+                                .onChanged { _ in
+                                    if !isUserScrolling {
+                                        isUserScrolling = true
+                                    }
+                                }
+                                .onEnded { _ in
+                                    if isUserScrolling {
+                                        isUserScrolling = false
+                                    }
+                                }
+                            )
                             
                             // Data Column with TabView for Sliding Animation and Tap Gesture
                             TabView(selection: $currentPage) {
                                 ForEach(0..<columns.count, id: \.self) { index in
                                     ZStack {
-                                        // Data Content
                                         VStack(spacing: 0) {
                                             ForEach(monteCarloResults) { result in
                                                 Text(getValue(result, columns[index].1))
@@ -426,48 +494,36 @@ struct ContentView: View {
                                             }
                                         }
                                         
-                                        // Invisible Layer to Detect Taps Near Edges
+                                        // GeometryReader for gesture recognition
                                         GeometryReader { geometry in
                                             HStack(spacing: 0) {
-                                                // Left Tap Area (Near Weeks Column)
-                                                // Color.red.opacity(0.3) // Debug: Red for left tap area
+                                                // Left Tap Area
                                                 Color.clear
-                                                    .frame(width: geometry.size.width * 0.2) // 20% width
+                                                    .frame(width: geometry.size.width * 0.2)
                                                     .contentShape(Rectangle())
                                                     .gesture(
-                                                        DragGesture(minimumDistance: 0)
-                                                            .onEnded { value in
-                                                                let drag = value.translation
-                                                                let threshold: CGFloat = 10
-                                                                if abs(drag.width) < threshold && abs(drag.height) < threshold {
-                                                                    // Treat as tap
-                                                                    if currentPage > 0 {
-                                                                        withAnimation {
-                                                                            currentPage -= 1
-                                                                        }
+                                                        TapGesture()
+                                                            .onEnded {
+                                                                if currentPage > 0 {
+                                                                    withAnimation {
+                                                                        currentPage -= 1
                                                                     }
                                                                 }
                                                             }
                                                     )
                                                 
-                                                Spacer() // Middle 60% where taps are ignored
+                                                Spacer()
                                                 
-                                                // Right Tap Area (Near Screen Edge)
-                                                // Color.blue.opacity(0.3) // Debug: Blue for right tap area
+                                                // Right Tap Area
                                                 Color.clear
-                                                    .frame(width: geometry.size.width * 0.2) // 20% width
+                                                    .frame(width: geometry.size.width * 0.2)
                                                     .contentShape(Rectangle())
                                                     .gesture(
-                                                        DragGesture(minimumDistance: 0)
-                                                            .onEnded { value in
-                                                                let drag = value.translation
-                                                                let threshold: CGFloat = 10
-                                                                if abs(drag.width) < threshold && abs(drag.height) < threshold {
-                                                                    // Treat as tap
-                                                                    if currentPage < columns.count - 1 {
-                                                                        withAnimation {
-                                                                            currentPage += 1
-                                                                        }
+                                                        TapGesture()
+                                                            .onEnded {
+                                                                if currentPage < columns.count - 1 {
+                                                                    withAnimation {
+                                                                        currentPage += 1
                                                                     }
                                                                 }
                                                             }
@@ -478,31 +534,10 @@ struct ContentView: View {
                                     .tag(index)
                                 }
                             }
-                            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never)) // Disable page indicators
-                            .frame(width: UIScreen.main.bounds.width - 60) // Adjust width to account for weeks column
-                        }
-                        .onChange(of: scrollToBottom) { value in
-                            if value {
-                                // Scroll to the last item
-                                if let lastResult = monteCarloResults.last {
-                                    withAnimation {
-                                        scrollProxy.scrollTo("week-\(lastResult.id)", anchor: .bottom)
-                                    }
-                                    scrollToBottom = false // Reset the trigger
-                                }
-                            }
-                        }
-                        .onAppear {
-                            // Automatically scroll to bottom when results appear
-                            if scrollToBottom, let lastResult = monteCarloResults.last {
-                                withAnimation {
-                                    scrollProxy.scrollTo("week-\(lastResult.id)", anchor: .bottom)
-                                }
-                                scrollToBottom = false
-                            }
+                            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+                            .frame(width: UIScreen.main.bounds.width - 60)
                         }
                         .background(GeometryReader { geometry -> Color in
-                            // Detect if user is at the bottom
                             DispatchQueue.main.async {
                                 let isAtBottom = geometry.frame(in: .global).maxY <= UIScreen.main.bounds.height
                                 if isAtBottom != isAtBottomParent {
@@ -514,6 +549,12 @@ struct ContentView: View {
                     }
                 }
             }
+        }
+        
+        // Helper function to determine if the row is at the top
+        func isTopRow(_ geo: GeometryProxy) -> Bool {
+            let y = geo.frame(in: .named("scrollView")).minY
+            return y >= 0 && y < geo.size.height
         }
     }
     
