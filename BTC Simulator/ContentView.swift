@@ -614,7 +614,7 @@ struct ContentView: View {
                     portfolioValueEUR: 465.00,
                     contributionEUR: 60.00,
                     contributionFeeEUR: 0.21,
-                    netContributionBTC: 0.00069130,
+                    netContributionBTC: 0.00066988,
                     withdrawalEUR: 0.0
                 ))
 
@@ -629,12 +629,27 @@ struct ContentView: View {
                     portfolioValueEUR: 547.00,
                     contributionEUR: 70.00,
                     contributionFeeEUR: 0.25,
-                    netContributionBTC: 0.00078105,
+                    netContributionBTC: 0.00077809,
                     withdrawalEUR: 0.0
                 ))
 
-                // Simulation loop (week 4 onwards)
-                for week in 4...totalWeeks {
+                // Week 4 (Hardcoded)
+                results.append(SimulationData(
+                    id: UUID(),
+                    week: 4,
+                    startingBTC: 0.00608283,
+                    netBTCHoldings: 0.00750280,
+                    btcPriceUSD: 95_741.15,
+                    btcPriceEUR: 90_321.84,
+                    portfolioValueEUR: 685.00,
+                    contributionEUR: 130.00,
+                    contributionFeeEUR: 0.46,
+                    netContributionBTC: 0.00141997,
+                    withdrawalEUR: 0.0
+                ))
+
+                // Simulation loop (week 5 onwards)
+                for week in 5...totalWeeks {
                     let previous = results[week - 2]
 
                     // Generate random shock

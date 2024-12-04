@@ -224,7 +224,7 @@ struct ContentView: View {
             let weeklyVolatility = annualVolatility / sqrt(52.0)
             let exchangeRateEURUSD = 1.06
             let totalWeeks = 1040
-            
+
             guard let totalIterations = inputManager.getParsedIterations(), totalIterations > 0 else {
                 DispatchQueue.main.async {
                     self.isLoading = false
@@ -232,14 +232,14 @@ struct ContentView: View {
                 print("Invalid number of iterations.")
                 return
             }
-            
+
             // Store all results
             var allResults: [[SimulationData]] = []
-            
+
             // Run simulation for the specified number of iterations
             for _ in 1...totalIterations {
                 var results: [SimulationData] = []
-                
+
                 // Week 1 (Hardcoded)
                 results.append(SimulationData(
                     id: UUID(),
@@ -254,7 +254,7 @@ struct ContentView: View {
                     netContributionBTC: 0.00527613,
                     withdrawalEUR: 0.0
                 ))
-                
+
                 // Week 2 (Hardcoded)
                 results.append(SimulationData(
                     id: UUID(),
@@ -266,10 +266,10 @@ struct ContentView: View {
                     portfolioValueEUR: 465.00,
                     contributionEUR: 60.00,
                     contributionFeeEUR: 0.21,
-                    netContributionBTC: 0.00069130,
+                    netContributionBTC: 0.00066988,
                     withdrawalEUR: 0.0
                 ))
-                
+
                 // Week 3 (Hardcoded)
                 results.append(SimulationData(
                     id: UUID(),
@@ -281,50 +281,65 @@ struct ContentView: View {
                     portfolioValueEUR: 547.00,
                     contributionEUR: 70.00,
                     contributionFeeEUR: 0.25,
-                    netContributionBTC: 0.00078105,
+                    netContributionBTC: 0.00077809,
                     withdrawalEUR: 0.0
                 ))
-                
+
+                // Week 4 (Hardcoded)
+                results.append(SimulationData(
+                    id: UUID(),
+                    week: 4,
+                    startingBTC: 0.00608283,
+                    netBTCHoldings: 0.00750280,
+                    btcPriceUSD: 95_741.15,
+                    btcPriceEUR: 90_321.84,
+                    portfolioValueEUR: 685.00,
+                    contributionEUR: 130.00,
+                    contributionFeeEUR: 0.46,
+                    netContributionBTC: 0.00141997,
+                    withdrawalEUR: 0.0
+                ))
+
                 // Cumulative trackers
-                var cumulativeBTC: Double = 0.00608283 // Starting BTC for week 3
-                var cumulativeContributionsEUR: Double = 508.00
-                
-                // Simulation loop (week 4 onwards)
-                for week in 4...totalWeeks {
+                var cumulativeBTC: Double = 0.00750280 // Starting BTC for week 4
+                var cumulativeContributionsEUR: Double = 638.00
+
+                // Simulation loop (week 5 onwards)
+                for week in 5...totalWeeks {
                     let previous = results[week - 2] // Reference to the previous week's data
-                    
+
                     // Generate random shock
                     let randomShock = randomNormal(mean: 0, standardDeviation: weeklyVolatility)
                     let adjustedGrowthFactor = 1 + weeklyDeterministicGrowth + randomShock
-                    
+
                     // Update BTC price
                     var btcPriceUSD = previous.btcPriceUSD * adjustedGrowthFactor
-                    
+
                     // Rare crash simulation
                     if Double.random(in: 0..<1) < 0.005 { // 0.5% crash probability
                         btcPriceUSD *= (1 - Double.random(in: 0.1...0.3)) // Moderate crash severity
                     }
-                    
+
                     // Apply price floor (adjust as needed)
                     btcPriceUSD = max(btcPriceUSD, 1_000.0)
                     let btcPriceEUR = btcPriceUSD / exchangeRateEURUSD
-                    
+
                     // Contribution logic
                     let contributionEUR: Double = week <= 52 ? 60.0 : 100.0
                     let contributionFeeEUR = contributionEUR * 0.0035
                     let netContributionBTC = (contributionEUR - contributionFeeEUR) / btcPriceEUR
                     cumulativeBTC += netContributionBTC
                     cumulativeContributionsEUR += contributionEUR
-                    
+
                     // Withdrawal logic
                     let withdrawalEUR: Double = previous.portfolioValueEUR > 30_000 ? 100.0 : 0.0
                     let withdrawalBTC = withdrawalEUR / btcPriceEUR
                     cumulativeBTC -= withdrawalBTC
-                    
+
                     // Update net BTC holdings and portfolio value
                     let netBTCHoldings = max(0, previous.netBTCHoldings + netContributionBTC - withdrawalBTC)
                     let portfolioValueEUR = netBTCHoldings * btcPriceEUR
-                    
+
                     // Append simulation data for the current week
                     results.append(SimulationData(
                         id: UUID(),
@@ -340,15 +355,15 @@ struct ContentView: View {
                         withdrawalEUR: withdrawalEUR
                     ))
                 }
-                
+
                 allResults.append(results)
             }
-            
+
             // Update UI
             DispatchQueue.main.async {
                 self.isLoading = false
                 self.monteCarloResults = allResults.last ?? []
-                
+
                 // Process and generate histogram
                 self.processAllResults(allResults) // Optional if you process stats here
                 self.generateHistogramForResults(
