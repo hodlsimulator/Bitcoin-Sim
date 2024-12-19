@@ -112,7 +112,7 @@ func simulateSingleRun(
         btcPriceEUR: 71_177.69,
         portfolioValueEUR: 333.83,
         contributionEUR: 378.00,
-        contributionFeeEUR: 2.46,
+        transactionFeeEUR: 2.46,
         netContributionBTC: 0.00527613,
         withdrawalEUR: 0.0
     ))
@@ -127,56 +127,114 @@ func simulateSingleRun(
         btcPriceEUR: 86_792.45,
         portfolioValueEUR: 465.00,
         contributionEUR: 60.00,
-        contributionFeeEUR: 0.21,
-        netContributionBTC: 0.00069130,
+        transactionFeeEUR: 0.21,
+        netContributionBTC: 0.00066988,
         withdrawalEUR: 0.0
     ))
 
-    // Starting points for simulation from Week 3 onward
-    var previousBTCPriceUSD = 92_000.00
-    var previousNetBTCHoldings = 0.00530474
+    // Week 3 (Hardcoded)
+    results.append(SimulationData(
+        id: UUID(),
+        week: 3,
+        startingBTC: 0.00530474,
+        netBTCHoldings: 0.00608283,
+        btcPriceUSD: 95_000.00,
+        btcPriceEUR: 89_622.64,
+        portfolioValueEUR: 547.00,
+        contributionEUR: 70.00,
+        transactionFeeEUR: 0.25,
+        netContributionBTC: 0.00077809,
+        withdrawalEUR: 0.0
+    ))
 
-    // Simulate Weeks 3 to 1040
-    for week in 3...1040 {
+    // Week 4 (Hardcoded)
+    results.append(SimulationData(
+        id: UUID(),
+        week: 4,
+        startingBTC: 0.00608283,
+        netBTCHoldings: 0.00750280,
+        btcPriceUSD: 95_741.15,
+        btcPriceEUR: 90_321.84,
+        portfolioValueEUR: 685.00,
+        contributionEUR: 130.00,
+        transactionFeeEUR: 0.46,
+        netContributionBTC: 0.00141997,
+        withdrawalEUR: 0.0
+    ))
+    
+    // Week 5 (Hardcoded)
+    results.append(SimulationData(
+        id: UUID(),
+        week: 5,
+        startingBTC: 0.00745154,
+        netBTCHoldings: 0.00745154,
+        btcPriceUSD: 96_632.26,
+        btcPriceEUR: 91_162.51,
+        portfolioValueEUR: 679.30,
+        contributionEUR: 0.00,
+        transactionFeeEUR: 5.00,
+        netContributionBTC: 0.00000000,
+        withdrawalEUR: 0.0
+    ))
+    
+    // Week 6 (Hardcoded)
+    results.append(SimulationData(
+        id: UUID(),
+        week: 6,
+        startingBTC: 0.00745154,
+        netBTCHoldings: 0.00745154,
+        btcPriceUSD: 106_000.00,
+        btcPriceEUR: 100_000,
+        portfolioValueEUR: 745.15,
+        contributionEUR: 0.00,
+        transactionFeeEUR: 0.00,
+        netContributionBTC: 0.00000000,
+        withdrawalEUR: 0.0
+    ))
+
+    // Starting points for simulation from Week 6 onward
+    var previousBTCPriceUSD = 96_632.26
+    var previousNetBTCHoldings = 0.00745154
+
+    // Simulate Weeks 6 to 1040
+    for week in 6...1040 {
         // Deterministic weekly growth
         let weeklyDeterministicGrowth = pow(1 + annualCAGR / 100, 1.0 / 52) - 1
 
         // Random volatility using Box-Muller transform
         let randomShock = randomNormal(mean: 0, standardDeviation: annualVolatility / sqrt(52.0))
 
-        // Mean reversion adjustment: BTC tends to revert to its exponential growth path
+        // Mean reversion adjustment
         let meanReversionFactor = 1.0 - 0.02 * (previousBTCPriceUSD / (initialBTCPriceUSD * pow(1 + weeklyDeterministicGrowth, Double(week))) - 1.0)
 
-        // Adjusted growth factor with mean reversion
         let adjustedGrowthFactor = 1 + weeklyDeterministicGrowth + randomShock * meanReversionFactor
 
         // Calculate BTC price in USD with adjustments
         var btcPriceUSD = previousBTCPriceUSD * adjustedGrowthFactor
 
-        // Rare crash event (1% chance of drawdown between 5% and 30%)
+        // Rare crash event
         if Double.random(in: 0..<1) < 0.01 {
             btcPriceUSD *= (1 - Double.random(in: 0.05...0.3))
         }
 
-        // Enforce a minimum BTC price (e.g., $10,000)
+        // Enforce a minimum BTC price
         btcPriceUSD = max(btcPriceUSD, 10_000.0)
 
-        // Convert USD price to EUR
+        // Convert USD to EUR
         let btcPriceEUR = btcPriceUSD / 1.06
 
         // Contribution logic
-        let contributionEUR: Double = week <= 52 ? 60.0 : 100.0 // Contributions increase after 1 year
-        let contributionFeeEUR = contributionEUR * 0.0025 // 0.25% fee
-        let netContributionBTC = (contributionEUR - contributionFeeEUR) / btcPriceEUR
+        let contributionEUR: Double = week <= 52 ? 60.0 : 100.0
+        let transactionFeeEUR = contributionEUR * 0.0025
+        let netContributionBTC = (contributionEUR - transactionFeeEUR) / btcPriceEUR
 
         // Withdrawal logic
-        let withdrawalEUR: Double = week > 156 ? 200.0 : 0.0 // Start withdrawals after 3 years
+        let withdrawalEUR: Double = week > 156 ? 200.0 : 0.0
 
-        // Calculate net BTC holdings and portfolio value
+        // Net BTC holdings and portfolio value
         let netBTCHoldings = previousNetBTCHoldings + netContributionBTC - (withdrawalEUR / btcPriceEUR)
-        let portfolioValueEUR = max(0.0, netBTCHoldings * btcPriceEUR) // Prevent negative values
+        let portfolioValueEUR = max(0.0, netBTCHoldings * btcPriceEUR)
 
-        // Append this week's data to results
         results.append(SimulationData(
             id: UUID(),
             week: week,
@@ -186,20 +244,18 @@ func simulateSingleRun(
             btcPriceEUR: btcPriceEUR,
             portfolioValueEUR: portfolioValueEUR,
             contributionEUR: contributionEUR,
-            contributionFeeEUR: contributionFeeEUR,
+            transactionFeeEUR: transactionFeeEUR,
             netContributionBTC: netContributionBTC,
             withdrawalEUR: withdrawalEUR
         ))
 
-        // Update for next iteration
         previousBTCPriceUSD = btcPriceUSD
         previousNetBTCHoldings = netBTCHoldings
     }
 
     return results
 }
-  
-/// Generate a random value from a normal distribution using the Box-Muller Transform
+
 /// Generate a random value from a normal distribution
 func randomNormal(mean: Double = 0, standardDeviation: Double = 1) -> Double {
     let u1 = Double.random(in: 0..<1)

@@ -25,7 +25,6 @@ func loadCSV() -> [SimulationData] {
             let columns = parseCSVRow(row)
             if columns.count < 13 { continue }
 
-            // Map columns to variables
             let week = Int(columns[0]) ?? 0
             let startingBTC = Double(columns[2]) ?? 0.0
             var btcPriceUSD = Double(columns[5].replacingOccurrences(of: ",", with: "")) ?? 0.0
@@ -40,7 +39,6 @@ func loadCSV() -> [SimulationData] {
                 portfolioValueEUR = 475.67
             }
 
-            // Create SimulationData
             let data = SimulationData(
                 week: week,
                 startingBTC: startingBTC,
@@ -49,7 +47,7 @@ func loadCSV() -> [SimulationData] {
                 btcPriceEUR: Double(columns[6].replacingOccurrences(of: ",", with: "")) ?? 0.0,
                 portfolioValueEUR: portfolioValueEUR,
                 contributionEUR: Double(columns[8]) ?? 0.0,
-                contributionFeeEUR: Double(columns[9]) ?? 0.0,
+                transactionFeeEUR: Double(columns[9]) ?? 0.0, // Renamed here too
                 netContributionBTC: Double(columns[10]) ?? 0.0,
                 withdrawalEUR: Double(columns[11]) ?? 0.0
             )
@@ -69,8 +67,8 @@ func parseDouble(_ string: String) -> Double? {
     let formatter = NumberFormatter()
     formatter.locale = Locale(identifier: "en_US_POSIX")
     formatter.numberStyle = .decimal
-    formatter.decimalSeparator = "." // Ensure decimal separator is '.'
-    formatter.groupingSeparator = "" // Disable grouping separator
+    formatter.decimalSeparator = "."
+    formatter.groupingSeparator = ""
     return formatter.number(from: string)?.doubleValue
 }
 
@@ -95,9 +93,8 @@ func parseCSVRow(_ row: String) -> [String] {
         columns.append(current.trimmingCharacters(in: .whitespacesAndNewlines))
     }
 
-    // Ensure there are exactly 13 columns for proper parsing
     while columns.count < 13 {
-        columns.append("") // Fill missing columns with empty strings
+        columns.append("")
     }
 
     return columns

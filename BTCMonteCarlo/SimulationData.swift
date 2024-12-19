@@ -16,11 +16,10 @@ struct SimulationData: Identifiable {
     let btcPriceEUR: Double
     let portfolioValueEUR: Double
     let contributionEUR: Double
-    let contributionFeeEUR: Double
+    let transactionFeeEUR: Double
     let netContributionBTC: Double
     let withdrawalEUR: Double
 
-    // Static placeholder for default data
     static let placeholder = SimulationData(
         id: UUID(),
         week: 0,
@@ -30,13 +29,11 @@ struct SimulationData: Identifiable {
         btcPriceEUR: 0.0,
         portfolioValueEUR: 0.0,
         contributionEUR: 0.0,
-        contributionFeeEUR: 0.0,
+        transactionFeeEUR: 0.0,
         netContributionBTC: 0.0,
         withdrawalEUR: 0.0
-        
     )
 
-    // Updated initializer
     init(
         id: UUID = UUID(),
         week: Int,
@@ -46,7 +43,7 @@ struct SimulationData: Identifiable {
         btcPriceEUR: Double,
         portfolioValueEUR: Double,
         contributionEUR: Double,
-        contributionFeeEUR: Double,
+        transactionFeeEUR: Double,
         netContributionBTC: Double,
         withdrawalEUR: Double
     ) {
@@ -58,7 +55,7 @@ struct SimulationData: Identifiable {
         self.btcPriceEUR = btcPriceEUR
         self.portfolioValueEUR = portfolioValueEUR
         self.contributionEUR = contributionEUR
-        self.contributionFeeEUR = contributionFeeEUR
+        self.transactionFeeEUR = transactionFeeEUR
         self.netContributionBTC = netContributionBTC
         self.withdrawalEUR = withdrawalEUR
     }

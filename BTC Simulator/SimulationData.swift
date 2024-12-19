@@ -1,14 +1,17 @@
+// SimulationData.swift
+// BTCMonteCarloSimulator
 //
-//  SimulationData.swift
-//  BTCMonteCarloSimulator
-//
-//  Created by Conor on 20/11/2024.
+// Created by Conor on 20/11/2024.
 //
 
 import Foundation
 
 struct SimulationData: Identifiable {
-    let id: UUID
+    // Use `week` as the unique ID rather than `UUID()`
+    var id: Int {
+        week
+    }
+
     let week: Int
     let startingBTC: Double
     let netBTCHoldings: Double
@@ -16,12 +19,11 @@ struct SimulationData: Identifiable {
     let btcPriceEUR: Double
     let portfolioValueEUR: Double
     let contributionEUR: Double
-    let contributionFeeEUR: Double
+    let transactionFeeEUR: Double
     let netContributionBTC: Double
     let withdrawalEUR: Double
 
     static let placeholder = SimulationData(
-        id: UUID(),
         week: 0,
         startingBTC: 0.0,
         netBTCHoldings: 0.0,
@@ -29,14 +31,12 @@ struct SimulationData: Identifiable {
         btcPriceEUR: 0.0,
         portfolioValueEUR: 0.0,
         contributionEUR: 0.0,
-        contributionFeeEUR: 0.0,
+        transactionFeeEUR: 0.0,
         netContributionBTC: 0.0,
         withdrawalEUR: 0.0
     )
 
-    // Updated initializer
     init(
-        id: UUID = UUID(),
         week: Int,
         startingBTC: Double,
         netBTCHoldings: Double,
@@ -44,11 +44,10 @@ struct SimulationData: Identifiable {
         btcPriceEUR: Double,
         portfolioValueEUR: Double,
         contributionEUR: Double,
-        contributionFeeEUR: Double,
+        transactionFeeEUR: Double,
         netContributionBTC: Double,
         withdrawalEUR: Double
     ) {
-        self.id = id
         self.week = week
         self.startingBTC = startingBTC
         self.netBTCHoldings = netBTCHoldings
@@ -56,7 +55,7 @@ struct SimulationData: Identifiable {
         self.btcPriceEUR = btcPriceEUR
         self.portfolioValueEUR = portfolioValueEUR
         self.contributionEUR = contributionEUR
-        self.contributionFeeEUR = contributionFeeEUR
+        self.transactionFeeEUR = transactionFeeEUR
         self.netContributionBTC = netContributionBTC
         self.withdrawalEUR = withdrawalEUR
     }

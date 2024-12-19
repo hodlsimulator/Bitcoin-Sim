@@ -28,6 +28,7 @@
 		E1CD4B412CF0F35C0070E8E3 /* DoubleExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1CD4B372CF0F35C0070E8E3 /* DoubleExtensions.swift */; };
 		E1CD4B422CF0F35C0070E8E3 /* MonteCarloSimulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1CD4B382CF0F35C0070E8E3 /* MonteCarloSimulator.swift */; };
 		E1CD4B432CF0F35C0070E8E3 /* SimulationData.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1CD4B392CF0F35C0070E8E3 /* SimulationData.swift */; };
+		E1E966C62D0A557C0010C1F3 /* PersistentInputManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1E966C52D0A557C0010C1F3 /* PersistentInputManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -57,6 +58,7 @@
 		E1CD4B372CF0F35C0070E8E3 /* DoubleExtensions.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DoubleExtensions.swift; sourceTree = "<group>"; };
 		E1CD4B382CF0F35C0070E8E3 /* MonteCarloSimulator.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MonteCarloSimulator.swift; sourceTree = "<group>"; };
 		E1CD4B392CF0F35C0070E8E3 /* SimulationData.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SimulationData.swift; sourceTree = "<group>"; };
+		E1E966C52D0A557C0010C1F3 /* PersistentInputManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistentInputManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -138,6 +140,7 @@
 				E1CD4B322CF0F35C0070E8E3 /* Assets.xcassets */,
 				E1CD4B342CF0F35C0070E8E3 /* BTCMoteCarloApp.swift */,
 				E1CD4B352CF0F35C0070E8E3 /* ContentView.swift */,
+				E1E966C52D0A557C0010C1F3 /* PersistentInputManager.swift */,
 				E1CD4B362CF0F35C0070E8E3 /* CSVLoader.swift */,
 				E1CD4B372CF0F35C0070E8E3 /* DoubleExtensions.swift */,
 				E1CD4B382CF0F35C0070E8E3 /* MonteCarloSimulator.swift */,
@@ -258,6 +261,7 @@
 				E1CD4B432CF0F35C0070E8E3 /* SimulationData.swift in Sources */,
 				E17A48012CF178C600AAC885 /* MonteCarloVisualisations.swift in Sources */,
 				E1CD4B412CF0F35C0070E8E3 /* DoubleExtensions.swift in Sources */,
+				E1E966C62D0A557C0010C1F3 /* PersistentInputManager.swift in Sources */,
 				E1CD4B402CF0F35C0070E8E3 /* CSVLoader.swift in Sources */,
 				E1CD4B3F2CF0F35C0070E8E3 /* ContentView.swift in Sources */,
 				E1CD4B3E2CF0F35C0070E8E3 /* BTCMoteCarloApp.swift in Sources */,
