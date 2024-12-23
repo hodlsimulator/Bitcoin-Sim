@@ -187,7 +187,7 @@ struct ContentView: View {
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
-
+            
             VStack(spacing: 10) {
                 if !isSimulationRun {
                     // INPUT FORM
@@ -195,8 +195,9 @@ struct ContentView: View {
                         InputField(title: "Iterations", text: $inputManager.iterations)
                         InputField(title: "Annual CAGR (%)", text: $inputManager.annualCAGR)
                         InputField(title: "Annual Volatility (%)", text: $inputManager.annualVolatility)
-
+                        
                         Button(action: {
+                            // Optionally set default column to USD if you like
                             if let usdIndex = columns.firstIndex(where: { $0.0 == "BTC Price USD" }) {
                                 currentPage = usdIndex
                             }
@@ -208,7 +209,7 @@ struct ContentView: View {
                                 .background(Color.blue)
                                 .cornerRadius(8)
                         }
-
+                        
                         Button("Reset Saved Data") {
                             UserDefaults.standard.removeObject(forKey: "lastViewedWeek")
                             UserDefaults.standard.removeObject(forKey: "lastViewedPage")
@@ -224,7 +225,7 @@ struct ContentView: View {
                         ZStack {
                             VStack {
                                 Spacer().frame(height: 40)
-
+                                
                                 VStack(spacing: 0) {
                                     HStack(spacing: 0) {
                                         Text("Week")
@@ -233,7 +234,7 @@ struct ContentView: View {
                                             .padding()
                                             .background(Color.black)
                                             .foregroundColor(.white)
-
+                                        
                                         ZStack {
                                             Text(columns[currentPage].0)
                                                 .font(.headline)
@@ -241,7 +242,7 @@ struct ContentView: View {
                                                 .background(Color.black)
                                                 .foregroundColor(.white)
                                                 .frame(maxWidth: .infinity, alignment: .center)
-
+                                            
                                             GeometryReader { geometry in
                                                 HStack(spacing: 0) {
                                                     Color.clear
@@ -257,9 +258,9 @@ struct ContentView: View {
                                                                     }
                                                                 }
                                                         )
-
+                                                    
                                                     Spacer()
-
+                                                    
                                                     Color.clear
                                                         .frame(width: geometry.size.width * 0.2)
                                                         .contentShape(Rectangle())
@@ -279,7 +280,7 @@ struct ContentView: View {
                                         .frame(height: 50)
                                     }
                                     .background(Color.black)
-
+                                    
                                     // SCROLL AREA + OFFSET DETECTION
                                     ScrollView(.vertical, showsIndicators: true) {
                                         HStack(spacing: 0) {
@@ -295,7 +296,7 @@ struct ContentView: View {
                                                         .background(RowOffsetReporter(week: result.week))
                                                 }
                                             }
-
+                                            
                                             // TABVIEW OF COLUMNS
                                             TabView(selection: $currentPage) {
                                                 ForEach(0..<columns.count, id: \.self) { index in
@@ -311,7 +312,7 @@ struct ContentView: View {
                                                                     .background(RowOffsetReporter(week: result.week))
                                                             }
                                                         }
-
+                                                        
                                                         GeometryReader { geometry in
                                                             HStack(spacing: 0) {
                                                                 Color.clear
@@ -327,9 +328,9 @@ struct ContentView: View {
                                                                                 }
                                                                             }
                                                                     )
-
+                                                                
                                                                 Spacer()
-
+                                                                
                                                                 Color.clear
                                                                     .frame(width: geometry.size.width * 0.2)
                                                                     .contentShape(Rectangle())
@@ -356,12 +357,12 @@ struct ContentView: View {
                                         .onPreferenceChange(RowOffsetPreferenceKey.self) { offsets in
                                             // Set the reference offset
                                             let targetY: CGFloat = 160
-
+                                            
                                             // Filter out row 1040 only
                                             let filtered = offsets.filter { (week, _) in
                                                 week != 1040
                                             }
-
+                                            
                                             // Map offsets to their absolute distance from targetY
                                             let mapped = filtered.mapValues { abs($0 - targetY) }
                                             
@@ -392,19 +393,10 @@ struct ContentView: View {
                                     }
                                 }
                             }
+                            // This onAppear only sets our local scrollProxy; no more userDefaults logic here
                             .onAppear {
                                 contentScrollProxy = scrollProxy
-                                let savedWeek = UserDefaults.standard.integer(forKey: "lastViewedWeek")
-                                if savedWeek != 0 {
-                                    lastViewedWeek = savedWeek
-                                    print("DEBUG: Results onAppear, loaded lastViewedWeek: \(lastViewedWeek)")
-                                }
-                                let savedPage = UserDefaults.standard.integer(forKey: "lastViewedPage")
-                                if savedPage < columns.count {
-                                    lastViewedPage = savedPage
-                                    currentPage = savedPage
-                                    print("DEBUG: Results onAppear, loaded lastViewedPage: \(lastViewedPage)")
-                                }
+                                print("DEBUG: Results onAppear - contentScrollProxy set.")
                             }
                             .onDisappear {
                                 print("DEBUG: onDisappear triggered. lastViewedWeek = \(lastViewedWeek), currentPage = \(currentPage).")
@@ -412,7 +404,7 @@ struct ContentView: View {
                                 UserDefaults.standard.set(currentPage, forKey: "lastViewedPage")
                                 print("DEBUG: Successfully saved lastViewedWeek: \(lastViewedWeek) and lastViewedPage: \(currentPage) to UserDefaults.")
                             }
-
+                            
                             // BACK BUTTON
                             VStack {
                                 HStack {
@@ -432,7 +424,7 @@ struct ContentView: View {
                                 }
                                 Spacer()
                             }
-
+                            
                             // SCROLL-TO-BOTTOM BUTTON
                             if !isAtBottom {
                                 VStack {
@@ -454,7 +446,7 @@ struct ContentView: View {
                     }
                 }
             }
-
+            
             // FORWARD BUTTON
             if !isSimulationRun && !monteCarloResults.isEmpty {
                 VStack {
@@ -464,7 +456,7 @@ struct ContentView: View {
                             print("DEBUG: Forward button pressed, lastViewedWeek = \(lastViewedWeek)")
                             isSimulationRun = true
                             currentPage = lastViewedPage
-
+                            
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                                 if let scrollProxy = contentScrollProxy {
                                     let savedWeek = UserDefaults.standard.integer(forKey: "lastViewedWeek")
@@ -491,18 +483,30 @@ struct ContentView: View {
                 }
             }
         }
+        // Main onAppear: handle userDefaults + decide if we show results
         .onAppear {
+            // Check if we have a saved week
             let savedWeek = UserDefaults.standard.integer(forKey: "lastViewedWeek")
             if savedWeek != 0 {
                 lastViewedWeek = savedWeek
                 print("DEBUG: onAppear (main), loaded lastViewedWeek: \(savedWeek)")
             }
+            
+            // Check if we have a saved page
             let savedPage = UserDefaults.standard.integer(forKey: "lastViewedPage")
             if savedPage < columns.count {
+                // Use the saved page if valid
                 lastViewedPage = savedPage
                 currentPage = savedPage
                 print("DEBUG: onAppear (main), loaded lastViewedPage: \(savedPage)")
+            } else if let usdIndex = columns.firstIndex(where: { $0.0 == "BTC Price USD" }) {
+                // Otherwise, default to the BTC Price USD column
+                currentPage = usdIndex
+                lastViewedPage = usdIndex
+                print("DEBUG: onAppear (main), defaulting to BTC Price USD at index \(usdIndex)")
             }
+            
+            // Decide if we’re showing results or the input form
             if monteCarloResults.isEmpty {
                 isSimulationRun = false
             } else {
