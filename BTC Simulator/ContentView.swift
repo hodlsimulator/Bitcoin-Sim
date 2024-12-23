@@ -9,6 +9,30 @@ import SwiftUI
 import PDFKit
 import UniformTypeIdentifiers
 
+// MARK: - RowOffset Helpers
+struct RowOffsetPreferenceKey: PreferenceKey {
+    static var defaultValue: [Int: CGFloat] = [:]
+    static func reduce(value: inout [Int: CGFloat], nextValue: () -> [Int: CGFloat]) {
+        for (week, offset) in nextValue() {
+            value[week] = offset
+        }
+    }
+}
+
+struct RowOffsetReporter: View {
+    let week: Int
+    var body: some View {
+        GeometryReader { geo in
+            Color.clear
+                .preference(
+                    key: RowOffsetPreferenceKey.self,
+                    value: [week: geo.frame(in: .named("scrollArea")).midY]
+                )
+        }
+    }
+}
+
+// MARK: - PersistentInputManager
 class PersistentInputManager: ObservableObject {
     @Published var iterations: String {
         didSet { UserDefaults.standard.set(iterations, forKey: "iterations") }
@@ -79,6 +103,7 @@ class PersistentInputManager: ObservableObject {
     }
 }
 
+// MARK: - Formatters
 extension Double {
     func formattedCurrency() -> String {
         let formatter = NumberFormatter()
@@ -126,6 +151,7 @@ struct ScrollViewProxyKey: EnvironmentKey {
     static let defaultValue: ScrollViewProxy? = nil
 }
 
+// MARK: - ContentView
 struct ContentView: View {
     @State private var monteCarloResults: [SimulationData] = []
     @State private var isLoading: Bool = false
@@ -133,13 +159,18 @@ struct ContentView: View {
     @State private var showFileExporter = false
     @StateObject var inputManager = PersistentInputManager()
     @State private var isSimulationRun: Bool = false
+
     @State private var scrollToBottom: Bool = false
     @State private var isAtBottom: Bool = false
-    @State private var lastViewedWeek: Int = 1
+    @State private var lastViewedWeek: Int = 0
+
     @Environment(\.scrollProxy) private var scrollProxy: ScrollViewProxy?
     @State private var contentScrollProxy: ScrollViewProxy?
-    @State private var lastViewedPage: Int = 0
+
     @State private var currentPage: Int = 0
+    @State private var lastViewedPage: Int = 0
+
+    @State private var userHasScrolled = false
 
     let columns: [(String, PartialKeyPath<SimulationData>)] = [
         ("Starting BTC (BTC)", \SimulationData.startingBTC),
@@ -159,7 +190,7 @@ struct ContentView: View {
 
             VStack(spacing: 10) {
                 if !isSimulationRun {
-                    // Input form until simulation done
+                    // INPUT FORM
                     VStack(spacing: 10) {
                         InputField(title: "Iterations", text: $inputManager.iterations)
                         InputField(title: "Annual CAGR (%)", text: $inputManager.annualCAGR)
@@ -177,13 +208,23 @@ struct ContentView: View {
                                 .background(Color.blue)
                                 .cornerRadius(8)
                         }
+
+                        Button("Reset Saved Data") {
+                            UserDefaults.standard.removeObject(forKey: "lastViewedWeek")
+                            UserDefaults.standard.removeObject(forKey: "lastViewedPage")
+                            lastViewedWeek = 0
+                            lastViewedPage = 0
+                            print("DEBUG: Reset user defaults and state.")
+                        }
+                        .foregroundColor(.red)
                     }
                 } else {
-                    // Results view
+                    // RESULTS VIEW
                     ScrollViewReader { scrollProxy in
                         ZStack {
                             VStack {
                                 Spacer().frame(height: 40)
+
                                 VStack(spacing: 0) {
                                     HStack(spacing: 0) {
                                         Text("Week")
@@ -239,8 +280,10 @@ struct ContentView: View {
                                     }
                                     .background(Color.black)
 
+                                    // SCROLL AREA + OFFSET DETECTION
                                     ScrollView(.vertical, showsIndicators: true) {
                                         HStack(spacing: 0) {
+                                            // WEEKS COLUMN
                                             VStack(spacing: 0) {
                                                 ForEach(monteCarloResults, id: \.week) { result in
                                                     Text("\(result.week)")
@@ -249,15 +292,11 @@ struct ContentView: View {
                                                         .background(Color.black)
                                                         .foregroundColor(.white)
                                                         .id("week-\(result.week)")
-                                                        .onAppear {
-                                                            // Only update lastViewedWeek if week > current and not at bottom
-                                                            if result.week > lastViewedWeek && !isAtBottom {
-                                                                lastViewedWeek = result.week
-                                                            }
-                                                        }
+                                                        .background(RowOffsetReporter(week: result.week))
                                                 }
                                             }
 
+                                            // TABVIEW OF COLUMNS
                                             TabView(selection: $currentPage) {
                                                 ForEach(0..<columns.count, id: \.self) { index in
                                                     ZStack {
@@ -269,6 +308,7 @@ struct ContentView: View {
                                                                     .background(Color.black)
                                                                     .foregroundColor(.white)
                                                                     .id("data-week-\(result.week)")
+                                                                    .background(RowOffsetReporter(week: result.week))
                                                             }
                                                         }
 
@@ -312,7 +352,24 @@ struct ContentView: View {
                                             .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
                                             .frame(width: UIScreen.main.bounds.width - 60)
                                         }
-                                        .coordinateSpace(name: "scrollView")
+                                        .coordinateSpace(name: "scrollArea")
+                                        .onPreferenceChange(RowOffsetPreferenceKey.self) { offsets in
+                                            // Set the reference offset
+                                            let targetY: CGFloat = 160
+
+                                            // Filter out row 1040 only
+                                            let filtered = offsets.filter { (week, _) in
+                                                week != 1040
+                                            }
+
+                                            // Map offsets to their absolute distance from targetY
+                                            let mapped = filtered.mapValues { abs($0 - targetY) }
+                                            
+                                            // Whichever row is closest to targetY becomes lastViewedWeek
+                                            if let (closestWeek, _) = mapped.min(by: { $0.value < $1.value }) {
+                                                lastViewedWeek = closestWeek
+                                            }
+                                        }
                                         .onChange(of: scrollToBottom) { value in
                                             if value, let lastResult = monteCarloResults.last {
                                                 withAnimation {
@@ -342,17 +399,29 @@ struct ContentView: View {
                                     lastViewedWeek = savedWeek
                                     print("DEBUG: Results onAppear, loaded lastViewedWeek: \(lastViewedWeek)")
                                 }
-                                // Do NOT scroll here at all.
+                                let savedPage = UserDefaults.standard.integer(forKey: "lastViewedPage")
+                                if savedPage < columns.count {
+                                    lastViewedPage = savedPage
+                                    currentPage = savedPage
+                                    print("DEBUG: Results onAppear, loaded lastViewedPage: \(lastViewedPage)")
+                                }
+                            }
+                            .onDisappear {
+                                print("DEBUG: onDisappear triggered. lastViewedWeek = \(lastViewedWeek), currentPage = \(currentPage).")
+                                UserDefaults.standard.set(lastViewedWeek, forKey: "lastViewedWeek")
+                                UserDefaults.standard.set(currentPage, forKey: "lastViewedPage")
+                                print("DEBUG: Successfully saved lastViewedWeek: \(lastViewedWeek) and lastViewedPage: \(currentPage) to UserDefaults.")
                             }
 
+                            // BACK BUTTON
                             VStack {
                                 HStack {
                                     Button(action: {
-                                        // Save lastViewedWeek on back
                                         UserDefaults.standard.set(lastViewedWeek, forKey: "lastViewedWeek")
-                                        print("DEBUG: Back button pressed, saving lastViewedWeek: \(lastViewedWeek)")
-                                        isSimulationRun = false
+                                        UserDefaults.standard.set(currentPage, forKey: "lastViewedPage")
+                                        print("DEBUG: Back button pressed, saving lastViewedWeek: \(lastViewedWeek), lastViewedPage: \(currentPage)")
                                         lastViewedPage = currentPage
+                                        isSimulationRun = false
                                     }) {
                                         Image(systemName: "chevron.left")
                                             .foregroundColor(.white)
@@ -364,6 +433,7 @@ struct ContentView: View {
                                 Spacer()
                             }
 
+                            // SCROLL-TO-BOTTOM BUTTON
                             if !isAtBottom {
                                 VStack {
                                     Spacer()
@@ -385,25 +455,25 @@ struct ContentView: View {
                 }
             }
 
-            // Forward button: Only scroll after pressing this button
+            // FORWARD BUTTON
             if !isSimulationRun && !monteCarloResults.isEmpty {
                 VStack {
                     HStack {
                         Spacer()
                         Button(action: {
-                            // Going forward triggers the scroll after a delay
+                            print("DEBUG: Forward button pressed, lastViewedWeek = \(lastViewedWeek)")
                             isSimulationRun = true
                             currentPage = lastViewedPage
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                                 if let scrollProxy = contentScrollProxy {
                                     let savedWeek = UserDefaults.standard.integer(forKey: "lastViewedWeek")
                                     if savedWeek != 0 {
                                         lastViewedWeek = savedWeek
                                         print("DEBUG: Forward button pressed, loaded lastViewedWeek: \(lastViewedWeek)")
                                     }
-
                                     if let target = monteCarloResults.first(where: { $0.week == lastViewedWeek }) {
-                                        print("DEBUG: Scrolling to lastViewedWeek: \(lastViewedWeek) on forward button action")
+                                        print("DEBUG: Found target with week: \(target.week)")
                                         withAnimation {
                                             scrollProxy.scrollTo("week-\(target.week)", anchor: .top)
                                         }
@@ -425,22 +495,23 @@ struct ContentView: View {
             let savedWeek = UserDefaults.standard.integer(forKey: "lastViewedWeek")
             if savedWeek != 0 {
                 lastViewedWeek = savedWeek
-                print("DEBUG: onAppear (main), loaded lastViewedWeek: \(lastViewedWeek)")
+                print("DEBUG: onAppear (main), loaded lastViewedWeek: \(savedWeek)")
             }
-
-            if isSimulationRun && monteCarloResults.isEmpty {
-                runSimulation()
-            } else if let usdIndex = columns.firstIndex(where: { $0.0 == "BTC Price USD" }) {
-                currentPage = usdIndex
+            let savedPage = UserDefaults.standard.integer(forKey: "lastViewedPage")
+            if savedPage < columns.count {
+                lastViewedPage = savedPage
+                currentPage = savedPage
+                print("DEBUG: onAppear (main), loaded lastViewedPage: \(savedPage)")
+            }
+            if monteCarloResults.isEmpty {
+                isSimulationRun = false
+            } else {
+                isSimulationRun = true
             }
         }
     }
 
-    func isTopRow(_ geo: GeometryProxy) -> Bool {
-        let y = geo.frame(in: .named("scrollView")).minY
-        return y >= 0 && y < geo.size.height
-    }
-
+    // MARK: - InputField
     struct InputField: View {
         let title: String
         @Binding var text: String
@@ -459,6 +530,7 @@ struct ContentView: View {
         }
     }
 
+    // MARK: - Simulation
     private func runSimulation() {
         isLoading = true
         monteCarloResults = []
@@ -549,7 +621,7 @@ struct ContentView: View {
                     netContributionBTC: 0.00000000,
                     withdrawalEUR: 0.0
                 ))
-                
+
                 // Week 6 (Hardcoded)
                 results.append(SimulationData(
                     week: 6,
@@ -570,6 +642,7 @@ struct ContentView: View {
                     let adjustedGrowthFactor = 1 + weeklyDeterministicGrowth + randomShock
 
                     var btcPriceUSD = previous.btcPriceUSD * adjustedGrowthFactor
+                    // occasional 'drawdown'
                     if Double.random(in: 0..<1) < 0.005 {
                         btcPriceUSD *= (1 - Double.random(in: 0.1...0.3))
                     }
@@ -659,7 +732,7 @@ struct ContentView: View {
         binCount: Int = 20,
         rotateLabels: Bool = true
     ) {
-        // Histogram logic unchanged
+        // Placeholder for histogram logic
     }
 
     private func getValue(_ item: SimulationData, _ keyPath: PartialKeyPath<SimulationData>) -> String {
