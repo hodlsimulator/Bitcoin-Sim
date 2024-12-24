@@ -186,7 +186,8 @@ struct ContentView: View {
 
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            // Entire background is the same grey as your "first row" colour
+            Color(white: 0.12).ignoresSafeArea()
             
             VStack(spacing: 10) {
                 if !isSimulationRun {
@@ -197,7 +198,6 @@ struct ContentView: View {
                         InputField(title: "Annual Volatility (%)", text: $inputManager.annualVolatility)
                         
                         Button(action: {
-                            // Optionally set default column to USD if you like
                             if let usdIndex = columns.firstIndex(where: { $0.0 == "BTC Price USD" }) {
                                 currentPage = usdIndex
                             }
@@ -231,8 +231,9 @@ struct ContentView: View {
                                         Text("Week")
                                             .frame(width: 60, alignment: .leading)
                                             .font(.headline)
-                                            .padding(.leading, 30)        // <— add this
+                                            .padding(.leading, 50)
                                             .padding(.vertical, 8)
+                                            // Keep the header black (if you like)
                                             .background(Color.black)
                                             .foregroundColor(.white)
                                         
@@ -287,11 +288,20 @@ struct ContentView: View {
                                         HStack(spacing: 0) {
                                             // WEEKS COLUMN
                                             VStack(spacing: 0) {
-                                                ForEach(monteCarloResults, id: \.week) { result in
+                                                // We use indices so we can alternate row colours
+                                                ForEach(monteCarloResults.indices, id: \.self) { index in
+                                                    let result = monteCarloResults[index]
+                                                    // Alternate row background
+                                                    let rowBackground = index.isMultiple(of: 2)
+                                                        ? Color(white: 0.10)  // even row
+                                                        : Color(white: 0.14)  // odd row
+                                                    
                                                     Text("\(result.week)")
-                                                        .frame(width: 60)
-                                                        .padding()
-                                                        .background(Color.black)
+                                                        .frame(width: 70, alignment: .leading)  // increased width from 60 to 70
+                                                        .padding(.leading, 50)                  // optional extra leading padding
+                                                        .padding(.vertical, 12)
+                                                        .padding(.horizontal, 8)
+                                                        .background(rowBackground)
                                                         .foregroundColor(.white)
                                                         .id("week-\(result.week)")
                                                         .background(RowOffsetReporter(week: result.week))
@@ -303,14 +313,21 @@ struct ContentView: View {
                                                 ForEach(0..<columns.count, id: \.self) { index in
                                                     ZStack {
                                                         VStack(spacing: 0) {
-                                                            ForEach(monteCarloResults, id: \.week) { result in
-                                                                Text(getValue(result, columns[index].1))
+                                                            ForEach(monteCarloResults.indices, id: \.self) { rowIndex in
+                                                                let rowResult = monteCarloResults[rowIndex]
+                                                                // alternate row background
+                                                                let rowBackground = rowIndex.isMultiple(of: 2)
+                                                                    ? Color(white: 0.10)
+                                                                    : Color(white: 0.14)
+                                                                
+                                                                Text(getValue(rowResult, columns[index].1))
                                                                     .frame(maxWidth: .infinity, alignment: .center)
-                                                                    .padding()
-                                                                    .background(Color.black)
+                                                                    .padding(.vertical, 12)
+                                                                    .padding(.horizontal, 8)
+                                                                    .background(rowBackground)
                                                                     .foregroundColor(.white)
-                                                                    .id("data-week-\(result.week)")
-                                                                    .background(RowOffsetReporter(week: result.week))
+                                                                    .id("data-week-\(rowResult.week)")
+                                                                    .background(RowOffsetReporter(week: rowResult.week))
                                                             }
                                                         }
                                                         
@@ -329,9 +346,7 @@ struct ContentView: View {
                                                                                 }
                                                                             }
                                                                     )
-                                                                
                                                                 Spacer()
-                                                                
                                                                 Color.clear
                                                                     .frame(width: geometry.size.width * 0.2)
                                                                     .contentShape(Rectangle())
@@ -356,18 +371,11 @@ struct ContentView: View {
                                         }
                                         .coordinateSpace(name: "scrollArea")
                                         .onPreferenceChange(RowOffsetPreferenceKey.self) { offsets in
-                                            // Set the reference offset
                                             let targetY: CGFloat = 160
-                                            
-                                            // Filter out row 1040 only
                                             let filtered = offsets.filter { (week, _) in
                                                 week != 1040
                                             }
-                                            
-                                            // Map offsets to their absolute distance from targetY
                                             let mapped = filtered.mapValues { abs($0 - targetY) }
-                                            
-                                            // Whichever row is closest to targetY becomes lastViewedWeek
                                             if let (closestWeek, _) = mapped.min(by: { $0.value < $1.value }) {
                                                 lastViewedWeek = closestWeek
                                             }
@@ -388,13 +396,14 @@ struct ContentView: View {
                                                         self.isAtBottom = atBottom
                                                     }
                                                 }
-                                                return Color.clear
+                                                // color behind the content => same as first row (0.12)
+                                                return Color(white: 0.12)
                                             }
                                         )
                                     }
                                 }
                             }
-                            // This onAppear only sets our local scrollProxy; no more userDefaults logic here
+                            // onAppear only sets local scrollProxy
                             .onAppear {
                                 contentScrollProxy = scrollProxy
                                 print("DEBUG: Results onAppear - contentScrollProxy set.")
@@ -403,7 +412,7 @@ struct ContentView: View {
                                 print("DEBUG: onDisappear triggered. lastViewedWeek = \(lastViewedWeek), currentPage = \(currentPage).")
                                 UserDefaults.standard.set(lastViewedWeek, forKey: "lastViewedWeek")
                                 UserDefaults.standard.set(currentPage, forKey: "lastViewedPage")
-                                print("DEBUG: Successfully saved lastViewedWeek: \(lastViewedWeek) and lastViewedPage: \(currentPage) to UserDefaults.")
+                                print("DEBUG: Successfully saved lastViewedWeek: \(lastViewedWeek) and lastViewedPage: \(currentPage).")
                             }
                             
                             // BACK BUTTON
@@ -419,7 +428,7 @@ struct ContentView: View {
                                         Image(systemName: "chevron.left")
                                             .foregroundColor(.white)
                                             .imageScale(.large)
-                                            .padding(.leading, 30)
+                                            .padding(.leading, 50)
                                             .padding(.vertical, 8)
                                     }
                                     Spacer()
@@ -487,28 +496,23 @@ struct ContentView: View {
         }
         // Main onAppear: handle userDefaults + decide if we show results
         .onAppear {
-            // Check if we have a saved week
             let savedWeek = UserDefaults.standard.integer(forKey: "lastViewedWeek")
             if savedWeek != 0 {
                 lastViewedWeek = savedWeek
                 print("DEBUG: onAppear (main), loaded lastViewedWeek: \(savedWeek)")
             }
             
-            // Check if we have a saved page
             let savedPage = UserDefaults.standard.integer(forKey: "lastViewedPage")
             if savedPage < columns.count {
-                // Use the saved page if valid
                 lastViewedPage = savedPage
                 currentPage = savedPage
                 print("DEBUG: onAppear (main), loaded lastViewedPage: \(savedPage)")
             } else if let usdIndex = columns.firstIndex(where: { $0.0 == "BTC Price USD" }) {
-                // Otherwise, default to the BTC Price USD column
                 currentPage = usdIndex
                 lastViewedPage = usdIndex
                 print("DEBUG: onAppear (main), defaulting to BTC Price USD at index \(usdIndex)")
             }
             
-            // Decide if we’re showing results or the input form
             if monteCarloResults.isEmpty {
                 isSimulationRun = false
             } else {
