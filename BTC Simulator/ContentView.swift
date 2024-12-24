@@ -546,15 +546,12 @@ struct ContentView: View {
         monteCarloResults = []
 
         DispatchQueue.global(qos: .userInitiated).async {
-            let annualCAGR = self.inputManager.getParsedAnnualCAGR() / 100.0
-            let annualVolatility = (Double(self.inputManager.annualVolatility) ?? 1.0) / 100.0
+            // Pull user inputs into local variables
+            let userInputCAGR = self.inputManager.getParsedAnnualCAGR() / 100.0
+            let userInputVolatility = (Double(self.inputManager.annualVolatility) ?? 1.0) / 100.0
 
-            // Convert to weekly
-            let weeklyDeterministicGrowth = pow(1 + annualCAGR, 1.0 / 52.0) - 1.0
-            let weeklyVolatility = annualVolatility / sqrt(52.0)
-
-            let exchangeRateEURUSD = 1.06
-            let totalWeeks = 1040
+            // Debug print right here, so we can confirm the user’s values
+            print("DEBUG: Using CAGR = \(userInputCAGR), Volatility = \(userInputVolatility)")
 
             guard let totalIterations = self.inputManager.getParsedIterations(), totalIterations > 0 else {
                 DispatchQueue.main.async {
@@ -564,208 +561,24 @@ struct ContentView: View {
                 return
             }
 
-            var allResults: [[SimulationData]] = []
+            // Now pass those local variables to your Monte Carlo function
+            let (medianRun, allIterations) = runMonteCarloSimulationsWithSpreadsheetData(
+                annualCAGR: userInputCAGR,
+                annualVolatility: userInputVolatility,
+                exchangeRateEURUSD: 1.06,
+                totalWeeks: 1040,
+                iterations: totalIterations
+            )
 
-            for _ in 1...totalIterations {
-                var results: [SimulationData] = []
-
-                // Hardcoded initial weeks
-                results.append(SimulationData(
-                    week: 1,
-                    startingBTC: 0.0,
-                    netBTCHoldings: 0.00469014,
-                    btcPriceUSD: 76_532.03,
-                    btcPriceEUR: 71_177.69,
-                    portfolioValueEUR: 333.83,
-                    contributionEUR: 378.00,
-                    transactionFeeEUR: 2.46,
-                    netContributionBTC: 0.00527613,
-                    withdrawalEUR: 0.0
-                ))
-                results.append(SimulationData(
-                    week: 2,
-                    startingBTC: 0.00469014,
-                    netBTCHoldings: 0.00530474,
-                    btcPriceUSD: 92_000.00,
-                    btcPriceEUR: 86_792.45,
-                    portfolioValueEUR: 465.00,
-                    contributionEUR: 60.00,
-                    transactionFeeEUR: 0.21,
-                    netContributionBTC: 0.00066988,
-                    withdrawalEUR: 0.0
-                ))
-                results.append(SimulationData(
-                    week: 3,
-                    startingBTC: 0.00530474,
-                    netBTCHoldings: 0.00608283,
-                    btcPriceUSD: 95_000.00,
-                    btcPriceEUR: 89_622.64,
-                    portfolioValueEUR: 547.00,
-                    contributionEUR: 70.00,
-                    transactionFeeEUR: 0.25,
-                    netContributionBTC: 0.00077809,
-                    withdrawalEUR: 0.0
-                ))
-                results.append(SimulationData(
-                    week: 4,
-                    startingBTC: 0.00608283,
-                    netBTCHoldings: 0.00750280,
-                    btcPriceUSD: 95_741.15,
-                    btcPriceEUR: 90_321.84,
-                    portfolioValueEUR: 685.00,
-                    contributionEUR: 130.00,
-                    transactionFeeEUR: 0.46,
-                    netContributionBTC: 0.00141997,
-                    withdrawalEUR: 0.0
-                ))
-                results.append(SimulationData(
-                    week: 5,
-                    startingBTC: 0.00745154,
-                    netBTCHoldings: 0.00745154,
-                    btcPriceUSD: 96_632.26,
-                    btcPriceEUR: 91_162.51,
-                    portfolioValueEUR: 679.30,
-                    contributionEUR: 0.00,
-                    transactionFeeEUR: 5.00,
-                    netContributionBTC: 0.00000000,
-                    withdrawalEUR: 0.0
-                ))
-                results.append(SimulationData(
-                    week: 6,
-                    startingBTC: 0.00745154,
-                    netBTCHoldings: 0.00745154,
-                    btcPriceUSD: 106_000.00,
-                    btcPriceEUR: 100_000,
-                    portfolioValueEUR: 745.15,
-                    contributionEUR: 0.00,
-                    transactionFeeEUR: 0.00,
-                    netContributionBTC: 0.00000000,
-                    withdrawalEUR: 0.0
-                ))
-
-                for week in 7...totalWeeks {
-                    let previous = results[week - 2]
-
-                    // Volatility-based growth
-                    let randomShock = self.randomNormal(mean: 0, standardDeviation: weeklyVolatility)
-                    var adjustedGrowthFactor = 1.0 + weeklyDeterministicGrowth + randomShock
-
-                    // Avoid negative factor
-                    if adjustedGrowthFactor < -0.9999 {
-                        adjustedGrowthFactor = -0.9999
-                    }
-                    
-                    // ---------------------------------------------------------
-                    // DEMAND VS SUPPLY (slightly more dampened)
-                    // ---------------------------------------------------------
-                    let yearIndex = (week - 1) / 52
-                    let yearDouble = Double(yearIndex)
-
-                    // 1.5% demand growth per year
-                    let demandGrowthPerYear = 0.015
-                    let demandFactor = pow(1.0 + demandGrowthPerYear, yearDouble)
-
-                    // 1% coins lost per year
-                    let lostCoinsPerYear = 0.01
-                    let lostCoinsFactor = pow(1.0 - lostCoinsPerYear, yearDouble)
-
-                    // Halving every 208 weeks at 1.05×
-                    let halvingCount = (week - 1) / 208
-                    let halvingFactor = pow(1.05, Double(halvingCount))
-
-                    var demandSupplyFactor = demandFactor * (1.0 / lostCoinsFactor) * halvingFactor
-
-                    // Clamp to 4
-                    if demandSupplyFactor > 4 {
-                        demandSupplyFactor = 4
-                    }
-
-                    // ---------------------------------------------------------
-                    // Apply normal volatility-based update, then multiply
-                    // ---------------------------------------------------------
-                    var btcPriceUSD = previous.btcPriceUSD * adjustedGrowthFactor
-                    btcPriceUSD *= demandSupplyFactor
-
-                    // ---------------------------------------------------------
-                    // Mean Reversion if price > 2× baseline
-                    // (pull ~3/4 back toward 2× baseline)
-                    // ---------------------------------------------------------
-                    let initialBTCPriceUSD = 76_532.03
-                    let baselinePrice = initialBTCPriceUSD * pow(1.0 + annualCAGR, Double(yearIndex))
-                    let overshoot = btcPriceUSD / baselinePrice
-                    if overshoot > 2.0 {
-                        let target = baselinePrice * 2.0
-                        // Weighted approach: 3 parts target + 1 part current
-                        btcPriceUSD = (3.0 * target + btcPriceUSD) / 4.0
-                    }
-
-                    // Occasional drawdowns
-                    if Double.random(in: 0..<1) < 0.01 {
-                        // 1% chance for a 10–50% crash
-                        btcPriceUSD *= (1 - Double.random(in: 0.1...0.5))
-                    }
-                    if Double.random(in: 0..<1) < 0.003 {
-                        // 0.3% chance for 50–80% black swan
-                        btcPriceUSD *= (1 - Double.random(in: 0.5...0.8))
-                    }
-
-                    // Final floor
-                    btcPriceUSD = max(btcPriceUSD, 0.01)
-
-                    let btcPriceEUR = btcPriceUSD / exchangeRateEURUSD
-
-                    // Contributions & holdings
-                    let contributionEUR = (week <= 52) ? 60.0 : 100.0
-                    let transactionFeeEUR = contributionEUR * 0.0035
-                    let netContributionBTC = (contributionEUR - transactionFeeEUR) / btcPriceEUR
-
-                    let withdrawalEUR = 0.0
-                    let withdrawalBTC = withdrawalEUR / btcPriceEUR
-
-                    let netBTCHoldings = max(0, previous.netBTCHoldings + netContributionBTC - withdrawalBTC)
-                    let portfolioValueEUR = netBTCHoldings * btcPriceEUR
-
-                    results.append(SimulationData(
-                        week: week,
-                        startingBTC: previous.netBTCHoldings,
-                        netBTCHoldings: netBTCHoldings,
-                        btcPriceUSD: btcPriceUSD,
-                        btcPriceEUR: btcPriceEUR,
-                        portfolioValueEUR: portfolioValueEUR,
-                        contributionEUR: contributionEUR,
-                        transactionFeeEUR: transactionFeeEUR,
-                        netContributionBTC: netContributionBTC,
-                        withdrawalEUR: withdrawalEUR
-                    ))
-                }
-                allResults.append(results)
-            }
-
-            // For final output, either pick a percentile or do a mean path.
-            // Here’s a quick example for the 50th percentile (median):
-
-            // Build array of (finalValue, run)
-            var finalPortfolioValues: [(value: Double, run: [SimulationData])] = []
-            for run in allResults {
-                if let lastData = run.last {
-                    finalPortfolioValues.append((value: lastData.portfolioValueEUR, run: run))
-                }
-            }
-            finalPortfolioValues.sort { $0.value < $1.value }
-
-            let medianIndex = finalPortfolioValues.count / 2
-            let medianRun = finalPortfolioValues[medianIndex].run
-
-            // Switch back to main thread
             DispatchQueue.main.async {
                 self.isLoading = false
                 self.monteCarloResults = medianRun
                 self.isSimulationRun = true
 
-                print("Simulation complete. Using median run. Final portfolio: \(medianRun.last?.portfolioValueEUR ?? 0)")
+                print("Simulation complete (Median). Final portfolio: \(medianRun.last?.portfolioValueEUR ?? 0.0)")
 
                 DispatchQueue.global(qos: .background).async {
-                    self.processAllResults(allResults)
+                    self.processAllResults(allIterations)
                     self.generateHistogramForResults(
                         results: medianRun,
                         filePath: "/Users/conor/Desktop/PS Batch/portfolio_growth_histogram.png"
@@ -774,7 +587,7 @@ struct ContentView: View {
             }
         }
     }
- 
+
     // Example helper
     private func computeMeanPath(allResults: [[SimulationData]]) -> [SimulationData] {
         guard let firstRun = allResults.first else { return [] }

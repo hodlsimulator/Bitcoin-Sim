@@ -3,4 +3,22 @@
    uuid = "99C22E69-3147-48C7-A3E6-5609540D50B8"
    type = "1"
    version = "2.0">
+   <Breakpoints>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "8F72C264-B1B6-4A32-8791-A24630152934"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "BTC Simulator/MonteCarloSimulator.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "76"
+            endingLineNumber = "76"
+            landmarkName = "runMonteCarloSimulationsWithSpreadsheetData(spreadsheetData:initialBTCPriceUSD:iterations:scenario:)"
+            landmarkType = "9">
+         </BreakpointContent>
+      </BreakpointProxy>
+   </Breakpoints>
 </Bucket>
