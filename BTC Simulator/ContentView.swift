@@ -242,7 +242,7 @@ struct BitcoinBShape: Shape {
         // Normal scale
         let baseScale = min(rect.width / box.width, rect.height / box.height)
         // Shrink the B a bit, say 10% smaller
-        let bScale = baseScale * 0.8
+        let bScale = baseScale * 0.7
 
         var transform = CGAffineTransform.identity
         transform = transform
@@ -269,19 +269,21 @@ struct OfficialBitcoinLogo: View {
 }
 
 // MARK: - 3D Spinner of the Official Logo
-struct BrandedBitcoinSymbol3DSpinner: View {
+struct InteractiveBitcoinSymbol3DSpinner: View {
     @State private var rotationAngle = 0.0
 
     var body: some View {
         OfficialBitcoinLogo()
             .frame(width: 120, height: 120)
-            // Shift it down
-            .offset(y:20)
-            // Spin more slowly (12s)
-            .rotation3DEffect(.degrees(rotationAngle), axis: (x: 0, y: 1, z: 0))
+            .offset(y: 20)  // Keep it slightly down if you want
+            .rotation3DEffect(
+                .degrees(rotationAngle),
+                axis: (x: 0, y: 1, z: 0),
+                anchor: .center    // <--- This is crucial
+            )
             .onAppear {
                 withAnimation(
-                    .linear(duration: 10)
+                    .linear(duration: 12)
                         .repeatForever(autoreverses: false)
                 ) {
                     rotationAngle = 360
@@ -684,7 +686,7 @@ struct ContentView: View {
                     Color.black.opacity(0.5).edgesIgnoringSafeArea(.all)
                     VStack(spacing: 30) {
                         // Our spinner
-                        BrandedBitcoinSymbol3DSpinner()
+                        InteractiveBitcoinSymbol3DSpinner()
                         VStack {
                             if showTip {
                                 Text(currentTip)
@@ -730,6 +732,134 @@ struct ContentView: View {
         }
     }
 
+    struct InteractiveBitcoinSymbol3DSpinner: View {
+        // The angle of rotation around Y (in degrees)
+        @State private var angle: Double = 0
+        
+        // Degrees per second (default spin speed, e.g. 30°/s = 12s for 360°)
+        @State private var spinRate: Double = 30.0
+        
+        // For tracking real-time updates
+        @State private var lastUpdate = Date()
+        
+        // For quick flips on up/down swipes
+        @State private var flipAngleX: Double = 0
+        @State private var flipAngleZ: Double = 0
+        
+        // The normal spin rate we revert to
+        private let defaultSpinRate: Double = 30.0  // ~12s per revolution if 360 / 30 = 12
+        
+        var body: some View {
+            OfficialBitcoinLogo()
+                .frame(width: 120, height: 120)
+                .offset(y: 20)
+                // Combine the base spin + any flips
+                .rotation3DEffect(.degrees(angle),
+                                  axis: (x: 0, y: 1, z: 0),
+                                  anchor: .center)
+                .rotation3DEffect(.degrees(flipAngleX), axis: (x: 1, y: 0, z: 0))
+                .rotation3DEffect(.degrees(flipAngleZ), axis: (x: 0, y: 0, z: 1))
+                
+                // Attach drag gesture for swiping
+                .gesture(dragGesture())
+                
+                // Continuously update angle based on spinRate
+                .onAppear {
+                    // Start tracking time
+                    lastUpdate = Date()
+                    // Create a 60fps timer (ish) to increment the angle
+                    Timer.scheduledTimer(withTimeInterval: 1.0/60, repeats: true) { _ in
+                        let now = Date()
+                        let dt = now.timeIntervalSince(lastUpdate)
+                        lastUpdate = now
+                        
+                        // Update angle by spinRate * dt
+                        angle += spinRate * dt
+                        // Keep angle in [0, 360) range or let it keep climbing
+                    }
+                }
+        }
+        
+        // MARK: - Swipes
+        private func dragGesture() -> some Gesture {
+            DragGesture(minimumDistance: 30)
+                .onEnded { value in
+                    let dx = value.translation.width
+                    let dy = value.translation.height
+                    
+                    // If horizontal swipe
+                    if abs(dx) > abs(dy) {
+                        if dx > 0 {
+                            // Right swipe => speed up
+                            speedUpTemporarily()
+                        } else {
+                            // Left swipe => slow down
+                            slowDownTemporarily()
+                        }
+                    } else {
+                        // Up or down swipe => flip
+                        if dy < 0 {
+                            flipXLogo()
+                        } else {
+                            flipZLogo()
+                        }
+                    }
+                }
+        }
+        
+        // MARK: - Speed changes
+        private func speedUpTemporarily() {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                spinRate = 100  // spin faster
+            }
+            // After 3s, ease back
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                // Smoothly revert to default over 1s
+                withAnimation(.easeInOut(duration: 1)) {
+                    spinRate = defaultSpinRate
+                }
+            }
+        }
+        
+        private func slowDownTemporarily() {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                spinRate = 10  // slow down
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                withAnimation(.easeInOut(duration: 1)) {
+                    spinRate = defaultSpinRate
+                }
+            }
+        }
+        
+        // MARK: - Flips
+        private func flipXLogo() {
+            let flipAnimation = Animation.easeInOut(duration: 0.6)
+            withAnimation(flipAnimation) {
+                flipAngleX += 180
+            }
+            // Flip back after 1s
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                withAnimation(flipAnimation) {
+                    flipAngleX -= 180
+                }
+            }
+        }
+        
+        private func flipZLogo() {
+            let flipAnimation = Animation.easeInOut(duration: 0.6)
+            withAnimation(flipAnimation) {
+                flipAngleZ += 180
+            }
+            // Flip back
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                withAnimation(flipAnimation) {
+                    flipAngleZ -= 180
+                }
+            }
+        }
+    }
+    
     // MARK: - InputField
     struct InputField: View {
         let title: String
@@ -835,8 +965,7 @@ struct ContentView: View {
                 showTip = false
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 7) {
-                tipsIndex = (tipsIndex + 1) % loadingTips.count
-                currentTip = loadingTips[tipsIndex]
+                currentTip = loadingTips.randomElement() ?? ""
                 withAnimation(.easeInOut(duration: 2)) {
                     showTip = true
                 }
