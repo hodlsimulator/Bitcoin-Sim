@@ -1,3 +1,4 @@
+//
 //  ContentView.swift
 //  BTCMonteCarlo
 //
@@ -252,23 +253,62 @@ struct OfficialBitcoinLogo: View {
     }
 }
 
-// MARK: - 3D Spinner of the Official Logo
-struct EdgeOnSpinner: View {
-    @State private var rotationAngle = 90.0
-
+// MARK: - 3D Spinner (used for the loading overlay)
+struct InteractiveBitcoinSymbol3DSpinner: View {
+    @State private var rotationX: Double = 0
+    @State private var rotationY: Double = 90
+    @State private var rotationZ: Double = 0
+    @State private var spinSpeed: Double = 10
+    @State private var lastUpdate = Date()
+    
     var body: some View {
-        OfficialBitcoinLogo()
-            .scaleEffect(x: -1, y: 1, anchor: .center)
-            .rotation3DEffect(
-                .degrees(rotationAngle),
-                axis: (x: 0, y: 1, z: 0),
-                anchor: .center
-            )
-            .onAppear {
-                withAnimation(.linear(duration: 12).repeatForever(autoreverses: false)) {
-                    rotationAngle = 450
+        ZStack {
+            OfficialBitcoinLogo()
+                .rotation3DEffect(.degrees(rotationX), axis: (x: 1, y: 0, z: 0))
+                .rotation3DEffect(.degrees(rotationY), axis: (x: 0, y: 1, z: 0))
+                .rotation3DEffect(.degrees(rotationZ), axis: (x: 0, y: 0, z: 1))
+        }
+        .frame(width: 300, height: 300)
+        .offset(y: -50) // Move the whole spinner up a bit
+        .gesture(
+            DragGesture()
+                .onChanged { value in
+                    let dx = value.translation.width
+                    let dy = value.translation.height
+                    
+                    if abs(dx) > abs(dy) {
+                        spinSpeed = 10 + (dx / 5.0)
+                    } else {
+                        if dy < 0 {
+                            rotationZ = 180
+                        } else {
+                            rotationX = 180
+                        }
+                    }
                 }
+                .onEnded { value in
+                    let dx = value.translation.width
+                    let dy = value.translation.height
+                    
+                    if abs(dx) > abs(dy) {
+                        let flingFactor = value.predictedEndTranslation.width / 5.0
+                        spinSpeed = Double(10 + flingFactor)
+                    } else {
+                        withAnimation(.easeOut(duration: 0.5)) {
+                            rotationX = 0
+                            rotationZ = 0
+                        }
+                    }
+                }
+        )
+        .onAppear {
+            Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { _ in
+                let now = Date()
+                let delta = now.timeIntervalSince(lastUpdate)
+                lastUpdate = now
+                rotationY += spinSpeed * delta
             }
+        }
     }
 }
 
@@ -679,8 +719,11 @@ struct ContentView: View {
                     Color.black.opacity(0.5).ignoresSafeArea()
                     
                     VStack(spacing: 0) {
-                        Spacer().frame(height: 400)
                         
+                        // A spacer near the top, if you want
+                        Spacer().frame(height: 250)
+                        
+                        // 1) X (close) button row
                         HStack {
                             Spacer()
                             Button(action: {
@@ -693,43 +736,49 @@ struct ContentView: View {
                             }
                             .padding(.trailing, 20)
                         }
+                        // Move the entire X button row down by 130 points
+                        .offset(y: 130)
                         
-                        Spacer().frame(height: 40)
+                        // 2) The spinning Bitcoin logo
+                        InteractiveBitcoinSymbol3DSpinner()
+                            // Move it down by 120 points
+                            .offset(y: 120)
+                            // Keep the bottom padding so it doesn’t collide with the progress bar
+                            .padding(.bottom, 30)
                         
-                        EdgeOnSpinner()
-                            .padding(.bottom, 16)
-                        
+                        // 3) Progress text & bar (unchanged)
                         VStack(spacing: 8) {
                             Text("Simulating: \(completedIterations) / \(totalIterations)")
                                 .foregroundColor(.white)
-                                .font(.subheadline)
                             
-                            ProgressView(value: Double(completedIterations),
-                                         total: Double(totalIterations))
-                            .tint(Color.blue)
+                            ProgressView(
+                                value: Double(completedIterations),
+                                total: Double(totalIterations)
+                            )
+                            .tint(.blue)
                             .scaleEffect(x: 1, y: 2, anchor: .center)
                             .frame(width: 200)
                         }
+                        .padding(.bottom, 20)
                         
+                        // 4) Tips text (unchanged)
                         if showTip {
                             Text(currentTip)
                                 .foregroundColor(.white)
                                 .multilineTextAlignment(.center)
-                                .padding(.horizontal)
                                 .frame(maxWidth: 300)
+                                .lineLimit(nil)
+                                .fixedSize(horizontal: false, vertical: true)
                                 .transition(.opacity)
-                                .padding(.top, 40)
+                                .padding(.bottom, 30)
                         }
                         
+                        // 5) A spacer at the bottom
                         Spacer()
                     }
                 }
-                .onAppear {
-                    startTipCycle()
-                }
-                .onDisappear {
-                    stopTipCycle()
-                }
+                .onAppear { startTipCycle() }
+                .onDisappear { stopTipCycle() }
             }
         }
         .onAppear {
@@ -874,7 +923,6 @@ struct ContentView: View {
         return (medianRun, allRuns)
     }
 
-    
     /// This is the function you actually call inside runMonteCarloSimulationsWithProgress
     func runOneFullSimulation(
         annualCAGR: Double,
@@ -1109,5 +1157,22 @@ struct ContentView: View {
         tipTimer?.invalidate()
         tipTimer = nil
         showTip = false
+    }
+
+    // Fake "historical returns" function
+    func sampleHistoricalReturns() -> (Double, Double) {
+        // e.g. randomly produce a weekly % change between -5% and +5%
+        let randomBTC = Double.random(in: -0.05...0.05)
+        let randomSP = Double.random(in: -0.02...0.03)
+        return (randomBTC, randomSP)
+    }
+
+    // Simple normal distribution generator
+    func randomNormal(mean: Double, standardDeviation: Double) -> Double {
+        // Box-Muller
+        let u1 = Double.random(in: 0..<1)
+        let u2 = Double.random(in: 0..<1)
+        let z0 = sqrt(-2.0 * log(u1)) * cos(2.0 * .pi * u2)
+        return z0 * standardDeviation + mean
     }
 }
