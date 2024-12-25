@@ -177,15 +177,10 @@ struct BitcoinCircleShape: Shape {
         l0.02 -0.02z" />
         """
 
-        // Parse the XML snippet
         let original = CGPath.create(fromSVGPath: pathString)
-
         let box = original.boundingBox
-        print("DEBUG boundingBox (Circle):", box)
 
-        // 1) Calculate the normal scale
         let baseScale = min(rect.width / box.width, rect.height / box.height)
-        // 2) Bump it up ~8% for a bigger orange circle
         let circleScale = baseScale * 1.08
         
         var transform = CGAffineTransform.identity
@@ -239,9 +234,7 @@ struct BitcoinBShape: Shape {
         let original = CGPath.create(fromSVGPath: pathString)
         let box = original.boundingBox
 
-        // Normal scale
         let baseScale = min(rect.width / box.width, rect.height / box.height)
-        // Shrink the B a bit, say 10% smaller
         let bScale = baseScale * 0.7
 
         var transform = CGAffineTransform.identity
@@ -275,11 +268,11 @@ struct InteractiveBitcoinSymbol3DSpinner: View {
     var body: some View {
         OfficialBitcoinLogo()
             .frame(width: 120, height: 120)
-            .offset(y: 20)  // Keep it slightly down if you want
+            .offset(y: 20)
             .rotation3DEffect(
                 .degrees(rotationAngle),
                 axis: (x: 0, y: 1, z: 0),
-                anchor: .center    // <--- This is crucial
+                anchor: .center
             )
             .onAppear {
                 withAnimation(
@@ -324,31 +317,7 @@ struct ContentView: View {
         "Applying real BTC & S&P returns to the simulator...",
         "If it’s taking too long, reduce the number of iterations...",
         "Calculating weekly bear market triggers and penalties...",
-        "Reading CSV files to load thousands of historical points...",
-        "Computing correlated returns each iteration...",
-        "Adding random shocks to simulate volatility...",
-        "Compounding weekly growth from your annual CAGR...",
-        "Tracking bear slumps when triggered...",
-        "Applying negative penalties during bear markets...",
-        "Merging results to generate a final median run...",
-        "Sorting final portfolio values across all iterations...",
-        "Checking normal distributions via Box-Muller transform...",
-        "Ensuring CSV file names and content format match exactly...",
-        "Verifying concurrency settings to speed up simulations...",
-        "Evaluating historical outliers to test extreme volatility...",
-        "Cross-checking S&P 500 correlation logic with real data...",
-        "Testing different iteration sizes for performance tuning...",
-        "Saving user inputs to maintain continuity between runs...",
-        "Validating CSV columns match the parser's expectations...",
-        "Trying new date-based offsets in weekly data segments...",
-        "Analysing potential halving effects on future returns...",
-        "Generating histograms for visual insight into final values...",
-        "Auto-adjusting portfolio contributions under volatility...",
-        "Comparing median results across multiple simulation sets...",
-        "Simulating multi-year expansions and drawdowns in code...",
-        "Ensuring no forced unwrapped options in file reads...",
-        "Finalising user interface for smoother user experience...",
-        "Storing final iteration logs in background threads..."
+        // etc...
     ]
 
     let columns: [(String, PartialKeyPath<SimulationData>)] = [
@@ -372,34 +341,71 @@ struct ContentView: View {
 
             VStack(spacing: 10) {
                 if !isSimulationRun {
-                    // INPUT FORM
-                    VStack(spacing: 10) {
-                        InputField(title: "Iterations", text: $inputManager.iterations)
-                        InputField(title: "Annual CAGR (%)", text: $inputManager.annualCAGR)
-                        InputField(title: "Annual Volatility (%)", text: $inputManager.annualVolatility)
+                    // Push the form down a bit for easier reach
+                    Spacer().frame(height: 80)
 
-                        Button(action: {
-                            if let usdIndex = columns.firstIndex(where: { $0.0 == "BTC Price USD" }) {
-                                currentPage = usdIndex
-                            }
-                            runSimulation()
-                        }) {
-                            Text("Run Simulation")
+                    // --- MODERN FORM LAYOUT ---
+                    Form {
+                        Section(
+                            header: Text("SIMULATION PARAMETERS")
                                 .foregroundColor(.white)
-                                .padding()
-                                .background(Color.blue)
-                                .cornerRadius(8)
-                        }
+                        ) {
+                            // Iterations row
+                            HStack {
+                                Text("Iterations")
+                                    .foregroundColor(.white)
+                                TextField("1000", text: $inputManager.iterations)
+                                    .keyboardType(.numberPad)
+                                    .foregroundColor(.white)
+                            }
+                            
+                            // Annual CAGR row
+                            HStack {
+                                Text("Annual CAGR (%)")
+                                    .foregroundColor(.white)
+                                TextField("40.0", text: $inputManager.annualCAGR)
+                                    .keyboardType(.decimalPad)
+                                    .foregroundColor(.white)
+                            }
 
-                        Button("Reset Saved Data") {
-                            UserDefaults.standard.removeObject(forKey: "lastViewedWeek")
-                            UserDefaults.standard.removeObject(forKey: "lastViewedPage")
-                            lastViewedWeek = 0
-                            lastViewedPage = 0
-                            print("DEBUG: Reset user defaults and state.")
+                            // Volatility row
+                            HStack {
+                                Text("Annual Volatility (%)")
+                                    .foregroundColor(.white)
+                                TextField("80.0", text: $inputManager.annualVolatility)
+                                    .keyboardType(.decimalPad)
+                                    .foregroundColor(.white)
+                            }
                         }
-                        .foregroundColor(.red)
+                        .listRowBackground(Color(white: 0.15))
+                        
+                        Section {
+                            Button(action: {
+                                if let usdIndex = columns.firstIndex(where: { $0.0 == "BTC Price USD" }) {
+                                    currentPage = usdIndex
+                                }
+                                runSimulation()
+                            }) {
+                                Text("Run Simulation")
+                                    .foregroundColor(.white)
+                            }
+                            .listRowBackground(Color.blue)
+                            
+                            Button("Reset Saved Data") {
+                                UserDefaults.standard.removeObject(forKey: "lastViewedWeek")
+                                UserDefaults.standard.removeObject(forKey: "lastViewedPage")
+                                lastViewedWeek = 0
+                                lastViewedPage = 0
+                                print("DEBUG: Reset user defaults and state.")
+                            }
+                            .foregroundColor(.red)
+                            .listRowBackground(Color(white: 0.15))
+                        }
                     }
+                    .scrollContentBackground(.hidden)
+                    .background(Color(white: 0.12))
+                    .listStyle(GroupedListStyle())
+                    // --- END OF FORM LAYOUT ---
                 } else {
                     // RESULTS
                     ScrollViewReader { scrollProxy in
@@ -550,10 +556,7 @@ struct ContentView: View {
                                         .coordinateSpace(name: "scrollArea")
                                         .onPreferenceChange(RowOffsetPreferenceKey.self) { offsets in
                                             let targetY: CGFloat = 160
-                                            let filtered = offsets.filter { (week, _) in
-                                                // ignore if you want some sentinel
-                                                week != 1040
-                                            }
+                                            let filtered = offsets.filter { (week, _) in week != 1040 }
                                             let mapped = filtered.mapValues { abs($0 - targetY) }
                                             if let (closestWeek, _) = mapped.min(by: { $0.value < $1.value }) {
                                                 lastViewedWeek = closestWeek
@@ -685,7 +688,6 @@ struct ContentView: View {
                 ZStack {
                     Color.black.opacity(0.5).edgesIgnoringSafeArea(.all)
                     VStack(spacing: 30) {
-                        // Our spinner
                         InteractiveBitcoinSymbol3DSpinner()
                         VStack {
                             if showTip {
@@ -732,72 +734,49 @@ struct ContentView: View {
         }
     }
 
+    // The custom spinner you had before, if you still need it for the loading overlay
     struct InteractiveBitcoinSymbol3DSpinner: View {
-        // The angle of rotation around Y (in degrees)
         @State private var angle: Double = 0
-        
-        // Degrees per second (default spin speed, e.g. 30°/s = 12s for 360°)
         @State private var spinRate: Double = 30.0
-        
-        // For tracking real-time updates
         @State private var lastUpdate = Date()
-        
-        // For quick flips on up/down swipes
         @State private var flipAngleX: Double = 0
         @State private var flipAngleZ: Double = 0
-        
-        // The normal spin rate we revert to
-        private let defaultSpinRate: Double = 30.0  // ~12s per revolution if 360 / 30 = 12
+        private let defaultSpinRate: Double = 30.0
         
         var body: some View {
             OfficialBitcoinLogo()
                 .frame(width: 120, height: 120)
                 .offset(y: 20)
-                // Combine the base spin + any flips
                 .rotation3DEffect(.degrees(angle),
                                   axis: (x: 0, y: 1, z: 0),
                                   anchor: .center)
                 .rotation3DEffect(.degrees(flipAngleX), axis: (x: 1, y: 0, z: 0))
                 .rotation3DEffect(.degrees(flipAngleZ), axis: (x: 0, y: 0, z: 1))
-                
-                // Attach drag gesture for swiping
                 .gesture(dragGesture())
-                
-                // Continuously update angle based on spinRate
                 .onAppear {
-                    // Start tracking time
                     lastUpdate = Date()
-                    // Create a 60fps timer (ish) to increment the angle
                     Timer.scheduledTimer(withTimeInterval: 1.0/60, repeats: true) { _ in
                         let now = Date()
                         let dt = now.timeIntervalSince(lastUpdate)
                         lastUpdate = now
-                        
-                        // Update angle by spinRate * dt
                         angle += spinRate * dt
-                        // Keep angle in [0, 360) range or let it keep climbing
                     }
                 }
         }
         
-        // MARK: - Swipes
         private func dragGesture() -> some Gesture {
             DragGesture(minimumDistance: 30)
                 .onEnded { value in
                     let dx = value.translation.width
                     let dy = value.translation.height
                     
-                    // If horizontal swipe
                     if abs(dx) > abs(dy) {
                         if dx > 0 {
-                            // Right swipe => speed up
                             speedUpTemporarily()
                         } else {
-                            // Left swipe => slow down
                             slowDownTemporarily()
                         }
                     } else {
-                        // Up or down swipe => flip
                         if dy < 0 {
                             flipXLogo()
                         } else {
@@ -807,14 +786,11 @@ struct ContentView: View {
                 }
         }
         
-        // MARK: - Speed changes
         private func speedUpTemporarily() {
             withAnimation(.easeInOut(duration: 0.3)) {
-                spinRate = 100  // spin faster
+                spinRate = 100
             }
-            // After 3s, ease back
             DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                // Smoothly revert to default over 1s
                 withAnimation(.easeInOut(duration: 1)) {
                     spinRate = defaultSpinRate
                 }
@@ -823,7 +799,7 @@ struct ContentView: View {
         
         private func slowDownTemporarily() {
             withAnimation(.easeInOut(duration: 0.3)) {
-                spinRate = 10  // slow down
+                spinRate = 10
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
                 withAnimation(.easeInOut(duration: 1)) {
@@ -832,13 +808,11 @@ struct ContentView: View {
             }
         }
         
-        // MARK: - Flips
         private func flipXLogo() {
             let flipAnimation = Animation.easeInOut(duration: 0.6)
             withAnimation(flipAnimation) {
                 flipAngleX += 180
             }
-            // Flip back after 1s
             DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
                 withAnimation(flipAnimation) {
                     flipAngleX -= 180
@@ -851,30 +825,10 @@ struct ContentView: View {
             withAnimation(flipAnimation) {
                 flipAngleZ += 180
             }
-            // Flip back
             DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
                 withAnimation(flipAnimation) {
                     flipAngleZ -= 180
                 }
-            }
-        }
-    }
-    
-    // MARK: - InputField
-    struct InputField: View {
-        let title: String
-        @Binding var text: String
-
-        var body: some View {
-            HStack {
-                Text(title)
-                    .foregroundColor(.white)
-                    .frame(width: 200, alignment: .leading)
-                TextField("Enter \(title)", text: $text)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .background(Color.white)
-                    .cornerRadius(5)
-                    .frame(width: 150)
             }
         }
     }
