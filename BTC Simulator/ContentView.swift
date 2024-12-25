@@ -1,4 +1,3 @@
-//
 //  ContentView.swift
 //  BTCMonteCarlo
 //
@@ -12,15 +11,11 @@ import PocketSVG
 
 extension CGPath {
     static func create(fromSVGPath svgString: String) -> CGPath {
-        // PocketSVG parses the path string into an array of UIBezierPaths
         let paths = SVGBezierPath.paths(fromSVGString: svgString)
-
-        // Merge all the UIBezierPaths into one CGPath
         let combined = CGMutablePath()
         for p in paths {
             combined.addPath(p.cgPath)
         }
-
         return combined
     }
 }
@@ -176,10 +171,8 @@ struct BitcoinCircleShape: Shape {
         1096.06,273.24 1763.03,1383.51 1489.76,2479.57 \
         l0.02 -0.02z" />
         """
-
         let original = CGPath.create(fromSVGPath: pathString)
         let box = original.boundingBox
-
         let baseScale = min(rect.width / box.width, rect.height / box.height)
         let circleScale = baseScale * 1.08
         
@@ -230,13 +223,11 @@ struct BitcoinBShape: Shape {
         c126.73,31.59 534.85,90.55 468.94,355.05
         l-0.02 0z" />
         """
-
         let original = CGPath.create(fromSVGPath: pathString)
         let box = original.boundingBox
-
         let baseScale = min(rect.width / box.width, rect.height / box.height)
         let bScale = baseScale * 0.7
-
+        
         var transform = CGAffineTransform.identity
         transform = transform
             .translatedBy(x: rect.midX, y: rect.midY)
@@ -257,29 +248,25 @@ struct OfficialBitcoinLogo: View {
             BitcoinBShape()
                 .fill(Color.white)
         }
-        .frame(width: 120, height: 120)  // or whatever size
+        .frame(width: 120, height: 120)
     }
 }
 
 // MARK: - 3D Spinner of the Official Logo
-struct InteractiveBitcoinSymbol3DSpinner: View {
-    @State private var rotationAngle = 0.0
+struct EdgeOnSpinner: View {
+    @State private var rotationAngle = 90.0
 
     var body: some View {
         OfficialBitcoinLogo()
-            .frame(width: 120, height: 120)
-            .offset(y: 20)
+            .scaleEffect(x: -1, y: 1, anchor: .center)
             .rotation3DEffect(
                 .degrees(rotationAngle),
                 axis: (x: 0, y: 1, z: 0),
                 anchor: .center
             )
             .onAppear {
-                withAnimation(
-                    .linear(duration: 12)
-                        .repeatForever(autoreverses: false)
-                ) {
-                    rotationAngle = 360
+                withAnimation(.linear(duration: 12).repeatForever(autoreverses: false)) {
+                    rotationAngle = 450
                 }
             }
     }
@@ -287,12 +274,21 @@ struct InteractiveBitcoinSymbol3DSpinner: View {
 
 // MARK: - ContentView
 struct ContentView: View {
+
+    enum ActiveField: Hashable {
+        case iterations
+        case annualCAGR
+        case annualVolatility
+    }
+
     @State private var monteCarloResults: [SimulationData] = []
     @State private var isLoading: Bool = false
     @State private var pdfData: Data?
     @State private var showFileExporter = false
+    @FocusState private var activeField: ActiveField?
     @StateObject var inputManager = PersistentInputManager()
     @State private var isSimulationRun: Bool = false
+    @State private var isCancelled = false
 
     @State private var scrollToBottom: Bool = false
     @State private var isAtBottom: Bool = false
@@ -305,21 +301,22 @@ struct ContentView: View {
     @State private var lastViewedPage: Int = 0
     @State private var userHasScrolled = false
 
-    // For multi-tip fade in/out
     @State private var currentTip: String = ""
     @State private var showTip: Bool = false
     @State private var tipsIndex: Int = 0
     @State private var tipTimer: Timer? = nil
+    
+    @State private var showSpinner = false
+    @State private var completedIterations: Int = 0
+    @State private var totalIterations: Int = 1000
 
     let loadingTips = [
         "Gathering historical data from CSV files...",
         "Running thousands of random draws...",
         "Applying real BTC & S&P returns to the simulator...",
-        "If it’s taking too long, reduce the number of iterations...",
-        "Calculating weekly bear market triggers and penalties...",
         // etc...
     ]
-
+    
     let columns: [(String, PartialKeyPath<SimulationData>)] = [
         ("Starting BTC (BTC)", \SimulationData.startingBTC),
         ("Net BTC Holdings (BTC)", \SimulationData.netBTCHoldings),
@@ -337,53 +334,59 @@ struct ContentView: View {
 
     var body: some View {
         ZStack {
-            Color(white: 0.12).ignoresSafeArea()
-
+            ZStack {
+                Color(white: 0.12).ignoresSafeArea()
+                Color.clear
+                    .contentShape(Rectangle())
+                    .highPriorityGesture(
+                        TapGesture()
+                            .onEnded {
+                                activeField = nil
+                            }
+                    )
+            }
+            
             VStack(spacing: 10) {
                 if !isSimulationRun {
-                    // Push the form down a bit for easier reach
                     Spacer().frame(height: 80)
-
-                    // --- MODERN FORM LAYOUT ---
+                    
                     Form {
                         Section(
                             header: Text("SIMULATION PARAMETERS")
                                 .foregroundColor(.white)
                         ) {
-                            // Iterations row
                             HStack {
                                 Text("Iterations")
                                     .foregroundColor(.white)
                                 TextField("1000", text: $inputManager.iterations)
                                     .keyboardType(.numberPad)
                                     .foregroundColor(.white)
+                                    .focused($activeField, equals: .iterations)
                             }
                             
-                            // Annual CAGR row
                             HStack {
                                 Text("Annual CAGR (%)")
                                     .foregroundColor(.white)
                                 TextField("40.0", text: $inputManager.annualCAGR)
                                     .keyboardType(.decimalPad)
                                     .foregroundColor(.white)
+                                    .focused($activeField, equals: .annualCAGR)
                             }
-
-                            // Volatility row
+                            
                             HStack {
                                 Text("Annual Volatility (%)")
                                     .foregroundColor(.white)
                                 TextField("80.0", text: $inputManager.annualVolatility)
                                     .keyboardType(.decimalPad)
                                     .foregroundColor(.white)
+                                    .focused($activeField, equals: .annualVolatility)
                             }
                         }
                         .listRowBackground(Color(white: 0.15))
                         
                         Section {
                             Button(action: {
-                                if let usdIndex = columns.firstIndex(where: { $0.0 == "BTC Price USD" }) {
-                                    currentPage = usdIndex
-                                }
+                                activeField = nil
                                 runSimulation()
                             }) {
                                 Text("Run Simulation")
@@ -396,7 +399,6 @@ struct ContentView: View {
                                 UserDefaults.standard.removeObject(forKey: "lastViewedPage")
                                 lastViewedWeek = 0
                                 lastViewedPage = 0
-                                print("DEBUG: Reset user defaults and state.")
                             }
                             .foregroundColor(.red)
                             .listRowBackground(Color(white: 0.15))
@@ -405,15 +407,12 @@ struct ContentView: View {
                     .scrollContentBackground(.hidden)
                     .background(Color(white: 0.12))
                     .listStyle(GroupedListStyle())
-                    // --- END OF FORM LAYOUT ---
                 } else {
-                    // RESULTS
                     ScrollViewReader { scrollProxy in
                         ZStack {
                             VStack {
                                 Spacer().frame(height: 40)
                                 VStack(spacing: 0) {
-                                    // Header
                                     HStack(spacing: 0) {
                                         Text("Week")
                                             .frame(width: 60, alignment: .leading)
@@ -422,7 +421,7 @@ struct ContentView: View {
                                             .padding(.vertical, 8)
                                             .background(Color.black)
                                             .foregroundColor(.white)
-
+                                        
                                         ZStack {
                                             Text(columns[currentPage].0)
                                                 .font(.headline)
@@ -431,7 +430,7 @@ struct ContentView: View {
                                                 .background(Color.black)
                                                 .foregroundColor(.white)
                                                 .frame(maxWidth: .infinity, alignment: .leading)
-
+                                            
                                             GeometryReader { geometry in
                                                 HStack(spacing: 0) {
                                                     Color.clear
@@ -447,9 +446,7 @@ struct ContentView: View {
                                                                     }
                                                                 }
                                                         )
-
                                                     Spacer()
-
                                                     Color.clear
                                                         .frame(width: geometry.size.width * 0.2)
                                                         .contentShape(Rectangle())
@@ -469,18 +466,16 @@ struct ContentView: View {
                                         .frame(height: 50)
                                     }
                                     .background(Color.black)
-
-                                    // Scroll area
+                                    
                                     ScrollView(.vertical, showsIndicators: !hideScrollIndicators) {
                                         HStack(spacing: 0) {
-                                            // Weeks column
                                             VStack(spacing: 0) {
                                                 ForEach(monteCarloResults.indices, id: \.self) { index in
                                                     let result = monteCarloResults[index]
                                                     let rowBackground = index.isMultiple(of: 2)
-                                                        ? Color(white: 0.10)
-                                                        : Color(white: 0.14)
-
+                                                    ? Color(white: 0.10)
+                                                    : Color(white: 0.14)
+                                                    
                                                     Text("\(result.week)")
                                                         .frame(width: 70, alignment: .leading)
                                                         .padding(.leading, 50)
@@ -492,8 +487,7 @@ struct ContentView: View {
                                                         .background(RowOffsetReporter(week: result.week))
                                                 }
                                             }
-
-                                            // TabView of columns
+                                            
                                             TabView(selection: $currentPage) {
                                                 ForEach(0..<columns.count, id: \.self) { index in
                                                     ZStack {
@@ -501,9 +495,9 @@ struct ContentView: View {
                                                             ForEach(monteCarloResults.indices, id: \.self) { rowIndex in
                                                                 let rowResult = monteCarloResults[rowIndex]
                                                                 let rowBackground = rowIndex.isMultiple(of: 2)
-                                                                    ? Color(white: 0.10)
-                                                                    : Color(white: 0.14)
-
+                                                                ? Color(white: 0.10)
+                                                                : Color(white: 0.14)
+                                                                
                                                                 Text(getValue(rowResult, columns[index].1))
                                                                     .frame(maxWidth: .infinity, alignment: .leading)
                                                                     .padding(.leading, 80)
@@ -608,8 +602,7 @@ struct ContentView: View {
                                 UserDefaults.standard.set(lastViewedWeek, forKey: "lastViewedWeek")
                                 UserDefaults.standard.set(currentPage, forKey: "lastViewedPage")
                             }
-
-                            // Back button
+                            
                             VStack {
                                 HStack {
                                     Button(action: {
@@ -628,8 +621,7 @@ struct ContentView: View {
                                 }
                                 Spacer()
                             }
-
-                            // Scroll-to-bottom
+                            
                             if !isAtBottom {
                                 VStack {
                                     Spacer()
@@ -650,8 +642,7 @@ struct ContentView: View {
                     }
                 }
             }
-
-            // Forward button
+            
             if !isSimulationRun && !monteCarloResults.isEmpty {
                 VStack {
                     HStack {
@@ -682,26 +673,56 @@ struct ContentView: View {
                     Spacer()
                 }
             }
-
-            // Loading overlay
+            
             if isLoading {
                 ZStack {
-                    Color.black.opacity(0.5).edgesIgnoringSafeArea(.all)
-                    VStack(spacing: 30) {
-                        InteractiveBitcoinSymbol3DSpinner()
-                        VStack {
-                            if showTip {
-                                Text(currentTip)
+                    Color.black.opacity(0.5).ignoresSafeArea()
+                    
+                    VStack(spacing: 0) {
+                        Spacer().frame(height: 400)
+                        
+                        HStack {
+                            Spacer()
+                            Button(action: {
+                                isCancelled = true
+                                isLoading = false
+                            }) {
+                                Image(systemName: "xmark")
                                     .foregroundColor(.white)
-                                    .multilineTextAlignment(.center)
-                                    .padding(.horizontal)
-                                    .frame(maxWidth: 300)
-                                    .transition(.opacity)
+                                    .padding()
                             }
+                            .padding(.trailing, 20)
                         }
-                        .frame(height: 80)
+                        
+                        Spacer().frame(height: 40)
+                        
+                        EdgeOnSpinner()
+                            .padding(.bottom, 16)
+                        
+                        VStack(spacing: 8) {
+                            Text("Simulating: \(completedIterations) / \(totalIterations)")
+                                .foregroundColor(.white)
+                                .font(.subheadline)
+                            
+                            ProgressView(value: Double(completedIterations),
+                                         total: Double(totalIterations))
+                            .tint(Color.blue)
+                            .scaleEffect(x: 1, y: 2, anchor: .center)
+                            .frame(width: 200)
+                        }
+                        
+                        if showTip {
+                            Text(currentTip)
+                                .foregroundColor(.white)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal)
+                                .frame(maxWidth: 300)
+                                .transition(.opacity)
+                                .padding(.top, 40)
+                        }
+                        
+                        Spacer()
                     }
-                    .offset(y: 220)
                 }
                 .onAppear {
                     startTipCycle()
@@ -733,146 +754,235 @@ struct ContentView: View {
             }
         }
     }
+    
+    struct DarkKeyboardTextField: UIViewRepresentable {
+        @Binding var text: String
+        var placeholder: String = ""
+        var keyboardType: UIKeyboardType = .numberPad
 
-    // The custom spinner you had before, if you still need it for the loading overlay
-    struct InteractiveBitcoinSymbol3DSpinner: View {
-        @State private var angle: Double = 0
-        @State private var spinRate: Double = 30.0
-        @State private var lastUpdate = Date()
-        @State private var flipAngleX: Double = 0
-        @State private var flipAngleZ: Double = 0
-        private let defaultSpinRate: Double = 30.0
-        
-        var body: some View {
-            OfficialBitcoinLogo()
-                .frame(width: 120, height: 120)
-                .offset(y: 20)
-                .rotation3DEffect(.degrees(angle),
-                                  axis: (x: 0, y: 1, z: 0),
-                                  anchor: .center)
-                .rotation3DEffect(.degrees(flipAngleX), axis: (x: 1, y: 0, z: 0))
-                .rotation3DEffect(.degrees(flipAngleZ), axis: (x: 0, y: 0, z: 1))
-                .gesture(dragGesture())
-                .onAppear {
-                    lastUpdate = Date()
-                    Timer.scheduledTimer(withTimeInterval: 1.0/60, repeats: true) { _ in
-                        let now = Date()
-                        let dt = now.timeIntervalSince(lastUpdate)
-                        lastUpdate = now
-                        angle += spinRate * dt
-                    }
-                }
+        func makeUIView(context: Context) -> UITextField {
+            let textField = UITextField()
+            textField.placeholder = placeholder
+            textField.keyboardType = keyboardType
+            textField.keyboardAppearance = .dark
+            textField.delegate = context.coordinator
+            return textField
+        }
+
+        func updateUIView(_ uiView: UITextField, context: Context) {
+            uiView.text = text
+        }
+
+        func makeCoordinator() -> Coordinator {
+            Coordinator(self)
         }
         
-        private func dragGesture() -> some Gesture {
-            DragGesture(minimumDistance: 30)
-                .onEnded { value in
-                    let dx = value.translation.width
-                    let dy = value.translation.height
-                    
-                    if abs(dx) > abs(dy) {
-                        if dx > 0 {
-                            speedUpTemporarily()
-                        } else {
-                            slowDownTemporarily()
-                        }
-                    } else {
-                        if dy < 0 {
-                            flipXLogo()
-                        } else {
-                            flipZLogo()
-                        }
-                    }
-                }
-        }
-        
-        private func speedUpTemporarily() {
-            withAnimation(.easeInOut(duration: 0.3)) {
-                spinRate = 100
+        class Coordinator: NSObject, UITextFieldDelegate {
+            var parent: DarkKeyboardTextField
+            init(_ parent: DarkKeyboardTextField) {
+                self.parent = parent
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                withAnimation(.easeInOut(duration: 1)) {
-                    spinRate = defaultSpinRate
-                }
-            }
-        }
-        
-        private func slowDownTemporarily() {
-            withAnimation(.easeInOut(duration: 0.3)) {
-                spinRate = 10
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                withAnimation(.easeInOut(duration: 1)) {
-                    spinRate = defaultSpinRate
-                }
-            }
-        }
-        
-        private func flipXLogo() {
-            let flipAnimation = Animation.easeInOut(duration: 0.6)
-            withAnimation(flipAnimation) {
-                flipAngleX += 180
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-                withAnimation(flipAnimation) {
-                    flipAngleX -= 180
-                }
-            }
-        }
-        
-        private func flipZLogo() {
-            let flipAnimation = Animation.easeInOut(duration: 0.6)
-            withAnimation(flipAnimation) {
-                flipAngleZ += 180
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-                withAnimation(flipAnimation) {
-                    flipAngleZ -= 180
-                }
+            func textFieldDidChangeSelection(_ textField: UITextField) {
+                parent.text = textField.text ?? ""
             }
         }
     }
 
-    // MARK: - Simulation
     private func runSimulation() {
+        isCancelled = false
         isLoading = true
         monteCarloResults = []
+        completedIterations = 0
+
+        // 1) First, insert your 7 fixed weeks into monteCarloResults so they show immediately:
+        let fixedWeeks: [SimulationData] = [
+            .init(
+                week: 1,
+                startingBTC: 0.0,
+                netBTCHoldings: 0.00469014,
+                btcPriceUSD: 76_532.03,
+                btcPriceEUR: 71_177.69,
+                portfolioValueEUR: 333.83,
+                contributionEUR: 378.00,
+                transactionFeeEUR: 2.46,
+                netContributionBTC: 0.00527613,
+                withdrawalEUR: 0.0
+            ),
+            .init(
+                week: 2,
+                startingBTC: 0.00469014,
+                netBTCHoldings: 0.00530474,
+                btcPriceUSD: 92_000.00,
+                btcPriceEUR: 86_792.45,
+                portfolioValueEUR: 465.00,
+                contributionEUR: 60.00,
+                transactionFeeEUR: 0.21,
+                netContributionBTC: 0.00066988,
+                withdrawalEUR: 0.0
+            ),
+            .init(
+                week: 3,
+                startingBTC: 0.00530474,
+                netBTCHoldings: 0.00608283,
+                btcPriceUSD: 95_000.00,
+                btcPriceEUR: 89_622.64,
+                portfolioValueEUR: 547.00,
+                contributionEUR: 70.00,
+                transactionFeeEUR: 0.25,
+                netContributionBTC: 0.00077809,
+                withdrawalEUR: 0.0
+            ),
+            .init(
+                week: 4,
+                startingBTC: 0.00608283,
+                netBTCHoldings: 0.00750280,
+                btcPriceUSD: 95_741.15,
+                btcPriceEUR: 90_321.84,
+                portfolioValueEUR: 685.00,
+                contributionEUR: 130.00,
+                transactionFeeEUR: 0.46,
+                netContributionBTC: 0.00141997,
+                withdrawalEUR: 0.0
+            ),
+            .init(
+                week: 5,
+                startingBTC: 0.00745154,
+                netBTCHoldings: 0.00745154,
+                btcPriceUSD: 96_632.26,
+                btcPriceEUR: 91_162.51,
+                portfolioValueEUR: 679.30,
+                contributionEUR: 0.00,
+                transactionFeeEUR: 5.00,
+                netContributionBTC: 0.00000000,
+                withdrawalEUR: 0.0
+            ),
+            .init(
+                week: 6,
+                startingBTC: 0.00745154,
+                netBTCHoldings: 0.00745154,
+                btcPriceUSD: 106_000.00,
+                btcPriceEUR: 100_000.00,
+                portfolioValueEUR: 745.15,
+                contributionEUR: 0.00,
+                transactionFeeEUR: 0.00,
+                netContributionBTC: 0.00000000,
+                withdrawalEUR: 0.0
+            ),
+            .init(
+                week: 7,
+                startingBTC: 0.00745154,
+                netBTCHoldings: 0.00959318,
+                btcPriceUSD: 98_346.31,
+                btcPriceEUR: 92_779.54,
+                portfolioValueEUR: 890.05,
+                contributionEUR: 200.00,
+                transactionFeeEUR: 1.300,
+                netContributionBTC: 0.00214164,
+                withdrawalEUR: 0.0
+            )
+        ]
+        self.monteCarloResults = fixedWeeks
 
         DispatchQueue.global(qos: .userInitiated).async {
+            guard let total = self.inputManager.getParsedIterations(), total > 0 else {
+                DispatchQueue.main.async { self.isLoading = false }
+                return
+            }
+            DispatchQueue.main.async {
+                self.totalIterations = total
+            }
+
             let userInputCAGR = self.inputManager.getParsedAnnualCAGR() / 100.0
             let userInputVolatility = (Double(self.inputManager.annualVolatility) ?? 1.0) / 100.0
 
-            guard let totalIterations = self.inputManager.getParsedIterations(), totalIterations > 0 else {
-                DispatchQueue.main.async {
-                    self.isLoading = false
-                }
-                return
-            }
-
-            // Dummy logic
-            let (medianRun, allIterations) = runMonteCarloSimulationsWithSpreadsheetData(
+            // 2) Run the real simulation with progress
+            let (medianRun, allIterations) = self.runMonteCarloSimulationsWithProgress(
                 annualCAGR: userInputCAGR,
                 annualVolatility: userInputVolatility,
                 exchangeRateEURUSD: 1.06,
                 totalWeeks: 1040,
-                iterations: totalIterations
-            )
+                iterations: total
+            ) { completed in
+                // Update progress bar
+                DispatchQueue.main.async {
+                    self.completedIterations = completed
+                }
+            }
 
+            if self.isCancelled { return }
+
+            // 3) Append the random part after the 7 fixed weeks
             DispatchQueue.main.async {
                 self.isLoading = false
-                self.monteCarloResults = medianRun
+                
+                // If the medianRun also has those first 7 weeks inside it, we only need
+                // to append from week 8 onwards. That’s dropFirst(7).
+                let simulatedWeeks = medianRun.dropFirst(7)
+                self.monteCarloResults.append(contentsOf: simulatedWeeks)
+                
                 self.isSimulationRun = true
+            }
 
-                DispatchQueue.global(qos: .background).async {
-                    self.processAllResults(allIterations)
-                }
+            DispatchQueue.global(qos: .background).async {
+                self.processAllResults(allIterations)
             }
         }
     }
 
+    // This version loops through each iteration, calling progressCallback(i+1) each time
+    private func runMonteCarloSimulationsWithProgress(
+        annualCAGR: Double,
+        annualVolatility: Double,
+        exchangeRateEURUSD: Double,
+        totalWeeks: Int,
+        iterations: Int,
+        progressCallback: @escaping (Int) -> Void
+    ) -> ([SimulationData], [[SimulationData]]) {
+        
+        var allRuns: [[SimulationData]] = []
+        
+        for i in 0..<iterations {
+            if isCancelled { break }
+            
+            // ...Pretend we do some heavy-lifting per iteration...
+            let thisRun = generateFakeSimulation(totalWeeks: totalWeeks)
+            allRuns.append(thisRun)
+            
+            // Let the UI know we finished iteration i+1
+            progressCallback(i + 1)
+        }
+        
+        // Once all runs are done, pick a “median” run, or any final logic
+        let median = allRuns.randomElement() ?? []
+        return (median, allRuns)
+    }
+    
+    // Dummy method, just returns fake data
+    private func generateFakeSimulation(totalWeeks: Int) -> [SimulationData] {
+        var results: [SimulationData] = []
+        for w in 1...totalWeeks {
+            results.append(
+                SimulationData(
+                    week: w,
+                    startingBTC: Double.random(in: 0...1),
+                    netBTCHoldings: Double.random(in: 0...2),
+                    btcPriceUSD: Double.random(in: 10000...40000),
+                    btcPriceEUR: Double.random(in: 9000...38000),
+                    portfolioValueEUR: Double.random(in: 1000...100000),
+                    contributionEUR: Double.random(in: 0...200),
+                    transactionFeeEUR: Double.random(in: 0...5),
+                    netContributionBTC: Double.random(in: 0...0.01),
+                    withdrawalEUR: Double.random(in: 0...50)
+                )
+            )
+        }
+        // Sleep a tiny bit to simulate heavy processing
+        Thread.sleep(forTimeInterval: 0.002)
+        return results
+    }
+
     private func processAllResults(_ allResults: [[SimulationData]]) {
-        let portfolioValues = allResults.flatMap { $0.map { $0.portfolioValueEUR } }
-        // do something with it...
+        // do something with them...
     }
 
     private func getValue(_ item: SimulationData, _ keyPath: PartialKeyPath<SimulationData>) -> String {
@@ -899,21 +1009,18 @@ struct ContentView: View {
         }
     }
 
-    // MARK: - Tip Cycling
     private func startTipCycle() {
         showTip = false
         tipTimer?.invalidate()
         tipTimer = nil
 
-        // Show first tip after 5s
         DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
-            currentTip = loadingTips[tipsIndex]
+            currentTip = loadingTips.randomElement() ?? ""
             withAnimation(.easeInOut(duration: 2)) {
                 showTip = true
             }
         }
 
-        // Cycle tips every 25s
         tipTimer = Timer.scheduledTimer(withTimeInterval: 25, repeats: true) { _ in
             withAnimation(.easeInOut(duration: 2)) {
                 showTip = false

@@ -32,6 +32,17 @@ func loadAllHistoricalData() {
 // These used to be hardcoded. We now load them via loadAllHistoricalData().
 // --------------------------------------------------------------------------
 
+// func loadBTCWeeklyReturns() -> [Double] {
+    // Placeholder CSV parsing or real logic. If file not found or parse fails, return []
+    // E.g. parse CSV from “BTCWeeklyReturns.csv”
+ //   return []
+// }
+
+// func loadSP500WeeklyReturns() -> [Double] {
+    // Same placeholder logic for S&P 500 weekly returns
+   // return []
+// }
+
 // --------------------------------------------------------------------------
 // MARK: - Helpers for Correlation, Sampling, Normal Dist.
 // --------------------------------------------------------------------------
@@ -59,7 +70,7 @@ func sampleHistoricalReturns() -> (btcWeekly: Double, spWeekly: Double) {
     let spIdx  = Int.random(in: 0..<sp500WeeklyReturns.count)
     
     let chosenBTC = historicalBTCWeeklyReturns[btcIdx]
-    let chosenSP = sp500WeeklyReturns[spIdx]
+    let chosenSP  = sp500WeeklyReturns[spIdx]
     
     return (chosenBTC, chosenSP)
 }
@@ -95,7 +106,7 @@ func calculateStandardDeviation(values: [Double], mean: Double) -> Double {
 func calculatePercentile(values: [Double], percentile: Double) -> Double {
     let sorted = values.sorted()
     let index = Int(Double(sorted.count - 1) * percentile / 100.0)
-    return sorted[index]
+    return sorted[max(0, min(index, sorted.count - 1))]
 }
 
 /// Summaries across all iterations (mean, median, std, p90, p10, etc.)
@@ -153,14 +164,13 @@ let bearMarketLengthRange = 4...8
 
 /// Weeks from halving to current date
 func weeksFromHalving(halvingDate: Date, currentWeekDate: Date) -> Int {
-    guard currentWeekDate >= halvingDate else {
-        return 0
-    }
+    guard currentWeekDate >= halvingDate else { return 0 }
     let comps = Calendar.current.dateComponents([.weekOfYear], from: halvingDate, to: currentWeekDate)
     return comps.weekOfYear ?? 0
 }
 
 func halvingYearIndex(weeksAfterHalving: Int) -> Int {
+    // Each 52 weeks => next year index
     return weeksAfterHalving / 52
 }
 
@@ -200,7 +210,7 @@ func runMonteCarloSimulationsWithSpreadsheetData(
 
                 var results = [SimulationData]()
 
-                // Example of pre-filled weeks (replace with real logic if needed).
+                // Hardcoded weeks 1-7
                 results.append(SimulationData(
                     week: 1,
                     startingBTC: 0.0,
@@ -273,18 +283,43 @@ func runMonteCarloSimulationsWithSpreadsheetData(
                     netContributionBTC: 0.00000000,
                     withdrawalEUR: 0.0
                 ))
+                results.append(SimulationData(
+                    week: 7,
+                    startingBTC: 0.00745154,
+                    netBTCHoldings: 0.00959318,
+                    btcPriceUSD: 98_346.31,
+                    btcPriceEUR: 92_779.54,
+                    portfolioValueEUR: 890.05,
+                    contributionEUR: 200.00,
+                    transactionFeeEUR: 1.300,
+                    netContributionBTC: 0.00214164,
+                    withdrawalEUR: 0.0
+                ))
 
-                var previousBTCPriceUSD = 106_000.00
-                var previousBTCHoldings = 0.00745154
+                // Instead of hardcoding:
+                // var previousBTCPriceUSD = 106_000.00
+                // var previousBTCHoldings = 0.00745154
+                // We'll pick up from the last of the above entries:
+                var previousBTCPriceUSD: Double
+                var previousBTCHoldings: Double
+
+                if let lastHardcoded = results.last {
+                    previousBTCPriceUSD = lastHardcoded.btcPriceUSD
+                    previousBTCHoldings = lastHardcoded.netBTCHoldings
+                } else {
+                    // fallback if we had no data
+                    previousBTCPriceUSD = 106_000.00
+                    previousBTCHoldings = 0.00745154
+                }
+
                 var halvingHasOccurred = false
-
                 var isBearMarketActive = false
                 var weeksRemainingInBear = 0
 
                 let baseWeeklyGrowth = pow(1.0 + annualCAGR, 1.0 / 52.0) - 1.0
                 let weeklyVol = annualVolatility / sqrt(52.0)
 
-                for week in 7...totalWeeks {
+                for week in 8...totalWeeks {
                     let offset = week - 1
                     guard let currentDate = Calendar.current.date(byAdding: .weekOfYear, value: offset, to: realStartDate)
                     else { continue }
@@ -301,7 +336,6 @@ func runMonteCarloSimulationsWithSpreadsheetData(
                     let bearPenalty = halvingBearPenalties[safeIdx]
 
                     let (histBTC, histSP) = sampleHistoricalReturns()
-
                     var combinedWeeklyReturn = correlatedReturn(
                         correlation: correlationWithSP500,
                         sp500Return: histSP,
@@ -365,6 +399,7 @@ func runMonteCarloSimulationsWithSpreadsheetData(
                     previousBTCHoldings = netHoldings
                 }
 
+                // Save final portfolio run
                 if let final = results.last {
                     finalValuesLock.lock()
                     finalPortfolioValues.append((value: final.portfolioValueEUR, run: results))
@@ -381,7 +416,11 @@ func runMonteCarloSimulationsWithSpreadsheetData(
     }
 
     dispatchGroup.wait()
+
+    // Sort final results
     finalPortfolioValues.sort { $0.value < $1.value }
+    // Get the median run
     let medianRun = finalPortfolioValues[finalPortfolioValues.count / 2].run
+    
     return (medianRun, allIterations)
 }
