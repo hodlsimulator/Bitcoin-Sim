@@ -256,7 +256,7 @@ struct OfficialBitcoinLogo: View {
 // MARK: - 3D Spinner (used for the loading overlay)
 struct InteractiveBitcoinSymbol3DSpinner: View {
     @State private var rotationX: Double = 0
-    @State private var rotationY: Double = 90
+    @State private var rotationY: Double = -90
     @State private var rotationZ: Double = 0
     @State private var spinSpeed: Double = 10
     @State private var lastUpdate = Date()
@@ -747,9 +747,12 @@ struct ContentView: View {
                             .padding(.bottom, 30)
                         
                         // 3) Progress text & bar (unchanged)
-                        VStack(spacing: 8) {
+                        VStack(spacing: 17) {
                             Text("Simulating: \(completedIterations) / \(totalIterations)")
+                                .font(.body.monospacedDigit())
                                 .foregroundColor(.white)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.5)
                             
                             ProgressView(
                                 value: Double(completedIterations),
@@ -759,6 +762,7 @@ struct ContentView: View {
                             .scaleEffect(x: 1, y: 2, anchor: .center)
                             .frame(width: 200)
                         }
+
                         .padding(.bottom, 20)
                         
                         // 4) Tips text (unchanged)
