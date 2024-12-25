@@ -63,15 +63,6 @@ func loadCSV() -> [SimulationData] {
     }
 }
 
-func parseDouble(_ string: String) -> Double? {
-    let formatter = NumberFormatter()
-    formatter.locale = Locale(identifier: "en_US_POSIX")
-    formatter.numberStyle = .decimal
-    formatter.decimalSeparator = "."
-    formatter.groupingSeparator = ""
-    return formatter.number(from: string)?.doubleValue
-}
-
 /// Helper to parse a CSV row, accounting for quoted values and commas
 func parseCSVRow(_ row: String) -> [String] {
     var columns: [String] = []

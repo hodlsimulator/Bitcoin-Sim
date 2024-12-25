@@ -9,6 +9,12 @@ import SwiftUI
 
 @main
 struct BTCMoteCarloApp: App {
+
+    init() {
+        // Load your CSVs here
+        loadAllHistoricalData()
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()
