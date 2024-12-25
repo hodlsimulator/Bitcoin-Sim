@@ -7,7 +7,7 @@
 
 import Foundation
 
-// Global arrays to hold historical data loaded from CSV
+// MARK: - Global Historical Arrays & Loading
 var historicalBTCWeeklyReturns: [Double] = []
 var sp500WeeklyReturns: [Double] = []
 
@@ -26,56 +26,25 @@ func loadAllHistoricalData() {
     }
 }
 
-// --------------------------------------------------------------------------
-// MARK: - Historical Data Arrays (use CSV data now)
-// --------------------------------------------------------------------------
-// These used to be hardcoded. We now load them via loadAllHistoricalData().
-// --------------------------------------------------------------------------
-
-// func loadBTCWeeklyReturns() -> [Double] {
-    // Placeholder CSV parsing or real logic. If file not found or parse fails, return []
-    // E.g. parse CSV from “BTCWeeklyReturns.csv”
- //   return []
-// }
-
-// func loadSP500WeeklyReturns() -> [Double] {
-    // Same placeholder logic for S&P 500 weekly returns
-   // return []
-// }
-
-// --------------------------------------------------------------------------
 // MARK: - Helpers for Correlation, Sampling, Normal Dist.
-// --------------------------------------------------------------------------
-
-/// Combine BTC & S&P returns given a correlation factor
 func correlatedReturn(
     correlation: Double,
     sp500Return: Double,
     btcReturn: Double
 ) -> Double {
-    // If correlation is 0, we just return btcReturn.
-    // If correlation is 1, we basically mirror sp500Return.
-    return correlation * sp500Return + sqrt(1 - correlation * correlation) * btcReturn
+    correlation * sp500Return + sqrt(1 - correlation * correlation) * btcReturn
 }
 
-/// Randomly pick one weekly return from your newly loaded arrays
 func sampleHistoricalReturns() -> (btcWeekly: Double, spWeekly: Double) {
-    guard !historicalBTCWeeklyReturns.isEmpty,
-          !sp500WeeklyReturns.isEmpty
-    else {
-        print("DEBUG: Historical arrays are empty, defaulting to 0.0 returns")
+    guard !historicalBTCWeeklyReturns.isEmpty, !sp500WeeklyReturns.isEmpty else {
+        print("DEBUG: Historical arrays empty, defaulting to 0.0 returns")
         return (0.0, 0.0)
     }
     let btcIdx = Int.random(in: 0..<historicalBTCWeeklyReturns.count)
     let spIdx  = Int.random(in: 0..<sp500WeeklyReturns.count)
-    
-    let chosenBTC = historicalBTCWeeklyReturns[btcIdx]
-    let chosenSP  = sp500WeeklyReturns[spIdx]
-    
-    return (chosenBTC, chosenSP)
+    return (historicalBTCWeeklyReturns[btcIdx], sp500WeeklyReturns[spIdx])
 }
 
-/// Simple normal distribution generator (Box-Muller)
 func randomNormal(mean: Double = 0, standardDeviation: Double = 1) -> Double {
     let u1 = Double.random(in: 0..<1)
     let u2 = Double.random(in: 0..<1)
@@ -83,18 +52,15 @@ func randomNormal(mean: Double = 0, standardDeviation: Double = 1) -> Double {
     return z0 * standardDeviation + mean
 }
 
-// --------------------------------------------------------------------------
 // MARK: - Basic Stats & Aggregation
-// --------------------------------------------------------------------------
-
 func calculateMedian(values: [Double]) -> Double {
     guard !values.isEmpty else { return 0.0 }
-    let sortedValues = values.sorted()
-    let mid = sortedValues.count / 2
-    if sortedValues.count % 2 == 0 {
-        return (sortedValues[mid - 1] + sortedValues[mid]) / 2.0
+    let sorted = values.sorted()
+    let mid = sorted.count / 2
+    if sorted.count % 2 == 0 {
+        return (sorted[mid - 1] + sorted[mid]) / 2.0
     } else {
-        return sortedValues[mid]
+        return sorted[mid]
     }
 }
 
@@ -109,307 +75,256 @@ func calculatePercentile(values: [Double], percentile: Double) -> Double {
     return sorted[max(0, min(index, sorted.count - 1))]
 }
 
-/// Summaries across all iterations (mean, median, std, p90, p10, etc.)
 func aggregateResults(allIterations: [[SimulationData]]) -> [String: [String: Double]] {
-    var stats: [String: [String: Double]] = [:]
+    var stats = [String: [String: Double]]()
     let totalIters = allIterations.count
     guard totalIters > 0 else { return stats }
 
     let weeks = allIterations[0].count
     for i in 0..<weeks {
-        var vals: [Double] = []
+        var vals = [Double]()
         for iteration in allIterations {
             vals.append(iteration[i].portfolioValueEUR)
         }
-        let mean = vals.reduce(0, +) / Double(totalIters)
-        let median = calculateMedian(values: vals)
-        let std = calculateStandardDeviation(values: vals, mean: mean)
-        let p90 = calculatePercentile(values: vals, percentile: 90)
-        let p10 = calculatePercentile(values: vals, percentile: 10)
+        let meanVal = vals.reduce(0, +) / Double(totalIters)
+        let medVal  = calculateMedian(values: vals)
+        let stdVal  = calculateStandardDeviation(values: vals, mean: meanVal)
+        let p90Val  = calculatePercentile(values: vals, percentile: 90)
+        let p10Val  = calculatePercentile(values: vals, percentile: 10)
+
         stats["Week \(i+1)"] = [
-            "Mean": mean,
-            "Median": median,
-            "Standard Deviation": std,
-            "90th Percentile": p90,
-            "10th Percentile": p10
+            "Mean": meanVal,
+            "Median": medVal,
+            "Standard Deviation": stdVal,
+            "90th Percentile": p90Val,
+            "10th Percentile": p10Val
         ]
     }
     return stats
 }
 
-// --------------------------------------------------------------------------
-// MARK: - Halving & Start Date
-// --------------------------------------------------------------------------
+// MARK: - Single-run function (1 iteration)
+func runOneFullSimulation(
+    annualCAGR: Double,
+    annualVolatility: Double,
+    correlationWithSP500: Double,
+    exchangeRateEURUSD: Double,
+    totalWeeks: Int
+) -> [SimulationData] {
+    // Hardcoded weeks 1–7
+    var results: [SimulationData] = [
+        .init(
+            week: 1,
+            startingBTC: 0.0,
+            netBTCHoldings: 0.00469014,
+            btcPriceUSD: 76_532.03,
+            btcPriceEUR: 71_177.69,
+            portfolioValueEUR: 333.83,
+            contributionEUR: 378.00,
+            transactionFeeEUR: 2.46,
+            netContributionBTC: 0.00527613,
+            withdrawalEUR: 0.0
+        ),
+        .init(
+            week: 2,
+            startingBTC: 0.00469014,
+            netBTCHoldings: 0.00530474,
+            btcPriceUSD: 92_000.00,
+            btcPriceEUR: 86_792.45,
+            portfolioValueEUR: 465.00,
+            contributionEUR: 60.00,
+            transactionFeeEUR: 0.21,
+            netContributionBTC: 0.00066988,
+            withdrawalEUR: 0.0
+        ),
+        .init(
+            week: 3,
+            startingBTC: 0.00530474,
+            netBTCHoldings: 0.00608283,
+            btcPriceUSD: 95_000.00,
+            btcPriceEUR: 89_622.64,
+            portfolioValueEUR: 547.00,
+            contributionEUR: 70.00,
+            transactionFeeEUR: 0.25,
+            netContributionBTC: 0.00077809,
+            withdrawalEUR: 0.0
+        ),
+        .init(
+            week: 4,
+            startingBTC: 0.00608283,
+            netBTCHoldings: 0.00750280,
+            btcPriceUSD: 95_741.15,
+            btcPriceEUR: 90_321.84,
+            portfolioValueEUR: 685.00,
+            contributionEUR: 130.00,
+            transactionFeeEUR: 0.46,
+            netContributionBTC: 0.00141997,
+            withdrawalEUR: 0.0
+        ),
+        .init(
+            week: 5,
+            startingBTC: 0.00745154,
+            netBTCHoldings: 0.00745154,
+            btcPriceUSD: 96_632.26,
+            btcPriceEUR: 91_162.51,
+            portfolioValueEUR: 679.30,
+            contributionEUR: 0.00,
+            transactionFeeEUR: 5.00,
+            netContributionBTC: 0.00000000,
+            withdrawalEUR: 0.0
+        ),
+        .init(
+            week: 6,
+            startingBTC: 0.00745154,
+            netBTCHoldings: 0.00745154,
+            btcPriceUSD: 106_000.00,
+            btcPriceEUR: 100_000.00,
+            portfolioValueEUR: 745.15,
+            contributionEUR: 0.00,
+            transactionFeeEUR: 0.00,
+            netContributionBTC: 0.00000000,
+            withdrawalEUR: 0.0
+        ),
+        .init(
+            week: 7,
+            startingBTC: 0.00745154,
+            netBTCHoldings: 0.00959318,
+            btcPriceUSD: 98_346.31,
+            btcPriceEUR: 92_779.54,
+            portfolioValueEUR: 890.05,
+            contributionEUR: 200.00,
+            transactionFeeEUR: 1.300,
+            netContributionBTC: 0.00214164,
+            withdrawalEUR: 0.0
+        )
+    ]
+    
+    let lastHardcoded = results.last
+    let baseWeeklyGrowth = pow(1.0 + annualCAGR, 1.0 / 52.0) - 1.0
+    let weeklyVol = annualVolatility / sqrt(52.0)
 
-/// Approx. next halving date
-let halvingDateComponents = DateComponents(year: 2028, month: 5, day: 1)
-let halvingDate = Calendar.current.date(from: halvingDateComponents)!
+    var previousBTCPriceUSD = lastHardcoded?.btcPriceUSD ?? 106_000.00
+    var previousBTCHoldings = lastHardcoded?.netBTCHoldings ?? 0.00745154
 
-/// Our "Week 1" is 13 Oct 2024
-let startDateComponents = DateComponents(year: 2024, month: 10, day: 13)
-let realStartDate = Calendar.current.date(from: startDateComponents)!
+    // Weeks 8..totalWeeks
+    for week in 8...totalWeeks {
+        // sample random or CSV-based returns
+        let (histBTC, histSP) = sampleHistoricalReturns()
+        var combinedWeeklyReturn = correlatedReturn(
+            correlation: correlationWithSP500,
+            sp500Return: histSP,
+            btcReturn: histBTC
+        )
+        combinedWeeklyReturn += baseWeeklyGrowth
 
-// --------------------------------------------------------------------------
-// MARK: - Bear Market Logic
-// --------------------------------------------------------------------------
+        let shock = randomNormal(mean: 0, standardDeviation: weeklyVol)
+        combinedWeeklyReturn += shock
 
-/// Probability of triggering a bear slump each year after halving:
-let halvingBearProbabilities: [Double] = [0.001, 0.003, 0.008, 0.015]
+        var btcPriceUSD = previousBTCPriceUSD * (1.0 + combinedWeeklyReturn)
+        btcPriceUSD = max(btcPriceUSD, 1.0)
+        let btcPriceEUR = btcPriceUSD / exchangeRateEURUSD
 
-/// Negative penalty to weekly returns if in bear slump
-let halvingBearPenalties: [Double] = [-0.01, -0.02, -0.03, -0.04]
+        let contributionEUR = (week <= 52) ? 60.0 : 100.0
+        let fee = contributionEUR * 0.0035
+        let netBTC = (contributionEUR - fee) / btcPriceEUR
 
-/// Possible length (in weeks) of a bear slump once triggered
-let bearMarketLengthRange = 4...8
+        let hypotheticalHoldings = previousBTCHoldings + netBTC
+        let hypotheticalValueEUR = hypotheticalHoldings * btcPriceEUR
 
-/// Weeks from halving to current date
-func weeksFromHalving(halvingDate: Date, currentWeekDate: Date) -> Int {
-    guard currentWeekDate >= halvingDate else { return 0 }
-    let comps = Calendar.current.dateComponents([.weekOfYear], from: halvingDate, to: currentWeekDate)
-    return comps.weekOfYear ?? 0
+        var withdrawalEUR = 0.0
+        if hypotheticalValueEUR > 60_000 {
+            withdrawalEUR = 200.0
+        } else if hypotheticalValueEUR > 30_000 {
+            withdrawalEUR = 100.0
+        }
+        let withdrawalBTC = withdrawalEUR / btcPriceEUR
+
+        let netHoldings = max(0.0, hypotheticalHoldings - withdrawalBTC)
+        let portfolioValEUR = netHoldings * btcPriceEUR
+
+        results.append(
+            SimulationData(
+                week: week,
+                startingBTC: previousBTCHoldings,
+                netBTCHoldings: netHoldings,
+                btcPriceUSD: btcPriceUSD,
+                btcPriceEUR: btcPriceEUR,
+                portfolioValueEUR: portfolioValEUR,
+                contributionEUR: contributionEUR,
+                transactionFeeEUR: fee,
+                netContributionBTC: netBTC,
+                withdrawalEUR: withdrawalEUR
+            )
+        )
+
+        previousBTCPriceUSD = btcPriceUSD
+        previousBTCHoldings = netHoldings
+    }
+
+    return results
 }
 
-func halvingYearIndex(weeksAfterHalving: Int) -> Int {
-    // Each 52 weeks => next year index
-    return weeksAfterHalving / 52
-}
-
-// --------------------------------------------------------------------------
-// MARK: - Main Monte Carlo
-// --------------------------------------------------------------------------
-
-func runMonteCarloSimulationsWithSpreadsheetData(
-    annualCAGR: Double,          // e.g. 0.29
-    annualVolatility: Double,    // e.g. 0.8
+// MARK: - Concurrency-based approach that calls `runOneFullSimulation`
+func runMonteCarloSimulationsWithProgress(
+    annualCAGR: Double,
+    annualVolatility: Double,
     correlationWithSP500: Double = 0.0,
-    exchangeRateEURUSD: Double = 1.06,
-    totalWeeks: Int = 1040,
-    iterations: Int
+    exchangeRateEURUSD: Double,
+    totalWeeks: Int,
+    iterations: Int,
+    progressCallback: @escaping (Int) -> Void
 ) -> ([SimulationData], [[SimulationData]]) {
 
     let batchSize = 1000
     let totalBatches = (iterations + batchSize - 1) / batchSize
-    print("Total Batches: \(totalBatches), Batch Size: \(batchSize), Total Iterations: \(iterations)")
+    print("DEBUG: totalBatches =", totalBatches, "batchSize =", batchSize, "iterations =", iterations)
 
-    var allIterations: [[SimulationData]] = []
-    var finalPortfolioValues: [(value: Double, run: [SimulationData])] = []
+    var allIterations = [[SimulationData]]()
+    var finalPortfolioValues = [(value: Double, run: [SimulationData])]()
 
     let lock = NSLock()
     let finalValuesLock = NSLock()
     let dispatchGroup = DispatchGroup()
 
+    var completed = 0
+
     for batchIndex in 0..<totalBatches {
-        let startIteration = batchIndex * batchSize
-        let endIteration = min(startIteration + batchSize, iterations)
+        let startIter = batchIndex * batchSize
+        let endIter   = min(startIter + batchSize, iterations)
 
         dispatchGroup.enter()
         DispatchQueue.global(qos: .userInitiated).async {
-            var localIterations: [[SimulationData]] = []
+            var localRuns = [[SimulationData]]()
 
-            for _ in startIteration..<endIteration {
+            for _ in startIter..<endIter {
+                // A single iteration => a single "full" run
+                let run = runOneFullSimulation(
+                    annualCAGR: annualCAGR,
+                    annualVolatility: annualVolatility,
+                    correlationWithSP500: correlationWithSP500,
+                    exchangeRateEURUSD: exchangeRateEURUSD,
+                    totalWeeks: totalWeeks
+                )
 
-                var results = [SimulationData]()
-
-                // Hardcoded weeks 1-7
-                results.append(SimulationData(
-                    week: 1,
-                    startingBTC: 0.0,
-                    netBTCHoldings: 0.00469014,
-                    btcPriceUSD: 76_532.03,
-                    btcPriceEUR: 71_177.69,
-                    portfolioValueEUR: 333.83,
-                    contributionEUR: 378.00,
-                    transactionFeeEUR: 2.46,
-                    netContributionBTC: 0.00527613,
-                    withdrawalEUR: 0.0
-                ))
-                results.append(SimulationData(
-                    week: 2,
-                    startingBTC: 0.00469014,
-                    netBTCHoldings: 0.00530474,
-                    btcPriceUSD: 92_000.00,
-                    btcPriceEUR: 86_792.45,
-                    portfolioValueEUR: 465.00,
-                    contributionEUR: 60.00,
-                    transactionFeeEUR: 0.21,
-                    netContributionBTC: 0.00066988,
-                    withdrawalEUR: 0.0
-                ))
-                results.append(SimulationData(
-                    week: 3,
-                    startingBTC: 0.00530474,
-                    netBTCHoldings: 0.00608283,
-                    btcPriceUSD: 95_000.00,
-                    btcPriceEUR: 89_622.64,
-                    portfolioValueEUR: 547.00,
-                    contributionEUR: 70.00,
-                    transactionFeeEUR: 0.25,
-                    netContributionBTC: 0.00077809,
-                    withdrawalEUR: 0.0
-                ))
-                results.append(SimulationData(
-                    week: 4,
-                    startingBTC: 0.00608283,
-                    netBTCHoldings: 0.00750280,
-                    btcPriceUSD: 95_741.15,
-                    btcPriceEUR: 90_321.84,
-                    portfolioValueEUR: 685.00,
-                    contributionEUR: 130.00,
-                    transactionFeeEUR: 0.46,
-                    netContributionBTC: 0.00141997,
-                    withdrawalEUR: 0.0
-                ))
-                results.append(SimulationData(
-                    week: 5,
-                    startingBTC: 0.00745154,
-                    netBTCHoldings: 0.00745154,
-                    btcPriceUSD: 96_632.26,
-                    btcPriceEUR: 91_162.51,
-                    portfolioValueEUR: 679.30,
-                    contributionEUR: 0.00,
-                    transactionFeeEUR: 5.00,
-                    netContributionBTC: 0.00000000,
-                    withdrawalEUR: 0.0
-                ))
-                results.append(SimulationData(
-                    week: 6,
-                    startingBTC: 0.00745154,
-                    netBTCHoldings: 0.00745154,
-                    btcPriceUSD: 106_000.00,
-                    btcPriceEUR: 100_000.00,
-                    portfolioValueEUR: 745.15,
-                    contributionEUR: 0.00,
-                    transactionFeeEUR: 0.00,
-                    netContributionBTC: 0.00000000,
-                    withdrawalEUR: 0.0
-                ))
-                results.append(SimulationData(
-                    week: 7,
-                    startingBTC: 0.00745154,
-                    netBTCHoldings: 0.00959318,
-                    btcPriceUSD: 98_346.31,
-                    btcPriceEUR: 92_779.54,
-                    portfolioValueEUR: 890.05,
-                    contributionEUR: 200.00,
-                    transactionFeeEUR: 1.300,
-                    netContributionBTC: 0.00214164,
-                    withdrawalEUR: 0.0
-                ))
-
-                // Instead of hardcoding:
-                // var previousBTCPriceUSD = 106_000.00
-                // var previousBTCHoldings = 0.00745154
-                // We'll pick up from the last of the above entries:
-                var previousBTCPriceUSD: Double
-                var previousBTCHoldings: Double
-
-                if let lastHardcoded = results.last {
-                    previousBTCPriceUSD = lastHardcoded.btcPriceUSD
-                    previousBTCHoldings = lastHardcoded.netBTCHoldings
-                } else {
-                    // fallback if we had no data
-                    previousBTCPriceUSD = 106_000.00
-                    previousBTCHoldings = 0.00745154
-                }
-
-                var halvingHasOccurred = false
-                var isBearMarketActive = false
-                var weeksRemainingInBear = 0
-
-                let baseWeeklyGrowth = pow(1.0 + annualCAGR, 1.0 / 52.0) - 1.0
-                let weeklyVol = annualVolatility / sqrt(52.0)
-
-                for week in 8...totalWeeks {
-                    let offset = week - 1
-                    guard let currentDate = Calendar.current.date(byAdding: .weekOfYear, value: offset, to: realStartDate)
-                    else { continue }
-
-                    if !halvingHasOccurred && currentDate >= halvingDate {
-                        halvingHasOccurred = true
-                    }
-
-                    let weeksAfter = weeksFromHalving(halvingDate: halvingDate, currentWeekDate: currentDate)
-                    let yearIdx = halvingYearIndex(weeksAfterHalving: weeksAfter)
-                    let safeIdx = min(yearIdx, 3)
-
-                    let bearProb = halvingBearProbabilities[safeIdx]
-                    let bearPenalty = halvingBearPenalties[safeIdx]
-
-                    let (histBTC, histSP) = sampleHistoricalReturns()
-                    var combinedWeeklyReturn = correlatedReturn(
-                        correlation: correlationWithSP500,
-                        sp500Return: histSP,
-                        btcReturn: histBTC
-                    )
-
-                    combinedWeeklyReturn += baseWeeklyGrowth
-                    let shock = randomNormal(mean: 0, standardDeviation: weeklyVol)
-                    combinedWeeklyReturn += shock
-
-                    if !isBearMarketActive {
-                        if Double.random(in: 0..<1) < bearProb {
-                            isBearMarketActive = true
-                            weeksRemainingInBear = Int.random(in: bearMarketLengthRange)
-                        }
-                    }
-                    if isBearMarketActive {
-                        combinedWeeklyReturn += bearPenalty
-                        weeksRemainingInBear -= 1
-                        if weeksRemainingInBear <= 0 {
-                            isBearMarketActive = false
-                        }
-                    }
-
-                    var btcPriceUSD = previousBTCPriceUSD * (1.0 + combinedWeeklyReturn)
-                    btcPriceUSD = max(btcPriceUSD, 1.0)
-                    let btcPriceEUR = btcPriceUSD / exchangeRateEURUSD
-
-                    let contributionEUR = (week <= 52) ? 60.0 : 100.0
-                    let fee = contributionEUR * 0.0035
-                    let netBTC = (contributionEUR - fee) / btcPriceEUR
-
-                    let hypotheticalHoldings = previousBTCHoldings + netBTC
-                    let hypotheticalValueEUR = hypotheticalHoldings * btcPriceEUR
-
-                    var withdrawalEUR = 0.0
-                    if hypotheticalValueEUR > 60_000 {
-                        withdrawalEUR = 200.0
-                    } else if hypotheticalValueEUR > 30_000 {
-                        withdrawalEUR = 100.0
-                    }
-                    let withdrawalBTC = withdrawalEUR / btcPriceEUR
-
-                    let netHoldings = max(0.0, hypotheticalHoldings - withdrawalBTC)
-                    let portfolioValEUR = netHoldings * btcPriceEUR
-
-                    results.append(SimulationData(
-                        week: week,
-                        startingBTC: previousBTCHoldings,
-                        netBTCHoldings: netHoldings,
-                        btcPriceUSD: btcPriceUSD,
-                        btcPriceEUR: btcPriceEUR,
-                        portfolioValueEUR: portfolioValEUR,
-                        contributionEUR: contributionEUR,
-                        transactionFeeEUR: fee,
-                        netContributionBTC: netBTC,
-                        withdrawalEUR: withdrawalEUR
-                    ))
-
-                    previousBTCPriceUSD = btcPriceUSD
-                    previousBTCHoldings = netHoldings
-                }
-
-                // Save final portfolio run
-                if let final = results.last {
+                // Capture final portfolio
+                if let final = run.last {
                     finalValuesLock.lock()
-                    finalPortfolioValues.append((value: final.portfolioValueEUR, run: results))
+                    finalPortfolioValues.append((value: final.portfolioValueEUR, run: run))
                     finalValuesLock.unlock()
                 }
-                localIterations.append(results)
+
+                localRuns.append(run)
+
+                // progress
+                lock.lock()
+                completed += 1
+                lock.unlock()
+
+                progressCallback(completed)
             }
 
             lock.lock()
-            allIterations.append(contentsOf: localIterations)
+            allIterations.append(contentsOf: localRuns)
             lock.unlock()
             dispatchGroup.leave()
         }
@@ -417,10 +332,10 @@ func runMonteCarloSimulationsWithSpreadsheetData(
 
     dispatchGroup.wait()
 
-    // Sort final results
+    // Sort by final portfolio
     finalPortfolioValues.sort { $0.value < $1.value }
-    // Get the median run
+
+    // median run
     let medianRun = finalPortfolioValues[finalPortfolioValues.count / 2].run
-    
     return (medianRun, allIterations)
 }

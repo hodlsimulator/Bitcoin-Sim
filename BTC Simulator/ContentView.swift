@@ -794,95 +794,6 @@ struct ContentView: View {
         monteCarloResults = []
         completedIterations = 0
 
-        // 1) First, insert your 7 fixed weeks into monteCarloResults so they show immediately:
-        let fixedWeeks: [SimulationData] = [
-            .init(
-                week: 1,
-                startingBTC: 0.0,
-                netBTCHoldings: 0.00469014,
-                btcPriceUSD: 76_532.03,
-                btcPriceEUR: 71_177.69,
-                portfolioValueEUR: 333.83,
-                contributionEUR: 378.00,
-                transactionFeeEUR: 2.46,
-                netContributionBTC: 0.00527613,
-                withdrawalEUR: 0.0
-            ),
-            .init(
-                week: 2,
-                startingBTC: 0.00469014,
-                netBTCHoldings: 0.00530474,
-                btcPriceUSD: 92_000.00,
-                btcPriceEUR: 86_792.45,
-                portfolioValueEUR: 465.00,
-                contributionEUR: 60.00,
-                transactionFeeEUR: 0.21,
-                netContributionBTC: 0.00066988,
-                withdrawalEUR: 0.0
-            ),
-            .init(
-                week: 3,
-                startingBTC: 0.00530474,
-                netBTCHoldings: 0.00608283,
-                btcPriceUSD: 95_000.00,
-                btcPriceEUR: 89_622.64,
-                portfolioValueEUR: 547.00,
-                contributionEUR: 70.00,
-                transactionFeeEUR: 0.25,
-                netContributionBTC: 0.00077809,
-                withdrawalEUR: 0.0
-            ),
-            .init(
-                week: 4,
-                startingBTC: 0.00608283,
-                netBTCHoldings: 0.00750280,
-                btcPriceUSD: 95_741.15,
-                btcPriceEUR: 90_321.84,
-                portfolioValueEUR: 685.00,
-                contributionEUR: 130.00,
-                transactionFeeEUR: 0.46,
-                netContributionBTC: 0.00141997,
-                withdrawalEUR: 0.0
-            ),
-            .init(
-                week: 5,
-                startingBTC: 0.00745154,
-                netBTCHoldings: 0.00745154,
-                btcPriceUSD: 96_632.26,
-                btcPriceEUR: 91_162.51,
-                portfolioValueEUR: 679.30,
-                contributionEUR: 0.00,
-                transactionFeeEUR: 5.00,
-                netContributionBTC: 0.00000000,
-                withdrawalEUR: 0.0
-            ),
-            .init(
-                week: 6,
-                startingBTC: 0.00745154,
-                netBTCHoldings: 0.00745154,
-                btcPriceUSD: 106_000.00,
-                btcPriceEUR: 100_000.00,
-                portfolioValueEUR: 745.15,
-                contributionEUR: 0.00,
-                transactionFeeEUR: 0.00,
-                netContributionBTC: 0.00000000,
-                withdrawalEUR: 0.0
-            ),
-            .init(
-                week: 7,
-                startingBTC: 0.00745154,
-                netBTCHoldings: 0.00959318,
-                btcPriceUSD: 98_346.31,
-                btcPriceEUR: 92_779.54,
-                portfolioValueEUR: 890.05,
-                contributionEUR: 200.00,
-                transactionFeeEUR: 1.300,
-                netContributionBTC: 0.00214164,
-                withdrawalEUR: 0.0
-            )
-        ]
-        self.monteCarloResults = fixedWeeks
-
         DispatchQueue.global(qos: .userInitiated).async {
             guard let total = self.inputManager.getParsedIterations(), total > 0 else {
                 DispatchQueue.main.async { self.isLoading = false }
@@ -895,15 +806,15 @@ struct ContentView: View {
             let userInputCAGR = self.inputManager.getParsedAnnualCAGR() / 100.0
             let userInputVolatility = (Double(self.inputManager.annualVolatility) ?? 1.0) / 100.0
 
-            // 2) Run the real simulation with progress
-            let (medianRun, allIterations) = self.runMonteCarloSimulationsWithProgress(
+            // Single approach: no "fake" data
+            let (medianRun, allIterations) = runMonteCarloSimulationsWithProgress(
                 annualCAGR: userInputCAGR,
                 annualVolatility: userInputVolatility,
+                correlationWithSP500: 0.0,
                 exchangeRateEURUSD: 1.06,
                 totalWeeks: 1040,
                 iterations: total
             ) { completed in
-                // Update progress bar
                 DispatchQueue.main.async {
                     self.completedIterations = completed
                 }
@@ -911,73 +822,233 @@ struct ContentView: View {
 
             if self.isCancelled { return }
 
-            // 3) Append the random part after the 7 fixed weeks
             DispatchQueue.main.async {
                 self.isLoading = false
-                
-                // If the medianRun also has those first 7 weeks inside it, we only need
-                // to append from week 8 onwards. That’s dropFirst(7).
-                let simulatedWeeks = medianRun.dropFirst(7)
-                self.monteCarloResults.append(contentsOf: simulatedWeeks)
-                
+                // medianRun is already weeks 1..1040
+                self.monteCarloResults = medianRun
                 self.isSimulationRun = true
             }
 
+            // If you want to process all iterations in background
             DispatchQueue.global(qos: .background).async {
                 self.processAllResults(allIterations)
             }
         }
     }
 
-    // This version loops through each iteration, calling progressCallback(i+1) each time
-    private func runMonteCarloSimulationsWithProgress(
+    /// The cohesive approach for N runs
+    func runMonteCarloSimulationsWithProgress(
         annualCAGR: Double,
         annualVolatility: Double,
+        correlationWithSP500: Double = 0.0,
         exchangeRateEURUSD: Double,
         totalWeeks: Int,
         iterations: Int,
         progressCallback: @escaping (Int) -> Void
     ) -> ([SimulationData], [[SimulationData]]) {
-        
-        var allRuns: [[SimulationData]] = []
-        
+
+        var allRuns = [[SimulationData]]()
+
         for i in 0..<iterations {
             if isCancelled { break }
+
+            let simRun = runOneFullSimulation(
+                annualCAGR: annualCAGR,
+                annualVolatility: annualVolatility,
+                exchangeRateEURUSD: exchangeRateEURUSD,
+                totalWeeks: totalWeeks
+            )
             
-            // ...Pretend we do some heavy-lifting per iteration...
-            let thisRun = generateFakeSimulation(totalWeeks: totalWeeks)
-            allRuns.append(thisRun)
+            allRuns.append(simRun)
             
-            // Let the UI know we finished iteration i+1
+            // Update progress
             progressCallback(i + 1)
         }
-        
-        // Once all runs are done, pick a “median” run, or any final logic
-        let median = allRuns.randomElement() ?? []
-        return (median, allRuns)
+
+        // Sort final results by last week's portfolioValue
+        var finalValues = allRuns.map { ($0.last?.portfolioValueEUR ?? 0.0, $0) }
+        finalValues.sort { $0.0 < $1.0 }
+
+        // median
+        let medianRun = finalValues[finalValues.count / 2].1
+        return (medianRun, allRuns)
     }
+
     
-    // Dummy method, just returns fake data
-    private func generateFakeSimulation(totalWeeks: Int) -> [SimulationData] {
-        var results: [SimulationData] = []
-        for w in 1...totalWeeks {
+    /// This is the function you actually call inside runMonteCarloSimulationsWithProgress
+    func runOneFullSimulation(
+        annualCAGR: Double,
+        annualVolatility: Double,
+        exchangeRateEURUSD: Double,
+        totalWeeks: Int
+    ) -> [SimulationData] {
+        // Instead of "generateRealSimulation", we do it all here.
+        // 1) Start with known weeks 1–7
+        var results: [SimulationData] = [
+            SimulationData(
+                week: 1,
+                startingBTC: 0.0,
+                netBTCHoldings: 0.00469014,
+                btcPriceUSD: 76_532.03,
+                btcPriceEUR: 71_177.69,
+                portfolioValueEUR: 333.83,
+                contributionEUR: 378.00,
+                transactionFeeEUR: 2.46,
+                netContributionBTC: 0.00527613,
+                withdrawalEUR: 0.0
+            ),
+            SimulationData(
+                week: 2,
+                startingBTC: 0.00469014,
+                netBTCHoldings: 0.00530474,
+                btcPriceUSD: 92_000.00,
+                btcPriceEUR: 86_792.45,
+                portfolioValueEUR: 465.00,
+                contributionEUR: 60.00,
+                transactionFeeEUR: 0.21,
+                netContributionBTC: 0.00066988,
+                withdrawalEUR: 0.0
+            ),
+            SimulationData(
+                week: 3,
+                startingBTC: 0.00530474,
+                netBTCHoldings: 0.00608283,
+                btcPriceUSD: 95_000.00,
+                btcPriceEUR: 89_622.64,
+                portfolioValueEUR: 547.00,
+                contributionEUR: 70.00,
+                transactionFeeEUR: 0.25,
+                netContributionBTC: 0.00077809,
+                withdrawalEUR: 0.0
+            ),
+            SimulationData(
+                week: 4,
+                startingBTC: 0.00608283,
+                netBTCHoldings: 0.00750280,
+                btcPriceUSD: 95_741.15,
+                btcPriceEUR: 90_321.84,
+                portfolioValueEUR: 685.00,
+                contributionEUR: 130.00,
+                transactionFeeEUR: 0.46,
+                netContributionBTC: 0.00141997,
+                withdrawalEUR: 0.0
+            ),
+            SimulationData(
+                week: 5,
+                startingBTC: 0.00745154,
+                netBTCHoldings: 0.00745154,
+                btcPriceUSD: 96_632.26,
+                btcPriceEUR: 91_162.51,
+                portfolioValueEUR: 679.30,
+                contributionEUR: 0.00,
+                transactionFeeEUR: 5.00,
+                netContributionBTC: 0.00000000,
+                withdrawalEUR: 0.0
+            ),
+            SimulationData(
+                week: 6,
+                startingBTC: 0.00745154,
+                netBTCHoldings: 0.00745154,
+                btcPriceUSD: 106_000.00,
+                btcPriceEUR: 100_000.00,
+                portfolioValueEUR: 745.15,
+                contributionEUR: 0.00,
+                transactionFeeEUR: 0.00,
+                netContributionBTC: 0.00000000,
+                withdrawalEUR: 0.0
+            ),
+            SimulationData(
+                week: 7,
+                startingBTC: 0.00745154,
+                netBTCHoldings: 0.00959318,
+                btcPriceUSD: 98_346.31,
+                btcPriceEUR: 92_779.54,
+                portfolioValueEUR: 890.05,
+                contributionEUR: 200.00,
+                transactionFeeEUR: 1.3,
+                netContributionBTC: 0.00214164,
+                withdrawalEUR: 0.0
+            )
+        ]
+        
+        let lastHardcoded = results.last
+        let baseWeeklyGrowth = pow(1.0 + annualCAGR, 1.0 / 52.0) - 1.0
+        let weeklyVol = annualVolatility / sqrt(52.0)
+
+        var previousBTCPriceUSD = lastHardcoded?.btcPriceUSD ?? 106_000.00
+        var previousBTCHoldings = lastHardcoded?.netBTCHoldings ?? 0.00745154
+
+        // 2) For week 8..1040, do "real" CSV-based logic
+        for w in 8...totalWeeks {
+            let (histBTC, _) = sampleHistoricalReturns()  // or incorporate SP if correlation needed
+            
+            var combinedWeeklyReturn = histBTC + baseWeeklyGrowth
+            let shock = randomNormal(mean: 0, standardDeviation: weeklyVol)
+            combinedWeeklyReturn += shock
+
+            var btcPriceUSD = previousBTCPriceUSD * (1.0 + combinedWeeklyReturn)
+            btcPriceUSD = max(btcPriceUSD, 1.0)
+            let btcPriceEUR = btcPriceUSD / exchangeRateEURUSD
+
+            let contributionEUR = (w <= 52) ? 60.0 : 100.0
+            let fee = contributionEUR * 0.0035
+            let netBTC = (contributionEUR - fee) / btcPriceEUR
+
+            let hypotheticalHoldings = previousBTCHoldings + netBTC
+            let hypotheticalValueEUR = hypotheticalHoldings * btcPriceEUR
+
+            var withdrawalEUR = 0.0
+            if hypotheticalValueEUR > 60_000 {
+                withdrawalEUR = 200.0
+            } else if hypotheticalValueEUR > 30_000 {
+                withdrawalEUR = 100.0
+            }
+            let withdrawalBTC = withdrawalEUR / btcPriceEUR
+
+            let netHoldings = max(0.0, hypotheticalHoldings - withdrawalBTC)
+            let portfolioValEUR = netHoldings * btcPriceEUR
+
             results.append(
                 SimulationData(
                     week: w,
-                    startingBTC: Double.random(in: 0...1),
-                    netBTCHoldings: Double.random(in: 0...2),
-                    btcPriceUSD: Double.random(in: 10000...40000),
-                    btcPriceEUR: Double.random(in: 9000...38000),
-                    portfolioValueEUR: Double.random(in: 1000...100000),
-                    contributionEUR: Double.random(in: 0...200),
-                    transactionFeeEUR: Double.random(in: 0...5),
-                    netContributionBTC: Double.random(in: 0...0.01),
-                    withdrawalEUR: Double.random(in: 0...50)
+                    startingBTC: previousBTCHoldings,
+                    netBTCHoldings: netHoldings,
+                    btcPriceUSD: btcPriceUSD,
+                    btcPriceEUR: btcPriceEUR,
+                    portfolioValueEUR: portfolioValEUR,
+                    contributionEUR: contributionEUR,
+                    transactionFeeEUR: fee,
+                    netContributionBTC: netBTC,
+                    withdrawalEUR: withdrawalEUR
                 )
             )
+
+            previousBTCPriceUSD = btcPriceUSD
+            previousBTCHoldings = netHoldings
         }
-        // Sleep a tiny bit to simulate heavy processing
-        Thread.sleep(forTimeInterval: 0.002)
+
+        return results
+    }
+    
+    private func generateRealSimulation(
+        totalWeeks: Int,
+        annualCAGR: Double,
+        annualVolatility: Double,
+        exchangeRateEURUSD: Double
+    ) -> [SimulationData] {
+        // 1) Declare `results` explicitly as an empty `[SimulationData]` array
+        var results: [SimulationData] = []
+        
+        // 2) If needed, you could do:
+        // results.append(
+        //    SimulationData(
+        //       week: 1,
+        //       ... etc ...
+        //    )
+        // )
+        // ... plus code for weeks 8...1040 ...
+        
+        // 3) Return
         return results
     }
 
