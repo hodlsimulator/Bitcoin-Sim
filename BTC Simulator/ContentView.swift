@@ -8,6 +8,22 @@
 import SwiftUI
 import PDFKit
 import UniformTypeIdentifiers
+import PocketSVG
+
+extension CGPath {
+    static func create(fromSVGPath svgString: String) -> CGPath {
+        // PocketSVG parses the path string into an array of UIBezierPaths
+        let paths = SVGBezierPath.paths(fromSVGString: svgString)
+
+        // Merge all the UIBezierPaths into one CGPath
+        let combined = CGMutablePath()
+        for p in paths {
+            combined.addPath(p.cgPath)
+        }
+
+        return combined
+    }
+}
 
 // MARK: - RowOffset Helpers
 struct RowOffsetPreferenceKey: PreferenceKey {
@@ -89,14 +105,12 @@ class PersistentInputManager: ObservableObject {
     }
 
     func getParsedIterations() -> Int? {
-        return Int(iterations.replacingOccurrences(of: ",", with: ""))
+        Int(iterations.replacingOccurrences(of: ",", with: ""))
     }
 
     func getParsedAnnualCAGR() -> Double {
         let rawValue = annualCAGR.replacingOccurrences(of: ",", with: "")
-        print("Debug: Raw Annual CAGR String = \(rawValue)")
         guard let parsedValue = Double(rawValue) else {
-            print("Debug: Parsing failed, returning default value.")
             return 40.0
         }
         return parsedValue
@@ -151,268 +165,128 @@ struct ScrollViewProxyKey: EnvironmentKey {
     static let defaultValue: ScrollViewProxy? = nil
 }
 
-// MARK: - OfficialBitcoinLogo3DSpinner
-//
-// Renders the orange circle + tilted white “B,” then spins around the Y-axis.
-struct OfficialBitcoinLogo3DSpinner: View {
-    @State private var rotation: Double = 0.0
+// MARK: - Official Shapes for the Logo
+struct BitcoinCircleShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        let pathString = """
+        <path d="M4030.06 2540.77 \
+        c-273.24,1096.01 -1383.32,1763.02 -2479.46,1489.71 \
+        -1095.68,-273.24 -1762.69,-1383.39 -1489.33,-2479.31 \
+        273.12,-1096.13 1383.2,-1763.19 2479,-1489.95 \
+        1096.06,273.24 1763.03,1383.51 1489.76,2479.57 \
+        l0.02 -0.02z" />
+        """
+
+        // Parse the XML snippet
+        let original = CGPath.create(fromSVGPath: pathString)
+
+        let box = original.boundingBox
+        print("DEBUG boundingBox (Circle):", box)
+
+        // 1) Calculate the normal scale
+        let baseScale = min(rect.width / box.width, rect.height / box.height)
+        // 2) Bump it up ~8% for a bigger orange circle
+        let circleScale = baseScale * 1.08
+        
+        var transform = CGAffineTransform.identity
+        transform = transform
+            .translatedBy(x: rect.midX, y: rect.midY)
+            .scaledBy(x: circleScale, y: circleScale)
+            .translatedBy(x: -box.midX, y: -box.midY)
+
+        let scaledPath = original.copy(using: &transform) ?? original
+        return Path(scaledPath)
+    }
+}
+
+struct BitcoinBShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        let pathString = """
+        <path d="M2947.77 1754.38
+        c40.72,-272.26 -166.56,-418.61 -450,-516.24
+        l91.95 -368.8 -224.5 -55.94 -89.51 359.09
+        c-59.02,-14.72 -119.63,-28.59 -179.87,-42.34
+        l90.16 -361.46 -224.36 -55.94 -92 368.68
+        c-48.84,-11.12 -96.81,-22.11 -143.35,-33.69
+        l0.26 -1.16 -309.59 -77.31 -59.72 239.78
+        c0,0 166.56,38.18 163.05,40.53 90.91,22.69 107.35,82.87 104.62,130.57
+        l-104.74 420.15
+        c6.26,1.59 14.38,3.89 23.34,7.49
+        -7.49,-1.86 -15.46,-3.89 -23.73,-5.87
+        l-146.81 588.57
+        c-11.11,27.62 -39.31,69.07 -102.87,53.33
+        2.25,3.26 -163.17,-40.72 -163.17,-40.72
+        l-111.46 256.98 292.15 72.83
+        c54.35,13.63 107.61,27.89 160.06,41.3
+        l-92.9 373.03 224.24 55.94 92 -369.07
+        c61.26,16.63 120.71,31.97 178.91,46.43
+        l-91.69 367.33 224.51 55.94 92.89 -372.33
+        c382.82,72.45 670.67,43.24 791.83,-303.02
+        97.63,-278.78 -4.86,-439.58 -206.26,-544.44
+        146.69,-33.83 257.18,-130.31 286.64,-329.61
+        l-0.07 -0.05
+        zm-512.93 719.26
+        c-69.38,278.78 -538.76,128.08 -690.94,90.29
+        l123.28 -494.2
+        c152.17,37.99 640.17,113.17 567.67,403.91
+        zm69.43 -723.3
+        c-63.29,253.58 -453.96,124.75 -580.69,93.16
+        l111.77 -448.21
+        c126.73,31.59 534.85,90.55 468.94,355.05
+        l-0.02 0z" />
+        """
+
+        let original = CGPath.create(fromSVGPath: pathString)
+        let box = original.boundingBox
+
+        // Normal scale
+        let baseScale = min(rect.width / box.width, rect.height / box.height)
+        // Shrink the B a bit, say 10% smaller
+        let bScale = baseScale * 0.8
+
+        var transform = CGAffineTransform.identity
+        transform = transform
+            .translatedBy(x: rect.midX, y: rect.midY)
+            .scaledBy(x: bScale, y: bScale)
+            .translatedBy(x: -box.midX, y: -box.midY)
+
+        let scaledPath = original.copy(using: &transform) ?? original
+        return Path(scaledPath)
+    }
+}
+
+// A combined official logo
+struct OfficialBitcoinLogo: View {
+    var body: some View {
+        ZStack {
+            BitcoinCircleShape()
+                .fill(Color.orange)
+            BitcoinBShape()
+                .fill(Color.white)
+        }
+        .frame(width: 120, height: 120)  // or whatever size
+    }
+}
+
+// MARK: - 3D Spinner of the Official Logo
+struct BrandedBitcoinSymbol3DSpinner: View {
+    @State private var rotationAngle = 0.0
 
     var body: some View {
-        OfficialBitcoinLogoShape()
-            .rotation3DEffect(
-                .degrees(rotation),
-                axis: (x: 0, y: 1, z: 0),  // coin-flip around vertical axis
-                anchor: .center
-            )
-            .frame(width: 150, height: 150) // or whatever size you like
+        OfficialBitcoinLogo()
+            .frame(width: 120, height: 120)
+            // Shift it down
+            .offset(y:20)
+            // Spin more slowly (12s)
+            .rotation3DEffect(.degrees(rotationAngle), axis: (x: 0, y: 1, z: 0))
             .onAppear {
                 withAnimation(
-                    .linear(duration: 6)
+                    .linear(duration: 10)
                         .repeatForever(autoreverses: false)
                 ) {
-                    rotation = 360
+                    rotationAngle = 360
                 }
             }
-    }
-}
-
-// MARK: - OfficialBitcoinLogoShape
-//
-// Draws an orange circle with a white “B” in it, tilted ~14°.
-// The entire shape is built in a 1000×1000 coordinate space, then SwiftUI scales it.
-// The “B” is subpath inside the circle, using even-odd fill so the orange shows behind it.
-struct OfficialBitcoinLogoShape: Shape {
-    func path(in rect: CGRect) -> Path {
-        // We'll define everything in a 1000×1000 coordinate space,
-        // then scale to the actual 'rect' at render time.
-
-        // STEP 1) We create a Path in that 1000×1000 space.
-        let scale = min(rect.width, rect.height) / 1000
-        let xOffset = (rect.width - 1000 * scale) / 2
-        let yOffset = (rect.height - 1000 * scale) / 2
-
-        var path = Path()
-
-        // Helper to scale points from 1000-space to SwiftUI rect.
-        func pt(_ x: CGFloat, _ y: CGFloat) -> CGPoint {
-            CGPoint(x: xOffset + x * scale, y: yOffset + y * scale)
-        }
-
-        // The circle is easy: center = (500, 500), radius = 500
-        // We'll draw it as one big shape (the orange),
-        // but we'll also add the white "B" as a subpath that “cuts out” via even-odd fill.
-
-        // 1) ORANGE CIRCLE
-        path.addEllipse(in: CGRect(
-            x: pt(0, 0).x,
-            y: pt(0, 0).y,
-            width: 1000 * scale,
-            height: 1000 * scale
-        ))
-
-        // 2) WHITE “B” SUBPATH
-        //
-        // Official brand tilt is about -14°, so we'll define the “B” upright at a
-        // local coordinate system, then rotate it around (500, 500).
-        // We'll do a manual rotation transform on the subpath points.
-
-        let tiltAngle = -14.0 * .pi / 180.0 // in radians
-        let sinA = sin(tiltAngle)
-        let cosA = cos(tiltAngle)
-
-        // A function to rotate a point (x,y) around center (500,500) by tiltAngle
-        func rotate(_ x: CGFloat, _ y: CGFloat) -> CGPoint {
-            // Translate so center is at (0,0)
-            let dx = x - 500
-            let dy = y - 500
-            // Rotate
-            let rx = dx * cosA - dy * sinA
-            let ry = dx * sinA + dy * cosA
-            // Translate back
-            return CGPoint(x: 500 + rx, y: 500 + ry)
-        }
-
-        // The “B” geometry is roughly:
-        // - bounding box: x: 320..680, y: 200..800 (centered in circle).
-        // - We'll define arcs & bars to replicate the official shape.
-
-        // Spine positions, bars, etc. This is a more “official” layout gleaned from references.
-        // Tweak if you see misalignment:
-        let leftX: CGFloat   = 320
-        let rightX: CGFloat  = 680
-        let topY: CGFloat    = 200
-        let bottomY: CGFloat = 800
-        let bar1Y: CGFloat   = 380
-        let bar2Y: CGFloat   = 620
-
-        // Spine thickness
-        let spineX: CGFloat  = 420
-        let spineW: CGFloat  = 60
-
-        // We'll define arcs for top, mid, bottom lumps.
-        // The “B” in official brand guidelines has slight differences, but let's approximate:
-        let arcTopCtrlY: CGFloat = (topY + bar1Y) * 0.5 - 20
-        let arcMidCtrlY: CGFloat = (bar1Y + bar2Y) * 0.5
-        let arcBotCtrlY: CGFloat = (bar2Y + bottomY) * 0.5 + 20
-
-        // We'll build subpaths for each “lump” in the B, then rotate them.
-
-        // Build an array of line/arc segments, then apply rotation to each point.
-        // Finally, we'll add them to `path` with .move(to:), .addLine(to:), .addQuadCurve(...).
-        var bSubpaths: [Path] = []
-
-        // 2A) Vertical spine
-        do {
-            var p = Path()
-            p.move(to: rotate(spineX, topY))
-            p.addLine(to: rotate(spineX, bottomY))
-            p.addLine(to: rotate(spineX + spineW, bottomY))
-            p.addLine(to: rotate(spineX + spineW, topY))
-            p.closeSubpath()
-            bSubpaths.append(p)
-        }
-
-        // 2B) Top lump
-        do {
-            var p = Path()
-            p.move(to: rotate(spineX + spineW, topY))
-            p.addQuadCurve(
-                to: rotate(spineX + spineW, bar1Y),
-                control: rotate(rightX, arcTopCtrlY)
-            )
-            p.closeSubpath()
-            bSubpaths.append(p)
-        }
-
-        // 2C) Middle lump
-        do {
-            var p = Path()
-            p.move(to: rotate(spineX + spineW, bar1Y))
-            p.addQuadCurve(
-                to: rotate(spineX + spineW, bar2Y),
-                control: rotate(rightX, arcMidCtrlY)
-            )
-            p.closeSubpath()
-            bSubpaths.append(p)
-        }
-
-        // 2D) Bottom lump
-        do {
-            var p = Path()
-            p.move(to: rotate(spineX + spineW, bar2Y))
-            p.addQuadCurve(
-                to: rotate(spineX + spineW, bottomY),
-                control: rotate(rightX, arcBotCtrlY)
-            )
-            p.closeSubpath()
-            bSubpaths.append(p)
-        }
-
-        // 2E) The horizontal “double bar” chunks (the short lines crossing the spine).
-        // Official brand has them near bar1Y & bar2Y.
-        let barThickness: CGFloat = 20
-        let barIndent: CGFloat    = 60
-        // top bar
-        do {
-            var p = Path()
-            p.move(to: rotate(spineX - barIndent, bar1Y - barThickness / 2))
-            p.addLine(to: rotate(spineX - barIndent, bar1Y + barThickness / 2))
-            p.addLine(to: rotate(spineX + spineW * 0.8, bar1Y + barThickness / 2))
-            p.addLine(to: rotate(spineX + spineW * 0.8, bar1Y - barThickness / 2))
-            p.closeSubpath()
-            bSubpaths.append(p)
-        }
-        // bottom bar
-        do {
-            var p = Path()
-            p.move(to: rotate(spineX - barIndent, bar2Y - barThickness / 2))
-            p.addLine(to: rotate(spineX - barIndent, bar2Y + barThickness / 2))
-            p.addLine(to: rotate(spineX + spineW * 0.8, bar2Y + barThickness / 2))
-            p.addLine(to: rotate(spineX + spineW * 0.8, bar2Y - barThickness / 2))
-            p.closeSubpath()
-            bSubpaths.append(p)
-        }
-
-        // Now we add all subpaths (the “B” lumps, spine, bars) to the main path using .addPath(...).
-        // We’ll do so in “even-odd” fill style, meaning the white B will “cut out” from the orange circle.
-        for subP in bSubpaths {
-            path.addPath(subP)
-        }
-
-        // By default, SwiftUI uses “non-zero winding” for fill. We want “even-odd” so the B is a hole in the circle.
-        // We can set that at render time, or we can combine them. Here, we just rely on SwiftUI's .fill(style:eoFill:).
-        return path
-    }
-    
-    // We want to fill with .orange for the circle, and .white for the “B.”
-    // But we can do it by returning the same path for both layers (circle + B),
-    // and fill it with .eoFill style. Then in the final view, we do:
-    // .fill( evenOddFillOfOrangeAndWhite ) - but that's more complex in SwiftUI.
-    //
-    // Easiest approach: We'll do a specialized “View” below that just uses this shape
-    // twice with different fill styles. But let's keep it simpler:
-}
-
-// MARK: - OfficialBitcoinLogoView
-//
-// One approach is to overlay two fills: an orange fill with normal mode, plus a white fill using .eoFill.
-// But simpler is: We can fill the entire shape with orange, THEN re-draw the shape in white with .eoFill
-// so it “carves out” the B. We'll build that into a single SwiftUI view:
-
-struct OfficialBitcoinLogoView: View {
-    var body: some View {
-        ZStack {
-            OfficialBitcoinLogoShape()
-                .fill(Color(hex: "#F7931A")) // brand orange
-            OfficialBitcoinLogoShape()
-                .fill(Color.white, style: FillStyle(eoFill: true))
-        }
-        .frame(width: 200, height: 200)
-    }
-}
-
-// Then apply the 3D rotation if we want the coin-flip look:
-struct OfficialBitcoinLogo3DView: View {
-    @State private var rotation: Double = 0.0
-
-    var body: some View {
-        ZStack {
-            OfficialBitcoinLogoView()
-        }
-        .rotation3DEffect(
-            .degrees(rotation),
-            axis: (x: 0, y: 1, z: 0),
-            anchor: .center
-        )
-        .onAppear {
-            withAnimation(
-                .linear(duration: 6)
-                    .repeatForever(autoreverses: false)
-            ) {
-                rotation = 360
-            }
-        }
-    }
-}
-
-// MARK: - Optional: Color(hex:) extension
-// If you want #F7931A as "BitcoinOrange," you can do:
-extension Color {
-    init(hex: String) {
-        let noHash = hex.trimmingCharacters(in: CharacterSet(charactersIn: "#"))
-        var hexInt: UInt64 = 0
-        Scanner(string: noHash).scanHexInt64(&hexInt)
-        
-        let r, g, b: Double
-        if noHash.count == 6 {
-            r = Double((hexInt & 0xFF0000) >> 16) / 255
-            g = Double((hexInt & 0x00FF00) >> 8) / 255
-            b = Double(hexInt & 0x0000FF) / 255
-            self.init(.sRGB, red: r, green: g, blue: b, opacity: 1)
-        } else {
-            // fallback
-            self.init(.sRGB, red: 1, green: 0.5, blue: 0)
-        }
     }
 }
 
@@ -442,7 +316,6 @@ struct ContentView: View {
     @State private var tipsIndex: Int = 0
     @State private var tipTimer: Timer? = nil
 
-    // Double the original set of statements (30 total)
     let loadingTips = [
         "Gathering historical data from CSV files...",
         "Running thousands of random draws...",
@@ -488,13 +361,11 @@ struct ContentView: View {
         ("Withdrawal EUR", \SimulationData.withdrawalEUR)
     ]
 
-    // Scroll indicator states
     @State private var hideScrollIndicators = true
     @State private var lastScrollTime = Date()
 
     var body: some View {
         ZStack {
-            // Entire background
             Color(white: 0.12).ignoresSafeArea()
 
             VStack(spacing: 10) {
@@ -528,13 +399,13 @@ struct ContentView: View {
                         .foregroundColor(.red)
                     }
                 } else {
-                    // RESULTS VIEW
+                    // RESULTS
                     ScrollViewReader { scrollProxy in
                         ZStack {
                             VStack {
                                 Spacer().frame(height: 40)
                                 VStack(spacing: 0) {
-                                    // HEADER
+                                    // Header
                                     HStack(spacing: 0) {
                                         Text("Week")
                                             .frame(width: 60, alignment: .leading)
@@ -591,10 +462,10 @@ struct ContentView: View {
                                     }
                                     .background(Color.black)
 
-                                    // SCROLL AREA
+                                    // Scroll area
                                     ScrollView(.vertical, showsIndicators: !hideScrollIndicators) {
                                         HStack(spacing: 0) {
-                                            // WEEKS COLUMN
+                                            // Weeks column
                                             VStack(spacing: 0) {
                                                 ForEach(monteCarloResults.indices, id: \.self) { index in
                                                     let result = monteCarloResults[index]
@@ -614,7 +485,7 @@ struct ContentView: View {
                                                 }
                                             }
 
-                                            // TABVIEW OF COLUMNS
+                                            // TabView of columns
                                             TabView(selection: $currentPage) {
                                                 ForEach(0..<columns.count, id: \.self) { index in
                                                     ZStack {
@@ -636,8 +507,6 @@ struct ContentView: View {
                                                                     .background(RowOffsetReporter(week: rowResult.week))
                                                             }
                                                         }
-
-                                                        // Invisible tap zones for left/right column navigation
                                                         GeometryReader { geometry in
                                                             HStack(spacing: 0) {
                                                                 Color.clear
@@ -680,6 +549,7 @@ struct ContentView: View {
                                         .onPreferenceChange(RowOffsetPreferenceKey.self) { offsets in
                                             let targetY: CGFloat = 160
                                             let filtered = offsets.filter { (week, _) in
+                                                // ignore if you want some sentinel
                                                 week != 1040
                                             }
                                             let mapped = filtered.mapValues { abs($0 - targetY) }
@@ -706,7 +576,6 @@ struct ContentView: View {
                                                 return Color(white: 0.12)
                                             }
                                         )
-                                        // Detect scrolling: show indicators
                                         .simultaneousGesture(
                                             DragGesture(minimumDistance: 0)
                                                 .onChanged { _ in
@@ -718,7 +587,6 @@ struct ContentView: View {
                                                 }
                                         )
                                     }
-                                    // Timer to hide scroll indicators after 1.5s
                                     .onReceive(
                                         Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()
                                     ) { _ in
@@ -730,22 +598,18 @@ struct ContentView: View {
                             }
                             .onAppear {
                                 contentScrollProxy = scrollProxy
-                                print("DEBUG: Results onAppear - contentScrollProxy set.")
                             }
                             .onDisappear {
-                                print("DEBUG: onDisappear triggered. lastViewedWeek = \(lastViewedWeek), currentPage = \(currentPage).")
                                 UserDefaults.standard.set(lastViewedWeek, forKey: "lastViewedWeek")
                                 UserDefaults.standard.set(currentPage, forKey: "lastViewedPage")
-                                print("DEBUG: Successfully saved lastViewedWeek: \(lastViewedWeek) and lastViewedPage: \(currentPage).")
                             }
 
-                            // BACK BUTTON
+                            // Back button
                             VStack {
                                 HStack {
                                     Button(action: {
                                         UserDefaults.standard.set(lastViewedWeek, forKey: "lastViewedWeek")
                                         UserDefaults.standard.set(currentPage, forKey: "lastViewedPage")
-                                        print("DEBUG: Back button pressed, saving lastViewedWeek: \(lastViewedWeek), lastViewedPage: \(currentPage)")
                                         lastViewedPage = currentPage
                                         isSimulationRun = false
                                     }) {
@@ -760,7 +624,7 @@ struct ContentView: View {
                                 Spacer()
                             }
 
-                            // SCROLL-TO-BOTTOM BUTTON
+                            // Scroll-to-bottom
                             if !isAtBottom {
                                 VStack {
                                     Spacer()
@@ -782,25 +646,21 @@ struct ContentView: View {
                 }
             }
 
-            // FORWARD BUTTON
+            // Forward button
             if !isSimulationRun && !monteCarloResults.isEmpty {
                 VStack {
                     HStack {
                         Spacer()
                         Button(action: {
-                            print("DEBUG: Forward button pressed, lastViewedWeek = \(lastViewedWeek)")
                             isSimulationRun = true
                             currentPage = lastViewedPage
-
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                                 if let scrollProxy = contentScrollProxy {
                                     let savedWeek = UserDefaults.standard.integer(forKey: "lastViewedWeek")
                                     if savedWeek != 0 {
                                         lastViewedWeek = savedWeek
-                                        print("DEBUG: Forward button pressed, loaded lastViewedWeek: \(lastViewedWeek)")
                                     }
                                     if let target = monteCarloResults.first(where: { $0.week == lastViewedWeek }) {
-                                        print("DEBUG: Found target with week: \(target.week)")
                                         withAnimation {
                                             scrollProxy.scrollTo("week-\(target.week)", anchor: .top)
                                         }
@@ -818,29 +678,26 @@ struct ContentView: View {
                 }
             }
 
-            // LOADING OVERLAY (Flower spinner + multi-tip fade)
+            // Loading overlay
             if isLoading {
                 ZStack {
                     Color.black.opacity(0.5).edgesIgnoringSafeArea(.all)
-
                     VStack(spacing: 30) {
-                        // Use our new Bitcoin spinner here
-                        OfficialBitcoinLogo3DSpinner()
-
-                        // Reserve space for your tip text so the spinner won’t shift
+                        // Our spinner
+                        BrandedBitcoinSymbol3DSpinner()
                         VStack {
                             if showTip {
                                 Text(currentTip)
                                     .foregroundColor(.white)
                                     .multilineTextAlignment(.center)
                                     .padding(.horizontal)
-                                    .frame(maxWidth: 300, alignment: .center)
+                                    .frame(maxWidth: 300)
                                     .transition(.opacity)
                             }
                         }
                         .frame(height: 80)
                     }
-                    .offset(y: 220)  // or your preferred vertical offset
+                    .offset(y: 220)
                 }
                 .onAppear {
                     startTipCycle()
@@ -854,18 +711,15 @@ struct ContentView: View {
             let savedWeek = UserDefaults.standard.integer(forKey: "lastViewedWeek")
             if savedWeek != 0 {
                 lastViewedWeek = savedWeek
-                print("DEBUG: onAppear (main), loaded lastViewedWeek: \(savedWeek)")
             }
 
             let savedPage = UserDefaults.standard.integer(forKey: "lastViewedPage")
             if savedPage < columns.count {
                 lastViewedPage = savedPage
                 currentPage = savedPage
-                print("DEBUG: onAppear (main), loaded lastViewedPage: \(savedPage)")
             } else if let usdIndex = columns.firstIndex(where: { $0.0 == "BTC Price USD" }) {
                 currentPage = usdIndex
                 lastViewedPage = usdIndex
-                print("DEBUG: onAppear (main), defaulting to BTC Price USD at index \(usdIndex)")
             }
 
             if monteCarloResults.isEmpty {
@@ -904,16 +758,14 @@ struct ContentView: View {
             let userInputCAGR = self.inputManager.getParsedAnnualCAGR() / 100.0
             let userInputVolatility = (Double(self.inputManager.annualVolatility) ?? 1.0) / 100.0
 
-            print("DEBUG: Using CAGR = \(userInputCAGR), Volatility = \(userInputVolatility)")
-
             guard let totalIterations = self.inputManager.getParsedIterations(), totalIterations > 0 else {
                 DispatchQueue.main.async {
                     self.isLoading = false
-                    print("Invalid number of iterations.")
                 }
                 return
             }
 
+            // Dummy logic
             let (medianRun, allIterations) = runMonteCarloSimulationsWithSpreadsheetData(
                 annualCAGR: userInputCAGR,
                 annualVolatility: userInputVolatility,
@@ -927,14 +779,8 @@ struct ContentView: View {
                 self.monteCarloResults = medianRun
                 self.isSimulationRun = true
 
-                print("Simulation complete (Median). Final BTC Price (USD): \(medianRun.last?.btcPriceUSD ?? 0.0)")
-
                 DispatchQueue.global(qos: .background).async {
                     self.processAllResults(allIterations)
-                    self.generateHistogramForResults(
-                        results: medianRun,
-                        filePath: "/Users/Desktop/portfolio_growth_histogram.png"
-                    )
                 }
             }
         }
@@ -942,36 +788,7 @@ struct ContentView: View {
 
     private func processAllResults(_ allResults: [[SimulationData]]) {
         let portfolioValues = allResults.flatMap { $0.map { $0.portfolioValueEUR } }
-        createHistogramWithLogBins(
-            data: portfolioValues,
-            title: "Portfolio Growth",
-            fileName: "/Users/Desktop/portfolio_growth_histogram.png"
-        )
-    }
-
-    func generateHistogramForResults(results: [SimulationData], filePath: String) {
-        let portfolioValues = results.map { $0.portfolioValueEUR }
-        createHistogramWithLogBins(
-            data: portfolioValues,
-            title: "Portfolio Value Distribution",
-            fileName: filePath,
-            lowerPercentile: 0.01,
-            upperPercentile: 0.99,
-            binCount: 20,
-            rotateLabels: true
-        )
-    }
-
-    private func createHistogramWithLogBins(
-        data: [Double],
-        title: String,
-        fileName: String,
-        lowerPercentile: Double = 0.01,
-        upperPercentile: Double = 0.99,
-        binCount: Int = 20,
-        rotateLabels: Bool = true
-    ) {
-        // Placeholder for histogram logic
+        // do something with it...
     }
 
     private func getValue(_ item: SimulationData, _ keyPath: PartialKeyPath<SimulationData>) -> String {
@@ -998,20 +815,13 @@ struct ContentView: View {
         }
     }
 
-    func randomNormal(mean: Double = 0, standardDeviation: Double = 1) -> Double {
-        let u1 = Double.random(in: 0..<1)
-        let u2 = Double.random(in: 0..<1)
-        let z0 = sqrt(-2.0 * log(u1)) * cos(2 * .pi * u2)
-        return z0 * standardDeviation + mean
-    }
-
-    // MARK: - Tip Cycling (calming fade with a longer gap)
+    // MARK: - Tip Cycling
     private func startTipCycle() {
         showTip = false
         tipTimer?.invalidate()
         tipTimer = nil
 
-        // Wait 5 seconds before showing the first tip (fade in over 2s)
+        // Show first tip after 5s
         DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
             currentTip = loadingTips[tipsIndex]
             withAnimation(.easeInOut(duration: 2)) {
@@ -1019,18 +829,11 @@ struct ContentView: View {
             }
         }
 
-        // Each cycle is 25 seconds:
-        // - 10 seconds displayed
-        // - 2 seconds fade out
-        // - 5 seconds gap
-        // - 2 seconds fade in
-        // (adjust as needed, but total ~25)
+        // Cycle tips every 25s
         tipTimer = Timer.scheduledTimer(withTimeInterval: 25, repeats: true) { _ in
-            // Fade out over 2s
             withAnimation(.easeInOut(duration: 2)) {
                 showTip = false
             }
-            // After fade out completes, wait 5 more seconds, then fade in next tip
             DispatchQueue.main.asyncAfter(deadline: .now() + 7) {
                 tipsIndex = (tipsIndex + 1) % loadingTips.count
                 currentTip = loadingTips[tipsIndex]

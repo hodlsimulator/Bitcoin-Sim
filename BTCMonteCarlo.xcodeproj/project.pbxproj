@@ -19,6 +19,7 @@
 		E166A8B92CF955ED0003F518 /* ContentOffsetScrollView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E166A8B82CF955E80003F518 /* ContentOffsetScrollView.swift */; };
 		E17A47FE2CF11AC000AAC885 /* project.pbxproj in Resources */ = {isa = PBXBuildFile; fileRef = E17A47FD2CF11AC000AAC885 /* project.pbxproj */; };
 		E17A48012CF178C600AAC885 /* MonteCarloVisualisations.swift in Sources */ = {isa = PBXBuildFile; fileRef = E17A48002CF178C600AAC885 /* MonteCarloVisualisations.swift */; };
+		E17DDF9C2D1BD13E008700A8 /* PocketSVG in Frameworks */ = {isa = PBXBuildFile; productRef = E17DDF9B2D1BD13E008700A8 /* PocketSVG */; };
 		E191AD5D2D1B06E600020DBE /* BitcoinHistoricalData.swift in Sources */ = {isa = PBXBuildFile; fileRef = E191AD5C2D1B06E000020DBE /* BitcoinHistoricalData.swift */; };
 		E191AD5F2D1B07BC00020DBE /* CSVLoaderHistorical.swift in Sources */ = {isa = PBXBuildFile; fileRef = E191AD5E2D1B07B800020DBE /* CSVLoaderHistorical.swift */; };
 		E191AD632D1B0C9400020DBE /* CSVLoaderSP500.swift in Sources */ = {isa = PBXBuildFile; fileRef = E191AD622D1B0C9100020DBE /* CSVLoaderSP500.swift */; };
@@ -87,6 +88,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E17DDF9C2D1BD13E008700A8 /* PocketSVG in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -98,6 +100,7 @@
 			children = (
 				E1CD4B3A2CF0F35C0070E8E3 /* BTCMonteCarlo */,
 				E12CCD892CF8235F0059931D /* BTC Simulator */,
+				E1CDC7812D1BC85900F89006 /* Frameworks */,
 				E11B459B2CEE8D53006B0594 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -116,8 +119,8 @@
 			children = (
 				E191AD5C2D1B06E000020DBE /* BitcoinHistoricalData.swift */,
 				E12CCD8A2CF8235F0059931D /* BTC_SimulatorApp.swift */,
-				E166A8B12CF85B2B0003F518 /* ContentView.swift */,
 				E166A8B82CF955E80003F518 /* ContentOffsetScrollView.swift */,
+				E166A8B12CF85B2B0003F518 /* ContentView.swift */,
 				E166A8A92CF855B00003F518 /* CSVLoader.swift */,
 				E191AD662D1B763E00020DBE /* CSVLoaderBTC.swift */,
 				E191AD5E2D1B07B800020DBE /* CSVLoaderHistorical.swift */,
@@ -171,6 +174,13 @@
 				E17A47FF2CF11D3200AAC885 /* BTCMonteCarlo.entitlements */,
 			);
 			path = BTCMonteCarlo;
+			sourceTree = "<group>";
+		};
+		E1CDC7812D1BC85900F89006 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -239,6 +249,7 @@
 			mainGroup = E11B45912CEE8D53006B0594;
 			packageReferences = (
 				E17A48022CF17A0300AAC885 /* XCRemoteSwiftPackageReference "swiftplot" */,
+				E17DDF9A2D1BD13E008700A8 /* XCRemoteSwiftPackageReference "PocketSVG" */,
 			);
 			productRefGroup = E11B459B2CEE8D53006B0594 /* Products */;
 			projectDirPath = "";
@@ -598,7 +609,23 @@
 				minimumVersion = 2.0.0;
 			};
 		};
+		E17DDF9A2D1BD13E008700A8 /* XCRemoteSwiftPackageReference "PocketSVG" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/pocketsvg/PocketSVG";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.7.3;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		E17DDF9B2D1BD13E008700A8 /* PocketSVG */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E17DDF9A2D1BD13E008700A8 /* XCRemoteSwiftPackageReference "PocketSVG" */;
+			productName = PocketSVG;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = E11B45922CEE8D53006B0594 /* Project object */;
 }
