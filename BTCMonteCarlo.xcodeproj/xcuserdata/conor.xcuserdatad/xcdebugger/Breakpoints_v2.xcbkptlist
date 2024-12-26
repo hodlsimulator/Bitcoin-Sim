@@ -14,10 +14,10 @@
             filePath = "BTC Simulator/ContentView.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "942"
-            endingLineNumber = "942"
-            landmarkName = "ContentView"
-            landmarkType = "14">
+            startingLineNumber = "980"
+            endingLineNumber = "980"
+            landmarkName = "runLocalOneFullSimulation(annualCAGR:annualVolatility:exchangeRateEURUSD:totalWeeks:)"
+            landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -30,10 +30,10 @@
             filePath = "BTC Simulator/ContentView.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "894"
-            endingLineNumber = "894"
-            landmarkName = "ContentView"
-            landmarkType = "14">
+            startingLineNumber = "932"
+            endingLineNumber = "932"
+            landmarkName = "runLocalMonteCarloSimulationsWithProgress(annualCAGR:annualVolatility:correlationWithSP500:exchangeRateEURUSD:totalWeeks:iterations:progressCallback:)"
+            landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy

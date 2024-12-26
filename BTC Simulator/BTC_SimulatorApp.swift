@@ -9,6 +9,7 @@ import SwiftUI
 
 @main
 struct BTCMoteCarloApp: App {
+    @StateObject private var simSettings = SimulationSettings()
 
     init() {
         // Load your CSVs here
@@ -18,6 +19,7 @@ struct BTCMoteCarloApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environmentObject(simSettings) // Provide simSettings to all subviews
         }
     }
 }
