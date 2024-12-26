@@ -18,6 +18,20 @@ private var useSeededRandom = false
 /// Our optional seeded generator (only used if `useSeededRandom = true`).
 private var seededGen: SeededGenerator?
 
+// MARK: - Halving config
+/// At these weeks, we add a bump to reflect halving supply shock.
+/// Currently set to 0.00 so it’s effectively disabled unless you raise it.
+private let halvingWeeks = [210, 420, 630, 840]
+private let halvingBump = 0.00
+
+// MARK: - Institutional Demand Factor
+/// This example linearly ramps up from `demandStartWeek` to `demandEndWeek`.
+/// Then it remains constant. Set it to 0.0 if you don’t want this at all.
+private let useInstitutionalDemand = false
+private let demandStartWeek = 0
+private let demandEndWeek   = 1040
+private let maxDemandBoost  = 0.004  // up to +0.4% by week 1040
+
 // MARK: - Private Seeded Generator
 /// A simple pseudo-random generator for deterministic picks.
 private struct SeededGenerator: RandomNumberGenerator {
@@ -61,7 +75,7 @@ var historicalBTCWeeklyReturns: [Double] = []
 var sp500WeeklyReturns: [Double] = []
 var weightedBTCWeeklyReturns: [Double] = []
 
-// MARK: - Single Run
+// MARK: - runOneFullSimulation
 func runOneFullSimulation(
     annualCAGR: Double,
     annualVolatility: Double,
@@ -165,7 +179,9 @@ func runOneFullSimulation(
     var previousBTCPriceUSD = lastHardcoded?.btcPriceUSD ?? 76_532.03
     var previousBTCHoldings = lastHardcoded?.netBTCHoldings ?? 0.00469014
 
+    // Main loop
     for week in 8...totalWeeks {
+        
         // 1) Pull a random weekly return from CSV
         let btcArr = useWeightedSampling ? weightedBTCWeeklyReturns : historicalBTCWeeklyReturns
         let histReturn = pickRandomReturn(from: btcArr)
@@ -173,15 +189,33 @@ func runOneFullSimulation(
         // 2) Dampen extremes
         let dampenedReturn = dampenArctan(histReturn)
         
-        // 3) Combine with CAGR
+        // 3) Combine with base CAGR
         var combinedWeeklyReturn = dampenedReturn + baseWeeklyGrowth
         
-        // 4) Optional random shock
-        //    If you want seeded or not, handle it here internally:
+        // 4) Halving: if the week is in halvingWeeks, add a small bump
+        if halvingWeeks.contains(week) {
+            combinedWeeklyReturn += halvingBump
+        }
+        
+        // 5) Institutional demand factor: linearly ramp between demandStartWeek & demandEndWeek,
+        //    then remain at max afterwards
+        if useInstitutionalDemand {
+            if week >= demandStartWeek && week <= demandEndWeek {
+                let progress = Double(week - demandStartWeek) / Double(demandEndWeek - demandStartWeek)
+                let demandFactor = maxDemandBoost * progress
+                combinedWeeklyReturn += demandFactor
+            } else if week > demandEndWeek {
+                // Fully ramped up
+                combinedWeeklyReturn += maxDemandBoost
+            }
+        }
+
+        // 6) Optional random shock
+        //    If you want seeded randomness, implement a seeded normal RNG here:
         // let shock = randomNormal(mean: 0.0, standardDeviation: weeklyVol)
         // combinedWeeklyReturn += shock
 
-        // 5) Update BTC price
+        // 7) Update BTC price
         var btcPriceUSD = previousBTCPriceUSD * (1.0 + combinedWeeklyReturn)
         btcPriceUSD = max(btcPriceUSD, 1.0)
         let btcPriceEUR = btcPriceUSD / exchangeRateEURUSD
@@ -196,12 +230,12 @@ func runOneFullSimulation(
             )
         }
         
-        // Contribution
+        // 8) Contribution
         let contributionEUR = (week <= 52) ? 60.0 : 100.0
         let fee = contributionEUR * 0.0035
         let netBTC = (contributionEUR - fee) / btcPriceEUR
         
-        // Evaluate withdrawals
+        // 9) Evaluate withdrawals
         let hypotheticalHoldings = previousBTCHoldings + netBTC
         let hypotheticalValueEUR = hypotheticalHoldings * btcPriceEUR
         var withdrawalEUR = 0.0
@@ -215,7 +249,7 @@ func runOneFullSimulation(
         let netHoldings = max(0.0, hypotheticalHoldings - withdrawalBTC)
         let portfolioValEUR = netHoldings * btcPriceEUR
 
-        // Append
+        // 10) Append this week’s simulation data
         results.append(
             SimulationData(
                 week: week,
@@ -262,9 +296,9 @@ func runMonteCarloSimulationsWithProgress(
     progressCallback: @escaping (Int) -> Void
 ) -> ([SimulationData], [[SimulationData]]) {
 
-    // If you want to use seeded randomness internally for testing, do so here:
+    // If you want to lock randomness, uncomment and set a seed here:
     // setRandomSeed(12345)
-    
+
     var allRuns = [[SimulationData]]()
 
     for i in 0..<iterations {
@@ -278,11 +312,22 @@ func runMonteCarloSimulationsWithProgress(
         progressCallback(i + 1)
     }
 
-    // sort final results by last week's portfolioValue
+    // Sort final results by last week's portfolioValue
     var finalValues = allRuns.map { ($0.last?.portfolioValueEUR ?? 0.0, $0) }
     finalValues.sort { $0.0 < $1.0 }
 
     // median
     let medianRun = finalValues[finalValues.count / 2].1
     return (medianRun, allRuns)
+}
+
+// Optional unseeded Box-Muller if you want randomVol shocks:
+private func randomNormal(
+    mean: Double,
+    standardDeviation: Double
+) -> Double {
+    let u1 = Double.random(in: 0..<1)
+    let u2 = Double.random(in: 0..<1)
+    let z0 = sqrt(-2.0 * log(u1)) * cos(2.0 * .pi * u2)
+    return z0 * standardDeviation + mean
 }

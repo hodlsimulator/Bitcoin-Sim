@@ -939,7 +939,7 @@ struct ContentView: View {
         return z0 * standardDeviation + mean
     }
 
-    func runOneFullSimulation(
+    func runOneFullSimulationLocal(
         annualCAGR: Double,
         annualVolatility: Double,
         exchangeRateEURUSD: Double,
