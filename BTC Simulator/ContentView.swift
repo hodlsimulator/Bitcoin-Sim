@@ -927,17 +927,28 @@ struct ContentView: View {
         return (medianRun, allRuns)
     }
 
-    /// This is the function you actually call inside runMonteCarloSimulationsWithProgress
+    /// Gently dampen large returns to avoid explosive outliers.
+    func dampenArctan(_ rawReturn: Double) -> Double {
+        // 'factor' controls how aggressively to flatten extremes.
+        let factor = 5.5
+        let scaled = rawReturn * factor
+        let flattened = (2.0 / Double.pi) * atan(scaled)
+        return flattened
+    }
+
     func runOneFullSimulation(
         annualCAGR: Double,
         annualVolatility: Double,
         exchangeRateEURUSD: Double,
         totalWeeks: Int
     ) -> [SimulationData] {
-        // Instead of "generateRealSimulation", we do it all here.
-        // 1) Start with known weeks 1–7
+        
+        // Just define a local flag here if you want weighted sampling:
+        let useWeightedSampling = false
+
+        // Hardcoded starting weeks 1..7
         var results: [SimulationData] = [
-            SimulationData(
+            .init(
                 week: 1,
                 startingBTC: 0.0,
                 netBTCHoldings: 0.00469014,
@@ -949,7 +960,7 @@ struct ContentView: View {
                 netContributionBTC: 0.00527613,
                 withdrawalEUR: 0.0
             ),
-            SimulationData(
+            .init(
                 week: 2,
                 startingBTC: 0.00469014,
                 netBTCHoldings: 0.00530474,
@@ -961,7 +972,7 @@ struct ContentView: View {
                 netContributionBTC: 0.00066988,
                 withdrawalEUR: 0.0
             ),
-            SimulationData(
+            .init(
                 week: 3,
                 startingBTC: 0.00530474,
                 netBTCHoldings: 0.00608283,
@@ -973,7 +984,7 @@ struct ContentView: View {
                 netContributionBTC: 0.00077809,
                 withdrawalEUR: 0.0
             ),
-            SimulationData(
+            .init(
                 week: 4,
                 startingBTC: 0.00608283,
                 netBTCHoldings: 0.00750280,
@@ -985,7 +996,7 @@ struct ContentView: View {
                 netContributionBTC: 0.00141997,
                 withdrawalEUR: 0.0
             ),
-            SimulationData(
+            .init(
                 week: 5,
                 startingBTC: 0.00745154,
                 netBTCHoldings: 0.00745154,
@@ -997,7 +1008,7 @@ struct ContentView: View {
                 netContributionBTC: 0.00000000,
                 withdrawalEUR: 0.0
             ),
-            SimulationData(
+            .init(
                 week: 6,
                 startingBTC: 0.00745154,
                 netBTCHoldings: 0.00745154,
@@ -1009,7 +1020,7 @@ struct ContentView: View {
                 netContributionBTC: 0.00000000,
                 withdrawalEUR: 0.0
             ),
-            SimulationData(
+            .init(
                 week: 7,
                 startingBTC: 0.00745154,
                 netBTCHoldings: 0.00959318,
@@ -1017,38 +1028,63 @@ struct ContentView: View {
                 btcPriceEUR: 92_779.54,
                 portfolioValueEUR: 890.05,
                 contributionEUR: 200.00,
-                transactionFeeEUR: 1.3,
+                transactionFeeEUR: 1.300,
                 netContributionBTC: 0.00214164,
                 withdrawalEUR: 0.0
             )
         ]
         
+        // Base weekly growth from annual CAGR
         let lastHardcoded = results.last
         let baseWeeklyGrowth = pow(1.0 + annualCAGR, 1.0 / 52.0) - 1.0
+
+        // If you ever want random shocks, you can use annualVolatility
         let weeklyVol = annualVolatility / sqrt(52.0)
 
-        var previousBTCPriceUSD = lastHardcoded?.btcPriceUSD ?? 106_000.00
-        var previousBTCHoldings = lastHardcoded?.netBTCHoldings ?? 0.00745154
+        var previousBTCPriceUSD = lastHardcoded?.btcPriceUSD ?? 76_532.03
+        var previousBTCHoldings = lastHardcoded?.netBTCHoldings ?? 0.00469014
 
-        // 2) For week 8..1040, do "real" CSV-based logic
-        for w in 8...totalWeeks {
-            let (histBTC, _) = sampleHistoricalReturns()  // or incorporate SP if correlation needed
+        for week in 8...totalWeeks {
             
-            var combinedWeeklyReturn = histBTC + baseWeeklyGrowth
-            let shock = randomNormal(mean: 0, standardDeviation: weeklyVol)
-            combinedWeeklyReturn += shock
-
+            // 1) Select a weekly return from CSV
+            let btcArr = useWeightedSampling ? weightedBTCWeeklyReturns : historicalBTCWeeklyReturns
+            let histReturn = btcArr.isEmpty ? 0.0 : btcArr.randomElement() ?? 0.0
+            
+            // 2) Dampen extremes
+            let dampenedReturn = dampenArctan(histReturn)
+            
+            // 3) Combine with CAGR
+            var combinedWeeklyReturn = dampenedReturn + baseWeeklyGrowth
+            
+            // Optional random shock:
+            // let shock = randomNormal(mean: 0.0, standardDeviation: weeklyVol)
+            // combinedWeeklyReturn += shock
+            
+            // 4) BTC price update
             var btcPriceUSD = previousBTCPriceUSD * (1.0 + combinedWeeklyReturn)
             btcPriceUSD = max(btcPriceUSD, 1.0)
             let btcPriceEUR = btcPriceUSD / exchangeRateEURUSD
 
-            let contributionEUR = (w <= 52) ? 60.0 : 100.0
+            // Log every 50 weeks (avoid messy quoting)
+            if week % 50 == 0 {
+                print(
+                    "[Week \(week)] WeeklyReturn = "
+                    + String(format: "%.4f", combinedWeeklyReturn)
+                    + ", btcPriceUSD = "
+                    + String(format: "%.2f", btcPriceUSD)
+                )
+            }
+            
+            // Contribution
+            let contributionEUR = (week <= 52) ? 60.0 : 100.0
             let fee = contributionEUR * 0.0035
             let netBTC = (contributionEUR - fee) / btcPriceEUR
-
+            
+            // Hypothetical holdings
             let hypotheticalHoldings = previousBTCHoldings + netBTC
             let hypotheticalValueEUR = hypotheticalHoldings * btcPriceEUR
-
+            
+            // Minimal withdrawals
             var withdrawalEUR = 0.0
             if hypotheticalValueEUR > 60_000 {
                 withdrawalEUR = 200.0
@@ -1056,13 +1092,14 @@ struct ContentView: View {
                 withdrawalEUR = 100.0
             }
             let withdrawalBTC = withdrawalEUR / btcPriceEUR
-
+            
             let netHoldings = max(0.0, hypotheticalHoldings - withdrawalBTC)
             let portfolioValEUR = netHoldings * btcPriceEUR
-
+            
+            // Append results
             results.append(
                 SimulationData(
-                    week: w,
+                    week: week,
                     startingBTC: previousBTCHoldings,
                     netBTCHoldings: netHoldings,
                     btcPriceUSD: btcPriceUSD,
@@ -1074,11 +1111,11 @@ struct ContentView: View {
                     withdrawalEUR: withdrawalEUR
                 )
             )
-
+            
             previousBTCPriceUSD = btcPriceUSD
             previousBTCHoldings = netHoldings
         }
-
+        
         return results
     }
     
