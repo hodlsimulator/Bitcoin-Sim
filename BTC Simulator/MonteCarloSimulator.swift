@@ -20,20 +20,49 @@ private var seededGen: SeededGenerator?
 
 // MARK: - Halving config
 /// At these weeks, we add a bump to reflect halving supply shock.
-/// Currently set to 0.00 so it’s effectively disabled unless you raise it.
 private let halvingWeeks = [210, 420, 630, 840]
 private let halvingBump = 0.00
 
 // MARK: - Institutional Demand Factor
-/// This example linearly ramps up from `demandStartWeek` to `demandEndWeek`.
-/// Then it remains constant. Set it to 0.0 if you don’t want this at all.
 private let useInstitutionalDemand = false
 private let demandStartWeek = 0
 private let demandEndWeek   = 1040
-private let maxDemandBoost  = 0.004  // up to +0.4% by week 1040
+private let maxDemandBoost  = 0.004
+
+// MARK: - Country Adoption Factor
+private let useCountryAdoption = false
+private let countryStartWeek = 30
+private let countryEndWeek   = 1040
+private let maxCountryAdoptionBoost = 0.0055
+
+// MARK: - Regulatory Clarity Factor
+private let useRegulatoryClarity = false
+private let clarityStartWeek = 0
+private let clarityEndWeek   = 200
+private let maxClarityBoost = 0.0006
+
+// MARK: - ETF Approval Factor
+private let useEtfApproval = false
+private let etfStartWeek   = 0
+private let etfEndWeek     = 400
+private let maxEtfBoost    = 0.0008
+
+// MARK: - Technological Breakthrough Factor
+/// Represents big leaps like new layer-2 solutions, quantum-resistance upgrades, etc.
+/// We ramp from techStartWeek to techEndWeek, then keep that boost afterwards.
+private let useTechBreakthrough = false
+private let techStartWeek = 500
+private let techEndWeek   = 600
+private let maxTechBoost  = 0.002 // up to +0.2% once fully ramped
+
+// MARK: - Scarcity Event Factor
+/// Represents sudden additional supply constraints or large amounts of BTC removed from circulation.
+private let useScarcityEvents = false
+private let scarcityStartWeek = 700
+private let scarcityEndWeek   = 1040
+private let maxScarcityBoost  = 0.025
 
 // MARK: - Private Seeded Generator
-/// A simple pseudo-random generator for deterministic picks.
 private struct SeededGenerator: RandomNumberGenerator {
     private var state: UInt64
 
@@ -42,14 +71,12 @@ private struct SeededGenerator: RandomNumberGenerator {
     }
 
     mutating func next() -> UInt64 {
-        // Minimal linear congruential generator (LCG).
         state = 2862933555777941757 &* state &+ 3037000493
         return state
     }
 }
 
-/// If you want to enable/disable seeded randomness **internally**,
-/// just call this from inside MonteCarloSimulator.swift:
+/// Call this if you want to enable or disable seeded randomness inside MonteCarloSimulator.
 private func setRandomSeed(_ seed: UInt64?) {
     if let s = seed {
         useSeededRandom = true
@@ -62,10 +89,8 @@ private func setRandomSeed(_ seed: UInt64?) {
 
 // MARK: - Gentle Dampening: arctan
 func dampenArctan(_ rawReturn: Double) -> Double {
-    // 'factor' is how aggressively to flatten big returns (positive or negative).
     let factor = 5.5
     let scaled = rawReturn * factor
-    // arctan is then mapped from [-π/2..+π/2] to [-1..+1].
     let flattened = (2.0 / Double.pi) * atan(scaled)
     return flattened
 }
@@ -171,7 +196,7 @@ func runOneFullSimulation(
         )
     ]
     
-    // Base weekly growth from annual CAGR
+    // Convert annual CAGR to weekly growth
     let lastHardcoded = results.last
     let baseWeeklyGrowth = pow(1.0 + annualCAGR, 1.0 / 52.0) - 1.0
     let weeklyVol = annualVolatility / sqrt(52.0)
@@ -192,50 +217,98 @@ func runOneFullSimulation(
         // 3) Combine with base CAGR
         var combinedWeeklyReturn = dampenedReturn + baseWeeklyGrowth
         
-        // 4) Halving: if the week is in halvingWeeks, add a small bump
+        // 4) Halving
         if halvingWeeks.contains(week) {
             combinedWeeklyReturn += halvingBump
         }
         
-        // 5) Institutional demand factor: linearly ramp between demandStartWeek & demandEndWeek,
-        //    then remain at max afterwards
+        // 5) Institutional demand factor
         if useInstitutionalDemand {
             if week >= demandStartWeek && week <= demandEndWeek {
                 let progress = Double(week - demandStartWeek) / Double(demandEndWeek - demandStartWeek)
                 let demandFactor = maxDemandBoost * progress
                 combinedWeeklyReturn += demandFactor
             } else if week > demandEndWeek {
-                // Fully ramped up
                 combinedWeeklyReturn += maxDemandBoost
             }
         }
+        
+        // 6) Country adoption factor
+        if useCountryAdoption {
+            if week >= countryStartWeek && week <= countryEndWeek {
+                let progress = Double(week - countryStartWeek) / Double(countryEndWeek - countryStartWeek)
+                let countryAdoptionFactor = maxCountryAdoptionBoost * progress
+                combinedWeeklyReturn += countryAdoptionFactor
+            } else if week > countryEndWeek {
+                combinedWeeklyReturn += maxCountryAdoptionBoost
+            }
+        }
 
-        // 6) Optional random shock
-        //    If you want seeded randomness, implement a seeded normal RNG here:
+        // 7) Regulatory clarity factor
+        if useRegulatoryClarity {
+            if week >= clarityStartWeek && week <= clarityEndWeek {
+                let progress = Double(week - clarityStartWeek) / Double(clarityEndWeek - clarityStartWeek)
+                let clarityFactor = maxClarityBoost * progress
+                combinedWeeklyReturn += clarityFactor
+            } else if week > clarityEndWeek {
+                combinedWeeklyReturn += maxClarityBoost
+            }
+        }
+
+        // 8) ETF approval factor
+        if useEtfApproval {
+            if week >= etfStartWeek && week <= etfEndWeek {
+                let progress = Double(week - etfStartWeek) / Double(etfEndWeek - etfStartWeek)
+                let etfFactor = maxEtfBoost * progress
+                combinedWeeklyReturn += etfFactor
+            } else if week > etfEndWeek {
+                combinedWeeklyReturn += maxEtfBoost
+            }
+        }
+
+        // 9) Technological breakthrough factor
+        if useTechBreakthrough {
+            if week >= techStartWeek && week <= techEndWeek {
+                let progress = Double(week - techStartWeek) / Double(techEndWeek - techStartWeek)
+                let techFactor = maxTechBoost * progress
+                combinedWeeklyReturn += techFactor
+            } else if week > techEndWeek {
+                combinedWeeklyReturn += maxTechBoost
+            }
+        }
+
+        // 10) Scarcity events factor
+        if useScarcityEvents {
+            if week >= scarcityStartWeek && week <= scarcityEndWeek {
+                let progress = Double(week - scarcityStartWeek) / Double(scarcityEndWeek - scarcityStartWeek)
+                let scarcityFactor = maxScarcityBoost * progress
+                combinedWeeklyReturn += scarcityFactor
+            } else if week > scarcityEndWeek {
+                // Once fully ramped, remain at max
+                combinedWeeklyReturn += maxScarcityBoost
+            }
+        }
+
+        // 11) Optional random shock
         // let shock = randomNormal(mean: 0.0, standardDeviation: weeklyVol)
         // combinedWeeklyReturn += shock
 
-        // 7) Update BTC price
+        // 12) Update BTC price
         var btcPriceUSD = previousBTCPriceUSD * (1.0 + combinedWeeklyReturn)
         btcPriceUSD = max(btcPriceUSD, 1.0)
         let btcPriceEUR = btcPriceUSD / exchangeRateEURUSD
 
         // Log every 50 weeks
         if week % 50 == 0 {
-            print(
-                "[Week \(week)] WeeklyReturn = "
-                + String(format: "%.4f", combinedWeeklyReturn)
-                + ", btcPriceUSD = "
-                + String(format: "%.2f", btcPriceUSD)
-            )
+            print("[Week \(week)] WeeklyReturn = \(String(format: "%.4f", combinedWeeklyReturn)), btcPriceUSD = \(String(format: "%.2f", btcPriceUSD))")
         }
         
-        // 8) Contribution
+        // 13) Contribution
         let contributionEUR = (week <= 52) ? 60.0 : 100.0
         let fee = contributionEUR * 0.0035
         let netBTC = (contributionEUR - fee) / btcPriceEUR
         
-        // 9) Evaluate withdrawals
+        // 14) Evaluate withdrawals
         let hypotheticalHoldings = previousBTCHoldings + netBTC
         let hypotheticalValueEUR = hypotheticalHoldings * btcPriceEUR
         var withdrawalEUR = 0.0
@@ -249,7 +322,7 @@ func runOneFullSimulation(
         let netHoldings = max(0.0, hypotheticalHoldings - withdrawalBTC)
         let portfolioValEUR = netHoldings * btcPriceEUR
 
-        // 10) Append this week’s simulation data
+        // Append this week’s data
         results.append(
             SimulationData(
                 week: week,
@@ -272,8 +345,7 @@ func runOneFullSimulation(
     return results
 }
 
-/// Helper function to pick a random return from an array,
-/// using seeded randomness if it’s enabled.
+/// Picks a random return from an array, using seeded randomness if it’s enabled.
 private func pickRandomReturn(from arr: [Double]) -> Double {
     guard !arr.isEmpty else { return 0.0 }
     if useSeededRandom, var rng = seededGen {
@@ -296,8 +368,7 @@ func runMonteCarloSimulationsWithProgress(
     progressCallback: @escaping (Int) -> Void
 ) -> ([SimulationData], [[SimulationData]]) {
 
-    // If you want to lock randomness, uncomment and set a seed here:
-    // setRandomSeed(12345)
+    // If you want to lock randomness for repeatable runs, e.g. setRandomSeed(12345)
 
     var allRuns = [[SimulationData]]()
 
@@ -321,7 +392,7 @@ func runMonteCarloSimulationsWithProgress(
     return (medianRun, allRuns)
 }
 
-// Optional unseeded Box-Muller if you want randomVol shocks:
+// Optional unseeded Box-Muller for randomVol shocks:
 private func randomNormal(
     mean: Double,
     standardDeviation: Double
