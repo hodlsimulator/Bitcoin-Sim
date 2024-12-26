@@ -19,48 +19,105 @@ private var useSeededRandom = false
 private var seededGen: SeededGenerator?
 
 // MARK: - Halving config
-/// At these weeks, we add a bump to reflect halving supply shock.
 private let halvingWeeks = [210, 420, 630, 840]
-private let halvingBump = 0.00
+private let halvingBump = 0.20
 
 // MARK: - Institutional Demand Factor
-private let useInstitutionalDemand = false
+private let useInstitutionalDemand = true
 private let demandStartWeek = 0
 private let demandEndWeek   = 1040
 private let maxDemandBoost  = 0.004
 
 // MARK: - Country Adoption Factor
-private let useCountryAdoption = false
+private let useCountryAdoption = true
 private let countryStartWeek = 30
 private let countryEndWeek   = 1040
 private let maxCountryAdoptionBoost = 0.0055
 
 // MARK: - Regulatory Clarity Factor
-private let useRegulatoryClarity = false
+private let useRegulatoryClarity = true
 private let clarityStartWeek = 0
 private let clarityEndWeek   = 200
 private let maxClarityBoost = 0.0006
 
 // MARK: - ETF Approval Factor
-private let useEtfApproval = false
+private let useEtfApproval = true
 private let etfStartWeek   = 0
 private let etfEndWeek     = 400
 private let maxEtfBoost    = 0.0008
 
 // MARK: - Technological Breakthrough Factor
-/// Represents big leaps like new layer-2 solutions, quantum-resistance upgrades, etc.
-/// We ramp from techStartWeek to techEndWeek, then keep that boost afterwards.
-private let useTechBreakthrough = false
+private let useTechBreakthrough = true
 private let techStartWeek = 500
 private let techEndWeek   = 600
-private let maxTechBoost  = 0.002 // up to +0.2% once fully ramped
+private let maxTechBoost  = 0.002
 
 // MARK: - Scarcity Event Factor
-/// Represents sudden additional supply constraints or large amounts of BTC removed from circulation.
-private let useScarcityEvents = false
+private let useScarcityEvents = true
 private let scarcityStartWeek = 700
 private let scarcityEndWeek   = 1040
 private let maxScarcityBoost  = 0.025
+
+// MARK: - Global Macro Hedge Factor
+private let useGlobalMacroHedge = true
+private let macroStartWeek = 400
+private let macroEndWeek   = 600
+private let maxMacroBoost  = 0.0015
+
+// MARK: - Stablecoin Shift Factor
+private let useStablecoinShift = true
+private let stablecoinStartWeek = 300
+private let stablecoinEndWeek   = 320
+private let maxStablecoinBoost  = 0.0006
+
+// MARK: - Demographic Adoption Factor
+private let useDemographicAdoption = true
+private let demoStartWeek = 0
+private let demoEndWeek   = 1040
+private let maxDemoBoost  = 0.001
+
+// MARK: - Altcoin Flight Factor
+private let useAltcoinFlight = true
+private let altcoinStartWeek = 600
+private let altcoinEndWeek   = 620
+private let maxAltcoinBoost  = 0.001
+
+// MARK: - Adoption Factor (Simple Incremental Drift)
+private let useAdoptionFactor = true
+private let adoptionBaseFactor = 0.000005
+
+// MARK: - NEGATIVE FACTORS
+// 1) Regulatory Clampdown
+private let useRegClampdown = true
+private let clampStartWeek  = 200
+private let clampEndWeek    = 220
+private let maxClampDown    = -0.0002  // -0.02% weekly once fully ramped
+
+// 2) Competitor Coin
+private let useCompetitorCoin = true
+private let competitorStartWeek = 800
+private let competitorEndWeek   = 820
+private let maxCompetitorBoost  = -0.0018
+
+// 3) Security Breach / Hack
+// A one-off negative event at a specific week
+private let useSecurityBreach = true
+private let breachWeek        = 350
+private let breachImpact      = -0.1
+
+// 4) Bubble Pop
+private let useBubblePop = true
+private let popStartWeek = 900
+private let popEndWeek   = 920
+private let maxPopDrop   = -0.005 // -0.5% weekly once fully ramped
+
+// 5) Stablecoin Meltdown
+// Different from stablecoin shift (which was bullish for BTC).
+// This meltdown might spook the entire crypto space:
+private let useStablecoinMeltdown = true
+private let meltdownStartWeek = 320
+private let meltdownEndWeek   = 340
+private let maxMeltdownDrop   = -0.001
 
 // MARK: - Private Seeded Generator
 private struct SeededGenerator: RandomNumberGenerator {
@@ -76,7 +133,7 @@ private struct SeededGenerator: RandomNumberGenerator {
     }
 }
 
-/// Call this if you want to enable or disable seeded randomness inside MonteCarloSimulator.
+/// If you want a locked seed for deterministic runs, call this internally.
 private func setRandomSeed(_ seed: UInt64?) {
     if let s = seed {
         useSeededRandom = true
@@ -108,7 +165,7 @@ func runOneFullSimulation(
     totalWeeks: Int
 ) -> [SimulationData] {
     
-    // Hardcoded starting weeks 1..7
+    // Hardcoded initial data (weeks 1..7)
     var results: [SimulationData] = [
         .init(
             week: 1,
@@ -207,7 +264,7 @@ func runOneFullSimulation(
     // Main loop
     for week in 8...totalWeeks {
         
-        // 1) Pull a random weekly return from CSV
+        // 1) Pick a random weekly return from CSV
         let btcArr = useWeightedSampling ? weightedBTCWeeklyReturns : historicalBTCWeeklyReturns
         let histReturn = pickRandomReturn(from: btcArr)
         
@@ -216,13 +273,19 @@ func runOneFullSimulation(
         
         // 3) Combine with base CAGR
         var combinedWeeklyReturn = dampenedReturn + baseWeeklyGrowth
+
+        // 3a) Adoption factor (incremental drift)
+        if useAdoptionFactor {
+            let adoptionFactor = adoptionBaseFactor * Double(week - 7)
+            combinedWeeklyReturn += adoptionFactor
+        }
         
         // 4) Halving
         if halvingWeeks.contains(week) {
             combinedWeeklyReturn += halvingBump
         }
         
-        // 5) Institutional demand factor
+        // 5) Institutional demand
         if useInstitutionalDemand {
             if week >= demandStartWeek && week <= demandEndWeek {
                 let progress = Double(week - demandStartWeek) / Double(demandEndWeek - demandStartWeek)
@@ -233,7 +296,7 @@ func runOneFullSimulation(
             }
         }
         
-        // 6) Country adoption factor
+        // 6) Country adoption
         if useCountryAdoption {
             if week >= countryStartWeek && week <= countryEndWeek {
                 let progress = Double(week - countryStartWeek) / Double(countryEndWeek - countryStartWeek)
@@ -244,7 +307,7 @@ func runOneFullSimulation(
             }
         }
 
-        // 7) Regulatory clarity factor
+        // 7) Regulatory clarity
         if useRegulatoryClarity {
             if week >= clarityStartWeek && week <= clarityEndWeek {
                 let progress = Double(week - clarityStartWeek) / Double(clarityEndWeek - clarityStartWeek)
@@ -255,7 +318,7 @@ func runOneFullSimulation(
             }
         }
 
-        // 8) ETF approval factor
+        // 8) ETF approval
         if useEtfApproval {
             if week >= etfStartWeek && week <= etfEndWeek {
                 let progress = Double(week - etfStartWeek) / Double(etfEndWeek - etfStartWeek)
@@ -266,7 +329,7 @@ func runOneFullSimulation(
             }
         }
 
-        // 9) Technological breakthrough factor
+        // 9) Tech breakthroughs
         if useTechBreakthrough {
             if week >= techStartWeek && week <= techEndWeek {
                 let progress = Double(week - techStartWeek) / Double(techEndWeek - techStartWeek)
@@ -277,38 +340,139 @@ func runOneFullSimulation(
             }
         }
 
-        // 10) Scarcity events factor
+        // 10) Scarcity events
         if useScarcityEvents {
             if week >= scarcityStartWeek && week <= scarcityEndWeek {
                 let progress = Double(week - scarcityStartWeek) / Double(scarcityEndWeek - scarcityStartWeek)
                 let scarcityFactor = maxScarcityBoost * progress
                 combinedWeeklyReturn += scarcityFactor
             } else if week > scarcityEndWeek {
-                // Once fully ramped, remain at max
                 combinedWeeklyReturn += maxScarcityBoost
             }
         }
 
-        // 11) Optional random shock
+        // 11) Macro hedge
+        if useGlobalMacroHedge {
+            if week >= macroStartWeek && week <= macroEndWeek {
+                let progress = Double(week - macroStartWeek) / Double(macroEndWeek - macroStartWeek)
+                let macroFactor = maxMacroBoost * progress
+                combinedWeeklyReturn += macroFactor
+            } else if week > macroEndWeek {
+                combinedWeeklyReturn += maxMacroBoost
+            }
+        }
+
+        // 12) Stablecoin shift
+        if useStablecoinShift {
+            if week >= stablecoinStartWeek && week <= stablecoinEndWeek {
+                let progress = Double(week - stablecoinStartWeek) / Double(stablecoinEndWeek - stablecoinStartWeek)
+                let stablecoinFactor = maxStablecoinBoost * progress
+                combinedWeeklyReturn += stablecoinFactor
+            } else if week > stablecoinEndWeek {
+                combinedWeeklyReturn += maxStablecoinBoost
+            }
+        }
+
+        // 13) Demographic adoption
+        if useDemographicAdoption {
+            if week >= demoStartWeek && week <= demoEndWeek {
+                let progress = Double(week - demoStartWeek) / Double(demoEndWeek - demoStartWeek)
+                let demoFactor = maxDemoBoost * progress
+                combinedWeeklyReturn += demoFactor
+            } else if week > demoEndWeek {
+                combinedWeeklyReturn += maxDemoBoost
+            }
+        }
+
+        // 14) Altcoin flight
+        if useAltcoinFlight {
+            if week >= altcoinStartWeek && week <= altcoinEndWeek {
+                let progress = Double(week - altcoinStartWeek) / Double(altcoinEndWeek - altcoinStartWeek)
+                let altFactor = maxAltcoinBoost * progress
+                combinedWeeklyReturn += altFactor
+            } else if week > altcoinEndWeek {
+                combinedWeeklyReturn += maxAltcoinBoost
+            }
+        }
+
+        // NEGATIVE FACTORS:
+
+        // 15) Regulatory clampdown
+        if useRegClampdown {
+            if week >= clampStartWeek && week <= clampEndWeek {
+                let progress = Double(week - clampStartWeek) / Double(clampEndWeek - clampStartWeek)
+                let clampFactor = maxClampDown * progress
+                combinedWeeklyReturn += clampFactor
+            } else if week > clampEndWeek {
+                combinedWeeklyReturn += maxClampDown
+            }
+        }
+
+        // 16) Competitor coin
+        if useCompetitorCoin {
+            if week >= competitorStartWeek && week <= competitorEndWeek {
+                let progress = Double(week - competitorStartWeek) / Double(competitorEndWeek - competitorStartWeek)
+                let competitorFactor = maxCompetitorBoost * progress
+                combinedWeeklyReturn += competitorFactor
+            } else if week > competitorEndWeek {
+                combinedWeeklyReturn += maxCompetitorBoost
+            }
+        }
+
+        // 17) Security breach (one-off)
+        if useSecurityBreach {
+            if week == breachWeek {
+                combinedWeeklyReturn += breachImpact
+            }
+        }
+
+        // 18) Bubble pop
+        if useBubblePop {
+            if week >= popStartWeek && week <= popEndWeek {
+                let progress = Double(week - popStartWeek) / Double(popEndWeek - popStartWeek)
+                let popFactor = maxPopDrop * progress
+                combinedWeeklyReturn += popFactor
+            } else if week > popEndWeek {
+                combinedWeeklyReturn += maxPopDrop
+            }
+        }
+
+        // 19) Stablecoin meltdown (negative, spooks entire market)
+        if useStablecoinMeltdown {
+            if week >= meltdownStartWeek && week <= meltdownEndWeek {
+                let progress = Double(week - meltdownStartWeek) / Double(meltdownEndWeek - meltdownStartWeek)
+                let meltdownFactor = maxMeltdownDrop * progress
+                combinedWeeklyReturn += meltdownFactor
+            } else if week > meltdownEndWeek {
+                combinedWeeklyReturn += maxMeltdownDrop
+            }
+        }
+        
+        // 20) Optional random shock (volatility)
         // let shock = randomNormal(mean: 0.0, standardDeviation: weeklyVol)
         // combinedWeeklyReturn += shock
 
-        // 12) Update BTC price
+        // 21) Update BTC price
         var btcPriceUSD = previousBTCPriceUSD * (1.0 + combinedWeeklyReturn)
         btcPriceUSD = max(btcPriceUSD, 1.0)
         let btcPriceEUR = btcPriceUSD / exchangeRateEURUSD
 
         // Log every 50 weeks
         if week % 50 == 0 {
-            print("[Week \(week)] WeeklyReturn = \(String(format: "%.4f", combinedWeeklyReturn)), btcPriceUSD = \(String(format: "%.2f", btcPriceUSD))")
+            print(
+                "[Week \(week)] WeeklyReturn = "
+                + String(format: "%.4f", combinedWeeklyReturn)
+                + ", btcPriceUSD = "
+                + String(format: "%.2f", btcPriceUSD)
+            )
         }
         
-        // 13) Contribution
+        // 22) Contribution
         let contributionEUR = (week <= 52) ? 60.0 : 100.0
         let fee = contributionEUR * 0.0035
         let netBTC = (contributionEUR - fee) / btcPriceEUR
         
-        // 14) Evaluate withdrawals
+        // 23) Withdrawals
         let hypotheticalHoldings = previousBTCHoldings + netBTC
         let hypotheticalValueEUR = hypotheticalHoldings * btcPriceEUR
         var withdrawalEUR = 0.0
@@ -322,11 +486,10 @@ func runOneFullSimulation(
         let netHoldings = max(0.0, hypotheticalHoldings - withdrawalBTC)
         let portfolioValEUR = netHoldings * btcPriceEUR
 
-        // Append this week’s data
         results.append(
             SimulationData(
                 week: week,
-                startingBTC: previousBTCHoldings,
+                startingBTC: previousBTCPriceUSD, // or previousBTCHoldings, depending on how you want to track
                 netBTCHoldings: netHoldings,
                 btcPriceUSD: btcPriceUSD,
                 btcPriceEUR: btcPriceEUR,
@@ -345,7 +508,7 @@ func runOneFullSimulation(
     return results
 }
 
-/// Picks a random return from an array, using seeded randomness if it’s enabled.
+/// Helper function for random pick with optional seeding.
 private func pickRandomReturn(from arr: [Double]) -> Double {
     guard !arr.isEmpty else { return 0.0 }
     if useSeededRandom, var rng = seededGen {
@@ -368,7 +531,8 @@ func runMonteCarloSimulationsWithProgress(
     progressCallback: @escaping (Int) -> Void
 ) -> ([SimulationData], [[SimulationData]]) {
 
-    // If you want to lock randomness for repeatable runs, e.g. setRandomSeed(12345)
+    // If you want a deterministic seed:
+    // setRandomSeed(12345)
 
     var allRuns = [[SimulationData]]()
 
@@ -392,7 +556,7 @@ func runMonteCarloSimulationsWithProgress(
     return (medianRun, allRuns)
 }
 
-// Optional unseeded Box-Muller for randomVol shocks:
+// MARK: - Optional Box-Muller for volatility
 private func randomNormal(
     mean: Double,
     standardDeviation: Double
