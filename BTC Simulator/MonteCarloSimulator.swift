@@ -12,237 +12,277 @@ import Foundation
 /// If `false`, we pick raw weekly returns as is.
 private let useWeightedSampling = false
 
-// MARK: - Global Historical Arrays
-var historicalBTCWeeklyReturns: [Double] = []
-var sp500WeeklyReturns: [Double] = []
+/// By default, we do not use a seeded generator (you can enable it if you want).
+private var useSeededRandom = false
 
-// Weighted BTC array (optional)
-var weightedBTCWeeklyReturns: [Double] = []
+/// Our optional seeded generator (only used if `useSeededRandom = true`).
+private var seededGen: SeededGenerator?
 
-// Simple struct to hold daily data
-struct DailyDataPoint {
-    let date: Date
-    let price: Double
-}
+// MARK: - Private Seeded Generator
+/// A simple pseudo-random generator for deterministic picks.
+private struct SeededGenerator: RandomNumberGenerator {
+    private var state: UInt64
 
-// MARK: - Load all historical data
-func loadAllHistoricalData() {
-    // 1) Parse BTC CSV -> weekly
-    let btcDaily = parseDailyDataCSV(filename: "Bitcoin Historical Data.csv")
-    historicalBTCWeeklyReturns = convertDailyToWeeklyReturns(btcDaily)
-
-    // 2) Parse S&P CSV -> weekly
-    let spDaily = parseDailyDataCSV(filename: "SP500 Historical Data.csv")
-    sp500WeeklyReturns = convertDailyToWeeklyReturns(spDaily)
-
-    // 3) Weighted BTC array
-    weightedBTCWeeklyReturns = buildWeightedReturns(historicalBTCWeeklyReturns)
-
-    print("Weeks loaded: BTC=\(historicalBTCWeeklyReturns.count), SP500=\(sp500WeeklyReturns.count)")
-}
-
-// MARK: - CSV -> Daily
-func parseDailyDataCSV(filename: String) -> [DailyDataPoint] {
-    var results: [DailyDataPoint] = []
-
-    guard let filePath = Bundle.main.path(
-        forResource: filename.replacingOccurrences(of: ".csv", with: ""),
-        ofType: "csv"
-    ) else {
-        return []
+    init(seed: UInt64) {
+        self.state = seed
     }
 
-    do {
-        let content = try String(contentsOfFile: filePath, encoding: .utf8)
-        let lines = content.components(separatedBy: .newlines).filter { !$0.isEmpty }
-
-        for (index, line) in lines.enumerated() {
-            if index == 0 { continue } // skip header
-            let cols = parseCSVRowNoPadding(line)
-            guard cols.count >= 7 else { continue }
-
-            let dateString  = cols[0]
-            let priceString = cols[1]
-            guard
-                let date  = dateFromString(dateString),
-                let price = parseDouble(priceString.replacingOccurrences(of: ",", with: ""))
-            else { continue }
-
-            results.append(.init(date: date, price: price))
-        }
-
-    } catch {
-        return []
+    mutating func next() -> UInt64 {
+        // Minimal linear congruential generator (LCG).
+        state = 2862933555777941757 &* state &+ 3037000493
+        return state
     }
-
-    // Sort ascending
-    results.sort { $0.date < $1.date }
-    print("\(filename) -> \(results.count) rows.")
-    return results
 }
 
-// MARK: - Convert daily -> weekly
-func convertDailyToWeeklyReturns(_ dailyData: [DailyDataPoint]) -> [Double] {
-    var weeklyReturns: [Double] = []
-    let chunkSize = 7
-    var index = 0
-
-    while index < dailyData.count {
-        let end = min(index + chunkSize, dailyData.count)
-        let slice = dailyData[index..<end]
-        if slice.count < chunkSize { break }
-
-        let startPrice = slice.first!.price
-        let endPrice   = slice.last!.price
-        let weeklyChange = (endPrice / startPrice) - 1.0
-        weeklyReturns.append(weeklyChange)
-        index += chunkSize
+/// If you want to enable/disable seeded randomness **internally**,
+/// just call this from inside MonteCarloSimulator.swift:
+private func setRandomSeed(_ seed: UInt64?) {
+    if let s = seed {
+        useSeededRandom = true
+        seededGen = SeededGenerator(seed: s)
+    } else {
+        useSeededRandom = false
+        seededGen = nil
     }
-
-    return weeklyReturns
-}
-
-// MARK: - Weighted approach (optional)
-func buildWeightedReturns(_ rawReturns: [Double]) -> [Double] {
-    var weighted = [Double]()
-    for r in rawReturns {
-        // Example weighting logic:
-        //   big negative < -0.20 => weight = 1
-        //   mild negative -0.20..0 => weight = 2
-        //   mild positive 0..0.10 => weight = 3
-        //   moderate positive 0.10..0.20 => weight = 4
-        //   big positive > 0.20 => weight = 5
-        //
-        // Tweak these thresholds or multipliers as you see fit.
-        let w: Int
-        switch r {
-        case ..<(-0.20):
-            w = 1
-        case (-0.20)..<0.0:
-            w = 2
-        case 0.0..<0.10:
-            w = 3
-        case 0.10..<0.20:
-            w = 4
-        default:
-            w = 5
-        }
-        for _ in 0..<w {
-            weighted.append(r)
-        }
-    }
-    return weighted
-}
-
-// MARK: - CSV Row Parser
-func parseCSVRowNoPadding(_ row: String) -> [String] {
-    var columns: [String] = []
-    var current = ""
-    var inQuotes = false
-
-    for char in row {
-        if char == "\"" {
-            inQuotes.toggle()
-        } else if char == "," && !inQuotes {
-            columns.append(current.trimmingCharacters(in: .whitespacesAndNewlines))
-            current = ""
-        } else {
-            current.append(char)
-        }
-    }
-    if !current.isEmpty {
-        columns.append(current.trimmingCharacters(in: .whitespacesAndNewlines))
-    }
-    return columns
-}
-
-// MARK: - String->Double & Date
-func parseDouble(_ s: String) -> Double? {
-    let formatter = NumberFormatter()
-    formatter.locale = Locale(identifier: "en_US_POSIX")
-    formatter.numberStyle = .decimal
-    formatter.decimalSeparator = "."
-    return formatter.number(from: s)?.doubleValue
-}
-
-func dateFromString(_ str: String) -> Date? {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "MM/dd/yyyy"
-    return formatter.date(from: str)
 }
 
 // MARK: - Gentle Dampening: arctan
-/// This function gently dampens large positive/negative returns so they don't explode.
 func dampenArctan(_ rawReturn: Double) -> Double {
-    // 'factor' is how aggressively to flatten.
-    // Larger factor => more flattening of big outliers.
-    let factor = 5.0
-    // arctan approach => range is roughly -0.636..+0.636 for factor=5
+    // 'factor' is how aggressively to flatten big returns (positive or negative).
+    let factor = 5.5
     let scaled = rawReturn * factor
-    // scale to [-pi/2 .. +pi/2], then normalise
-    // (2/pi) maps [-pi/2..+pi/2] to [-1..+1]
+    // arctan is then mapped from [-π/2..+π/2] to [-1..+1].
     let flattened = (2.0 / Double.pi) * atan(scaled)
     return flattened
 }
 
-// MARK: - Utility Stats
+// MARK: - Historical Arrays
+var historicalBTCWeeklyReturns: [Double] = []
+var sp500WeeklyReturns: [Double] = []
+var weightedBTCWeeklyReturns: [Double] = []
 
-/// Returns the median of an array of Doubles.
-func calculateMedian(values: [Double]) -> Double {
-    guard !values.isEmpty else { return 0.0 }
-    let sortedValues = values.sorted()
-    let mid = sortedValues.count / 2
-    if sortedValues.count.isMultiple(of: 2) {
-        // Even number of items, average the middle two
-        return (sortedValues[mid - 1] + sortedValues[mid]) / 2.0
-    } else {
-        // Odd number of items, pick the middle
-        return sortedValues[mid]
-    }
-}
+// MARK: - Single Run
+func runOneFullSimulation(
+    annualCAGR: Double,
+    annualVolatility: Double,
+    exchangeRateEURUSD: Double,
+    totalWeeks: Int
+) -> [SimulationData] {
+    
+    // Hardcoded starting weeks 1..7
+    var results: [SimulationData] = [
+        .init(
+            week: 1,
+            startingBTC: 0.0,
+            netBTCHoldings: 0.00469014,
+            btcPriceUSD: 76_532.03,
+            btcPriceEUR: 71_177.69,
+            portfolioValueEUR: 333.83,
+            contributionEUR: 378.00,
+            transactionFeeEUR: 2.46,
+            netContributionBTC: 0.00527613,
+            withdrawalEUR: 0.0
+        ),
+        .init(
+            week: 2,
+            startingBTC: 0.00469014,
+            netBTCHoldings: 0.00530474,
+            btcPriceUSD: 92_000.00,
+            btcPriceEUR: 86_792.45,
+            portfolioValueEUR: 465.00,
+            contributionEUR: 60.00,
+            transactionFeeEUR: 0.21,
+            netContributionBTC: 0.00066988,
+            withdrawalEUR: 0.0
+        ),
+        .init(
+            week: 3,
+            startingBTC: 0.00530474,
+            netBTCHoldings: 0.00608283,
+            btcPriceUSD: 95_000.00,
+            btcPriceEUR: 89_622.64,
+            portfolioValueEUR: 547.00,
+            contributionEUR: 70.00,
+            transactionFeeEUR: 0.25,
+            netContributionBTC: 0.00077809,
+            withdrawalEUR: 0.0
+        ),
+        .init(
+            week: 4,
+            startingBTC: 0.00608283,
+            netBTCHoldings: 0.00750280,
+            btcPriceUSD: 95_741.15,
+            btcPriceEUR: 90_321.84,
+            portfolioValueEUR: 685.00,
+            contributionEUR: 130.00,
+            transactionFeeEUR: 0.46,
+            netContributionBTC: 0.00141997,
+            withdrawalEUR: 0.0
+        ),
+        .init(
+            week: 5,
+            startingBTC: 0.00745154,
+            netBTCHoldings: 0.00745154,
+            btcPriceUSD: 96_632.26,
+            btcPriceEUR: 91_162.51,
+            portfolioValueEUR: 679.30,
+            contributionEUR: 0.00,
+            transactionFeeEUR: 5.00,
+            netContributionBTC: 0.00000000,
+            withdrawalEUR: 0.0
+        ),
+        .init(
+            week: 6,
+            startingBTC: 0.00745154,
+            netBTCHoldings: 0.00745154,
+            btcPriceUSD: 106_000.00,
+            btcPriceEUR: 100_000.00,
+            portfolioValueEUR: 745.15,
+            contributionEUR: 0.00,
+            transactionFeeEUR: 0.00,
+            netContributionBTC: 0.00000000,
+            withdrawalEUR: 0.0
+        ),
+        .init(
+            week: 7,
+            startingBTC: 0.00745154,
+            netBTCHoldings: 0.00959318,
+            btcPriceUSD: 98_346.31,
+            btcPriceEUR: 92_779.54,
+            portfolioValueEUR: 890.05,
+            contributionEUR: 200.00,
+            transactionFeeEUR: 1.300,
+            netContributionBTC: 0.00214164,
+            withdrawalEUR: 0.0
+        )
+    ]
+    
+    // Base weekly growth from annual CAGR
+    let lastHardcoded = results.last
+    let baseWeeklyGrowth = pow(1.0 + annualCAGR, 1.0 / 52.0) - 1.0
+    let weeklyVol = annualVolatility / sqrt(52.0)
 
-/// Returns the standard deviation of an array of Doubles, given the mean.
-func calculateStandardDeviation(values: [Double], mean: Double) -> Double {
-    guard !values.isEmpty else { return 0.0 }
-    let variance = values.reduce(0.0) { $0 + pow($1 - mean, 2) } / Double(values.count)
-    return sqrt(variance)
-}
+    var previousBTCPriceUSD = lastHardcoded?.btcPriceUSD ?? 76_532.03
+    var previousBTCHoldings = lastHardcoded?.netBTCHoldings ?? 0.00469014
 
-/// Returns the specified percentile (0–100) from an array of Doubles.
-func calculatePercentile(values: [Double], percentile: Double) -> Double {
-    guard !values.isEmpty else { return 0.0 }
-    let sortedValues = values.sorted()
-    let index = Int(Double(sortedValues.count - 1) * percentile / 100.0)
-    return sortedValues[max(0, min(index, sortedValues.count - 1))]
-}
+    for week in 8...totalWeeks {
+        // 1) Pull a random weekly return from CSV
+        let btcArr = useWeightedSampling ? weightedBTCWeeklyReturns : historicalBTCWeeklyReturns
+        let histReturn = pickRandomReturn(from: btcArr)
+        
+        // 2) Dampen extremes
+        let dampenedReturn = dampenArctan(histReturn)
+        
+        // 3) Combine with CAGR
+        var combinedWeeklyReturn = dampenedReturn + baseWeeklyGrowth
+        
+        // 4) Optional random shock
+        //    If you want seeded or not, handle it here internally:
+        // let shock = randomNormal(mean: 0.0, standardDeviation: weeklyVol)
+        // combinedWeeklyReturn += shock
 
-/// Aggregates results across all runs to produce stats for each week: Mean, Median, Standard Deviation, etc.
-func aggregateResults(allIterations: [[SimulationData]]) -> [String: [String: Double]] {
-    var stats = [String: [String: Double]]()
-    let totalIters = allIterations.count
-    guard totalIters > 0 else { return stats }
+        // 5) Update BTC price
+        var btcPriceUSD = previousBTCPriceUSD * (1.0 + combinedWeeklyReturn)
+        btcPriceUSD = max(btcPriceUSD, 1.0)
+        let btcPriceEUR = btcPriceUSD / exchangeRateEURUSD
 
-    // Assume all runs have the same number of weeks
-    let weeks = allIterations[0].count
-
-    for i in 0..<weeks {
-        var weekValues = [Double]()
-        for run in allIterations {
-            weekValues.append(run[i].portfolioValueEUR)
+        // Log every 50 weeks
+        if week % 50 == 0 {
+            print(
+                "[Week \(week)] WeeklyReturn = "
+                + String(format: "%.4f", combinedWeeklyReturn)
+                + ", btcPriceUSD = "
+                + String(format: "%.2f", btcPriceUSD)
+            )
         }
-        let meanVal = weekValues.reduce(0, +) / Double(totalIters)
-        let medVal  = calculateMedian(values: weekValues)
-        let stdVal  = calculateStandardDeviation(values: weekValues, mean: meanVal)
-        let p90Val  = calculatePercentile(values: weekValues, percentile: 90)
-        let p10Val  = calculatePercentile(values: weekValues, percentile: 10)
+        
+        // Contribution
+        let contributionEUR = (week <= 52) ? 60.0 : 100.0
+        let fee = contributionEUR * 0.0035
+        let netBTC = (contributionEUR - fee) / btcPriceEUR
+        
+        // Evaluate withdrawals
+        let hypotheticalHoldings = previousBTCHoldings + netBTC
+        let hypotheticalValueEUR = hypotheticalHoldings * btcPriceEUR
+        var withdrawalEUR = 0.0
+        if hypotheticalValueEUR > 60_000 {
+            withdrawalEUR = 200.0
+        } else if hypotheticalValueEUR > 30_000 {
+            withdrawalEUR = 100.0
+        }
+        let withdrawalBTC = withdrawalEUR / btcPriceEUR
+        
+        let netHoldings = max(0.0, hypotheticalHoldings - withdrawalBTC)
+        let portfolioValEUR = netHoldings * btcPriceEUR
 
-        stats["Week \(i+1)"] = [
-            "Mean": meanVal,
-            "Median": medVal,
-            "Standard Deviation": stdVal,
-            "90th Percentile": p90Val,
-            "10th Percentile": p10Val
-        ]
+        // Append
+        results.append(
+            SimulationData(
+                week: week,
+                startingBTC: previousBTCHoldings,
+                netBTCHoldings: netHoldings,
+                btcPriceUSD: btcPriceUSD,
+                btcPriceEUR: btcPriceEUR,
+                portfolioValueEUR: portfolioValEUR,
+                contributionEUR: contributionEUR,
+                transactionFeeEUR: fee,
+                netContributionBTC: netBTC,
+                withdrawalEUR: withdrawalEUR
+            )
+        )
+        
+        previousBTCPriceUSD = btcPriceUSD
+        previousBTCHoldings = netHoldings
     }
-    return stats
+
+    return results
+}
+
+/// Helper function to pick a random return from an array,
+/// using seeded randomness if it’s enabled.
+private func pickRandomReturn(from arr: [Double]) -> Double {
+    guard !arr.isEmpty else { return 0.0 }
+    if useSeededRandom, var rng = seededGen {
+        let val = arr.randomElement(using: &rng) ?? 0.0
+        seededGen = rng
+        return val
+    } else {
+        return arr.randomElement() ?? 0.0
+    }
+}
+
+// MARK: - runMonteCarloSimulationsWithProgress
+func runMonteCarloSimulationsWithProgress(
+    annualCAGR: Double,
+    annualVolatility: Double,
+    correlationWithSP500: Double,
+    exchangeRateEURUSD: Double,
+    totalWeeks: Int,
+    iterations: Int,
+    progressCallback: @escaping (Int) -> Void
+) -> ([SimulationData], [[SimulationData]]) {
+
+    // If you want to use seeded randomness internally for testing, do so here:
+    // setRandomSeed(12345)
+    
+    var allRuns = [[SimulationData]]()
+
+    for i in 0..<iterations {
+        let simRun = runOneFullSimulation(
+            annualCAGR: annualCAGR,
+            annualVolatility: annualVolatility,
+            exchangeRateEURUSD: exchangeRateEURUSD,
+            totalWeeks: totalWeeks
+        )
+        allRuns.append(simRun)
+        progressCallback(i + 1)
+    }
+
+    // sort final results by last week's portfolioValue
+    var finalValues = allRuns.map { ($0.last?.portfolioValueEUR ?? 0.0, $0) }
+    finalValues.sort { $0.0 < $1.0 }
+
+    // median
+    let medianRun = finalValues[finalValues.count / 2].1
+    return (medianRun, allRuns)
 }

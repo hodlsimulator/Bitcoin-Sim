@@ -842,6 +842,7 @@ struct ContentView: View {
     }
 
     private func runSimulation() {
+        
         isCancelled = false
         isLoading = true
         monteCarloResults = []
@@ -927,13 +928,15 @@ struct ContentView: View {
         return (medianRun, allRuns)
     }
 
-    /// Gently dampen large returns to avoid explosive outliers.
-    func dampenArctan(_ rawReturn: Double) -> Double {
-        // 'factor' controls how aggressively to flatten extremes.
-        let factor = 5.5
-        let scaled = rawReturn * factor
-        let flattened = (2.0 / Double.pi) * atan(scaled)
-        return flattened
+    private func randomNormal(
+        mean: Double,
+        standardDeviation: Double
+    ) -> Double {
+        // Box-Muller
+        let u1 = Double.random(in: 0..<1)       // unseeded
+        let u2 = Double.random(in: 0..<1)       // unseeded
+        let z0 = sqrt(-2.0 * log(u1)) * cos(2.0 * .pi * u2)
+        return z0 * standardDeviation + mean
     }
 
     func runOneFullSimulation(
@@ -943,7 +946,7 @@ struct ContentView: View {
         totalWeeks: Int
     ) -> [SimulationData] {
         
-        // Just define a local flag here if you want weighted sampling:
+        // If `true`, we pick from weightedBTCWeeklyReturns; else from historicalBTCWeeklyReturns.
         let useWeightedSampling = false
 
         // Hardcoded starting weeks 1..7
@@ -1034,11 +1037,9 @@ struct ContentView: View {
             )
         ]
         
-        // Base weekly growth from annual CAGR
+        // Convert annual CAGR to a weekly growth rate
         let lastHardcoded = results.last
         let baseWeeklyGrowth = pow(1.0 + annualCAGR, 1.0 / 52.0) - 1.0
-
-        // If you ever want random shocks, you can use annualVolatility
         let weeklyVol = annualVolatility / sqrt(52.0)
 
         var previousBTCPriceUSD = lastHardcoded?.btcPriceUSD ?? 76_532.03
@@ -1046,26 +1047,28 @@ struct ContentView: View {
 
         for week in 8...totalWeeks {
             
-            // 1) Select a weekly return from CSV
+            // 1) Pick a weekly return from our CSV array
             let btcArr = useWeightedSampling ? weightedBTCWeeklyReturns : historicalBTCWeeklyReturns
-            let histReturn = btcArr.isEmpty ? 0.0 : btcArr.randomElement() ?? 0.0
-            
+            let histReturn = btcArr.randomElement() ?? 0.0  // purely unseeded
+
             // 2) Dampen extremes
             let dampenedReturn = dampenArctan(histReturn)
-            
+
             // 3) Combine with CAGR
             var combinedWeeklyReturn = dampenedReturn + baseWeeklyGrowth
+
+            // 4) Optional random shock
+            if weeklyVol > 0.0 {
+                let shock = randomNormal(mean: 0.0, standardDeviation: weeklyVol)
+                combinedWeeklyReturn += shock
+            }
             
-            // Optional random shock:
-            // let shock = randomNormal(mean: 0.0, standardDeviation: weeklyVol)
-            // combinedWeeklyReturn += shock
-            
-            // 4) BTC price update
+            // 5) Calculate new BTC price
             var btcPriceUSD = previousBTCPriceUSD * (1.0 + combinedWeeklyReturn)
             btcPriceUSD = max(btcPriceUSD, 1.0)
             let btcPriceEUR = btcPriceUSD / exchangeRateEURUSD
 
-            // Log every 50 weeks (avoid messy quoting)
+            // Log every 50 weeks
             if week % 50 == 0 {
                 print(
                     "[Week \(week)] WeeklyReturn = "
@@ -1075,16 +1078,15 @@ struct ContentView: View {
                 )
             }
             
-            // Contribution
+            // Contribution each week
             let contributionEUR = (week <= 52) ? 60.0 : 100.0
             let fee = contributionEUR * 0.0035
             let netBTC = (contributionEUR - fee) / btcPriceEUR
             
-            // Hypothetical holdings
+            // Evaluate withdrawal logic
             let hypotheticalHoldings = previousBTCHoldings + netBTC
             let hypotheticalValueEUR = hypotheticalHoldings * btcPriceEUR
             
-            // Minimal withdrawals
             var withdrawalEUR = 0.0
             if hypotheticalValueEUR > 60_000 {
                 withdrawalEUR = 200.0
@@ -1096,7 +1098,7 @@ struct ContentView: View {
             let netHoldings = max(0.0, hypotheticalHoldings - withdrawalBTC)
             let portfolioValEUR = netHoldings * btcPriceEUR
             
-            // Append results
+            // Append the new week’s data
             results.append(
                 SimulationData(
                     week: week,
@@ -1206,14 +1208,5 @@ struct ContentView: View {
         let randomBTC = Double.random(in: -0.05...0.05)
         let randomSP = Double.random(in: -0.02...0.03)
         return (randomBTC, randomSP)
-    }
-
-    // Simple normal distribution generator
-    func randomNormal(mean: Double, standardDeviation: Double) -> Double {
-        // Box-Muller
-        let u1 = Double.random(in: 0..<1)
-        let u2 = Double.random(in: 0..<1)
-        let z0 = sqrt(-2.0 * log(u1)) * cos(2.0 * .pi * u2)
-        return z0 * standardDeviation + mean
     }
 }

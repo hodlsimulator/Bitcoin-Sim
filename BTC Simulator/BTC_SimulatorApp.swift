@@ -12,7 +12,7 @@ struct BTCMoteCarloApp: App {
 
     init() {
         // Load your CSVs here
-        loadAllHistoricalData()
+        // loadAllHistoricalData()
     }
 
     var body: some Scene {
