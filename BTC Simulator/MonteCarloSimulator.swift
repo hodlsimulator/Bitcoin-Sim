@@ -112,12 +112,40 @@ private let popEndWeek   = 920
 private let maxPopDrop   = -0.005 // -0.5% weekly once fully ramped
 
 // 5) Stablecoin Meltdown
-// Different from stablecoin shift (which was bullish for BTC).
-// This meltdown might spook the entire crypto space:
 private let useStablecoinMeltdown = true
 private let meltdownStartWeek = 320
 private let meltdownEndWeek   = 340
 private let maxMeltdownDrop   = -0.001
+
+// MARK: - NEW BEARISH FACTORS (all default to `false`)
+
+// 6) Black Swan Events
+// Example: big sudden drops on specific weeks.
+private let useBlackSwan = true
+/// Weeks where a black swan might occur
+private let blackSwanWeeks = [150, 500]
+/// Impact each time it happens
+private let blackSwanDrop = -0.60
+
+// 7) Bear Market Conditions
+// Example: a multi-week negative drift.
+private let useBearMarket = true
+private let bearStartWeek = 600
+private let bearEndWeek   = 800
+private let bearWeeklyDrift = -0.01  // -0.1% per week
+
+// 8) Declining ARR / Maturing Market
+// We linearly apply an additional negative drift from 0 to -2% by the end.
+private let useMaturingMarket = true
+private let maturingStartWeek = 50
+private let maturingEndWeek   = 1040
+private let maxMaturingDrop   = -0.015
+
+// 9) Recession / Macro Crash (any other negative scenario)
+private let useRecession = true
+private let recessionStartWeek = 250
+private let recessionEndWeek   = 400
+private let maxRecessionDrop   = -0.004  // -0.5% weekly once fully ramped
 
 // MARK: - Private Seeded Generator
 private struct SeededGenerator: RandomNumberGenerator {
@@ -396,7 +424,6 @@ func runOneFullSimulation(
         }
 
         // NEGATIVE FACTORS:
-
         // 15) Regulatory clampdown
         if useRegClampdown {
             if week >= clampStartWeek && week <= clampEndWeek {
@@ -437,7 +464,7 @@ func runOneFullSimulation(
             }
         }
 
-        // 19) Stablecoin meltdown (negative, spooks entire market)
+        // 19) Stablecoin meltdown
         if useStablecoinMeltdown {
             if week >= meltdownStartWeek && week <= meltdownEndWeek {
                 let progress = Double(week - meltdownStartWeek) / Double(meltdownEndWeek - meltdownStartWeek)
@@ -452,12 +479,49 @@ func runOneFullSimulation(
         // let shock = randomNormal(mean: 0.0, standardDeviation: weeklyVol)
         // combinedWeeklyReturn += shock
 
-        // 21) Update BTC price
+        // 21) Bear Market Conditions
+        if useBearMarket {
+            if week >= bearStartWeek && week <= bearEndWeek {
+                combinedWeeklyReturn += bearWeeklyDrift
+            }
+        }
+
+        // 22) Black Swan Events (big sudden drops on specific weeks)
+        if useBlackSwan {
+            if blackSwanWeeks.contains(week) {
+                combinedWeeklyReturn += blackSwanDrop
+            }
+        }
+
+        // 23) Declining ARR / Maturing Market
+        if useMaturingMarket {
+            if week >= maturingStartWeek && week <= maturingEndWeek {
+                let progress = Double(week - maturingStartWeek) / Double(maturingEndWeek - maturingStartWeek)
+                // This gradually moves from 0 to -0.02
+                let maturingFactor = maxMaturingDrop * progress
+                combinedWeeklyReturn += maturingFactor
+            } else if week > maturingEndWeek {
+                combinedWeeklyReturn += maxMaturingDrop
+            }
+        }
+
+        // 24) Recession / Macro Crash
+        if useRecession {
+            if week >= recessionStartWeek && week <= recessionEndWeek {
+                let progress = Double(week - recessionStartWeek) / Double(recessionEndWeek - recessionStartWeek)
+                let recessionFactor = maxRecessionDrop * progress
+                combinedWeeklyReturn += recessionFactor
+            } else if week > recessionEndWeek {
+                combinedWeeklyReturn += maxRecessionDrop
+            }
+        }
+
+        // 25) Update BTC price
         var btcPriceUSD = previousBTCPriceUSD * (1.0 + combinedWeeklyReturn)
         btcPriceUSD = max(btcPriceUSD, 1.0)
         let btcPriceEUR = btcPriceUSD / exchangeRateEURUSD
 
-        // Log every 50 weeks
+        // Log every 50 weeks (for convenience)
         if week % 50 == 0 {
             print(
                 "[Week \(week)] WeeklyReturn = "
@@ -467,12 +531,12 @@ func runOneFullSimulation(
             )
         }
         
-        // 22) Contribution
+        // 26) Contribution
         let contributionEUR = (week <= 52) ? 60.0 : 100.0
         let fee = contributionEUR * 0.0035
         let netBTC = (contributionEUR - fee) / btcPriceEUR
         
-        // 23) Withdrawals
+        // 27) Withdrawals
         let hypotheticalHoldings = previousBTCHoldings + netBTC
         let hypotheticalValueEUR = hypotheticalHoldings * btcPriceEUR
         var withdrawalEUR = 0.0
