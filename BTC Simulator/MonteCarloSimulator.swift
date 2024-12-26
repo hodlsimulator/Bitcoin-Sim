@@ -164,9 +164,11 @@ private struct SeededGenerator: RandomNumberGenerator {
 /// If you want a locked seed for deterministic runs, call this internally.
 private func setRandomSeed(_ seed: UInt64?) {
     if let s = seed {
+        print("[SEED] setRandomSeed was called with \(s) – locking seed.")
         useSeededRandom = true
         seededGen = SeededGenerator(seed: s)
     } else {
+        print("[SEED] setRandomSeed was called with nil – random seed.")
         useSeededRandom = false
         seededGen = nil
     }
@@ -181,9 +183,13 @@ func dampenArctan(_ rawReturn: Double) -> Double {
 }
 
 // MARK: - Historical Arrays
+/// We'll only use these two arrays, populated from "Bitcoin Historical Data" and "SP500 Historical Data" CSVs.
 var historicalBTCWeeklyReturns: [Double] = []
 var sp500WeeklyReturns: [Double] = []
+
+/// If you don't have or need weighted sampling, you can remove or ignore this.
 var weightedBTCWeeklyReturns: [Double] = []
+
 
 // MARK: - runOneFullSimulation
 func runOneFullSimulation(
@@ -497,7 +503,7 @@ func runOneFullSimulation(
         if useMaturingMarket {
             if week >= maturingStartWeek && week <= maturingEndWeek {
                 let progress = Double(week - maturingStartWeek) / Double(maturingEndWeek - maturingStartWeek)
-                // This gradually moves from 0 to -0.02
+                // This gradually moves from 0 to -0.02 (or -0.015, in your code)
                 let maturingFactor = maxMaturingDrop * progress
                 combinedWeeklyReturn += maturingFactor
             } else if week > maturingEndWeek {
@@ -596,7 +602,7 @@ func runMonteCarloSimulationsWithProgress(
 ) -> ([SimulationData], [[SimulationData]]) {
 
     // If you want a deterministic seed:
-    // setRandomSeed(12345)
+    setRandomSeed(nil)
 
     var allRuns = [[SimulationData]]()
 

@@ -842,7 +842,10 @@ struct ContentView: View {
     }
 
     private func runSimulation() {
-        
+        // 1) Load the CSV arrays before running
+        historicalBTCWeeklyReturns = loadBTCWeeklyReturns()
+        sp500WeeklyReturns         = loadSP500WeeklyReturns()
+
         isCancelled = false
         isLoading = true
         monteCarloResults = []
@@ -860,7 +863,6 @@ struct ContentView: View {
             let userInputCAGR = self.inputManager.getParsedAnnualCAGR() / 100.0
             let userInputVolatility = (Double(self.inputManager.annualVolatility) ?? 1.0) / 100.0
 
-            // Single approach: no "fake" data
             let (medianRun, allIterations) = runMonteCarloSimulationsWithProgress(
                 annualCAGR: userInputCAGR,
                 annualVolatility: userInputVolatility,
@@ -878,12 +880,10 @@ struct ContentView: View {
 
             DispatchQueue.main.async {
                 self.isLoading = false
-                // medianRun is already weeks 1..1040
                 self.monteCarloResults = medianRun
                 self.isSimulationRun = true
             }
 
-            // If you want to process all iterations in background
             DispatchQueue.global(qos: .background).async {
                 self.processAllResults(allIterations)
             }
@@ -891,7 +891,7 @@ struct ContentView: View {
     }
 
     /// The cohesive approach for N runs
-    func runMonteCarloSimulationsWithProgress(
+    func runLocalMonteCarloSimulationsWithProgress(
         annualCAGR: Double,
         annualVolatility: Double,
         correlationWithSP500: Double = 0.0,
@@ -939,7 +939,7 @@ struct ContentView: View {
         return z0 * standardDeviation + mean
     }
 
-    func runOneFullSimulationLocal(
+    func runLocalOneFullSimulation(
         annualCAGR: Double,
         annualVolatility: Double,
         exchangeRateEURUSD: Double,
