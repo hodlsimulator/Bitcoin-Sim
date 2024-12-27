@@ -8,266 +8,159 @@
 import SwiftUI
 
 class SimulationSettings: ObservableObject {
-    // Add these seed properties if you wish to store them in UserDefaults as well
+    // Add these seed properties if you wish to store them in UserDefaults
     @Published var useRandomSeed: Bool = false
     @Published var seedValue: UInt64 = 12345
-    
+
     // MARK: - Bullish Toggles
-    
     @Published var useHalving: Bool {
-        didSet {
-            UserDefaults.standard.set(useHalving, forKey: "useHalving")
-        }
+        didSet { UserDefaults.standard.set(useHalving, forKey: "useHalving") }
     }
-    
     @Published var halvingBump: Double {
-        didSet {
-            UserDefaults.standard.set(halvingBump, forKey: "halvingBump")
-        }
+        didSet { UserDefaults.standard.set(halvingBump, forKey: "halvingBump") }
     }
-    
+
     @Published var useInstitutionalDemand: Bool {
-        didSet {
-            UserDefaults.standard.set(useInstitutionalDemand, forKey: "useInstitutionalDemand")
-        }
+        didSet { UserDefaults.standard.set(useInstitutionalDemand, forKey: "useInstitutionalDemand") }
     }
-    
     @Published var maxDemandBoost: Double {
-        didSet {
-            UserDefaults.standard.set(maxDemandBoost, forKey: "maxDemandBoost")
-        }
+        didSet { UserDefaults.standard.set(maxDemandBoost, forKey: "maxDemandBoost") }
     }
-    
+
     @Published var useCountryAdoption: Bool {
-        didSet {
-            UserDefaults.standard.set(useCountryAdoption, forKey: "useCountryAdoption")
-        }
+        didSet { UserDefaults.standard.set(useCountryAdoption, forKey: "useCountryAdoption") }
     }
-    
     @Published var maxCountryAdBoost: Double {
-        didSet {
-            UserDefaults.standard.set(maxCountryAdBoost, forKey: "maxCountryAdBoost")
-        }
+        didSet { UserDefaults.standard.set(maxCountryAdBoost, forKey: "maxCountryAdBoost") }
     }
 
     @Published var useRegulatoryClarity: Bool {
-        didSet {
-            UserDefaults.standard.set(useRegulatoryClarity, forKey: "useRegulatoryClarity")
-        }
+        didSet { UserDefaults.standard.set(useRegulatoryClarity, forKey: "useRegulatoryClarity") }
     }
-    
     @Published var maxClarityBoost: Double {
-        didSet {
-            UserDefaults.standard.set(maxClarityBoost, forKey: "maxClarityBoost")
-        }
+        didSet { UserDefaults.standard.set(maxClarityBoost, forKey: "maxClarityBoost") }
     }
-    
+
     @Published var useEtfApproval: Bool {
-        didSet {
-            UserDefaults.standard.set(useEtfApproval, forKey: "useEtfApproval")
-        }
+        didSet { UserDefaults.standard.set(useEtfApproval, forKey: "useEtfApproval") }
     }
-    
     @Published var maxEtfBoost: Double {
-        didSet {
-            UserDefaults.standard.set(maxEtfBoost, forKey: "maxEtfBoost")
-        }
+        didSet { UserDefaults.standard.set(maxEtfBoost, forKey: "maxEtfBoost") }
     }
-    
+
     @Published var useTechBreakthrough: Bool {
-        didSet {
-            UserDefaults.standard.set(useTechBreakthrough, forKey: "useTechBreakthrough")
-        }
+        didSet { UserDefaults.standard.set(useTechBreakthrough, forKey: "useTechBreakthrough") }
     }
-    
     @Published var maxTechBoost: Double {
-        didSet {
-            UserDefaults.standard.set(maxTechBoost, forKey: "maxTechBoost")
-        }
+        didSet { UserDefaults.standard.set(maxTechBoost, forKey: "maxTechBoost") }
     }
-    
+
     @Published var useScarcityEvents: Bool {
-        didSet {
-            UserDefaults.standard.set(useScarcityEvents, forKey: "useScarcityEvents")
-        }
+        didSet { UserDefaults.standard.set(useScarcityEvents, forKey: "useScarcityEvents") }
     }
-    
     @Published var maxScarcityBoost: Double {
-        didSet {
-            UserDefaults.standard.set(maxScarcityBoost, forKey: "maxScarcityBoost")
-        }
+        didSet { UserDefaults.standard.set(maxScarcityBoost, forKey: "maxScarcityBoost") }
     }
-    
+
     @Published var useGlobalMacroHedge: Bool {
-        didSet {
-            UserDefaults.standard.set(useGlobalMacroHedge, forKey: "useGlobalMacroHedge")
-        }
+        didSet { UserDefaults.standard.set(useGlobalMacroHedge, forKey: "useGlobalMacroHedge") }
     }
-    
     @Published var maxMacroBoost: Double {
-        didSet {
-            UserDefaults.standard.set(maxMacroBoost, forKey: "maxMacroBoost")
-        }
+        didSet { UserDefaults.standard.set(maxMacroBoost, forKey: "maxMacroBoost") }
     }
-    
+
     @Published var useStablecoinShift: Bool {
-        didSet {
-            UserDefaults.standard.set(useStablecoinShift, forKey: "useStablecoinShift")
-        }
+        didSet { UserDefaults.standard.set(useStablecoinShift, forKey: "useStablecoinShift") }
     }
-    
     @Published var maxStablecoinBoost: Double {
-        didSet {
-            UserDefaults.standard.set(maxStablecoinBoost, forKey: "maxStablecoinBoost")
-        }
+        didSet { UserDefaults.standard.set(maxStablecoinBoost, forKey: "maxStablecoinBoost") }
     }
-    
+
     @Published var useDemographicAdoption: Bool {
-        didSet {
-            UserDefaults.standard.set(useDemographicAdoption, forKey: "useDemographicAdoption")
-        }
+        didSet { UserDefaults.standard.set(useDemographicAdoption, forKey: "useDemographicAdoption") }
     }
-    
     @Published var maxDemoBoost: Double {
-        didSet {
-            UserDefaults.standard.set(maxDemoBoost, forKey: "maxDemoBoost")
-        }
+        didSet { UserDefaults.standard.set(maxDemoBoost, forKey: "maxDemoBoost") }
     }
-    
+
     @Published var useAltcoinFlight: Bool {
-        didSet {
-            UserDefaults.standard.set(useAltcoinFlight, forKey: "useAltcoinFlight")
-        }
+        didSet { UserDefaults.standard.set(useAltcoinFlight, forKey: "useAltcoinFlight") }
     }
-    
     @Published var maxAltcoinBoost: Double {
-        didSet {
-            UserDefaults.standard.set(maxAltcoinBoost, forKey: "maxAltcoinBoost")
-        }
+        didSet { UserDefaults.standard.set(maxAltcoinBoost, forKey: "maxAltcoinBoost") }
     }
-    
+
     @Published var useAdoptionFactor: Bool {
-        didSet {
-            UserDefaults.standard.set(useAdoptionFactor, forKey: "useAdoptionFactor")
-        }
+        didSet { UserDefaults.standard.set(useAdoptionFactor, forKey: "useAdoptionFactor") }
     }
-    
     @Published var adoptionBaseFactor: Double {
-        didSet {
-            UserDefaults.standard.set(adoptionBaseFactor, forKey: "adoptionBaseFactor")
-        }
+        didSet { UserDefaults.standard.set(adoptionBaseFactor, forKey: "adoptionBaseFactor") }
     }
-    
+
     // MARK: - Bearish Toggles
-    
     @Published var useRegClampdown: Bool {
-        didSet {
-            UserDefaults.standard.set(useRegClampdown, forKey: "useRegClampdown")
-        }
+        didSet { UserDefaults.standard.set(useRegClampdown, forKey: "useRegClampdown") }
     }
-    
     @Published var maxClampDown: Double {
-        didSet {
-            UserDefaults.standard.set(maxClampDown, forKey: "maxClampDown")
-        }
+        didSet { UserDefaults.standard.set(maxClampDown, forKey: "maxClampDown") }
     }
-    
+
     @Published var useCompetitorCoin: Bool {
-        didSet {
-            UserDefaults.standard.set(useCompetitorCoin, forKey: "useCompetitorCoin")
-        }
+        didSet { UserDefaults.standard.set(useCompetitorCoin, forKey: "useCompetitorCoin") }
     }
-    
     @Published var maxCompetitorBoost: Double {
-        didSet {
-            UserDefaults.standard.set(maxCompetitorBoost, forKey: "maxCompetitorBoost")
-        }
+        didSet { UserDefaults.standard.set(maxCompetitorBoost, forKey: "maxCompetitorBoost") }
     }
-    
+
     @Published var useSecurityBreach: Bool {
-        didSet {
-            UserDefaults.standard.set(useSecurityBreach, forKey: "useSecurityBreach")
-        }
+        didSet { UserDefaults.standard.set(useSecurityBreach, forKey: "useSecurityBreach") }
     }
-    
     @Published var breachImpact: Double {
-        didSet {
-            UserDefaults.standard.set(breachImpact, forKey: "breachImpact")
-        }
+        didSet { UserDefaults.standard.set(breachImpact, forKey: "breachImpact") }
     }
-    
+
     @Published var useBubblePop: Bool {
-        didSet {
-            UserDefaults.standard.set(useBubblePop, forKey: "useBubblePop")
-        }
+        didSet { UserDefaults.standard.set(useBubblePop, forKey: "useBubblePop") }
     }
-    
     @Published var maxPopDrop: Double {
-        didSet {
-            UserDefaults.standard.set(maxPopDrop, forKey: "maxPopDrop")
-        }
+        didSet { UserDefaults.standard.set(maxPopDrop, forKey: "maxPopDrop") }
     }
-    
+
     @Published var useStablecoinMeltdown: Bool {
-        didSet {
-            UserDefaults.standard.set(useStablecoinMeltdown, forKey: "useStablecoinMeltdown")
-        }
+        didSet { UserDefaults.standard.set(useStablecoinMeltdown, forKey: "useStablecoinMeltdown") }
     }
-    
     @Published var maxMeltdownDrop: Double {
-        didSet {
-            UserDefaults.standard.set(maxMeltdownDrop, forKey: "maxMeltdownDrop")
-        }
+        didSet { UserDefaults.standard.set(maxMeltdownDrop, forKey: "maxMeltdownDrop") }
     }
-    
+
     @Published var useBlackSwan: Bool {
-        didSet {
-            UserDefaults.standard.set(useBlackSwan, forKey: "useBlackSwan")
-        }
+        didSet { UserDefaults.standard.set(useBlackSwan, forKey: "useBlackSwan") }
     }
-    
     @Published var blackSwanDrop: Double {
-        didSet {
-            UserDefaults.standard.set(blackSwanDrop, forKey: "blackSwanDrop")
-        }
+        didSet { UserDefaults.standard.set(blackSwanDrop, forKey: "blackSwanDrop") }
     }
-    
+
     @Published var useBearMarket: Bool {
-        didSet {
-            UserDefaults.standard.set(useBearMarket, forKey: "useBearMarket")
-        }
+        didSet { UserDefaults.standard.set(useBearMarket, forKey: "useBearMarket") }
     }
-    
     @Published var bearWeeklyDrift: Double {
-        didSet {
-            UserDefaults.standard.set(bearWeeklyDrift, forKey: "bearWeeklyDrift")
-        }
+        didSet { UserDefaults.standard.set(bearWeeklyDrift, forKey: "bearWeeklyDrift") }
     }
-    
+
     @Published var useMaturingMarket: Bool {
-        didSet {
-            UserDefaults.standard.set(useMaturingMarket, forKey: "useMaturingMarket")
-        }
+        didSet { UserDefaults.standard.set(useMaturingMarket, forKey: "useMaturingMarket") }
     }
-    
     @Published var maxMaturingDrop: Double {
-        didSet {
-            UserDefaults.standard.set(maxMaturingDrop, forKey: "maxMaturingDrop")
-        }
+        didSet { UserDefaults.standard.set(maxMaturingDrop, forKey: "maxMaturingDrop") }
     }
-    
+
     @Published var useRecession: Bool {
-        didSet {
-            UserDefaults.standard.set(useRecession, forKey: "useRecession")
-        }
+        didSet { UserDefaults.standard.set(useRecession, forKey: "useRecession") }
     }
-    
     @Published var maxRecessionDrop: Double {
-        didSet {
-            UserDefaults.standard.set(maxRecessionDrop, forKey: "maxRecessionDrop")
-        }
+        didSet { UserDefaults.standard.set(maxRecessionDrop, forKey: "maxRecessionDrop") }
     }
-    
+
     // MARK: - Init
     init() {
         // 1) Read from UserDefaults into local vars
@@ -354,7 +247,7 @@ class SimulationSettings: ObservableObject {
         let storedUseRecession    = UserDefaults.standard.object(forKey: "useRecession") as? Bool ?? true
         let storedMaxRecession    = UserDefaults.standard.double(forKey: "maxRecessionDrop")
         let finalMaxRecession     = (storedMaxRecession == 0) ? -0.004 : storedMaxRecession
-
+        
         // 2) Assign local vars to the @Published properties
         self.useHalving = storedUseHalving
         self.halvingBump = finalHalvingBump
@@ -422,7 +315,6 @@ class SimulationSettings: ObservableObject {
     
     // MARK: - Restore Defaults
     func restoreDefaults() {
-        // Revert toggles & sliders to your original baseline
         useHalving = true
         halvingBump = 0.20
         

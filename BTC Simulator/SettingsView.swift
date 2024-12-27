@@ -11,11 +11,10 @@ import SwiftUI
 struct PressableDestructiveButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .foregroundColor(.red) // The text colour for destructive
-            // Scale down and lower opacity if pressed
+            .foregroundColor(.red)
             .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
             .opacity(configuration.isPressed ? 0.7 : 1.0)
-            .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
+            .animation(.none, value: configuration.isPressed) // no delay
     }
 }
 
@@ -74,7 +73,7 @@ struct SettingsView: View {
     var body: some View {
         Form {
             // BULLISH FACTORS
-            Section("BULLISH FACTORS") {
+            Section {
                 FactorToggleRow(
                     iconName: "globe.europe.africa",
                     title: "Halving",
@@ -159,11 +158,16 @@ struct SettingsView: View {
                     sliderValue: $simSettings.adoptionBaseFactor,
                     sliderRange: 0.0...0.0001
                 )
+            } header: {
+                Text("Bullish Factors")
+                    .font(.title3)
+                    .foregroundColor(.white)
+                    .textCase(nil)
             }
             .listRowBackground(Color(white: 0.15))
 
             // BEARISH FACTORS
-            Section("BEARISH FACTORS") {
+            Section {
                 FactorToggleRow(
                     iconName: "hand.raised.slash",
                     title: "Regulatory Clampdown",
@@ -227,6 +231,11 @@ struct SettingsView: View {
                     sliderValue: $simSettings.maxRecessionDrop,
                     sliderRange: -0.01 ... 0.0
                 )
+            } header: {
+                Text("Bearish Factors")
+                    .font(.title3)
+                    .foregroundColor(.white)
+                    .textCase(nil)
             }
             .listRowBackground(Color(white: 0.15))
 
@@ -235,7 +244,7 @@ struct SettingsView: View {
                 Button("Restore Defaults") {
                     simSettings.restoreDefaults()
                 }
-                .buttonStyle(PressableDestructiveButtonStyle()) // Pressing effect
+                .buttonStyle(PressableDestructiveButtonStyle())
             }
             .listRowBackground(Color(white: 0.15))
         }
@@ -243,7 +252,6 @@ struct SettingsView: View {
         .scrollContentBackground(.hidden)
         .background(Color(white: 0.12))
         .environment(\.colorScheme, .dark)
-
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.large)
     }

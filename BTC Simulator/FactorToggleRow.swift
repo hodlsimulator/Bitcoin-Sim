@@ -11,63 +11,53 @@ import SwiftUI
 ///  - (Optional) iconName: for an SF Symbol
 ///  - A title
 ///  - A toggle (on the same line as the title)
-///  - A slider + numeric readout below, if toggled on
+///  - A slider + numeric readout below, greyed out if toggle is off
 ///  - Animate the height changes
-///
-///  The toggle is tinted .orange, and the slider is tinted with #bdd5ea.
 struct FactorToggleRow: View {
-    /// Optional SF Symbol name, e.g. "lock.shield"
     let iconName: String?
-
     let title: String
     @Binding var isOn: Bool
     @Binding var sliderValue: Double
     let sliderRange: ClosedRange<Double>
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // LINE 1: optional icon + title + toggle
-            HStack {
+        // Put opacity on this top-level VStack so everything dims.
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
                 if let iconName = iconName, !iconName.isEmpty {
                     Image(systemName: iconName)
                         .imageScale(.medium)
                         .foregroundColor(.orange)
                 }
-
+                
                 Text(title)
                     .font(.headline)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .layoutPriority(1)
 
                 Spacer()
 
                 Toggle("", isOn: $isOn)
                     .labelsHidden()
-                    .tint(.orange) // Tinted toggle
+                    .tint(.orange)
             }
 
-            // LINE 2: slider row if toggled on
-            if isOn {
-                HStack {
-                    Slider(value: $sliderValue, in: sliderRange)
-                        .tint(
-                            Color(
-                                red: 189.0/255.0,
-                                green: 213.0/255.0,
-                                blue: 234.0/255.0
-                            )
-                        )
+            HStack {
+                Slider(value: $sliderValue, in: sliderRange)
+                    .tint(Color(red: 189/255.0, green: 213/255.0, blue: 234/255.0))
+                    .disabled(!isOn)
 
-                    Text(String(format: "%.4f", sliderValue))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .frame(width: 60, alignment: .trailing)
-                }
-                // If you’d like to remove the slider instantly on toggle-off to avoid
-                // the bubble glitch, use an asymmetric transition. For example:
-                // .transition(.asymmetric(insertion: .opacity, removal: .identity))
+                Text(String(format: "%.4f", sliderValue))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .frame(width: 60, alignment: .trailing)
+                    .disabled(!isOn)
             }
         }
         .padding(.vertical, 4)
-        // Animate height changes
+        // Apply opacity here so icons, text, etc. all get dimmed
+        .opacity(isOn ? 1.0 : 0.5)
         .animation(.easeInOut(duration: 0.4), value: isOn)
     }
 }
