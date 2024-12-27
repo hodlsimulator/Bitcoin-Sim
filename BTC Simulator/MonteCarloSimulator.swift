@@ -6,146 +6,51 @@
 //
 
 import Foundation
+import SwiftUI
 
-// MARK: - Configuration toggles
-/// If `true`, we use weighted sampling of weekly returns.
-/// If `false`, we pick raw weekly returns as is.
-private let useWeightedSampling = false
+// MARK: - Fixed week arrays for certain factors (these remain constants, adjust if needed).
+private let halvingWeeks         = [210, 420, 630, 840]
+private let demandStartWeek      = 0
+private let demandEndWeek        = 1040
+private let countryStartWeek     = 30
+private let countryEndWeek       = 1040
+private let clarityStartWeek     = 0
+private let clarityEndWeek       = 200
+private let etfStartWeek         = 0
+private let etfEndWeek           = 400
+private let techStartWeek        = 500
+private let techEndWeek          = 600
+private let scarcityStartWeek    = 700
+private let scarcityEndWeek      = 1040
+private let macroStartWeek       = 400
+private let macroEndWeek         = 600
+private let stablecoinStartWeek  = 300
+private let stablecoinEndWeek    = 320
+private let demoStartWeek        = 0
+private let demoEndWeek          = 1040
+private let altcoinStartWeek     = 600
+private let altcoinEndWeek       = 620
+private let clampStartWeek       = 200
+private let clampEndWeek         = 220
+private let competitorStartWeek  = 800
+private let competitorEndWeek    = 820
+private let breachWeek           = 350
+private let popStartWeek         = 900
+private let popEndWeek           = 920
+private let meltdownStartWeek    = 320
+private let meltdownEndWeek      = 340
+private let blackSwanWeeks       = [150, 500]
+private let bearStartWeek        = 600
+private let bearEndWeek          = 800
+private let maturingStartWeek    = 50
+private let maturingEndWeek      = 1040
+private let recessionStartWeek   = 250
+private let recessionEndWeek     = 400
 
-/// By default, we do not use a seeded generator (you can enable it if you want).
-private var useSeededRandom = false
-
-/// Our optional seeded generator (only used if `useSeededRandom = true`).
+// MARK: - Weighted sampling / seeded generator toggles (optional)
+private let useWeightedSampling  = false
+private var useSeededRandom      = false
 private var seededGen: SeededGenerator?
-
-// MARK: - Halving config
-private let halvingWeeks = [210, 420, 630, 840]
-private let halvingBump = 0.20
-
-// MARK: - Institutional Demand Factor
-private let useInstitutionalDemand = true
-private let demandStartWeek = 0
-private let demandEndWeek   = 1040
-private let maxDemandBoost  = 0.004
-
-// MARK: - Country Adoption Factor
-private let useCountryAdoption = true
-private let countryStartWeek = 30
-private let countryEndWeek   = 1040
-private let maxCountryAdoptionBoost = 0.0055
-
-// MARK: - Regulatory Clarity Factor
-private let useRegulatoryClarity = true
-private let clarityStartWeek = 0
-private let clarityEndWeek   = 200
-private let maxClarityBoost = 0.0006
-
-// MARK: - ETF Approval Factor
-private let useEtfApproval = true
-private let etfStartWeek   = 0
-private let etfEndWeek     = 400
-private let maxEtfBoost    = 0.0008
-
-// MARK: - Technological Breakthrough Factor
-private let useTechBreakthrough = true
-private let techStartWeek = 500
-private let techEndWeek   = 600
-private let maxTechBoost  = 0.002
-
-// MARK: - Scarcity Event Factor
-private let useScarcityEvents = true
-private let scarcityStartWeek = 700
-private let scarcityEndWeek   = 1040
-private let maxScarcityBoost  = 0.025
-
-// MARK: - Global Macro Hedge Factor
-private let useGlobalMacroHedge = true
-private let macroStartWeek = 400
-private let macroEndWeek   = 600
-private let maxMacroBoost  = 0.0015
-
-// MARK: - Stablecoin Shift Factor
-private let useStablecoinShift = true
-private let stablecoinStartWeek = 300
-private let stablecoinEndWeek   = 320
-private let maxStablecoinBoost  = 0.0006
-
-// MARK: - Demographic Adoption Factor
-private let useDemographicAdoption = true
-private let demoStartWeek = 0
-private let demoEndWeek   = 1040
-private let maxDemoBoost  = 0.001
-
-// MARK: - Altcoin Flight Factor
-private let useAltcoinFlight = true
-private let altcoinStartWeek = 600
-private let altcoinEndWeek   = 620
-private let maxAltcoinBoost  = 0.001
-
-// MARK: - Adoption Factor (Simple Incremental Drift)
-private let useAdoptionFactor = true
-private let adoptionBaseFactor = 0.000005
-
-// MARK: - NEGATIVE FACTORS
-// 1) Regulatory Clampdown
-private let useRegClampdown = true
-private let clampStartWeek  = 200
-private let clampEndWeek    = 220
-private let maxClampDown    = -0.0002  // -0.02% weekly once fully ramped
-
-// 2) Competitor Coin
-private let useCompetitorCoin = true
-private let competitorStartWeek = 800
-private let competitorEndWeek   = 820
-private let maxCompetitorBoost  = -0.0018
-
-// 3) Security Breach / Hack
-// A one-off negative event at a specific week
-private let useSecurityBreach = true
-private let breachWeek        = 350
-private let breachImpact      = -0.1
-
-// 4) Bubble Pop
-private let useBubblePop = true
-private let popStartWeek = 900
-private let popEndWeek   = 920
-private let maxPopDrop   = -0.005 // -0.5% weekly once fully ramped
-
-// 5) Stablecoin Meltdown
-private let useStablecoinMeltdown = true
-private let meltdownStartWeek = 320
-private let meltdownEndWeek   = 340
-private let maxMeltdownDrop   = -0.001
-
-// MARK: - NEW BEARISH FACTORS (all default to `false`)
-
-// 6) Black Swan Events
-// Example: big sudden drops on specific weeks.
-private let useBlackSwan = true
-/// Weeks where a black swan might occur
-private let blackSwanWeeks = [150, 500]
-/// Impact each time it happens
-private let blackSwanDrop = -0.60
-
-// 7) Bear Market Conditions
-// Example: a multi-week negative drift.
-private let useBearMarket = true
-private let bearStartWeek = 600
-private let bearEndWeek   = 800
-private let bearWeeklyDrift = -0.01  // -0.1% per week
-
-// 8) Declining ARR / Maturing Market
-// We linearly apply an additional negative drift from 0 to -2% by the end.
-private let useMaturingMarket = true
-private let maturingStartWeek = 50
-private let maturingEndWeek   = 1040
-private let maxMaturingDrop   = -0.015
-
-// 9) Recession / Macro Crash (any other negative scenario)
-private let useRecession = true
-private let recessionStartWeek = 250
-private let recessionEndWeek   = 400
-private let maxRecessionDrop   = -0.004  // -0.5% weekly once fully ramped
 
 // MARK: - Private Seeded Generator
 private struct SeededGenerator: RandomNumberGenerator {
@@ -183,23 +88,22 @@ func dampenArctan(_ rawReturn: Double) -> Double {
 }
 
 // MARK: - Historical Arrays
-/// We'll only use these two arrays, populated from "Bitcoin Historical Data" and "SP500 Historical Data" CSVs.
+/// Populated from CSVs, presumably elsewhere:
 var historicalBTCWeeklyReturns: [Double] = []
 var sp500WeeklyReturns: [Double] = []
-
-/// If you don't have or need weighted sampling, you can remove or ignore this.
 var weightedBTCWeeklyReturns: [Double] = []
 
-
 // MARK: - runOneFullSimulation
+/// Now uses `SimulationSettings` to decide toggles & parameter values.
 func runOneFullSimulation(
+    settings: SimulationSettings,          // <-- pass toggles & parameters here
     annualCAGR: Double,
     annualVolatility: Double,
     exchangeRateEURUSD: Double,
     totalWeeks: Int
 ) -> [SimulationData] {
     
-    // Hardcoded initial data (weeks 1..7)
+    // Hardcoded initial data (weeks 1..7), adapt as needed
     var results: [SimulationData] = [
         .init(
             week: 1,
@@ -298,7 +202,7 @@ func runOneFullSimulation(
     // Main loop
     for week in 8...totalWeeks {
         
-        // 1) Pick a random weekly return from CSV
+        // 1) Pick a random weekly return
         let btcArr = useWeightedSampling ? weightedBTCWeeklyReturns : historicalBTCWeeklyReturns
         let histReturn = pickRandomReturn(from: btcArr)
         
@@ -309,222 +213,219 @@ func runOneFullSimulation(
         var combinedWeeklyReturn = dampenedReturn + baseWeeklyGrowth
 
         // 3a) Adoption factor (incremental drift)
-        if useAdoptionFactor {
-            let adoptionFactor = adoptionBaseFactor * Double(week - 7)
+        if settings.useAdoptionFactor {
+            // We read the base factor from the settings,
+            // or you might keep it private if you prefer
+            let adoptionFactor = settings.adoptionBaseFactor * Double(week - 7)
             combinedWeeklyReturn += adoptionFactor
         }
         
         // 4) Halving
-        if halvingWeeks.contains(week) {
-            combinedWeeklyReturn += halvingBump
+        if settings.useHalving, halvingWeeks.contains(week) {
+            combinedWeeklyReturn += settings.halvingBump
         }
         
         // 5) Institutional demand
-        if useInstitutionalDemand {
+        if settings.useInstitutionalDemand {
             if week >= demandStartWeek && week <= demandEndWeek {
                 let progress = Double(week - demandStartWeek) / Double(demandEndWeek - demandStartWeek)
-                let demandFactor = maxDemandBoost * progress
+                let demandFactor = settings.maxDemandBoost * progress
                 combinedWeeklyReturn += demandFactor
             } else if week > demandEndWeek {
-                combinedWeeklyReturn += maxDemandBoost
+                combinedWeeklyReturn += settings.maxDemandBoost
             }
         }
         
         // 6) Country adoption
-        if useCountryAdoption {
+        if settings.useCountryAdoption {
             if week >= countryStartWeek && week <= countryEndWeek {
                 let progress = Double(week - countryStartWeek) / Double(countryEndWeek - countryStartWeek)
-                let countryAdoptionFactor = maxCountryAdoptionBoost * progress
+                let countryAdoptionFactor = settings.maxCountryAdBoost * progress
                 combinedWeeklyReturn += countryAdoptionFactor
             } else if week > countryEndWeek {
-                combinedWeeklyReturn += maxCountryAdoptionBoost
+                combinedWeeklyReturn += settings.maxCountryAdBoost
             }
         }
 
         // 7) Regulatory clarity
-        if useRegulatoryClarity {
+        if settings.useRegulatoryClarity {
             if week >= clarityStartWeek && week <= clarityEndWeek {
                 let progress = Double(week - clarityStartWeek) / Double(clarityEndWeek - clarityStartWeek)
-                let clarityFactor = maxClarityBoost * progress
+                let clarityFactor = settings.maxClarityBoost * progress
                 combinedWeeklyReturn += clarityFactor
             } else if week > clarityEndWeek {
-                combinedWeeklyReturn += maxClarityBoost
+                combinedWeeklyReturn += settings.maxClarityBoost
             }
         }
 
         // 8) ETF approval
-        if useEtfApproval {
+        if settings.useEtfApproval {
             if week >= etfStartWeek && week <= etfEndWeek {
                 let progress = Double(week - etfStartWeek) / Double(etfEndWeek - etfStartWeek)
-                let etfFactor = maxEtfBoost * progress
+                let etfFactor = settings.maxEtfBoost * progress
                 combinedWeeklyReturn += etfFactor
             } else if week > etfEndWeek {
-                combinedWeeklyReturn += maxEtfBoost
+                combinedWeeklyReturn += settings.maxEtfBoost
             }
         }
 
         // 9) Tech breakthroughs
-        if useTechBreakthrough {
+        if settings.useTechBreakthrough {
             if week >= techStartWeek && week <= techEndWeek {
                 let progress = Double(week - techStartWeek) / Double(techEndWeek - techStartWeek)
-                let techFactor = maxTechBoost * progress
+                let techFactor = settings.maxTechBoost * progress
                 combinedWeeklyReturn += techFactor
             } else if week > techEndWeek {
-                combinedWeeklyReturn += maxTechBoost
+                combinedWeeklyReturn += settings.maxTechBoost
             }
         }
 
         // 10) Scarcity events
-        if useScarcityEvents {
+        if settings.useScarcityEvents {
             if week >= scarcityStartWeek && week <= scarcityEndWeek {
                 let progress = Double(week - scarcityStartWeek) / Double(scarcityEndWeek - scarcityStartWeek)
-                let scarcityFactor = maxScarcityBoost * progress
+                let scarcityFactor = settings.maxScarcityBoost * progress
                 combinedWeeklyReturn += scarcityFactor
             } else if week > scarcityEndWeek {
-                combinedWeeklyReturn += maxScarcityBoost
+                combinedWeeklyReturn += settings.maxScarcityBoost
             }
         }
 
         // 11) Macro hedge
-        if useGlobalMacroHedge {
+        if settings.useGlobalMacroHedge {
             if week >= macroStartWeek && week <= macroEndWeek {
                 let progress = Double(week - macroStartWeek) / Double(macroEndWeek - macroStartWeek)
-                let macroFactor = maxMacroBoost * progress
+                let macroFactor = settings.maxMacroBoost * progress
                 combinedWeeklyReturn += macroFactor
             } else if week > macroEndWeek {
-                combinedWeeklyReturn += maxMacroBoost
+                combinedWeeklyReturn += settings.maxMacroBoost
             }
         }
 
         // 12) Stablecoin shift
-        if useStablecoinShift {
+        if settings.useStablecoinShift {
             if week >= stablecoinStartWeek && week <= stablecoinEndWeek {
                 let progress = Double(week - stablecoinStartWeek) / Double(stablecoinEndWeek - stablecoinStartWeek)
-                let stablecoinFactor = maxStablecoinBoost * progress
+                let stablecoinFactor = settings.maxStablecoinBoost * progress
                 combinedWeeklyReturn += stablecoinFactor
             } else if week > stablecoinEndWeek {
-                combinedWeeklyReturn += maxStablecoinBoost
+                combinedWeeklyReturn += settings.maxStablecoinBoost
             }
         }
 
         // 13) Demographic adoption
-        if useDemographicAdoption {
+        if settings.useDemographicAdoption {
             if week >= demoStartWeek && week <= demoEndWeek {
                 let progress = Double(week - demoStartWeek) / Double(demoEndWeek - demoStartWeek)
-                let demoFactor = maxDemoBoost * progress
+                let demoFactor = settings.maxDemoBoost * progress
                 combinedWeeklyReturn += demoFactor
             } else if week > demoEndWeek {
-                combinedWeeklyReturn += maxDemoBoost
+                combinedWeeklyReturn += settings.maxDemoBoost
             }
         }
 
         // 14) Altcoin flight
-        if useAltcoinFlight {
+        if settings.useAltcoinFlight {
             if week >= altcoinStartWeek && week <= altcoinEndWeek {
                 let progress = Double(week - altcoinStartWeek) / Double(altcoinEndWeek - altcoinStartWeek)
-                let altFactor = maxAltcoinBoost * progress
+                let altFactor = settings.maxAltcoinBoost * progress
                 combinedWeeklyReturn += altFactor
             } else if week > altcoinEndWeek {
-                combinedWeeklyReturn += maxAltcoinBoost
+                combinedWeeklyReturn += settings.maxAltcoinBoost
             }
         }
 
         // NEGATIVE FACTORS:
         // 15) Regulatory clampdown
-        if useRegClampdown {
+        if settings.useRegClampdown {
             if week >= clampStartWeek && week <= clampEndWeek {
                 let progress = Double(week - clampStartWeek) / Double(clampEndWeek - clampStartWeek)
-                let clampFactor = maxClampDown * progress
+                let clampFactor = settings.maxClampDown * progress
                 combinedWeeklyReturn += clampFactor
             } else if week > clampEndWeek {
-                combinedWeeklyReturn += maxClampDown
+                combinedWeeklyReturn += settings.maxClampDown
             }
         }
 
         // 16) Competitor coin
-        if useCompetitorCoin {
+        if settings.useCompetitorCoin {
             if week >= competitorStartWeek && week <= competitorEndWeek {
                 let progress = Double(week - competitorStartWeek) / Double(competitorEndWeek - competitorStartWeek)
-                let competitorFactor = maxCompetitorBoost * progress
+                let competitorFactor = settings.maxCompetitorBoost * progress
                 combinedWeeklyReturn += competitorFactor
             } else if week > competitorEndWeek {
-                combinedWeeklyReturn += maxCompetitorBoost
+                combinedWeeklyReturn += settings.maxCompetitorBoost
             }
         }
 
         // 17) Security breach (one-off)
-        if useSecurityBreach {
+        if settings.useSecurityBreach {
             if week == breachWeek {
-                combinedWeeklyReturn += breachImpact
+                combinedWeeklyReturn += settings.breachImpact
             }
         }
 
         // 18) Bubble pop
-        if useBubblePop {
+        if settings.useBubblePop {
             if week >= popStartWeek && week <= popEndWeek {
                 let progress = Double(week - popStartWeek) / Double(popEndWeek - popStartWeek)
-                let popFactor = maxPopDrop * progress
+                let popFactor = settings.maxPopDrop * progress
                 combinedWeeklyReturn += popFactor
             } else if week > popEndWeek {
-                combinedWeeklyReturn += maxPopDrop
+                combinedWeeklyReturn += settings.maxPopDrop
             }
         }
 
         // 19) Stablecoin meltdown
-        if useStablecoinMeltdown {
+        if settings.useStablecoinMeltdown {
             if week >= meltdownStartWeek && week <= meltdownEndWeek {
                 let progress = Double(week - meltdownStartWeek) / Double(meltdownEndWeek - meltdownStartWeek)
-                let meltdownFactor = maxMeltdownDrop * progress
+                let meltdownFactor = settings.maxMeltdownDrop * progress
                 combinedWeeklyReturn += meltdownFactor
             } else if week > meltdownEndWeek {
-                combinedWeeklyReturn += maxMeltdownDrop
+                combinedWeeklyReturn += settings.maxMeltdownDrop
             }
         }
         
-        // 20) Optional random shock (volatility)
-        // let shock = randomNormal(mean: 0.0, standardDeviation: weeklyVol)
-        // combinedWeeklyReturn += shock
-
         // 21) Bear Market Conditions
-        if useBearMarket {
+        if settings.useBearMarket {
             if week >= bearStartWeek && week <= bearEndWeek {
-                combinedWeeklyReturn += bearWeeklyDrift
+                combinedWeeklyReturn += settings.bearWeeklyDrift
             }
         }
 
-        // 22) Black Swan Events (big sudden drops on specific weeks)
-        if useBlackSwan {
+        // 22) Black Swan Events
+        if settings.useBlackSwan {
             if blackSwanWeeks.contains(week) {
-                combinedWeeklyReturn += blackSwanDrop
+                combinedWeeklyReturn += settings.blackSwanDrop
             }
         }
 
         // 23) Declining ARR / Maturing Market
-        if useMaturingMarket {
+        if settings.useMaturingMarket {
             if week >= maturingStartWeek && week <= maturingEndWeek {
                 let progress = Double(week - maturingStartWeek) / Double(maturingEndWeek - maturingStartWeek)
-                // This gradually moves from 0 to -0.02 (or -0.015, in your code)
-                let maturingFactor = maxMaturingDrop * progress
+                let maturingFactor = settings.maxMaturingDrop * progress
                 combinedWeeklyReturn += maturingFactor
             } else if week > maturingEndWeek {
-                combinedWeeklyReturn += maxMaturingDrop
+                combinedWeeklyReturn += settings.maxMaturingDrop
             }
         }
 
         // 24) Recession / Macro Crash
-        if useRecession {
+        if settings.useRecession {
             if week >= recessionStartWeek && week <= recessionEndWeek {
                 let progress = Double(week - recessionStartWeek) / Double(recessionEndWeek - recessionStartWeek)
-                let recessionFactor = maxRecessionDrop * progress
+                let recessionFactor = settings.maxRecessionDrop * progress
                 combinedWeeklyReturn += recessionFactor
             } else if week > recessionEndWeek {
-                combinedWeeklyReturn += maxRecessionDrop
+                combinedWeeklyReturn += settings.maxRecessionDrop
             }
         }
 
         // 25) Update BTC price
         var btcPriceUSD = previousBTCPriceUSD * (1.0 + combinedWeeklyReturn)
-        btcPriceUSD = max(btcPriceUSD, 1.0)
+        btcPriceUSD = max(btcPriceUSD, 1.0)  // floor the price at $1
         let btcPriceEUR = btcPriceUSD / exchangeRateEURUSD
 
         // Log every 50 weeks (for convenience)
@@ -559,7 +460,7 @@ func runOneFullSimulation(
         results.append(
             SimulationData(
                 week: week,
-                startingBTC: previousBTCPriceUSD, // or previousBTCHoldings, depending on how you want to track
+                startingBTC: previousBTCPriceUSD,
                 netBTCHoldings: netHoldings,
                 btcPriceUSD: btcPriceUSD,
                 btcPriceEUR: btcPriceEUR,
@@ -592,9 +493,10 @@ private func pickRandomReturn(from arr: [Double]) -> Double {
 
 // MARK: - runMonteCarloSimulationsWithProgress
 func runMonteCarloSimulationsWithProgress(
+    settings: SimulationSettings,     // <-- pass the toggles here, too
     annualCAGR: Double,
     annualVolatility: Double,
-    correlationWithSP500: Double,
+    correlationWithSP500: Double,     // (not used here, presumably in further logic)
     exchangeRateEURUSD: Double,
     totalWeeks: Int,
     iterations: Int,
@@ -608,6 +510,7 @@ func runMonteCarloSimulationsWithProgress(
 
     for i in 0..<iterations {
         let simRun = runOneFullSimulation(
+            settings: settings,           // pass toggles down
             annualCAGR: annualCAGR,
             annualVolatility: annualVolatility,
             exchangeRateEURUSD: exchangeRateEURUSD,

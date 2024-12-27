@@ -14,10 +14,10 @@
             filePath = "BTC Simulator/ContentView.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "980"
-            endingLineNumber = "980"
-            landmarkName = "runLocalOneFullSimulation(annualCAGR:annualVolatility:exchangeRateEURUSD:totalWeeks:)"
-            landmarkType = "7">
+            startingLineNumber = "991"
+            endingLineNumber = "991"
+            landmarkName = "ContentView"
+            landmarkType = "14">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -30,26 +30,10 @@
             filePath = "BTC Simulator/ContentView.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "932"
-            endingLineNumber = "932"
-            landmarkName = "runLocalMonteCarloSimulationsWithProgress(annualCAGR:annualVolatility:correlationWithSP500:exchangeRateEURUSD:totalWeeks:iterations:progressCallback:)"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            uuid = "369A4717-1D61-46FB-9868-A088B7BD60A1"
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "BTC Simulator/MonteCarloSimulator.swift"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "594"
-            endingLineNumber = "594"
-            landmarkName = "runMonteCarloSimulationsWithProgress(annualCAGR:annualVolatility:correlationWithSP500:exchangeRateEURUSD:totalWeeks:iterations:progressCallback:)"
-            landmarkType = "9">
+            startingLineNumber = "942"
+            endingLineNumber = "942"
+            landmarkName = "ContentView"
+            landmarkType = "14">
          </BreakpointContent>
       </BreakpointProxy>
    </Breakpoints>

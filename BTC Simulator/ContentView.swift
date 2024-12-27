@@ -371,82 +371,91 @@ struct ContentView: View {
 
     // MARK: - BODY
         var body: some View {
-            ZStack {
-                // Background ZStack
+            NavigationStack {
                 ZStack {
-                    Color(white: 0.12).ignoresSafeArea()
-                    Color.clear
-                        .contentShape(Rectangle())
-                        .highPriorityGesture(
-                            TapGesture()
-                                .onEnded {
-                                    activeField = nil
-                                }
-                        )
-                }
-                
-                // Main VStack
-                VStack(spacing: 10) {
+                    // Background ZStack
+                    ZStack {
+                        Color(white: 0.12).ignoresSafeArea()
+                        Color.clear
+                            .contentShape(Rectangle())
+                            .highPriorityGesture(
+                                TapGesture()
+                                    .onEnded {
+                                        activeField = nil
+                                    }
+                            )
+                    }
                     
-                    // Gear icon to show settings
-                    HStack {
-                        Spacer()
-                        Button(action: {
-                            showSettings = true
-                        }) {
-                            Image(systemName: "gearshape")
-                                .foregroundColor(.white)
-                                .padding()
+                    // Main content in a ZStack so we can easily overlay additional items
+                    ZStack {
+                        // 1) Conditionally display either the form or the results
+                        if !isSimulationRun {
+                            // -- MAIN SCREEN (parameters form) --
+                            parametersFormView
+
+                            // -- SETTINGS ICON --
+                            VStack {
+                                Spacer()
+                                HStack {
+                                    Spacer()
+                                    Button(action: {
+                                        showSettings = true
+                                    }) {
+                                        Image(systemName: "gearshape")
+                                            .foregroundColor(.white)
+                                            .padding()
+                                    }
+                                    .padding(.trailing, 20)
+                                }
+                                .padding(.bottom, 30)
+                            }
+                        } else {
+                            // -- SIMULATION SCREEN --
+                            simulationResultsView
                         }
                     }
                     
-                    // Conditionally display either the input form or the results
-                    if !isSimulationRun {
-                        parametersFormView
-                    } else {
-                        simulationResultsView
+                    // If there's prior data, show a button to jump to results
+                    if !isSimulationRun && !monteCarloResults.isEmpty {
+                        transitionToResultsButton
+                    }
+                    
+                    // Loading overlay
+                    if isLoading {
+                        loadingOverlay
                     }
                 }
-                
-                // If there's prior data, show a button to jump to results
-                if !isSimulationRun && !monteCarloResults.isEmpty {
-                    transitionToResultsButton
+                // Previously, we had .sheet(isPresented: $showSettings) { ... }, we remove that.
+                // Now we do a push navigation destination:
+                .navigationDestination(isPresented: $showSettings) {
+                    SettingsView()
+                        .environmentObject(simSettings)
                 }
-                
-                // Loading overlay
-                if isLoading {
-                    loadingOverlay
-                }
-            }
-            // Sheet for settings
-            .sheet(isPresented: $showSettings) {
-                SettingsView()
-                    .environmentObject(simSettings)
-            }
-            // On appear logic
-            .onAppear {
-                let savedWeek = UserDefaults.standard.integer(forKey: "lastViewedWeek")
-                if savedWeek != 0 {
-                    lastViewedWeek = savedWeek
-                }
-                let savedPage = UserDefaults.standard.integer(forKey: "lastViewedPage")
-                if savedPage < columns.count {
-                    lastViewedPage = savedPage
-                    currentPage = savedPage
-                } else if let usdIndex = columns.firstIndex(where: { $0.0 == "BTC Price USD" }) {
-                    currentPage = usdIndex
-                    lastViewedPage = usdIndex
-                }
-                
-                // Decide whether to show the form or the simulation
-                if monteCarloResults.isEmpty {
-                    isSimulationRun = false
-                } else {
-                    isSimulationRun = true
+                // On appear logic
+                .onAppear {
+                    let savedWeek = UserDefaults.standard.integer(forKey: "lastViewedWeek")
+                    if savedWeek != 0 {
+                        lastViewedWeek = savedWeek
+                    }
+                    
+                    let savedPage = UserDefaults.standard.integer(forKey: "lastViewedPage")
+                    if savedPage < columns.count {
+                        lastViewedPage = savedPage
+                        currentPage = savedPage
+                    } else if let usdIndex = columns.firstIndex(where: { $0.0 == "BTC Price USD" }) {
+                        currentPage = usdIndex
+                        lastViewedPage = usdIndex
+                    }
+                    
+                    // Decide whether to show the form or the simulation
+                    if monteCarloResults.isEmpty {
+                        isSimulationRun = false
+                    } else {
+                        isSimulationRun = true
+                    }
                 }
             }
         }
-        
         
         // MARK: - SUBVIEW 1: The form when simulation has NOT run
         // Extracted as a computed property for clarity
@@ -902,6 +911,7 @@ struct ContentView: View {
             let userInputVolatility = (Double(self.inputManager.annualVolatility) ?? 1.0) / 100.0
 
             let (medianRun, allIterations) = runMonteCarloSimulationsWithProgress(
+                settings: simSettings,
                 annualCAGR: userInputCAGR,
                 annualVolatility: userInputVolatility,
                 correlationWithSP500: 0.0,
@@ -945,6 +955,7 @@ struct ContentView: View {
             if isCancelled { break }
 
             let simRun = runOneFullSimulation(
+                settings: simSettings,
                 annualCAGR: annualCAGR,
                 annualVolatility: annualVolatility,
                 exchangeRateEURUSD: exchangeRateEURUSD,
