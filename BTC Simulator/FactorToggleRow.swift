@@ -7,12 +7,6 @@
 
 import SwiftUI
 
-/// A reusable row showing:
-///  - (Optional) iconName: for an SF Symbol
-///  - A title
-///  - A toggle (on the same line as the title)
-///  - A slider + numeric readout below, greyed out if toggle is off
-///  - Animate the height changes
 struct FactorToggleRow: View {
     let iconName: String?
     let title: String
@@ -21,15 +15,14 @@ struct FactorToggleRow: View {
     let sliderRange: ClosedRange<Double>
 
     var body: some View {
-        // Put opacity on this top-level VStack so everything dims.
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: 8) {
                 if let iconName = iconName, !iconName.isEmpty {
                     Image(systemName: iconName)
                         .imageScale(.medium)
                         .foregroundColor(.orange)
                 }
-                
+
                 Text(title)
                     .font(.headline)
                     .lineLimit(1)
@@ -54,9 +47,9 @@ struct FactorToggleRow: View {
                     .frame(width: 60, alignment: .trailing)
                     .disabled(!isOn)
             }
+            .opacity(isOn ? 1.0 : 0.5)
         }
         .padding(.vertical, 4)
-        // Apply opacity here so icons, text, etc. all get dimmed
         .opacity(isOn ? 1.0 : 0.5)
         .animation(.easeInOut(duration: 0.4), value: isOn)
     }

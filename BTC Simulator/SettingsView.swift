@@ -14,7 +14,7 @@ struct PressableDestructiveButtonStyle: ButtonStyle {
             .foregroundColor(.red)
             .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
             .opacity(configuration.isPressed ? 0.7 : 1.0)
-            .animation(.none, value: configuration.isPressed) // no delay
+            .animation(.none, value: configuration.isPressed)
     }
 }
 
@@ -54,16 +54,16 @@ struct SettingsView: View {
         // 3) Hide “Back” text, show only a white chevron
         let chevronImage = UIImage(systemName: "chevron.left")?
             .withTintColor(.white, renderingMode: .alwaysOriginal)
-
+        
         let backItem = UIBarButtonItemAppearance(style: .plain)
         backItem.normal.titlePositionAdjustment = UIOffset(horizontal: -3000, vertical: 0)
-
+        
         opaqueAppearance.setBackIndicatorImage(chevronImage, transitionMaskImage: chevronImage)
         blurredAppearance.setBackIndicatorImage(chevronImage, transitionMaskImage: chevronImage)
-
+        
         opaqueAppearance.backButtonAppearance = backItem
         blurredAppearance.backButtonAppearance = backItem
-
+        
         UINavigationBar.appearance().scrollEdgeAppearance = opaqueAppearance
         UINavigationBar.appearance().standardAppearance   = blurredAppearance
         UINavigationBar.appearance().compactAppearance    = blurredAppearance
@@ -236,6 +236,32 @@ struct SettingsView: View {
                     .font(.title3)
                     .foregroundColor(.white)
                     .textCase(nil)
+            }
+            .listRowBackground(Color(white: 0.15))
+
+            // RANDOM SEED
+            Section("Random Seed") {
+                // A toggle to lock/unlock the random seed
+                Toggle("Lock Random Seed", isOn: $simSettings.lockedRandomSeed)
+                    .onChange(of: simSettings.lockedRandomSeed) { newValue in
+                        if newValue {
+                            // If toggled ON, pick a fresh random seed
+                            let newSeed = UInt64.random(in: 0..<UInt64.max)
+                            simSettings.seedValue = newSeed
+                            simSettings.useRandomSeed = false
+                        } else {
+                            // If toggled OFF, do something else, e.g. re-enable random seeds
+                            simSettings.useRandomSeed = true
+                        }
+                    }
+                    .foregroundColor(.white)
+                    .listRowBackground(Color(white: 0.15))
+
+                // Show the current seed for reference
+                Text("Current Seed: \(simSettings.seedValue)")
+                    .font(.footnote)
+                    .foregroundColor(.white)
+                    .listRowBackground(Color(white: 0.15))
             }
             .listRowBackground(Color(white: 0.15))
 

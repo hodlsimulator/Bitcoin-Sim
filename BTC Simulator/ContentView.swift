@@ -403,6 +403,8 @@ struct ContentView: View {
                                             showSettings = true
                                         }) {
                                             Image(systemName: "gearshape")
+                                                // Increase size via font or resizable frame
+                                                .font(.system(size: 26)) // e.g. 32, 40, etc.
                                                 .foregroundColor(.white)
                                                 .padding()
                                         }
@@ -894,9 +896,18 @@ struct ContentView: View {
         monteCarloResults = []
         completedIterations = 0
 
-        // 3) Determine if we lock a random seed
-        //    If simSettings.useRandomSeed is true, pass simSettings.seedValue; else nil.
-        let lockedSeed: UInt64? = simSettings.useRandomSeed ? simSettings.seedValue : nil
+        // 3) Determine the seed to use
+        let finalSeed: UInt64?
+        if simSettings.lockedRandomSeed {
+            // If locked, always use the stored seed
+            finalSeed = simSettings.seedValue
+        } else if simSettings.useRandomSeed {
+            // Not locked, but useRandomSeed is true => use stored seed
+            finalSeed = simSettings.seedValue
+        } else {
+            // No locked seed, no random seed => pass nil so it generates a new seed each run
+            finalSeed = nil
+        }
 
         // 4) Kick off on a background queue
         DispatchQueue.global(qos: .userInitiated).async {
@@ -922,14 +933,13 @@ struct ContentView: View {
                 iterations: total,
                 isCancelled: { self.isCancelled }, // checks mid-loop
                 progressCallback: { completed in
-                    // Only update iteration count if not cancelled
                     if !self.isCancelled {
                         DispatchQueue.main.async {
                             self.completedIterations = completed
                         }
                     }
                 },
-                seed: lockedSeed // <-- pass nil or the user’s seed
+                seed: finalSeed // use finalSeed here
             )
 
             // If we cancelled mid-iterations, skip final UI updates
@@ -947,7 +957,7 @@ struct ContentView: View {
                 self.isSimulationRun = true
             }
 
-            // Optionally process all results in background
+            // Optionally process all results in the background
             DispatchQueue.global(qos: .background).async {
                 self.processAllResults(allIterations)
             }
