@@ -10,16 +10,20 @@ import SwiftUI
 @main
 struct BTCMoteCarloApp: App {
     @StateObject private var simSettings = SimulationSettings()
-
+    
     init() {
-        // Load your CSVs here
+        // Load your CSVs here if needed
         // loadAllHistoricalData()
     }
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .environmentObject(simSettings) // Provide simSettings to all subviews
+            NavigationStack {
+                // Your main ContentView or root view
+                ContentView()
+            }
+            // Provide SimulationSettings to all child views in the NavigationStack
+            .environmentObject(simSettings)
         }
     }
 }

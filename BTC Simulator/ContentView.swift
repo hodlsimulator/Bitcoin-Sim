@@ -394,20 +394,22 @@ struct ContentView: View {
                             parametersFormView
 
                             // -- SETTINGS ICON --
-                            VStack {
-                                Spacer()
-                                HStack {
+                            if !isLoading {
+                                VStack {
                                     Spacer()
-                                    Button(action: {
-                                        showSettings = true
-                                    }) {
-                                        Image(systemName: "gearshape")
-                                            .foregroundColor(.white)
-                                            .padding()
+                                    HStack {
+                                        Spacer()
+                                        Button(action: {
+                                            showSettings = true
+                                        }) {
+                                            Image(systemName: "gearshape")
+                                                .foregroundColor(.white)
+                                                .padding()
+                                        }
+                                        .padding(.trailing, 20)
                                     }
-                                    .padding(.trailing, 20)
+                                    .padding(.bottom, 30)
                                 }
-                                .padding(.bottom, 30)
                             }
                         } else {
                             // -- SIMULATION SCREEN --
@@ -445,13 +447,6 @@ struct ContentView: View {
                     } else if let usdIndex = columns.firstIndex(where: { $0.0 == "BTC Price USD" }) {
                         currentPage = usdIndex
                         lastViewedPage = usdIndex
-                    }
-                    
-                    // Decide whether to show the form or the simulation
-                    if monteCarloResults.isEmpty {
-                        isSimulationRun = false
-                    } else {
-                        isSimulationRun = true
                     }
                 }
             }
@@ -893,11 +888,17 @@ struct ContentView: View {
         historicalBTCWeeklyReturns = loadBTCWeeklyReturns()
         sp500WeeklyReturns         = loadSP500WeeklyReturns()
 
+        // 2) Setup UI state
         isCancelled = false
         isLoading = true
         monteCarloResults = []
         completedIterations = 0
 
+        // 3) Determine if we lock a random seed
+        //    If simSettings.useRandomSeed is true, pass simSettings.seedValue; else nil.
+        let lockedSeed: UInt64? = simSettings.useRandomSeed ? simSettings.seedValue : nil
+
+        // 4) Kick off on a background queue
         DispatchQueue.global(qos: .userInitiated).async {
             guard let total = self.inputManager.getParsedIterations(), total > 0 else {
                 DispatchQueue.main.async { self.isLoading = false }
@@ -910,6 +911,7 @@ struct ContentView: View {
             let userInputCAGR = self.inputManager.getParsedAnnualCAGR() / 100.0
             let userInputVolatility = (Double(self.inputManager.annualVolatility) ?? 1.0) / 100.0
 
+            // 5) Run the simulation with progress + isCancelled checks
             let (medianRun, allIterations) = runMonteCarloSimulationsWithProgress(
                 settings: simSettings,
                 annualCAGR: userInputCAGR,
@@ -917,21 +919,35 @@ struct ContentView: View {
                 correlationWithSP500: 0.0,
                 exchangeRateEURUSD: 1.06,
                 totalWeeks: 1040,
-                iterations: total
-            ) { completed in
+                iterations: total,
+                isCancelled: { self.isCancelled }, // checks mid-loop
+                progressCallback: { completed in
+                    // Only update iteration count if not cancelled
+                    if !self.isCancelled {
+                        DispatchQueue.main.async {
+                            self.completedIterations = completed
+                        }
+                    }
+                },
+                seed: lockedSeed // <-- pass nil or the user’s seed
+            )
+
+            // If we cancelled mid-iterations, skip final UI updates
+            if self.isCancelled {
                 DispatchQueue.main.async {
-                    self.completedIterations = completed
+                    self.isLoading = false
                 }
+                return
             }
 
-            if self.isCancelled { return }
-
+            // Not cancelled => update UI with results
             DispatchQueue.main.async {
                 self.isLoading = false
                 self.monteCarloResults = medianRun
                 self.isSimulationRun = true
             }
 
+            // Optionally process all results in background
             DispatchQueue.global(qos: .background).async {
                 self.processAllResults(allIterations)
             }

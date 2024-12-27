@@ -47,8 +47,10 @@ private let maturingEndWeek      = 1040
 private let recessionStartWeek   = 250
 private let recessionEndWeek     = 400
 
-// MARK: - Weighted sampling / seeded generator toggles (optional)
+// MARK: - Weighted sampling / seeded generator toggles
 private let useWeightedSampling  = false
+
+/// Whether to use a seeded random approach instead of default random.
 private var useSeededRandom      = false
 private var seededGen: SeededGenerator?
 
@@ -61,19 +63,20 @@ private struct SeededGenerator: RandomNumberGenerator {
     }
 
     mutating func next() -> UInt64 {
+        // A simple linear approach or LCG-like progression
         state = 2862933555777941757 &* state &+ 3037000493
         return state
     }
 }
 
-/// If you want a locked seed for deterministic runs, call this internally.
+/// Call this to lock or unlock the seed. If `seed` is non-nil, we lock to that seed.
 private func setRandomSeed(_ seed: UInt64?) {
     if let s = seed {
-        print("[SEED] setRandomSeed was called with \(s) – locking seed.")
+        print("[SEED] setRandomSeed called with \(s) – locking seed.")
         useSeededRandom = true
         seededGen = SeededGenerator(seed: s)
     } else {
-        print("[SEED] setRandomSeed was called with nil – random seed.")
+        print("[SEED] setRandomSeed called with nil – using default random.")
         useSeededRandom = false
         seededGen = nil
     }
@@ -94,16 +97,15 @@ var sp500WeeklyReturns: [Double] = []
 var weightedBTCWeeklyReturns: [Double] = []
 
 // MARK: - runOneFullSimulation
-/// Now uses `SimulationSettings` to decide toggles & parameter values.
 func runOneFullSimulation(
-    settings: SimulationSettings,          // <-- pass toggles & parameters here
+    settings: SimulationSettings,
     annualCAGR: Double,
     annualVolatility: Double,
     exchangeRateEURUSD: Double,
     totalWeeks: Int
 ) -> [SimulationData] {
     
-    // Hardcoded initial data (weeks 1..7), adapt as needed
+    // Hardcoded initial data (weeks 1..7)
     var results: [SimulationData] = [
         .init(
             week: 1,
@@ -199,7 +201,7 @@ func runOneFullSimulation(
     var previousBTCPriceUSD = lastHardcoded?.btcPriceUSD ?? 76_532.03
     var previousBTCHoldings = lastHardcoded?.netBTCHoldings ?? 0.00469014
 
-    // Main loop
+    // Main loop for weeks 8..totalWeeks
     for week in 8...totalWeeks {
         
         // 1) Pick a random weekly return
@@ -214,8 +216,6 @@ func runOneFullSimulation(
 
         // 3a) Adoption factor (incremental drift)
         if settings.useAdoptionFactor {
-            // We read the base factor from the settings,
-            // or you might keep it private if you prefer
             let adoptionFactor = settings.adoptionBaseFactor * Double(week - 7)
             combinedWeeklyReturn += adoptionFactor
         }
@@ -484,6 +484,7 @@ private func pickRandomReturn(from arr: [Double]) -> Double {
     guard !arr.isEmpty else { return 0.0 }
     if useSeededRandom, var rng = seededGen {
         let val = arr.randomElement(using: &rng) ?? 0.0
+        // Update the global generator back
         seededGen = rng
         return val
     } else {
@@ -493,43 +494,64 @@ private func pickRandomReturn(from arr: [Double]) -> Double {
 
 // MARK: - runMonteCarloSimulationsWithProgress
 func runMonteCarloSimulationsWithProgress(
-    settings: SimulationSettings,     // <-- pass the toggles here, too
+    settings: SimulationSettings,
     annualCAGR: Double,
     annualVolatility: Double,
-    correlationWithSP500: Double,     // (not used here, presumably in further logic)
+    correlationWithSP500: Double,
     exchangeRateEURUSD: Double,
     totalWeeks: Int,
     iterations: Int,
-    progressCallback: @escaping (Int) -> Void
+    isCancelled: () -> Bool,           // <-- pass a closure to check
+    progressCallback: @escaping (Int) -> Void,
+    seed: UInt64? = nil
 ) -> ([SimulationData], [[SimulationData]]) {
 
-    // If you want a deterministic seed:
-    setRandomSeed(nil)
+    setRandomSeed(seed)
 
     var allRuns = [[SimulationData]]()
 
     for i in 0..<iterations {
+        // Check at the start of each iteration
+        if isCancelled() {
+            print("[CANCEL] Stopping mid-iterations at \(i) / \(iterations).")
+            break
+        }
+
         let simRun = runOneFullSimulation(
-            settings: settings,           // pass toggles down
+            settings: settings,
             annualCAGR: annualCAGR,
             annualVolatility: annualVolatility,
             exchangeRateEURUSD: exchangeRateEURUSD,
             totalWeeks: totalWeeks
         )
+
         allRuns.append(simRun)
+
+        // Also check after each iteration’s result if you like
+        if isCancelled() {
+            print("[CANCEL] Stopping mid-iterations at \(i) / \(iterations).")
+            break
+        }
+
+        // If not cancelled, update progress
         progressCallback(i + 1)
+    }
+
+    if allRuns.isEmpty {
+        // Cancelled immediately or no data
+        return ([], [])
     }
 
     // Sort final results by last week's portfolioValue
     var finalValues = allRuns.map { ($0.last?.portfolioValueEUR ?? 0.0, $0) }
     finalValues.sort { $0.0 < $1.0 }
 
-    // median
+    // median run
     let medianRun = finalValues[finalValues.count / 2].1
     return (medianRun, allRuns)
 }
 
-// MARK: - Optional Box-Muller for volatility
+// MARK: - Optional Box-Muller for volatility (not used in the default code)
 private func randomNormal(
     mean: Double,
     standardDeviation: Double
