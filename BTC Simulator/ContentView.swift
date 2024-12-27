@@ -135,32 +135,6 @@ extension Double {
     }
 }
 
-extension View {
-    @ViewBuilder
-    func syncWithScroll<T>(of value: T, perform action: @escaping (T) -> Void) -> some View where T: Equatable {
-        if #available(iOS 17, *) {
-            self.onChange(of: value) { _, newValue in
-                action(newValue)
-            }
-        } else {
-            self.onChange(of: value) { newValue in
-                action(newValue)
-            }
-        }
-    }
-}
-
-extension EnvironmentValues {
-    var scrollProxy: ScrollViewProxy? {
-        get { self[ScrollViewProxyKey.self] }
-        set { self[ScrollViewProxyKey.self] = newValue }
-    }
-}
-
-struct ScrollViewProxyKey: EnvironmentKey {
-    static let defaultValue: ScrollViewProxy? = nil
-}
-
 // MARK: - Official Shapes for the Logo
 struct BitcoinCircleShape: Shape {
     func path(in rect: CGRect) -> Path {
@@ -240,7 +214,6 @@ struct BitcoinBShape: Shape {
     }
 }
 
-// A combined official logo
 struct OfficialBitcoinLogo: View {
     var body: some View {
         ZStack {
@@ -253,7 +226,7 @@ struct OfficialBitcoinLogo: View {
     }
 }
 
-// MARK: - 3D Spinner (used for the loading overlay)
+// MARK: - 3D Spinner (loading overlay)
 struct InteractiveBitcoinSymbol3DSpinner: View {
     @State private var rotationX: Double = 0
     @State private var rotationY: Double = -90
@@ -269,13 +242,12 @@ struct InteractiveBitcoinSymbol3DSpinner: View {
                 .rotation3DEffect(.degrees(rotationZ), axis: (x: 0, y: 0, z: 1))
         }
         .frame(width: 300, height: 300)
-        .offset(y: -50) // Move the whole spinner up a bit
+        .offset(y: -50)
         .gesture(
             DragGesture()
                 .onChanged { value in
                     let dx = value.translation.width
                     let dy = value.translation.height
-                    
                     if abs(dx) > abs(dy) {
                         spinSpeed = 10 + (dx / 5.0)
                     } else {
@@ -289,7 +261,6 @@ struct InteractiveBitcoinSymbol3DSpinner: View {
                 .onEnded { value in
                     let dx = value.translation.width
                     let dy = value.translation.height
-                    
                     if abs(dx) > abs(dy) {
                         let flingFactor = value.predictedEndTranslation.width / 5.0
                         spinSpeed = Double(10 + flingFactor)
@@ -302,7 +273,7 @@ struct InteractiveBitcoinSymbol3DSpinner: View {
                 }
         )
         .onAppear {
-            Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { _ in
+            Timer.scheduledTimer(withTimeInterval: 1.0/60.0, repeats: true) { _ in
                 let now = Date()
                 let delta = now.timeIntervalSince(lastUpdate)
                 lastUpdate = now
@@ -317,8 +288,6 @@ struct ContentView: View {
 
     @State private var monteCarloResults: [SimulationData] = []
     @State private var isLoading: Bool = false
-    @State private var pdfData: Data?
-    @State private var showFileExporter = false
     @FocusState private var activeField: ActiveField?
     @StateObject var inputManager = PersistentInputManager()
     @State private var isSimulationRun: Bool = false
@@ -328,21 +297,19 @@ struct ContentView: View {
     @State private var isAtBottom: Bool = false
     @State private var lastViewedWeek: Int = 0
 
-    @Environment(\.scrollProxy) private var scrollProxy: ScrollViewProxy?
     @State private var contentScrollProxy: ScrollViewProxy?
 
     @State private var currentPage: Int = 0
     @State private var lastViewedPage: Int = 0
-    @State private var userHasScrolled = false
-
+    
     @State private var currentTip: String = ""
     @State private var showTip: Bool = false
-    @State private var tipsIndex: Int = 0
     @State private var tipTimer: Timer? = nil
-    
-    @State private var showSpinner = false
     @State private var completedIterations: Int = 0
     @State private var totalIterations: Int = 1000
+    
+    @State private var hideScrollIndicators = true
+    @State private var lastScrollTime = Date()
 
     let loadingTips = [
         "Gathering historical data from CSV files...",
@@ -363,566 +330,560 @@ struct ContentView: View {
         ("Withdrawal EUR", \SimulationData.withdrawalEUR)
     ]
 
-    @State private var hideScrollIndicators = true
-    @State private var lastScrollTime = Date()
-    
     @EnvironmentObject var simSettings: SimulationSettings
     @State private var showSettings = false
+    @State private var showAbout = false
 
-    // MARK: - BODY
-        var body: some View {
-            NavigationStack {
-                ZStack {
-                    // Background ZStack
-                    ZStack {
-                        Color(white: 0.12).ignoresSafeArea()
-                        Color.clear
-                            .contentShape(Rectangle())
-                            .highPriorityGesture(
-                                TapGesture()
-                                    .onEnded {
-                                        activeField = nil
-                                    }
-                            )
-                    }
-                    
-                    // Main content in a ZStack so we can easily overlay additional items
-                    ZStack {
-                        // 1) Conditionally display either the form or the results
-                        if !isSimulationRun {
-                            // -- MAIN SCREEN (parameters form) --
-                            parametersFormView
-
-                            // -- SETTINGS ICON --
-                            if !isLoading {
-                                VStack {
-                                    Spacer()
-                                    HStack {
-                                        Spacer()
-                                        Button(action: {
-                                            showSettings = true
-                                        }) {
-                                            Image(systemName: "gearshape")
-                                                // Increase size via font or resizable frame
-                                                .font(.system(size: 26)) // e.g. 32, 40, etc.
-                                                .foregroundColor(.white)
-                                                .padding()
-                                        }
-                                        .padding(.trailing, 20)
-                                    }
-                                    .padding(.bottom, 30)
-                                }
-                            }
-                        } else {
-                            // -- SIMULATION SCREEN --
-                            simulationResultsView
-                        }
-                    }
-                    
-                    // If there's prior data, show a button to jump to results
-                    if !isSimulationRun && !monteCarloResults.isEmpty {
-                        transitionToResultsButton
-                    }
-                    
-                    // Loading overlay
-                    if isLoading {
-                        loadingOverlay
-                    }
-                }
-                // Previously, we had .sheet(isPresented: $showSettings) { ... }, we remove that.
-                // Now we do a push navigation destination:
-                .navigationDestination(isPresented: $showSettings) {
-                    SettingsView()
-                        .environmentObject(simSettings)
-                }
-                // On appear logic
-                .onAppear {
-                    let savedWeek = UserDefaults.standard.integer(forKey: "lastViewedWeek")
-                    if savedWeek != 0 {
-                        lastViewedWeek = savedWeek
-                    }
-                    
-                    let savedPage = UserDefaults.standard.integer(forKey: "lastViewedPage")
-                    if savedPage < columns.count {
-                        lastViewedPage = savedPage
-                        currentPage = savedPage
-                    } else if let usdIndex = columns.firstIndex(where: { $0.0 == "BTC Price USD" }) {
-                        currentPage = usdIndex
-                        lastViewedPage = usdIndex
-                    }
-                }
-            }
-        }
-        
-        // MARK: - SUBVIEW 1: The form when simulation has NOT run
-        // Extracted as a computed property for clarity
-        private var parametersFormView: some View {
-            VStack {
-                Spacer().frame(height: 80)
-                
-                Form {
-                    Section(header: Text("SIMULATION PARAMETERS").foregroundColor(.white)) {
-                        HStack {
-                            Text("Iterations").foregroundColor(.white)
-                            TextField("1000", text: $inputManager.iterations)
-                                .keyboardType(.numberPad)
-                                .foregroundColor(.white)
-                                .focused($activeField, equals: .iterations)
-                        }
-                        
-                        HStack {
-                            Text("Annual CAGR (%)").foregroundColor(.white)
-                            TextField("40.0", text: $inputManager.annualCAGR)
-                                .keyboardType(.decimalPad)
-                                .foregroundColor(.white)
-                                .focused($activeField, equals: .annualCAGR)
-                        }
-                        
-                        HStack {
-                            Text("Annual Volatility (%)").foregroundColor(.white)
-                            TextField("80.0", text: $inputManager.annualVolatility)
-                                .keyboardType(.decimalPad)
-                                .foregroundColor(.white)
-                                .focused($activeField, equals: .annualVolatility)
-                        }
-                    }
-                    .listRowBackground(Color(white: 0.15))
-                    
-                    Section {
-                        Button(action: {
-                            activeField = nil
-                            runSimulation()
-                        }) {
-                            Text("Run Simulation")
-                                .foregroundColor(.white)
-                        }
-                        .listRowBackground(Color.blue)
-                        
-                        Button("Reset Saved Data") {
-                            UserDefaults.standard.removeObject(forKey: "lastViewedWeek")
-                            UserDefaults.standard.removeObject(forKey: "lastViewedPage")
-                            lastViewedWeek = 0
-                            lastViewedPage = 0
-                        }
-                        .foregroundColor(.red)
-                        .listRowBackground(Color(white: 0.15))
-                    }
-                }
-                .scrollContentBackground(.hidden)
-                .background(Color(white: 0.12))
-                .listStyle(GroupedListStyle())
-            }
-        }
-        
-        
-        // MARK: - SUBVIEW 2: Simulation results when it’s running
-        private var simulationResultsView: some View {
-            ScrollViewReader { scrollProxy in
-                ZStack {
-                    VStack {
-                        Spacer().frame(height: 40)
-                        
-                        VStack(spacing: 0) {
-                            // Title row
-                            HStack(spacing: 0) {
-                                Text("Week")
-                                    .frame(width: 60, alignment: .leading)
-                                    .font(.headline)
-                                    .padding(.leading, 50)
-                                    .padding(.vertical, 8)
-                                    .background(Color.black)
-                                    .foregroundColor(.white)
-                                
-                                ZStack {
-                                    Text(columns[currentPage].0)
-                                        .font(.headline)
-                                        .padding(.leading, 100)
-                                        .padding(.vertical, 8)
-                                        .background(Color.black)
-                                        .foregroundColor(.white)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                    
-                                    GeometryReader { geometry in
-                                        HStack(spacing: 0) {
-                                            Color.clear
-                                                .frame(width: geometry.size.width * 0.2)
-                                                .contentShape(Rectangle())
-                                                .gesture(
-                                                    TapGesture()
-                                                        .onEnded {
-                                                            if currentPage > 0 {
-                                                                withAnimation {
-                                                                    currentPage -= 1
-                                                                }
-                                                            }
-                                                        }
-                                                )
-                                            Spacer()
-                                            Color.clear
-                                                .frame(width: geometry.size.width * 0.2)
-                                                .contentShape(Rectangle())
-                                                .gesture(
-                                                    TapGesture()
-                                                        .onEnded {
-                                                            if currentPage < columns.count - 1 {
-                                                                withAnimation {
-                                                                    currentPage += 1
-                                                                }
-                                                            }
-                                                        }
-                                                )
-                                        }
-                                    }
-                                }
-                                .frame(height: 50)
-                            }
-                            .background(Color.black)
-                            
-                            // Data table
-                            ScrollView(.vertical, showsIndicators: !hideScrollIndicators) {
-                                HStack(spacing: 0) {
-                                    // Left column (Week numbers)
-                                    VStack(spacing: 0) {
-                                        ForEach(monteCarloResults.indices, id: \.self) { index in
-                                            let result = monteCarloResults[index]
-                                            let rowBackground = index.isMultiple(of: 2)
-                                            ? Color(white: 0.10)
-                                            : Color(white: 0.14)
-                                            
-                                            Text("\(result.week)")
-                                                .frame(width: 70, alignment: .leading)
-                                                .padding(.leading, 50)
-                                                .padding(.vertical, 12)
-                                                .padding(.horizontal, 8)
-                                                .background(rowBackground)
-                                                .foregroundColor(.white)
-                                                .id("week-\(result.week)")
-                                                .background(RowOffsetReporter(week: result.week))
-                                        }
-                                    }
-                                    
-                                    // Main columns in a TabView
-                                    TabView(selection: $currentPage) {
-                                        ForEach(0..<columns.count, id: \.self) { index in
-                                            ZStack {
-                                                VStack(spacing: 0) {
-                                                    ForEach(monteCarloResults.indices, id: \.self) { rowIndex in
-                                                        let rowResult = monteCarloResults[rowIndex]
-                                                        let rowBackground = rowIndex.isMultiple(of: 2)
-                                                        ? Color(white: 0.10)
-                                                        : Color(white: 0.14)
-                                                        
-                                                        Text(getValue(rowResult, columns[index].1))
-                                                            .frame(maxWidth: .infinity, alignment: .leading)
-                                                            .padding(.leading, 80)
-                                                            .padding(.vertical, 12)
-                                                            .padding(.horizontal, 8)
-                                                            .background(rowBackground)
-                                                            .foregroundColor(.white)
-                                                            .id("data-week-\(rowResult.week)")
-                                                            .background(RowOffsetReporter(week: rowResult.week))
-                                                    }
-                                                }
-                                                
-                                                GeometryReader { geometry in
-                                                    HStack(spacing: 0) {
-                                                        Color.clear
-                                                            .frame(width: geometry.size.width * 0.2)
-                                                            .contentShape(Rectangle())
-                                                            .gesture(
-                                                                TapGesture()
-                                                                    .onEnded {
-                                                                        if currentPage > 0 {
-                                                                            withAnimation {
-                                                                                currentPage -= 1
-                                                                            }
-                                                                        }
-                                                                    }
-                                                            )
-                                                        Spacer()
-                                                        Color.clear
-                                                            .frame(width: geometry.size.width * 0.2)
-                                                            .contentShape(Rectangle())
-                                                            .gesture(
-                                                                TapGesture()
-                                                                    .onEnded {
-                                                                        if currentPage < columns.count - 1 {
-                                                                            withAnimation {
-                                                                                currentPage += 1
-                                                                            }
-                                                                        }
-                                                                    }
-                                                            )
-                                                    }
-                                                }
-                                            }
-                                            .tag(index)
-                                        }
-                                    }
-                                    .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
-                                    .frame(width: UIScreen.main.bounds.width - 60)
-                                }
-                                .coordinateSpace(name: "scrollArea")
-                                .onPreferenceChange(RowOffsetPreferenceKey.self) { offsets in
-                                    let targetY: CGFloat = 160
-                                    let filtered = offsets.filter { (week, _) in week != 1040 }
-                                    let mapped = filtered.mapValues { abs($0 - targetY) }
-                                    if let (closestWeek, _) = mapped.min(by: { $0.value < $1.value }) {
-                                        lastViewedWeek = closestWeek
-                                    }
-                                }
-                                .onChange(of: scrollToBottom) { value in
-                                    if value, let lastResult = monteCarloResults.last {
-                                        withAnimation {
-                                            scrollProxy.scrollTo("week-\(lastResult.week)", anchor: .bottom)
-                                        }
-                                        scrollToBottom = false
-                                    }
-                                }
-                                .background(
-                                    GeometryReader { geometry -> Color in
-                                        DispatchQueue.main.async {
-                                            let atBottom = geometry.frame(in: .global).maxY <= UIScreen.main.bounds.height
-                                            if atBottom != self.isAtBottom {
-                                                self.isAtBottom = atBottom
-                                            }
-                                        }
-                                        return Color(white: 0.12)
-                                    }
-                                )
-                                .simultaneousGesture(
-                                    DragGesture(minimumDistance: 0)
-                                        .onChanged { _ in
-                                            hideScrollIndicators = false
-                                            lastScrollTime = Date()
-                                        }
-                                        .onEnded { _ in
-                                            lastScrollTime = Date()
-                                        }
-                                )
-                            }
-                            .onReceive(
-                                Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()
-                            ) { _ in
-                                if Date().timeIntervalSince(lastScrollTime) > 1.5 {
-                                    hideScrollIndicators = true
-                                }
-                            }
-                        }
-                    }
-                    .onAppear {
-                        contentScrollProxy = scrollProxy
-                    }
-                    .onDisappear {
-                        UserDefaults.standard.set(lastViewedWeek, forKey: "lastViewedWeek")
-                        UserDefaults.standard.set(currentPage, forKey: "lastViewedPage")
-                    }
-                    
-                    // “Back” button top-left
-                    VStack {
-                        HStack {
-                            Button(action: {
-                                UserDefaults.standard.set(lastViewedWeek, forKey: "lastViewedWeek")
-                                UserDefaults.standard.set(currentPage, forKey: "lastViewedPage")
-                                lastViewedPage = currentPage
-                                isSimulationRun = false
-                            }) {
-                                Image(systemName: "chevron.left")
-                                    .foregroundColor(.white)
-                                    .imageScale(.large)
-                                    .padding(.leading, 50)
-                                    .padding(.vertical, 8)
-                            }
-                            Spacer()
-                        }
-                        Spacer()
-                    }
-                    
-                    // Scroll to bottom if not at bottom
-                    if !isAtBottom {
-                        VStack {
-                            Spacer()
-                            Button(action: {
-                                scrollToBottom = true
-                            }) {
-                                Image(systemName: "chevron.down")
-                                    .foregroundColor(.white)
-                                    .imageScale(.large)
-                                    .padding()
-                                    .background(Color(white: 0.2).opacity(0.9))
-                                    .clipShape(Circle())
-                            }
-                            .padding()
-                        }
-                    }
-                }
-            }
-        }
-        
-        // MARK: - SUBVIEW 3: Button to transition to results if we have them
-        private var transitionToResultsButton: some View {
-            VStack {
-                HStack {
-                    Spacer()
-                    Button(action: {
-                        isSimulationRun = true
-                        currentPage = lastViewedPage
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                            if let scrollProxy = contentScrollProxy {
-                                let savedWeek = UserDefaults.standard.integer(forKey: "lastViewedWeek")
-                                if savedWeek != 0 {
-                                    lastViewedWeek = savedWeek
-                                }
-                                if let target = monteCarloResults.first(where: { $0.week == lastViewedWeek }) {
-                                    withAnimation {
-                                        scrollProxy.scrollTo("week-\(target.week)", anchor: .top)
-                                    }
-                                }
-                            }
-                        }
-                    }) {
-                        Image(systemName: "chevron.right")
-                            .foregroundColor(.white)
-                            .imageScale(.large)
-                            .padding()
-                    }
-                }
-                Spacer()
-            }
-        }
-        
-        // MARK: - SUBVIEW 4: Loading overlay
-        private var loadingOverlay: some View {
+    var body: some View {
+        NavigationStack {
             ZStack {
-                Color.black.opacity(0.5).ignoresSafeArea()
-                
-                VStack(spacing: 0) {
-                    Spacer().frame(height: 250)
-                    
-                    HStack {
-                        Spacer()
-                        Button(action: {
-                            isCancelled = true
-                            isLoading = false
-                        }) {
-                            Image(systemName: "xmark")
-                                .foregroundColor(.white)
-                                .padding()
-                        }
-                        .padding(.trailing, 20)
+                // 1) Gradient background for a fancier look
+                LinearGradient(
+                    gradient: Gradient(colors: [Color.black, Color(white: 0.15), Color.black]),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
+
+                // 2) Tap anywhere to dismiss keyboard
+                Color.clear
+                    .contentShape(Rectangle())
+                    .highPriorityGesture(
+                        TapGesture()
+                            .onEnded {
+                                activeField = nil
+                            }
+                    )
+
+                // 3) Main screen: either parameters or results
+                if !isSimulationRun {
+                    parametersScreen
+                    if !isLoading {
+                        bottomIcons
                     }
-                    .offset(y: 130)
-                    
-                    InteractiveBitcoinSymbol3DSpinner()
-                        .offset(y: 120)
-                        .padding(.bottom, 30)
-                    
-                    VStack(spacing: 17) {
-                        Text("Simulating: \(completedIterations) / \(totalIterations)")
-                            .font(.body.monospacedDigit())
-                            .foregroundColor(.white)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.5)
-                        
-                        ProgressView(
-                            value: Double(completedIterations),
-                            total: Double(totalIterations)
-                        )
-                        .tint(.blue)
-                        .scaleEffect(x: 1, y: 2, anchor: .center)
-                        .frame(width: 200)
-                    }
-                    .padding(.bottom, 20)
-                    
-                    if showTip {
-                        Text(currentTip)
-                            .foregroundColor(.white)
-                            .multilineTextAlignment(.center)
-                            .frame(maxWidth: 300)
-                            .lineLimit(nil)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .transition(.opacity)
-                            .padding(.bottom, 30)
-                    }
-                    
-                    Spacer()
+                } else {
+                    simulationResultsView
+                }
+
+                // 4) If there’s prior data, show quick-jump button
+                if !isSimulationRun && !monteCarloResults.isEmpty {
+                    transitionToResultsButton
+                }
+
+                // 5) Loading overlay
+                if isLoading {
+                    loadingOverlay
                 }
             }
-            .onAppear { startTipCycle() }
-            .onDisappear { stopTipCycle() }
-        }
-    
-    struct DarkKeyboardTextField: UIViewRepresentable {
-        @Binding var text: String
-        var placeholder: String = ""
-        var keyboardType: UIKeyboardType = .numberPad
-
-        func makeUIView(context: Context) -> UITextField {
-            let textField = UITextField()
-            textField.placeholder = placeholder
-            textField.keyboardType = keyboardType
-            textField.keyboardAppearance = .dark
-            textField.delegate = context.coordinator
-            return textField
-        }
-
-        func updateUIView(_ uiView: UITextField, context: Context) {
-            uiView.text = text
-        }
-
-        func makeCoordinator() -> Coordinator {
-            Coordinator(self)
-        }
-        
-        class Coordinator: NSObject, UITextFieldDelegate {
-            var parent: DarkKeyboardTextField
-            init(_ parent: DarkKeyboardTextField) {
-                self.parent = parent
+            .navigationDestination(isPresented: $showSettings) {
+                SettingsView()
+                    .environmentObject(simSettings)
             }
-            func textFieldDidChangeSelection(_ textField: UITextField) {
-                parent.text = textField.text ?? ""
+            .navigationDestination(isPresented: $showAbout) {
+                AboutView()
+            }
+            .onAppear {
+                // Restore scroll states if any
+                let savedWeek = UserDefaults.standard.integer(forKey: "lastViewedWeek")
+                if savedWeek != 0 {
+                    lastViewedWeek = savedWeek
+                }
+                let savedPage = UserDefaults.standard.integer(forKey: "lastViewedPage")
+                if savedPage < columns.count {
+                    lastViewedPage = savedPage
+                    currentPage = savedPage
+                } else if let usdIndex = columns.firstIndex(where: { $0.0 == "BTC Price USD" }) {
+                    currentPage = usdIndex
+                    lastViewedPage = usdIndex
+                }
             }
         }
     }
 
-    private func runSimulation() {
-        // 1) Load the CSV arrays before running
-        historicalBTCWeeklyReturns = loadBTCWeeklyReturns()
-        sp500WeeklyReturns         = loadSP500WeeklyReturns()
+    // MARK: - Bottom icons (About + Settings)
+    private var bottomIcons: some View {
+        VStack {
+            Spacer()
+            HStack {
+                // ABOUT
+                Button(action: {
+                    showAbout = true
+                }) {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 28))
+                        .foregroundColor(.white)
+                        .padding()
+                }
+                .padding(.leading, 15)
 
-        // 2) Setup UI state
+                Spacer()
+
+                // SETTINGS
+                Button(action: {
+                    showSettings = true
+                }) {
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 28))
+                        .foregroundColor(.white)
+                        .padding()
+                }
+                .padding(.trailing, 15)
+            }
+            .padding(.bottom, 30)
+        }
+    }
+
+    // MARK: - Parameters screen with white text fields, no “Reset” button, orange “Run” button
+    private var parametersScreen: some View {
+        VStack(spacing: 30) {
+            Spacer().frame(height: 60)
+
+            Text("BTC Monte Carlo")
+                .font(.system(size: 34, weight: .bold))
+                .foregroundColor(.white)
+                .padding(.top, 10)
+
+            Text("Set your simulation parameters")
+                .font(.callout)
+                .foregroundColor(.gray)
+
+            // White text fields in a card
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Iterations")
+                        .foregroundColor(.white)
+                    // White field with black text
+                    TextField("e.g. 1000", text: $inputManager.iterations)
+                        .keyboardType(.numberPad)
+                        .padding(8)
+                        .background(Color.white)
+                        .cornerRadius(6)
+                        .foregroundColor(.black)
+                        .focused($activeField, equals: .iterations)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Annual CAGR (%)")
+                        .foregroundColor(.white)
+                    TextField("e.g. 40.0", text: $inputManager.annualCAGR)
+                        .keyboardType(.decimalPad)
+                        .padding(8)
+                        .background(Color.white)
+                        .cornerRadius(6)
+                        .foregroundColor(.black)
+                        .focused($activeField, equals: .annualCAGR)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Annual Volatility (%)")
+                        .foregroundColor(.white)
+                    TextField("e.g. 80.0", text: $inputManager.annualVolatility)
+                        .keyboardType(.decimalPad)
+                        .padding(8)
+                        .background(Color.white)
+                        .cornerRadius(6)
+                        .foregroundColor(.black)
+                        .focused($activeField, equals: .annualVolatility)
+                }
+            }
+            .padding(20)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color(white: 0.1).opacity(0.8))
+            )
+            .padding(.horizontal, 30)
+
+            // ORANGE “Run Simulation” button
+            if !isLoading {
+                Button {
+                    activeField = nil
+                    runSimulation()
+                } label: {
+                    Text("RUN SIMULATION")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 32)
+                        .padding(.vertical, 14)
+                        .background(Color.orange)
+                        .cornerRadius(8)
+                        .shadow(color: .black.opacity(0.3), radius: 4, x: 2, y: 2)
+                }
+                .padding(.top, 6)
+            }
+
+            Spacer()
+        }
+    }
+
+    // MARK: - The simulation screen (unchanged from your code)
+    private var simulationResultsView: some View {
+        ScrollViewReader { scrollProxy in
+            ZStack {
+                VStack {
+                    Spacer().frame(height: 40)
+
+                    VStack(spacing: 0) {
+                        // Title row
+                        HStack(spacing: 0) {
+                            Text("Week")
+                                .frame(width: 60, alignment: .leading)
+                                .font(.headline)
+                                .padding(.leading, 50)
+                                .padding(.vertical, 8)
+                                .background(Color.black)
+                                .foregroundColor(.white)
+                            
+                            ZStack {
+                                Text(columns[currentPage].0)
+                                    .font(.headline)
+                                    .padding(.leading, 100)
+                                    .padding(.vertical, 8)
+                                    .background(Color.black)
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                
+                                GeometryReader { geometry in
+                                    HStack(spacing: 0) {
+                                        Color.clear
+                                            .frame(width: geometry.size.width * 0.2)
+                                            .contentShape(Rectangle())
+                                            .gesture(
+                                                TapGesture()
+                                                    .onEnded {
+                                                        if currentPage > 0 {
+                                                            withAnimation {
+                                                                currentPage -= 1
+                                                            }
+                                                        }
+                                                    }
+                                            )
+                                        Spacer()
+                                        Color.clear
+                                            .frame(width: geometry.size.width * 0.2)
+                                            .contentShape(Rectangle())
+                                            .gesture(
+                                                TapGesture()
+                                                    .onEnded {
+                                                        if currentPage < columns.count - 1 {
+                                                            withAnimation {
+                                                                currentPage += 1
+                                                            }
+                                                        }
+                                                    }
+                                            )
+                                    }
+                                }
+                            }
+                            .frame(height: 50)
+                        }
+                        .background(Color.black)
+                        
+                        // Data table
+                        ScrollView(.vertical, showsIndicators: !hideScrollIndicators) {
+                            HStack(spacing: 0) {
+                                // Left column (Week numbers)
+                                VStack(spacing: 0) {
+                                    ForEach(monteCarloResults.indices, id: \.self) { index in
+                                        let result = monteCarloResults[index]
+                                        let rowBackground = index.isMultiple(of: 2)
+                                        ? Color(white: 0.10)
+                                        : Color(white: 0.14)
+                                        
+                                        Text("\(result.week)")
+                                            .frame(width: 70, alignment: .leading)
+                                            .padding(.leading, 50)
+                                            .padding(.vertical, 12)
+                                            .padding(.horizontal, 8)
+                                            .background(rowBackground)
+                                            .foregroundColor(.white)
+                                            .id("week-\(result.week)")
+                                            .background(RowOffsetReporter(week: result.week))
+                                    }
+                                }
+                                
+                                // Main columns in a TabView
+                                TabView(selection: $currentPage) {
+                                    ForEach(0..<columns.count, id: \.self) { index in
+                                        ZStack {
+                                            VStack(spacing: 0) {
+                                                ForEach(monteCarloResults.indices, id: \.self) { rowIndex in
+                                                    let rowResult = monteCarloResults[rowIndex]
+                                                    let rowBackground = rowIndex.isMultiple(of: 2)
+                                                    ? Color(white: 0.10)
+                                                    : Color(white: 0.14)
+                                                    
+                                                    Text(getValue(rowResult, columns[index].1))
+                                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                                        .padding(.leading, 80)
+                                                        .padding(.vertical, 12)
+                                                        .padding(.horizontal, 8)
+                                                        .background(rowBackground)
+                                                        .foregroundColor(.white)
+                                                        .id("data-week-\(rowResult.week)")
+                                                        .background(RowOffsetReporter(week: rowResult.week))
+                                                }
+                                            }
+                                            
+                                            // Tap areas to scroll horizontally
+                                            GeometryReader { geometry in
+                                                HStack(spacing: 0) {
+                                                    Color.clear
+                                                        .frame(width: geometry.size.width * 0.2)
+                                                        .contentShape(Rectangle())
+                                                        .gesture(
+                                                            TapGesture()
+                                                                .onEnded {
+                                                                    if currentPage > 0 {
+                                                                        withAnimation {
+                                                                            currentPage -= 1
+                                                                        }
+                                                                    }
+                                                                }
+                                                        )
+                                                    Spacer()
+                                                    Color.clear
+                                                        .frame(width: geometry.size.width * 0.2)
+                                                        .contentShape(Rectangle())
+                                                        .gesture(
+                                                            TapGesture()
+                                                                .onEnded {
+                                                                    if currentPage < columns.count - 1 {
+                                                                        withAnimation {
+                                                                            currentPage += 1
+                                                                        }
+                                                                    }
+                                                                }
+                                                        )
+                                                }
+                                            }
+                                        }
+                                        .tag(index)
+                                    }
+                                }
+                                .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+                                .frame(width: UIScreen.main.bounds.width - 60)
+                            }
+                            .coordinateSpace(name: "scrollArea")
+                            .onPreferenceChange(RowOffsetPreferenceKey.self) { offsets in
+                                // Track which week is closest to the top
+                                let targetY: CGFloat = 160
+                                let filtered = offsets.filter { (week, _) in week != 1040 }
+                                let mapped = filtered.mapValues { abs($0 - targetY) }
+                                if let (closestWeek, _) = mapped.min(by: { $0.value < $1.value }) {
+                                    lastViewedWeek = closestWeek
+                                }
+                            }
+                            .onChange(of: scrollToBottom) { value in
+                                if value, let lastResult = monteCarloResults.last {
+                                    withAnimation {
+                                        scrollProxy.scrollTo("week-\(lastResult.week)", anchor: .bottom)
+                                    }
+                                    scrollToBottom = false
+                                }
+                            }
+                            .background(
+                                GeometryReader { geometry -> Color in
+                                    DispatchQueue.main.async {
+                                        let atBottom = geometry.frame(in: .global).maxY <= UIScreen.main.bounds.height
+                                        if atBottom != self.isAtBottom {
+                                            self.isAtBottom = atBottom
+                                        }
+                                    }
+                                    return Color(white: 0.12)
+                                }
+                            )
+                            .simultaneousGesture(
+                                DragGesture(minimumDistance: 0)
+                                    .onChanged { _ in
+                                        hideScrollIndicators = false
+                                        lastScrollTime = Date()
+                                    }
+                                    .onEnded { _ in
+                                        lastScrollTime = Date()
+                                    }
+                            )
+                        }
+                        .onReceive(
+                            Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()
+                        ) { _ in
+                            if Date().timeIntervalSince(lastScrollTime) > 1.5 {
+                                hideScrollIndicators = true
+                            }
+                        }
+                    }
+                }
+                .onAppear {
+                    contentScrollProxy = scrollProxy
+                }
+                .onDisappear {
+                    UserDefaults.standard.set(lastViewedWeek, forKey: "lastViewedWeek")
+                    UserDefaults.standard.set(currentPage, forKey: "lastViewedPage")
+                }
+                
+                // “Back” button top-left
+                VStack {
+                    HStack {
+                        Button(action: {
+                            UserDefaults.standard.set(lastViewedWeek, forKey: "lastViewedWeek")
+                            UserDefaults.standard.set(currentPage, forKey: "lastViewedPage")
+                            lastViewedPage = currentPage
+                            isSimulationRun = false
+                        }) {
+                            Image(systemName: "chevron.left")
+                                .foregroundColor(.white)
+                                .imageScale(.large)
+                                .padding(.leading, 50)
+                                .padding(.vertical, 8)
+                        }
+                        Spacer()
+                    }
+                    Spacer()
+                }
+                
+                // Scroll-to-bottom button that hides at the bottom
+                if !isAtBottom {
+                    VStack {
+                        Spacer()
+                        Button(action: {
+                            scrollToBottom = true
+                        }) {
+                            Image(systemName: "chevron.down")
+                                .foregroundColor(.white)
+                                .imageScale(.large)
+                                .padding()
+                                .background(Color(white: 0.2).opacity(0.9))
+                                .clipShape(Circle())
+                        }
+                        .padding()
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Jump to results button if data exists
+    private var transitionToResultsButton: some View {
+        VStack {
+            HStack {
+                Spacer()
+                Button(action: {
+                    isSimulationRun = true
+                    currentPage = lastViewedPage
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        if let scrollProxy = contentScrollProxy {
+                            let savedWeek = UserDefaults.standard.integer(forKey: "lastViewedWeek")
+                            if savedWeek != 0 {
+                                lastViewedWeek = savedWeek
+                            }
+                            if let target = monteCarloResults.first(where: { $0.week == lastViewedWeek }) {
+                                withAnimation {
+                                    scrollProxy.scrollTo("week-\(target.week)", anchor: .top)
+                                }
+                            }
+                        }
+                    }
+                }) {
+                    Image(systemName: "chevron.right")
+                        .foregroundColor(.white)
+                        .imageScale(.large)
+                        .padding()
+                }
+            }
+            Spacer()
+        }
+    }
+
+    // MARK: - Loading Overlay
+    private var loadingOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.6).ignoresSafeArea()
+            VStack(spacing: 0) {
+                Spacer().frame(height: 250)
+                HStack {
+                    Spacer()
+                    Button(action: {
+                        isCancelled = true
+                        isLoading = false
+                    }) {
+                        Image(systemName: "xmark")
+                            .foregroundColor(.white)
+                            .padding()
+                    }
+                    .padding(.trailing, 20)
+                }
+                .offset(y: 130)
+                
+                InteractiveBitcoinSymbol3DSpinner()
+                    .offset(y: 120)
+                    .padding(.bottom, 30)
+                
+                VStack(spacing: 17) {
+                    Text("Simulating: \(completedIterations) / \(totalIterations)")
+                        .font(.body.monospacedDigit())
+                        .foregroundColor(.white)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                    
+                    ProgressView(value: Double(completedIterations), total: Double(totalIterations))
+                        .tint(.blue)
+                        .scaleEffect(x: 1, y: 2, anchor: .center)
+                        .frame(width: 200)
+                }
+                .padding(.bottom, 20)
+                
+                if showTip {
+                    Text(currentTip)
+                        .foregroundColor(.white)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: 300)
+                        .lineLimit(nil)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .transition(.opacity)
+                        .padding(.bottom, 30)
+                }
+                
+                Spacer()
+            }
+        }
+        .onAppear { startTipCycle() }
+        .onDisappear { stopTipCycle() }
+    }
+
+    // MARK: - Run Simulation
+    private func runSimulation() {
+        // Load CSV arrays
+        historicalBTCWeeklyReturns = loadBTCWeeklyReturns()
+        sp500WeeklyReturns = loadSP500WeeklyReturns()
+
+        // Setup states
         isCancelled = false
         isLoading = true
         monteCarloResults = []
         completedIterations = 0
 
-        // 3) Determine the seed to use
+        // Check random seed
         let finalSeed: UInt64?
         if simSettings.lockedRandomSeed {
-            // If locked, always use the stored seed
             finalSeed = simSettings.seedValue
         } else if simSettings.useRandomSeed {
-            // Not locked, but useRandomSeed is true => use stored seed
             finalSeed = simSettings.seedValue
         } else {
-            // No locked seed, no random seed => pass nil so it generates a new seed each run
             finalSeed = nil
         }
 
-        // 4) Kick off on a background queue
+        // Kick off background
         DispatchQueue.global(qos: .userInitiated).async {
-            guard let total = self.inputManager.getParsedIterations(), total > 0 else {
-                DispatchQueue.main.async { self.isLoading = false }
+            guard let total = inputManager.getParsedIterations(), total > 0 else {
+                DispatchQueue.main.async { isLoading = false }
                 return
             }
             DispatchQueue.main.async {
-                self.totalIterations = total
+                totalIterations = total
             }
 
-            let userInputCAGR = self.inputManager.getParsedAnnualCAGR() / 100.0
-            let userInputVolatility = (Double(self.inputManager.annualVolatility) ?? 1.0) / 100.0
+            let userInputCAGR = inputManager.getParsedAnnualCAGR() / 100.0
+            let userInputVolatility = (Double(inputManager.annualVolatility) ?? 1.0) / 100.0
 
-            // 5) Run the simulation with progress + isCancelled checks
             let (medianRun, allIterations) = runMonteCarloSimulationsWithProgress(
                 settings: simSettings,
                 annualCAGR: userInputCAGR,
@@ -931,7 +892,7 @@ struct ContentView: View {
                 exchangeRateEURUSD: 1.06,
                 totalWeeks: 1040,
                 iterations: total,
-                isCancelled: { self.isCancelled }, // checks mid-loop
+                isCancelled: { self.isCancelled },
                 progressCallback: { completed in
                     if !self.isCancelled {
                         DispatchQueue.main.async {
@@ -939,10 +900,9 @@ struct ContentView: View {
                         }
                     }
                 },
-                seed: finalSeed // use finalSeed here
+                seed: finalSeed
             )
 
-            // If we cancelled mid-iterations, skip final UI updates
             if self.isCancelled {
                 DispatchQueue.main.async {
                     self.isLoading = false
@@ -950,302 +910,21 @@ struct ContentView: View {
                 return
             }
 
-            // Not cancelled => update UI with results
+            // Done => show results
             DispatchQueue.main.async {
                 self.isLoading = false
                 self.monteCarloResults = medianRun
                 self.isSimulationRun = true
             }
 
-            // Optionally process all results in the background
+            // Optionally background-process all results
             DispatchQueue.global(qos: .background).async {
                 self.processAllResults(allIterations)
             }
         }
     }
 
-    /// The cohesive approach for N runs
-    func runLocalMonteCarloSimulationsWithProgress(
-        annualCAGR: Double,
-        annualVolatility: Double,
-        correlationWithSP500: Double = 0.0,
-        exchangeRateEURUSD: Double,
-        totalWeeks: Int,
-        iterations: Int,
-        progressCallback: @escaping (Int) -> Void
-    ) -> ([SimulationData], [[SimulationData]]) {
-
-        var allRuns = [[SimulationData]]()
-
-        for i in 0..<iterations {
-            if isCancelled { break }
-
-            let simRun = runOneFullSimulation(
-                settings: simSettings,
-                annualCAGR: annualCAGR,
-                annualVolatility: annualVolatility,
-                exchangeRateEURUSD: exchangeRateEURUSD,
-                totalWeeks: totalWeeks
-            )
-            
-            allRuns.append(simRun)
-            
-            // Update progress
-            progressCallback(i + 1)
-        }
-
-        // Sort final results by last week's portfolioValue
-        var finalValues = allRuns.map { ($0.last?.portfolioValueEUR ?? 0.0, $0) }
-        finalValues.sort { $0.0 < $1.0 }
-
-        // median
-        let medianRun = finalValues[finalValues.count / 2].1
-        return (medianRun, allRuns)
-    }
-
-    private func randomNormal(
-        mean: Double,
-        standardDeviation: Double
-    ) -> Double {
-        // Box-Muller
-        let u1 = Double.random(in: 0..<1)       // unseeded
-        let u2 = Double.random(in: 0..<1)       // unseeded
-        let z0 = sqrt(-2.0 * log(u1)) * cos(2.0 * .pi * u2)
-        return z0 * standardDeviation + mean
-    }
-
-    func runLocalOneFullSimulation(
-        annualCAGR: Double,
-        annualVolatility: Double,
-        exchangeRateEURUSD: Double,
-        totalWeeks: Int
-    ) -> [SimulationData] {
-        
-        // If `true`, we pick from weightedBTCWeeklyReturns; else from historicalBTCWeeklyReturns.
-        let useWeightedSampling = false
-
-        // Hardcoded starting weeks 1..7
-        var results: [SimulationData] = [
-            .init(
-                week: 1,
-                startingBTC: 0.0,
-                netBTCHoldings: 0.00469014,
-                btcPriceUSD: 76_532.03,
-                btcPriceEUR: 71_177.69,
-                portfolioValueEUR: 333.83,
-                contributionEUR: 378.00,
-                transactionFeeEUR: 2.46,
-                netContributionBTC: 0.00527613,
-                withdrawalEUR: 0.0
-            ),
-            .init(
-                week: 2,
-                startingBTC: 0.00469014,
-                netBTCHoldings: 0.00530474,
-                btcPriceUSD: 92_000.00,
-                btcPriceEUR: 86_792.45,
-                portfolioValueEUR: 465.00,
-                contributionEUR: 60.00,
-                transactionFeeEUR: 0.21,
-                netContributionBTC: 0.00066988,
-                withdrawalEUR: 0.0
-            ),
-            .init(
-                week: 3,
-                startingBTC: 0.00530474,
-                netBTCHoldings: 0.00608283,
-                btcPriceUSD: 95_000.00,
-                btcPriceEUR: 89_622.64,
-                portfolioValueEUR: 547.00,
-                contributionEUR: 70.00,
-                transactionFeeEUR: 0.25,
-                netContributionBTC: 0.00077809,
-                withdrawalEUR: 0.0
-            ),
-            .init(
-                week: 4,
-                startingBTC: 0.00608283,
-                netBTCHoldings: 0.00750280,
-                btcPriceUSD: 95_741.15,
-                btcPriceEUR: 90_321.84,
-                portfolioValueEUR: 685.00,
-                contributionEUR: 130.00,
-                transactionFeeEUR: 0.46,
-                netContributionBTC: 0.00141997,
-                withdrawalEUR: 0.0
-            ),
-            .init(
-                week: 5,
-                startingBTC: 0.00745154,
-                netBTCHoldings: 0.00745154,
-                btcPriceUSD: 96_632.26,
-                btcPriceEUR: 91_162.51,
-                portfolioValueEUR: 679.30,
-                contributionEUR: 0.00,
-                transactionFeeEUR: 5.00,
-                netContributionBTC: 0.00000000,
-                withdrawalEUR: 0.0
-            ),
-            .init(
-                week: 6,
-                startingBTC: 0.00745154,
-                netBTCHoldings: 0.00745154,
-                btcPriceUSD: 106_000.00,
-                btcPriceEUR: 100_000.00,
-                portfolioValueEUR: 745.15,
-                contributionEUR: 0.00,
-                transactionFeeEUR: 0.00,
-                netContributionBTC: 0.00000000,
-                withdrawalEUR: 0.0
-            ),
-            .init(
-                week: 7,
-                startingBTC: 0.00745154,
-                netBTCHoldings: 0.00959318,
-                btcPriceUSD: 98_346.31,
-                btcPriceEUR: 92_779.54,
-                portfolioValueEUR: 890.05,
-                contributionEUR: 200.00,
-                transactionFeeEUR: 1.300,
-                netContributionBTC: 0.00214164,
-                withdrawalEUR: 0.0
-            )
-        ]
-        
-        // Convert annual CAGR to a weekly growth rate
-        let lastHardcoded = results.last
-        let baseWeeklyGrowth = pow(1.0 + annualCAGR, 1.0 / 52.0) - 1.0
-        let weeklyVol = annualVolatility / sqrt(52.0)
-
-        var previousBTCPriceUSD = lastHardcoded?.btcPriceUSD ?? 76_532.03
-        var previousBTCHoldings = lastHardcoded?.netBTCHoldings ?? 0.00469014
-
-        for week in 8...totalWeeks {
-            
-            // 1) Pick a weekly return from our CSV array
-            let btcArr = useWeightedSampling ? weightedBTCWeeklyReturns : historicalBTCWeeklyReturns
-            let histReturn = btcArr.randomElement() ?? 0.0  // purely unseeded
-
-            // 2) Dampen extremes
-            let dampenedReturn = dampenArctan(histReturn)
-
-            // 3) Combine with CAGR
-            var combinedWeeklyReturn = dampenedReturn + baseWeeklyGrowth
-
-            // 4) Optional random shock
-            if weeklyVol > 0.0 {
-                let shock = randomNormal(mean: 0.0, standardDeviation: weeklyVol)
-                combinedWeeklyReturn += shock
-            }
-            
-            // 5) Calculate new BTC price
-            var btcPriceUSD = previousBTCPriceUSD * (1.0 + combinedWeeklyReturn)
-            btcPriceUSD = max(btcPriceUSD, 1.0)
-            let btcPriceEUR = btcPriceUSD / exchangeRateEURUSD
-
-            // Log every 50 weeks
-            if week % 50 == 0 {
-                print(
-                    "[Week \(week)] WeeklyReturn = "
-                    + String(format: "%.4f", combinedWeeklyReturn)
-                    + ", btcPriceUSD = "
-                    + String(format: "%.2f", btcPriceUSD)
-                )
-            }
-            
-            // Contribution each week
-            let contributionEUR = (week <= 52) ? 60.0 : 100.0
-            let fee = contributionEUR * 0.0035
-            let netBTC = (contributionEUR - fee) / btcPriceEUR
-            
-            // Evaluate withdrawal logic
-            let hypotheticalHoldings = previousBTCHoldings + netBTC
-            let hypotheticalValueEUR = hypotheticalHoldings * btcPriceEUR
-            
-            var withdrawalEUR = 0.0
-            if hypotheticalValueEUR > 60_000 {
-                withdrawalEUR = 200.0
-            } else if hypotheticalValueEUR > 30_000 {
-                withdrawalEUR = 100.0
-            }
-            let withdrawalBTC = withdrawalEUR / btcPriceEUR
-            
-            let netHoldings = max(0.0, hypotheticalHoldings - withdrawalBTC)
-            let portfolioValEUR = netHoldings * btcPriceEUR
-            
-            // Append the new week’s data
-            results.append(
-                SimulationData(
-                    week: week,
-                    startingBTC: previousBTCHoldings,
-                    netBTCHoldings: netHoldings,
-                    btcPriceUSD: btcPriceUSD,
-                    btcPriceEUR: btcPriceEUR,
-                    portfolioValueEUR: portfolioValEUR,
-                    contributionEUR: contributionEUR,
-                    transactionFeeEUR: fee,
-                    netContributionBTC: netBTC,
-                    withdrawalEUR: withdrawalEUR
-                )
-            )
-            
-            previousBTCPriceUSD = btcPriceUSD
-            previousBTCHoldings = netHoldings
-        }
-        
-        return results
-    }
-    
-    private func generateRealSimulation(
-        totalWeeks: Int,
-        annualCAGR: Double,
-        annualVolatility: Double,
-        exchangeRateEURUSD: Double
-    ) -> [SimulationData] {
-        // 1) Declare `results` explicitly as an empty `[SimulationData]` array
-        var results: [SimulationData] = []
-        
-        // 2) If needed, you could do:
-        // results.append(
-        //    SimulationData(
-        //       week: 1,
-        //       ... etc ...
-        //    )
-        // )
-        // ... plus code for weeks 8...1040 ...
-        
-        // 3) Return
-        return results
-    }
-
-    private func processAllResults(_ allResults: [[SimulationData]]) {
-        // do something with them...
-    }
-
-    private func getValue(_ item: SimulationData, _ keyPath: PartialKeyPath<SimulationData>) -> String {
-        if let value = item[keyPath: keyPath] as? Double {
-            switch keyPath {
-            case \SimulationData.startingBTC,
-                 \SimulationData.netBTCHoldings,
-                 \SimulationData.netContributionBTC:
-                return value.formattedBTC()
-            case \SimulationData.btcPriceUSD,
-                 \SimulationData.btcPriceEUR,
-                 \SimulationData.portfolioValueEUR,
-                 \SimulationData.contributionEUR,
-                 \SimulationData.transactionFeeEUR,
-                 \SimulationData.withdrawalEUR:
-                return value.formattedCurrency()
-            default:
-                return String(format: "%.2f", value)
-            }
-        } else if let value = item[keyPath: keyPath] as? Int {
-            return "\(value)"
-        } else {
-            return ""
-        }
-    }
-
+    // The rest is unchanged (startTipCycle, stopTipCycle, processAllResults, getValue, etc.)
     private func startTipCycle() {
         showTip = false
         tipTimer?.invalidate()
@@ -1277,11 +956,31 @@ struct ContentView: View {
         showTip = false
     }
 
-    // Fake "historical returns" function
-    func sampleHistoricalReturns() -> (Double, Double) {
-        // e.g. randomly produce a weekly % change between -5% and +5%
-        let randomBTC = Double.random(in: -0.05...0.05)
-        let randomSP = Double.random(in: -0.02...0.03)
-        return (randomBTC, randomSP)
+    private func processAllResults(_ allResults: [[SimulationData]]) {
+        // ...
+    }
+
+    private func getValue(_ item: SimulationData, _ keyPath: PartialKeyPath<SimulationData>) -> String {
+        if let value = item[keyPath: keyPath] as? Double {
+            switch keyPath {
+            case \SimulationData.startingBTC,
+                 \SimulationData.netBTCHoldings,
+                 \SimulationData.netContributionBTC:
+                return value.formattedBTC()
+            case \SimulationData.btcPriceUSD,
+                 \SimulationData.btcPriceEUR,
+                 \SimulationData.portfolioValueEUR,
+                 \SimulationData.contributionEUR,
+                 \SimulationData.transactionFeeEUR,
+                 \SimulationData.withdrawalEUR:
+                return value.formattedCurrency()
+            default:
+                return String(format: "%.2f", value)
+            }
+        } else if let value = item[keyPath: keyPath] as? Int {
+            return "\(value)"
+        } else {
+            return ""
+        }
     }
 }
