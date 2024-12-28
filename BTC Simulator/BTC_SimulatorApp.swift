@@ -10,20 +10,32 @@ import SwiftUI
 @main
 struct BTCMoteCarloApp: App {
     @StateObject private var simSettings = SimulationSettings()
-    
+
+    // Track whether onboarding is done.
+    @State private var didFinishOnboarding: Bool
+
     init() {
-        // Load your CSVs here if needed
-        // loadAllHistoricalData()
+        // Check a UserDefaults key to see if onboarding was completed.
+        let hasOnboarded = UserDefaults.standard.bool(forKey: "hasOnboarded")
+        print(">>> hasOnboarded in init is:", hasOnboarded)
+        _didFinishOnboarding = State(initialValue: hasOnboarded)
     }
 
     var body: some Scene {
         WindowGroup {
-            NavigationStack {
-                // Your main ContentView or root view
-                ContentView()
+            if didFinishOnboarding {
+                NavigationStack {
+                    ContentView()
+                }
+                .environmentObject(simSettings)
+            } else {
+                OnboardingView(didFinishOnboarding: $didFinishOnboarding)
+                    .environmentObject(simSettings)
+                    .onDisappear {
+                        print("OnboardingView disappeared, switching to main content.")
+                        UserDefaults.standard.set(true, forKey: "hasOnboarded")
+                    }
             }
-            // Provide SimulationSettings to all child views in the NavigationStack
-            .environmentObject(simSettings)
         }
     }
 }

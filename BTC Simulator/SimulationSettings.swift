@@ -7,7 +7,39 @@
 
 import SwiftUI
 
+// SimulationSettings.swift
+extension SimulationSettings {
+    func resetUserCriteria() {
+        // If your app checks this key for whether onboarding is done:
+        UserDefaults.standard.set(false, forKey: "hasOnboarded")
+
+        // Clear random seed logic
+        lockedRandomSeed = false
+        seedValue = 0
+        useRandomSeed = true
+
+        // If you want to restore your bullish/bearish factors to defaults:
+        restoreDefaults()
+
+        print(">>> [RESET] Completed resetUserCriteria()")
+        
+        // Or if you want to do partial resets, do so here.
+        // For example:
+        // useHalving = false
+        // halvingBump = 0.0
+        // ... etc.
+
+        // If you have a separate manager for user inputs:
+        // let inputManager = PersistentInputManager() // or from a shared reference
+        // inputManager.resetAll()
+        
+        // Also reset inputManager if you have it hooked up, e.g.:
+        // inputManager?.resetAllInputs()
+    }
+}
+
 class SimulationSettings: ObservableObject {
+    var inputManager: PersistentInputManager? = nil
     // MARK: - Random Seed Logic
     
     @Published var lastUsedSeed: UInt64 = 0

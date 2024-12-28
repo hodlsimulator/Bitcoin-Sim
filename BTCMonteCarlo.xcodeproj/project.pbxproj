@@ -28,6 +28,8 @@
 		E1883F422D1E43DB007AA90B /* VisualEffectBlur.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1883F412D1E43D7007AA90B /* VisualEffectBlur.swift */; };
 		E1883F442D1E69B9007AA90B /* FactorToggleRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1883F432D1E69B5007AA90B /* FactorToggleRow.swift */; };
 		E1883F482D1E8E21007AA90B /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1883F472D1E8E1C007AA90B /* AboutView.swift */; };
+		E1883F502D1FCEBD007AA90B /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1883F4F2D1FCEB9007AA90B /* OnboardingView.swift */; };
+		E1883F522D1FDDB2007AA90B /* BitcoinShapes.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1883F512D1FDDB0007AA90B /* BitcoinShapes.swift */; };
 		E191AD5D2D1B06E600020DBE /* BitcoinHistoricalData.swift in Sources */ = {isa = PBXBuildFile; fileRef = E191AD5C2D1B06E000020DBE /* BitcoinHistoricalData.swift */; };
 		E191AD5F2D1B07BC00020DBE /* CSVLoaderHistorical.swift in Sources */ = {isa = PBXBuildFile; fileRef = E191AD5E2D1B07B800020DBE /* CSVLoaderHistorical.swift */; };
 		E191AD632D1B0C9400020DBE /* CSVLoaderSP500.swift in Sources */ = {isa = PBXBuildFile; fileRef = E191AD622D1B0C9100020DBE /* CSVLoaderSP500.swift */; };
@@ -72,6 +74,8 @@
 		E1883F412D1E43D7007AA90B /* VisualEffectBlur.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisualEffectBlur.swift; sourceTree = "<group>"; };
 		E1883F432D1E69B5007AA90B /* FactorToggleRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FactorToggleRow.swift; sourceTree = "<group>"; };
 		E1883F472D1E8E1C007AA90B /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
+		E1883F4F2D1FCEB9007AA90B /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		E1883F512D1FDDB0007AA90B /* BitcoinShapes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BitcoinShapes.swift; sourceTree = "<group>"; };
 		E191AD5C2D1B06E000020DBE /* BitcoinHistoricalData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BitcoinHistoricalData.swift; sourceTree = "<group>"; };
 		E191AD5E2D1B07B800020DBE /* CSVLoaderHistorical.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVLoaderHistorical.swift; sourceTree = "<group>"; };
 		E191AD622D1B0C9100020DBE /* CSVLoaderSP500.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVLoaderSP500.swift; sourceTree = "<group>"; };
@@ -136,6 +140,7 @@
 				E1883F472D1E8E1C007AA90B /* AboutView.swift */,
 				E1883F3D2D1E0D75007AA90B /* ActiveField.swift */,
 				E191AD5C2D1B06E000020DBE /* BitcoinHistoricalData.swift */,
+				E1883F512D1FDDB0007AA90B /* BitcoinShapes.swift */,
 				E12CCD8A2CF8235F0059931D /* BTC_SimulatorApp.swift */,
 				E166A8B82CF955E80003F518 /* ContentOffsetScrollView.swift */,
 				E166A8B12CF85B2B0003F518 /* ContentView.swift */,
@@ -148,6 +153,7 @@
 				E1883F432D1E69B5007AA90B /* FactorToggleRow.swift */,
 				E1883F3F2D1E0DC8007AA90B /* InputManager.swift */,
 				E166A8AD2CF855BF0003F518 /* MonteCarloSimulator.swift */,
+				E1883F4F2D1FCEB9007AA90B /* OnboardingView.swift */,
 				E1883F3B2D1DDC75007AA90B /* ParametersFormView.swift */,
 				E1883F372D1DD4C5007AA90B /* SettingsView.swift */,
 				E1883F392D1DD94C007AA90B /* SimulationSettings.swift */,
@@ -331,12 +337,14 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E1883F522D1FDDB2007AA90B /* BitcoinShapes.swift in Sources */,
 				E191AD5F2D1B07BC00020DBE /* CSVLoaderHistorical.swift in Sources */,
 				E166A8B02CF855C20003F518 /* SimulationData.swift in Sources */,
 				E166A8AC2CF855B60003F518 /* DoubleExtensions.swift in Sources */,
 				E191AD5D2D1B06E600020DBE /* BitcoinHistoricalData.swift in Sources */,
 				E1883F482D1E8E21007AA90B /* AboutView.swift in Sources */,
 				E166A8B22CF85B2B0003F518 /* ContentView.swift in Sources */,
+				E1883F502D1FCEBD007AA90B /* OnboardingView.swift in Sources */,
 				E1883F402D1E0DCB007AA90B /* InputManager.swift in Sources */,
 				E191AD672D1B764400020DBE /* CSVLoaderBTC.swift in Sources */,
 				E166A8B92CF955ED0003F518 /* ContentOffsetScrollView.swift in Sources */,

@@ -36,6 +36,22 @@ class PersistentInputManager: ObservableObject {
         self.btcGrowthRate = UserDefaults.standard.string(forKey: "btcGrowthRate") ?? "0.005" // Default: 0.5% weekly growth
     }
 
+    /// Resets all text-based inputs to default values.
+    func resetAllInputs() {
+        // Reset the @Published properties
+        iterations = "1000"
+        annualCAGR = "40.0"
+        annualVolatility = "80.0"
+        selectedWeek = "1"
+        btcPriceMinInput = ""
+        btcPriceMaxInput = ""
+        portfolioValueMinInput = ""
+        portfolioValueMaxInput = ""
+        btcHoldingsMinInput = ""
+        btcHoldingsMaxInput = ""
+        btcGrowthRate = "0.005"
+    }
+    
     func saveToDefaults() {
         UserDefaults.standard.set(iterations, forKey: "iterations")
         UserDefaults.standard.set(annualCAGR, forKey: "annualCAGR")
