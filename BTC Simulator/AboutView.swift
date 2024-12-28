@@ -18,72 +18,65 @@ struct AboutView: View {
                     .bold()
                     .padding(.bottom, 8)
 
-                // OVERVIEW
-                Text("Overview")
-                    .font(.title2)
-                    .bold()
+                // INTRODUCTION
                 Text("""
-This app simulates Bitcoin price growth (or decline) across many hypothetical futures. It uses a weekly random draw from historical BTC returns, then applies a series of “bullish” or “bearish” factors (like Halving, Tech Breakthrough, Recession, etc.) over a timeline of 1,040 weeks (~20 years). By running many such simulations (Monte Carlo), you get a range of outcomes and can see a possible median path.
+HODL Simulator is your tool for exploring Bitcoin’s potential future. Whether you’re curious about long-term price trends, the effects of macro events, or Bitcoin-specific milestones like halvings, this app lets you simulate scenarios and visualise outcomes. Dive into the numbers and discover what could shape Bitcoin over the next 20 years.
 """)
 
-                // CODE INSIGHTS
-                Text("How It Works Under the Hood")
+                // WHAT THE APP DOES
+                Text("What Does It Do?")
                     .font(.title2)
                     .bold()
                 Text("""
-We rely on a file called MonteCarloSimulator.swift, which handles the core simulation logic. It pulls historical weekly returns from CSVs (not included here), picks random entries, and “dampens” extreme outliers using an arctan function. On top of that, it systematically checks whether each factor (bullish or bearish) is enabled in Settings and adjusts the weekly return accordingly.
-
-For example, a “Halving” event might add a positive bump at weeks 210, 420, 630, and 840, whereas a “Regulatory Clampdown” might subtract a certain amount during weeks 200–220. When running the simulation, if a factor is toggled on, the code gradually adds or subtracts its effect over its time window. Some events, like a “Security Breach,” happen once at a specific week, while others (e.g. “Bear Market Conditions”) subtract every week during that window.
+HODL Simulator models Bitcoin’s price over 20 years (~1,040 weeks) by combining historical price patterns with adjustable bullish and bearish factors. From Halvings to Global Recessions, you control the assumptions. The app runs hundreds or thousands of simulations to show a range of potential outcomes, helping you explore how your BTC holdings might grow—or shrink—under different conditions.
 """)
 
-                // RANDOM SEED SECTION
-                Text("Random Seed Logic")
+                // KEY FEATURES
+                Text("Key Features")
                     .font(.title2)
                     .bold()
                 Text("""
-By default, each run can be entirely random—meaning each new simulation might produce a different final outcome. The code includes a “lock random seed” feature, so you can fix the underlying random number generator (RNG) at a specific seed. This ensures every run, with the same factors, returns identical results. This is super handy if you want to isolate exactly how one factor changes the outcome without random fluctuations each time.
-
-The simulator calls setRandomSeed(...) at the start of a run. If a seed is provided, it creates a custom SeededGenerator that repeats the same random draws. If the seed is nil, it uses Swift’s default random generator for fresh results every time.
-""")
-
-                // STEP-BY-STEP EXPLANATION
-                Text("Step-by-Step Simulation")
-                    .font(.title2)
-                    .bold()
-                Text("""
-1. **Initial Data**: The simulator starts from some hard-coded or previously recorded “weeks 1..7” data, so that you can see continuity from an existing scenario.
-2. **Weekly Loop**: From week 8 up to 1,040 (about 20 years), we:
-   • Pick a random weekly return from historical data (with optional damping).
-   • Add or subtract factor-based bumps (Bullish or Bearish).
-   • Update the BTC price accordingly.
-3. **Contributions & Withdrawals**: Each week, the user “contributes” some EUR to buy BTC (minus a small fee). If the portfolio grows large, we may withdraw EUR. 
-4. **Final Results**: After all iterations, the simulator collects every “run” (e.g. 100 or 1,000 runs), sorts them by final portfolio value, and picks a median run to display. That helps you get a sense of the “middle” scenario.
+- **Bullish and Bearish Factors**: Adjust events like Institutional Demand, ETF Approval, Recessions, or Black Swan events to see their impact on Bitcoin’s price.
+- **Monte Carlo Simulations**: Run randomised scenarios to understand the range of possible futures.
+- **Customised Parameters**: Set annual growth rates, volatility, and contribution amounts to match your personal outlook.
+- **Portfolio Insights**: See how your contributions, withdrawals, and Bitcoin holdings evolve over time.
+- **Factor Explanations**: Each factor includes a detailed description to help you understand its role in the simulation.
 """)
 
                 // SETTINGS PAGE
-                Text("Settings & Factors")
+                Text("Customising Simulations")
                     .font(.title2)
                     .bold()
                 Text("""
-The Settings page lists all bullish and bearish factors. Each has a slider controlling how strong the effect is and a toggle to enable or disable it. For instance, “Scarcity Events” can add up to a 0.025 return boost, ramping up between weeks 700–1040, while “Recession” might subtract -0.004 between weeks 250–400. Tweak these factors to reflect your personal macro assumptions.
-
-Additionally, you can reset any slider to its default value by tapping the small icon (emoji) next to it on the Settings page.
+Head to the Settings page to tailor your simulation. Each factor has a toggle to turn it on or off and a slider to adjust its strength. For example:
+- **Halving**: Models Bitcoin’s supply cuts, historically linked to price rallies.
+- **Regulatory Clarity**: Adds positive effects from clear and favourable crypto regulations.
+- **Scarcity Events**: Reflects reduced BTC supply on exchanges, leading to price increases.
+Whether you’re bullish, bearish, or somewhere in between, you can customise your settings to match your view of Bitcoin’s future.
 """)
 
-                // LOCK RANDOM SEED DETAILS
-                Text("Lock Random Seed")
+                // RANDOM SEED
+                Text("Consistent Results with Random Seed")
                     .font(.title2)
                     .bold()
                 Text("""
-Turn on “Lock Random Seed” if you want consistent randomness. When locked, the app sets a fixed seed number in the simulator, producing the same random weekly picks every run. That way, you can systematically compare “Halving On vs. Off” or “Regulatory Clarity On vs. Off” without worrying that random variation skewed the results.
+By default, each simulation is random, producing unique results. If you want consistent outcomes to compare scenarios, turn on “Lock Random Seed.” This feature ensures that random elements—like weekly returns—stay the same across runs. It’s perfect for testing individual factors, such as “Institutional Demand On vs. Off.”
 """)
 
-                // WRAP-UP
-                Text("Enjoy Experimenting!")
+                // HOW IT WORKS
+                Text("How It Works")
                     .font(.title2)
                     .bold()
                 Text("""
-Ultimately, HODL Simulator is a toy that helps you visualise scenarios, but it’s not a guarantee of future performance. Real markets are complex, and each factor is purely hypothetical! Still, it’s fun to experiment with toggles, see hypothetical long-term outcomes, and get a feel for how drastically the future can vary.
+The simulator starts with historical BTC price data and runs week-by-week for 20 years. Each week, it applies randomised returns adjusted by the factors you’ve selected. Contributions and withdrawals are tracked as your portfolio evolves, showing how your BTC holdings might grow—or contract—over time. After completing the simulations, you’ll see a range of possible outcomes, including a median scenario.
+""")
+
+                // EXPERIMENTATION
+                Text("Experiment and Explore")
+                    .font(.title2)
+                    .bold()
+                Text("""
+HODL Simulator is designed to help you think about Bitcoin’s long-term potential. While no tool can predict the future, this app lets you explore different scenarios and better understand the forces that could shape Bitcoin in the years ahead. Tweak settings, test assumptions, and see how the future could unfold.
 """)
             }
             .foregroundColor(.white)
@@ -93,6 +86,5 @@ Ultimately, HODL Simulator is a toy that helps you visualise scenarios, but it�
         .background(Color(white: 0.12).ignoresSafeArea())
         .navigationTitle("About")
         .navigationBarTitleDisplayMode(.inline)
-        // Default SwiftUI back button keeps your custom nav styling
     }
 }

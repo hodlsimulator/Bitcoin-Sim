@@ -85,16 +85,17 @@ struct FactorToggleRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             // Title row
-            HStack {
+            HStack(spacing: 8) {
                 if let icon = iconName, !icon.isEmpty {
                     Button {
-                        // Tapping icon resets slider to default
+                        // Reset slider to default on icon tap
                         sliderValue = defaultValue
                     } label: {
                         Image(systemName: icon)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 24, height: 24) // fixed frame for alignment
                             .foregroundColor(.orange)
-                            .padding(.vertical, 4)
-                            .padding(.horizontal, 6)
                     }
                     .buttonStyle(.plain)
                 }

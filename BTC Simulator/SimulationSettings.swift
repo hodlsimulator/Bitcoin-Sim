@@ -10,6 +10,8 @@ import SwiftUI
 class SimulationSettings: ObservableObject {
     // MARK: - Random Seed Logic
     
+    @Published var lastUsedSeed: UInt64 = 0
+
     /// Whether the random seed is locked (so it doesn't change each simulation)
     @Published var lockedRandomSeed: Bool = false {
         didSet {
@@ -18,14 +20,15 @@ class SimulationSettings: ObservableObject {
     }
     
     /// The actual seed value. If locked, we'll always use this seed.
-    @Published var seedValue: UInt64 = 12345 {
+    /// We'll use `0` here to indicate "no locked seed" by default.
+    @Published var seedValue: UInt64 = 0 {
         didSet {
             UserDefaults.standard.set(seedValue, forKey: "seedValue")
         }
     }
     
     /// Whether we pick a new random seed each run (if lockedRandomSeed is false)
-    @Published var useRandomSeed: Bool = false {
+    @Published var useRandomSeed: Bool = true {
         didSet {
             UserDefaults.standard.set(useRandomSeed, forKey: "useRandomSeed")
         }
@@ -187,93 +190,97 @@ class SimulationSettings: ObservableObject {
     init() {
         // --- Load random seed settings ---
         self.lockedRandomSeed = UserDefaults.standard.bool(forKey: "lockedRandomSeed")
+        
+        // Load the stored seed if any; otherwise, leave as 0 (unlocked)
         if let storedSeed = UserDefaults.standard.object(forKey: "seedValue") as? UInt64 {
             self.seedValue = storedSeed
         }
-        let storedUseRandom = UserDefaults.standard.object(forKey: "useRandomSeed") as? Bool ?? false
+        
+        // If user hasn’t locked the seed, default to “use random seed” = true
+        let storedUseRandom = UserDefaults.standard.object(forKey: "useRandomSeed") as? Bool ?? true
         self.useRandomSeed = storedUseRandom
-
+        
         // --- Load bullish toggles ---
         let storedUseHalving  = UserDefaults.standard.object(forKey: "useHalving") as? Bool ?? true
         let storedHalvingBump = UserDefaults.standard.double(forKey: "halvingBump")
         let finalHalvingBump  = (storedHalvingBump == 0) ? 0.20 : storedHalvingBump
 
-        let storedUseInst     = UserDefaults.standard.object(forKey: "useInstitutionalDemand") as? Bool ?? true
-        let storedMaxDemand   = UserDefaults.standard.double(forKey: "maxDemandBoost")
-        let finalMaxDemand    = (storedMaxDemand == 0) ? 0.004 : storedMaxDemand
+        let storedUseInst   = UserDefaults.standard.object(forKey: "useInstitutionalDemand") as? Bool ?? true
+        let storedMaxDemand = UserDefaults.standard.double(forKey: "maxDemandBoost")
+        let finalMaxDemand  = (storedMaxDemand == 0) ? 0.004 : storedMaxDemand
 
-        let storedUseCountry  = UserDefaults.standard.object(forKey: "useCountryAdoption") as? Bool ?? true
-        let storedMaxCountry  = UserDefaults.standard.double(forKey: "maxCountryAdBoost")
-        let finalMaxCountry   = (storedMaxCountry == 0) ? 0.0055 : storedMaxCountry
+        let storedUseCountry = UserDefaults.standard.object(forKey: "useCountryAdoption") as? Bool ?? true
+        let storedMaxCountry = UserDefaults.standard.double(forKey: "maxCountryAdBoost")
+        let finalMaxCountry  = (storedMaxCountry == 0) ? 0.0055 : storedMaxCountry
 
-        let storedUseClarity  = UserDefaults.standard.object(forKey: "useRegulatoryClarity") as? Bool ?? true
-        let storedMaxClarity  = UserDefaults.standard.double(forKey: "maxClarityBoost")
-        let finalMaxClarity   = (storedMaxClarity == 0) ? 0.0006 : storedMaxClarity
+        let storedUseClarity = UserDefaults.standard.object(forKey: "useRegulatoryClarity") as? Bool ?? true
+        let storedMaxClarity = UserDefaults.standard.double(forKey: "maxClarityBoost")
+        let finalMaxClarity  = (storedMaxClarity == 0) ? 0.0006 : storedMaxClarity
 
-        let storedUseEtf      = UserDefaults.standard.object(forKey: "useEtfApproval") as? Bool ?? true
-        let storedMaxEtf      = UserDefaults.standard.double(forKey: "maxEtfBoost")
-        let finalMaxEtf       = (storedMaxEtf == 0) ? 0.0008 : storedMaxEtf
+        let storedUseEtf   = UserDefaults.standard.object(forKey: "useEtfApproval") as? Bool ?? true
+        let storedMaxEtf   = UserDefaults.standard.double(forKey: "maxEtfBoost")
+        let finalMaxEtf    = (storedMaxEtf == 0) ? 0.0008 : storedMaxEtf
 
-        let storedUseTech     = UserDefaults.standard.object(forKey: "useTechBreakthrough") as? Bool ?? true
-        let storedMaxTech     = UserDefaults.standard.double(forKey: "maxTechBoost")
-        let finalMaxTech      = (storedMaxTech == 0) ? 0.002 : storedMaxTech
+        let storedUseTech  = UserDefaults.standard.object(forKey: "useTechBreakthrough") as? Bool ?? true
+        let storedMaxTech  = UserDefaults.standard.double(forKey: "maxTechBoost")
+        let finalMaxTech   = (storedMaxTech == 0) ? 0.002 : storedMaxTech
 
         let storedUseScarcity = UserDefaults.standard.object(forKey: "useScarcityEvents") as? Bool ?? true
         let storedMaxScarcity = UserDefaults.standard.double(forKey: "maxScarcityBoost")
         let finalMaxScarcity  = (storedMaxScarcity == 0) ? 0.025 : storedMaxScarcity
 
-        let storedUseMacro    = UserDefaults.standard.object(forKey: "useGlobalMacroHedge") as? Bool ?? true
-        let storedMaxMacro    = UserDefaults.standard.double(forKey: "maxMacroBoost")
-        let finalMaxMacro     = (storedMaxMacro == 0) ? 0.0015 : storedMaxMacro
+        let storedUseMacro = UserDefaults.standard.object(forKey: "useGlobalMacroHedge") as? Bool ?? true
+        let storedMaxMacro = UserDefaults.standard.double(forKey: "maxMacroBoost")
+        let finalMaxMacro  = (storedMaxMacro == 0) ? 0.0015 : storedMaxMacro
 
-        let storedUseStable   = UserDefaults.standard.object(forKey: "useStablecoinShift") as? Bool ?? true
-        let storedMaxStable   = UserDefaults.standard.double(forKey: "maxStablecoinBoost")
-        let finalMaxStable    = (storedMaxStable == 0) ? 0.0006 : storedMaxStable
+        let storedUseStable = UserDefaults.standard.object(forKey: "useStablecoinShift") as? Bool ?? true
+        let storedMaxStable = UserDefaults.standard.double(forKey: "maxStablecoinBoost")
+        let finalMaxStable  = (storedMaxStable == 0) ? 0.0006 : storedMaxStable
 
-        let storedUseDemo     = UserDefaults.standard.object(forKey: "useDemographicAdoption") as? Bool ?? true
-        let storedMaxDemo     = UserDefaults.standard.double(forKey: "maxDemoBoost")
-        let finalMaxDemo      = (storedMaxDemo == 0) ? 0.001 : storedMaxDemo
+        let storedUseDemo  = UserDefaults.standard.object(forKey: "useDemographicAdoption") as? Bool ?? true
+        let storedMaxDemo  = UserDefaults.standard.double(forKey: "maxDemoBoost")
+        let finalMaxDemo   = (storedMaxDemo == 0) ? 0.001 : storedMaxDemo
 
-        let storedUseAltcoin  = UserDefaults.standard.object(forKey: "useAltcoinFlight") as? Bool ?? true
-        let storedMaxAltcoin  = UserDefaults.standard.double(forKey: "maxAltcoinBoost")
-        let finalMaxAltcoin   = (storedMaxAltcoin == 0) ? 0.001 : storedMaxAltcoin
+        let storedUseAltcoin = UserDefaults.standard.object(forKey: "useAltcoinFlight") as? Bool ?? true
+        let storedMaxAltcoin = UserDefaults.standard.double(forKey: "maxAltcoinBoost")
+        let finalMaxAltcoin  = (storedMaxAltcoin == 0) ? 0.001 : storedMaxAltcoin
 
         let storedUseAdoption = UserDefaults.standard.object(forKey: "useAdoptionFactor") as? Bool ?? true
         let storedAdoptionVal = UserDefaults.standard.double(forKey: "adoptionBaseFactor")
         let finalAdoptionVal  = (storedAdoptionVal == 0) ? 0.000005 : storedAdoptionVal
 
         // --- Load bearish toggles ---
-        let storedUseClamp    = UserDefaults.standard.object(forKey: "useRegClampdown") as? Bool ?? true
-        let storedMaxClamp    = UserDefaults.standard.double(forKey: "maxClampDown")
-        let finalMaxClamp     = (storedMaxClamp == 0) ? -0.0002 : storedMaxClamp
+        let storedUseClamp  = UserDefaults.standard.object(forKey: "useRegClampdown") as? Bool ?? true
+        let storedMaxClamp  = UserDefaults.standard.double(forKey: "maxClampDown")
+        let finalMaxClamp   = (storedMaxClamp == 0) ? -0.0002 : storedMaxClamp
 
-        let storedUseCompet   = UserDefaults.standard.object(forKey: "useCompetitorCoin") as? Bool ?? true
-        let storedMaxCompet   = UserDefaults.standard.double(forKey: "maxCompetitorBoost")
-        let finalMaxCompet = (storedMaxCompet == 0) ? -0.0018 : storedMaxCompet
+        let storedUseCompet = UserDefaults.standard.object(forKey: "useCompetitorCoin") as? Bool ?? true
+        let storedMaxCompet = UserDefaults.standard.double(forKey: "maxCompetitorBoost")
+        let finalMaxCompet  = (storedMaxCompet == 0) ? -0.0018 : storedMaxCompet
 
-        let storedUseBreach   = UserDefaults.standard.object(forKey: "useSecurityBreach") as? Bool ?? true
-        let storedBreachImp   = UserDefaults.standard.double(forKey: "breachImpact")
-        let finalBreachImp    = (storedBreachImp == 0) ? -0.1 : storedBreachImp
+        let storedUseBreach = UserDefaults.standard.object(forKey: "useSecurityBreach") as? Bool ?? true
+        let storedBreachImp = UserDefaults.standard.double(forKey: "breachImpact")
+        let finalBreachImp  = (storedBreachImp == 0) ? -0.1 : storedBreachImp
 
-        let storedUsePop      = UserDefaults.standard.object(forKey: "useBubblePop") as? Bool ?? true
-        let storedMaxPop      = UserDefaults.standard.double(forKey: "maxPopDrop")
-        let finalMaxPop       = (storedMaxPop == 0) ? -0.005 : storedMaxPop
+        let storedUsePop    = UserDefaults.standard.object(forKey: "useBubblePop") as? Bool ?? true
+        let storedMaxPop    = UserDefaults.standard.double(forKey: "maxPopDrop")
+        let finalMaxPop     = (storedMaxPop == 0) ? -0.005 : storedMaxPop
 
-        let storedUseMelt     = UserDefaults.standard.object(forKey: "useStablecoinMeltdown") as? Bool ?? true
-        let storedMaxMelt     = UserDefaults.standard.double(forKey: "maxMeltdownDrop")
-        let finalMaxMelt      = (storedMaxMelt == 0) ? -0.001 : storedMaxMelt
+        let storedUseMelt   = UserDefaults.standard.object(forKey: "useStablecoinMeltdown") as? Bool ?? true
+        let storedMaxMelt   = UserDefaults.standard.double(forKey: "maxMeltdownDrop")
+        let finalMaxMelt    = (storedMaxMelt == 0) ? -0.001 : storedMaxMelt
 
-        let storedUseBlack    = UserDefaults.standard.object(forKey: "useBlackSwan") as? Bool ?? true
-        let storedBlackDrop   = UserDefaults.standard.double(forKey: "blackSwanDrop")
-        let finalBlackDrop    = (storedBlackDrop == 0) ? -0.60 : storedBlackDrop
+        let storedUseBlack  = UserDefaults.standard.object(forKey: "useBlackSwan") as? Bool ?? true
+        let storedBlackDrop = UserDefaults.standard.double(forKey: "blackSwanDrop")
+        let finalBlackDrop  = (storedBlackDrop == 0) ? -0.60 : storedBlackDrop
 
-        let storedUseBear     = UserDefaults.standard.object(forKey: "useBearMarket") as? Bool ?? true
-        let storedBearDrift   = UserDefaults.standard.double(forKey: "bearWeeklyDrift")
-        let finalBearDrift    = (storedBearDrift == 0) ? -0.01 : storedBearDrift
+        let storedUseBear   = UserDefaults.standard.object(forKey: "useBearMarket") as? Bool ?? true
+        let storedBearDrift = UserDefaults.standard.double(forKey: "bearWeeklyDrift")
+        let finalBearDrift  = (storedBearDrift == 0) ? -0.01 : storedBearDrift
 
-        let storedUseMatur    = UserDefaults.standard.object(forKey: "useMaturingMarket") as? Bool ?? true
-        let storedMaxMatur    = UserDefaults.standard.double(forKey: "maxMaturingDrop")
-        let finalMaxMatur     = (storedMaxMatur == 0) ? -0.015 : storedMaxMatur
+        let storedUseMatur  = UserDefaults.standard.object(forKey: "useMaturingMarket") as? Bool ?? true
+        let storedMaxMatur  = UserDefaults.standard.double(forKey: "maxMaturingDrop")
+        let finalMaxMatur   = (storedMaxMatur == 0) ? -0.015 : storedMaxMatur
 
         let storedUseRecession = UserDefaults.standard.object(forKey: "useRecession") as? Bool ?? true
         let storedMaxRecession = UserDefaults.standard.double(forKey: "maxRecessionDrop")
@@ -332,8 +339,8 @@ class SimulationSettings: ObservableObject {
     func restoreDefaults() {
         // Reset random seed logic
         lockedRandomSeed = false
-        useRandomSeed = false
-        seedValue = 12345
+        useRandomSeed = true
+        seedValue = 0  // “Unlocked, random each run” by default
         
         // Reset bullish toggles
         useHalving = true

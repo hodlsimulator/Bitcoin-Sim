@@ -851,13 +851,21 @@ struct ContentView: View {
         monteCarloResults = []
         completedIterations = 0
         
+        // Decide which seed to use.
         let finalSeed: UInt64?
         if simSettings.lockedRandomSeed {
+            // If locked, use the locked seed.
             finalSeed = simSettings.seedValue
+            simSettings.lastUsedSeed = simSettings.seedValue
         } else if simSettings.useRandomSeed {
-            finalSeed = simSettings.seedValue
+            // If unlocked with "use random seed," generate a fresh random for each run.
+            let newRandomSeed = UInt64.random(in: 0..<UInt64.max)
+            finalSeed = newRandomSeed
+            simSettings.lastUsedSeed = newRandomSeed
         } else {
+            // If unlocked but "useRandomSeed" is false, pass nil => let the sim pick internally
             finalSeed = nil
+            simSettings.lastUsedSeed = 0 // or leave as-is if you prefer
         }
         
         DispatchQueue.global(qos: .userInitiated).async {

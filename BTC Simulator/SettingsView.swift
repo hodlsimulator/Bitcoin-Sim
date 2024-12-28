@@ -415,22 +415,39 @@ leading investors to exit BTC positions to shore up liquidity in uncertain times
             //==================
             Section("Random Seed") {
                 Toggle("Lock Random Seed", isOn: $simSettings.lockedRandomSeed)
-                    .onChange(of: simSettings.lockedRandomSeed) { newValue in
-                        if newValue {
+                    .onChange(of: simSettings.lockedRandomSeed) { locked in
+                        if locked {
                             let newSeed = UInt64.random(in: 0..<UInt64.max)
                             simSettings.seedValue = newSeed
                             simSettings.useRandomSeed = false
                         } else {
+                            simSettings.seedValue = 0
                             simSettings.useRandomSeed = true
                         }
                     }
                     .foregroundColor(.white)
                     .listRowBackground(Color(white: 0.15))
 
-                Text("Current Seed: \(simSettings.seedValue)")
-                    .font(.footnote)
-                    .foregroundColor(.white)
-                    .listRowBackground(Color(white: 0.15))
+                // If locked, show the locked seedValue
+                if simSettings.lockedRandomSeed {
+                    Text("Current Seed (Locked): \(simSettings.seedValue)")
+                        .font(.footnote)
+                        .foregroundColor(.white)
+                        .listRowBackground(Color(white: 0.15))
+                } else {
+                    // Unlocked => show the lastUsedSeed if nonzero
+                    if simSettings.lastUsedSeed == 0 {
+                        Text("Current Seed: (no run yet)")
+                            .font(.footnote)
+                            .foregroundColor(.white)
+                            .listRowBackground(Color(white: 0.15))
+                    } else {
+                        Text("Current Seed (Unlocked): \(simSettings.lastUsedSeed)")
+                            .font(.footnote)
+                            .foregroundColor(.white)
+                            .listRowBackground(Color(white: 0.15))
+                    }
+                }
             }
             .listRowBackground(Color(white: 0.15))
 
