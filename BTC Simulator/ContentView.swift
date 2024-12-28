@@ -313,12 +313,75 @@ struct ContentView: View {
     @State private var lastScrollTime = Date()
     
     let loadingTips = [
+        // Existing "technical simulation" messages:
         "Gathering historical data from CSV files...",
-        "Running thousands of random draws...",
-        "Applying real BTC & S&P returns to the simulator...",
-        // etc...
+        "Spinning up random seeds...",
+        "Projecting future halving cycles...",
+        "Scrutinising all bullish and bearish factors...",
+        "Checking correlation with SP500...",
+        "Crunching thousands of Monte Carlo draws...",
+        "Spotting potential bubble pops...",
+        "Tracking demographic adoption trends...",
+        "Stirring volatility data...",
+        "Estimating random risk parameters...",
+        "Parsing user inputs for CAGR & volatility...",
+        "Calibrating institutional demand factor...",
+        "Waiting for whales to move off exchanges...",
+        "Probing competitor coin dominance...",
+        "Balancing stablecoin meltdown scenarios...",
+        "Analysing correlation with macro markets...",
+        "Synthesising historical BTC returns...",
+        "Focusing on supply shock events...",
+        "Examining next-generation adoption curves...",
+        "Running a quick fear-and-greed check...",
+        "Scanning for black swan catalysts...",
+        "Aligning user settings for final run...",
+        "Inflating or deflating the bubble?",
+        "Combining multi-year data into forecasts...",
+        "Hooking in country adoption boosts...",
+        "Filtering out short-term noise...",
+        "Compiling scenario stress tests...",
+        "Fine-tuning scale for weekly returns...",
+        "Cross-referencing stablecoin shifts...",
+        "Probing raw data for hidden signals...",
+        "Summoning lightning speed calculations...",
+        "Twisting code knobs for final results...",
+        
+        // New "tips on how to use the app" messages:
+        "Tip: Drag the 3D spinner to change its speed.",
+        "Tip: Double-tap the spinner to flip its rotation angle.",
+        "Tip: Scroll horizontally in the table to see extra columns.",
+        "Tip: Lock the random seed in Settings for repeatable results.",
+        "Tip: Check ‘About’ for more details on simulation methodology.",
+        "Tip: Toggle bull/bear factors in Settings to reflect your outlook.",
+        "Tip: Increase annual CAGR to simulate a more bullish scenario.",
+        "Tip: Lower annual volatility to reduce big swings in outcomes.",
+        "Tip: Swipe left or right on the results table to reveal hidden columns.",
+        "Tip: If the random seed is unlocked, you’ll get a fresh run each time.",
+        "Tip: Slow the spinner by dragging it in the opposite direction.",
+        "Tip: Simulate Tether depegs with the ‘Stablecoin Meltdown’ factor.",
+        "Tip: Press the back arrow anytime to modify parameters mid-sim.",
+        "Tip: Tap factor titles in Settings for a quick explanation bubble.",
+        "Tip: ‘Maturing Market’ can limit growth in later stages of adoption.",
+        "Tip: ‘Bubble Pop’ adds a risk of rapid correction after a big rally.",
+        "Tip: Snap screenshots of results to share or compare runs later.",
+        "Tip: ‘Halving’ typically occurs every 210k blocks—about four years.",
+        "Tip: El Salvador style? Enable ‘Country Adoption’ for big demand bumps.",
+        "Tip: ‘Global Macro Hedge’ imagines BTC as ‘digital gold’ in crises.",
+        "Tip: Return to Parameters to tweak your inputs before the next run.",
+        "Tip: Explore the ‘About’ screen to learn how each factor is simulated.",
+        "Tip: Try fewer or more iterations to see stable vs. scattered results.",
+        "Tip: Turn on ‘Scarcity Events’ to replicate supply shocks and FOMO.",
+        "Tip: You can do multiple runs without losing previous results—experiment!",
+        "Tip: Flip your device orientation for a wider table view.",
+        "Tip: Check ‘Security Breach’ factor for catastrophic hack scenarios.",
+        "Tip: ‘Bear Market’ factor simulates persistent negative sentiment.",
+        "Tip: The spinner is purely for fun—drag, poke or fling at will!",
+        "Tip: Keep track of your real-world BTC holdings separately—this is a sim.",
+        "Tip: Combine bullish and bearish toggles to mirror your market view.",
+        "Tip: Remember, all factors can be toggled off for a simpler baseline."
     ]
-    
+
     let columns: [(String, PartialKeyPath<SimulationData>)] = [
         ("Starting BTC (BTC)", \SimulationData.startingBTC),
         ("Net BTC Holdings (BTC)", \SimulationData.netBTCHoldings),
@@ -923,18 +986,21 @@ struct ContentView: View {
         tipTimer?.invalidate()
         tipTimer = nil
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+        // Show the first tip after 4s (instead of 5s)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
             currentTip = loadingTips.randomElement() ?? ""
             withAnimation(.easeInOut(duration: 2)) {
                 showTip = true
             }
         }
         
-        tipTimer = Timer.scheduledTimer(withTimeInterval: 25, repeats: true) { _ in
+        // Then switch tips every 20s (instead of 25s)
+        tipTimer = Timer.scheduledTimer(withTimeInterval: 20, repeats: true) { _ in
             withAnimation(.easeInOut(duration: 2)) {
                 showTip = false
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 7) {
+            // Hide for 4s (instead of 7s), then show the next tip
+            DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
                 currentTip = loadingTips.randomElement() ?? ""
                 withAnimation(.easeInOut(duration: 2)) {
                     showTip = true
