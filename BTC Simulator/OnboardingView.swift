@@ -31,13 +31,12 @@ struct OnboardingView: View {
     @State private var chosenPeriodUnit: PeriodUnit = .weeks
     
     // Step 1: How many total periods
-    @State private var totalPeriods: Int = 52
+    @State private var totalPeriods: Int = 1040
     
     // Step 2: Currency preference
     @State private var currencyPreference: PreferredCurrency = .usd
     
     // Step 3: Starting Balance
-    // user can enter a balance in that chosen currency
     @State private var startingBalance: Double = 0.0
     
     // Step 4: BTC Price (fetched or typed)
@@ -58,7 +57,10 @@ struct OnboardingView: View {
     
     var body: some View {
         ZStack {
-            // Gradient background
+            // ----------------------------------------------------------
+            // 1) BACKGROUND GRADIENT
+            // Covers entire screen behind any content
+            // ----------------------------------------------------------
             LinearGradient(
                 gradient: Gradient(colors: [Color.black, Color(white: 0.15), Color.black]),
                 startPoint: .topLeading,
@@ -66,86 +68,106 @@ struct OnboardingView: View {
             )
             .ignoresSafeArea()
             
-            // Tap away to dismiss keyboard
-            Color.clear
+            // ----------------------------------------------------------
+            // 2) SCROLLVIEW FOR STEP CONTENT
+            // This holds everything that needs to scroll if needed
+            // ----------------------------------------------------------
+            ScrollView {
+                VStack(spacing: 20) {
+                    
+                    // Space below status bar
+                    Spacer().frame(height: 40)
+                    
+                    // BITCOIN LOGO
+                    OfficialBitcoinLogo()
+                        .frame(width: 80, height: 80)
+                    
+                    // TITLE
+                    Text(titleForStep(currentStep))
+                        .font(.title)
+                        .foregroundColor(.white)
+                        .padding(.top, 30)
+                    
+                    // SUBTITLE
+                    Text(subtitleForStep(currentStep))
+                        .foregroundColor(.gray)
+                        .font(.callout)
+                        .padding(.top, 4)
+                    
+                    // STEP-SPECIFIC CONTENT
+                    switch currentStep {
+                    case 0:
+                        step0_PeriodFrequency()
+                            .padding(.top, 10)
+                    case 1:
+                        step1_TotalPeriods()
+                    case 2:
+                        step2_PickCurrency()
+                    case 3:
+                        step3_StartingBalance()
+                    case 4:
+                        step4_BTCPriceInput()
+                    case 5:
+                        step5_Contributions()
+                    case 6:
+                        step6_Withdrawals()
+                    default:
+                        step7_ReviewAndFinish()
+                    }
+                }
+                // Tappable to dismiss keyboard
+                .frame(maxWidth: .infinity)
+                .background(Color.clear)
                 .contentShape(Rectangle())
                 .onTapGesture {
                     hideKeyboard()
                 }
-            
-            VStack(spacing: 30) {
-                Spacer().frame(height: 50)
-                
-                // Official Bitcoin Logo up top
-                OfficialBitcoinLogo()
-                    .frame(width: 80, height: 80)
-                
-                Text(titleForStep(currentStep))
-                    .font(.title)
-                    .foregroundColor(.white)
-                
-                Text(subtitleForStep(currentStep))
-                    .foregroundColor(.gray)
-                    .font(.callout)
-                
-                Spacer().frame(height: 10)
-                
-                // Step content
-                switch currentStep {
-                case 0:
-                    step0_PeriodFrequency()
-                case 1:
-                    step1_TotalPeriods()
-                case 2:
-                    step2_PickCurrency()
-                case 3:
-                    step3_StartingBalance()
-                case 4:
-                    step4_BTCPriceInput()
-                case 5:
-                    step5_Contributions()
-                case 6:
-                    step6_Withdrawals()
-                default:
-                    step7_ReviewAndFinish()
-                }
-                
-                Spacer()
-                
-                // Bottom nav bar
-                HStack {
-                    if currentStep > 0 {
-                        Button("Back") {
-                            withAnimation {
-                                currentStep -= 1
-                            }
-                        }
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 12)
-                        .background(Color.orange)
-                        .cornerRadius(6)
-                        .shadow(color: .black.opacity(0.3), radius: 4, x: 2, y: 2)
-                    }
-                    
-                    Spacer()
-                    
-                    // If final step => "Finish", else "Next"
-                    Button(currentStep == 7 ? "Finish" : "Next") {
-                        onNextTapped()
-                    }
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 12)
-                    .background(Color.orange)
-                    .cornerRadius(6)
-                    .shadow(color: .black.opacity(0.3), radius: 4, x: 2, y: 2)
-                }
-                .padding(.horizontal, 40)
-                .padding(.bottom, 30)
             }
         }
-        // Async fetch BTC price on appear
+        // BACK CHEVRON
+        .overlay(
+            Group {
+                if currentStep > 0 {
+                    Button {
+                        withAnimation {
+                            currentStep -= 1
+                        }
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.title2)
+                            .foregroundColor(.white)
+                    }
+                    .padding(.top, 50)
+                    .padding(.leading, 20)
+                }
+            },
+            alignment: .topLeading
+        )
+        // NEXT / FINISH BUTTON (STATIC AT BOTTOM)
+        .overlay(
+            // We use a single button that changes label from “Next” to “Finish”
+            // depending on currentStep.
+            Button(currentStep == 7 ? "Finish" : "Next") {
+                onNextTapped()
+            }
+            .foregroundColor(.white)     // Text colour
+            .padding(.horizontal, 20)    // Left & right in-button padding
+            .padding(.vertical, 12)      // Top & bottom in-button padding
+            .background(Color.orange)    // Button background colour
+            .cornerRadius(6)             // Rounded corners
+            .shadow(color: .black.opacity(0.3), radius: 4, x: 2, y: 2)
+            // This decides how far from the bottom edge the button sits.
+            // If we’re on step 7 (Finish), we use 100. For any other step, 270.
+            // Adjust these two numbers as needed so the button sits exactly where you want.
+            .padding(.bottom, currentStep == 7 ? 200 : 270),
+            
+            alignment: .bottom // This pins the button to the bottom of the screen
+        )
+        // IGNORE KEYBOARD SAFE AREA
+        // This is crucial: it prevents iOS from pushing everything up
+        // when the keyboard appears.
+        .ignoresSafeArea(.keyboard, edges: .bottom)
+        // Fetch BTC price on appear
         .task {
             await fetchBTCPriceFromAPI()
         }
@@ -174,7 +196,7 @@ struct OnboardingView: View {
                  : "How many months?")
                 .foregroundColor(.white)
             
-            TextField("e.g. 52", value: $totalPeriods, format: .number)
+            TextField("e.g. 1040", value: $totalPeriods, format: .number)
                 .keyboardType(.numberPad)
                 .padding()
                 .background(Color.white.opacity(0.15))
@@ -369,8 +391,8 @@ struct OnboardingView: View {
         simSettings.initialBTCPriceUSD = finalBTCPrice  // from finalBTCPrice property below
         
         // If you store currency preference:
-        // simSettings.preferredCurrency = currencyPreference.rawValue  // e.g. "USD", "EUR", "Both"
-
+        // simSettings.preferredCurrency = currencyPreference.rawValue
+        
         // If you store startingBalance:
         // simSettings.startingBalance = startingBalance
         
