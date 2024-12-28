@@ -10,9 +10,10 @@ import PDFKit
 import UniformTypeIdentifiers
 
 class PersistentInputManager: ObservableObject {
-    @Published var iterations: String = "1000" // Default value
-    @Published var annualCAGR: String // BTC Annual CAGR (%)
-    @Published var annualVolatility: String // BTC Annual Volatility (%)
+    // Existing fields
+    @Published var iterations: String = "1000"
+    @Published var annualCAGR: String
+    @Published var annualVolatility: String
     @Published var selectedWeek: String
     @Published var btcPriceMinInput: String
     @Published var btcPriceMaxInput: String
@@ -20,12 +21,27 @@ class PersistentInputManager: ObservableObject {
     @Published var portfolioValueMaxInput: String
     @Published var btcHoldingsMinInput: String
     @Published var btcHoldingsMaxInput: String
-    @Published var btcGrowthRate: String // Unused, can be removed if not needed
+    @Published var btcGrowthRate: String
+    
+    // New fields for contributions/withdrawals
+    @Published var firstYearContribution: String
+    
+    @Published var subsequentContribution: Double {
+        didSet {
+            UserDefaults.standard.set(subsequentContribution, forKey: "subsequentContribution")
+        }
+    }
 
+    @Published var threshold1: String
+    @Published var withdrawAmount1: String
+    @Published var threshold2: String
+    @Published var withdrawAmount2: String
+    
     init() {
+        // Existing loads
         self.iterations = UserDefaults.standard.string(forKey: "iterations") ?? "1000"
         self.annualCAGR = UserDefaults.standard.string(forKey: "annualCAGR") ?? "40.0"
-        self.annualVolatility = UserDefaults.standard.string(forKey: "annualVolatility") ?? "80.0" // Default: 80%
+        self.annualVolatility = UserDefaults.standard.string(forKey: "annualVolatility") ?? "80.0"
         self.selectedWeek = UserDefaults.standard.string(forKey: "selectedWeek") ?? "1"
         self.btcPriceMinInput = UserDefaults.standard.string(forKey: "btcPriceMinInput") ?? ""
         self.btcPriceMaxInput = UserDefaults.standard.string(forKey: "btcPriceMaxInput") ?? ""
@@ -33,7 +49,16 @@ class PersistentInputManager: ObservableObject {
         self.portfolioValueMaxInput = UserDefaults.standard.string(forKey: "portfolioValueMaxInput") ?? ""
         self.btcHoldingsMinInput = UserDefaults.standard.string(forKey: "btcHoldingsMinInput") ?? ""
         self.btcHoldingsMaxInput = UserDefaults.standard.string(forKey: "btcHoldingsMaxInput") ?? ""
-        self.btcGrowthRate = UserDefaults.standard.string(forKey: "btcGrowthRate") ?? "0.005" // Default: 0.5% weekly growth
+        self.btcGrowthRate = UserDefaults.standard.string(forKey: "btcGrowthRate") ?? "0.005"
+        
+        // New loads for contributions/withdrawals
+        self.firstYearContribution = UserDefaults.standard.string(forKey: "firstYearContribution") ?? "60"
+        let storedSC = UserDefaults.standard.double(forKey: "subsequentContribution")
+        self.subsequentContribution = (storedSC != 0.0) ? storedSC : 100.0
+        self.threshold1 = UserDefaults.standard.string(forKey: "threshold1") ?? "30000"
+        self.withdrawAmount1 = UserDefaults.standard.string(forKey: "withdrawAmount1") ?? "100"
+        self.threshold2 = UserDefaults.standard.string(forKey: "threshold2") ?? "60000"
+        self.withdrawAmount2 = UserDefaults.standard.string(forKey: "withdrawAmount2") ?? "200"
     }
 
     /// Resets all text-based inputs to default values.
