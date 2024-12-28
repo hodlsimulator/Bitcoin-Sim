@@ -242,7 +242,8 @@ struct InteractiveBitcoinSymbol3DSpinner: View {
                 .rotation3DEffect(.degrees(rotationZ), axis: (x: 0, y: 0, z: 1))
         }
         .frame(width: 300, height: 300)
-        .offset(y: -50)
+        // Adjust the offset as needed
+        .offset(x: 0, y: 95)
         .gesture(
             DragGesture()
                 .onChanged { value in
@@ -285,20 +286,20 @@ struct InteractiveBitcoinSymbol3DSpinner: View {
 
 // MARK: - ContentView
 struct ContentView: View {
-
+    
     @State private var monteCarloResults: [SimulationData] = []
     @State private var isLoading: Bool = false
     @FocusState private var activeField: ActiveField?
     @StateObject var inputManager = PersistentInputManager()
     @State private var isSimulationRun: Bool = false
     @State private var isCancelled = false
-
+    
     @State private var scrollToBottom: Bool = false
     @State private var isAtBottom: Bool = false
     @State private var lastViewedWeek: Int = 0
-
+    
     @State private var contentScrollProxy: ScrollViewProxy?
-
+    
     @State private var currentPage: Int = 0
     @State private var lastViewedPage: Int = 0
     
@@ -310,7 +311,7 @@ struct ContentView: View {
     
     @State private var hideScrollIndicators = true
     @State private var lastScrollTime = Date()
-
+    
     let loadingTips = [
         "Gathering historical data from CSV files...",
         "Running thousands of random draws...",
@@ -329,83 +330,81 @@ struct ContentView: View {
         ("Net Contribution BTC", \SimulationData.netContributionBTC),
         ("Withdrawal EUR", \SimulationData.withdrawalEUR)
     ]
-
+    
     @EnvironmentObject var simSettings: SimulationSettings
     @State private var showSettings = false
     @State private var showAbout = false
-
+    
     var body: some View {
-        NavigationStack {
-            ZStack {
-                // 1) Gradient background for a fancier look
+        ZStack {
+            // *** Use Color(white: 0.14) instead of 0.10 for the simulation background. ***
+            if isSimulationRun {
+                Color(white: 0.14).ignoresSafeArea()
+            } else {
                 LinearGradient(
                     gradient: Gradient(colors: [Color.black, Color(white: 0.15), Color.black]),
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
                 .ignoresSafeArea()
-
-                // 2) Tap anywhere to dismiss keyboard
-                Color.clear
-                    .contentShape(Rectangle())
-                    .highPriorityGesture(
-                        TapGesture()
-                            .onEnded {
-                                activeField = nil
-                            }
-                    )
-
-                // 3) Main screen: either parameters or results
-                if !isSimulationRun {
-                    parametersScreen
-                    if !isLoading {
+            }
+            
+            Color.clear
+                .contentShape(Rectangle())
+                .highPriorityGesture(
+                    TapGesture()
+                        .onEnded {
+                            activeField = nil
+                        }
+                )
+            
+            if !isSimulationRun {
+                parametersScreen
+                if !isLoading {
+                    if activeField == nil {
                         bottomIcons
                     }
-                } else {
-                    simulationResultsView
                 }
-
-                // 4) If there’s prior data, show quick-jump button
-                if !isSimulationRun && !monteCarloResults.isEmpty {
-                    transitionToResultsButton
-                }
-
-                // 5) Loading overlay
-                if isLoading {
-                    loadingOverlay
-                }
+            } else {
+                simulationResultsView
             }
-            .navigationDestination(isPresented: $showSettings) {
-                SettingsView()
-                    .environmentObject(simSettings)
+            
+            if !isSimulationRun && !monteCarloResults.isEmpty {
+                transitionToResultsButton
             }
-            .navigationDestination(isPresented: $showAbout) {
-                AboutView()
+            
+            if isLoading {
+                loadingOverlay
             }
-            .onAppear {
-                // Restore scroll states if any
-                let savedWeek = UserDefaults.standard.integer(forKey: "lastViewedWeek")
-                if savedWeek != 0 {
-                    lastViewedWeek = savedWeek
-                }
-                let savedPage = UserDefaults.standard.integer(forKey: "lastViewedPage")
-                if savedPage < columns.count {
-                    lastViewedPage = savedPage
-                    currentPage = savedPage
-                } else if let usdIndex = columns.firstIndex(where: { $0.0 == "BTC Price USD" }) {
-                    currentPage = usdIndex
-                    lastViewedPage = usdIndex
-                }
+        }
+        .navigationDestination(isPresented: $showSettings) {
+            SettingsView()
+                .environmentObject(simSettings)
+        }
+        .navigationDestination(isPresented: $showAbout) {
+            AboutView()
+        }
+        .onAppear {
+            let savedWeek = UserDefaults.standard.integer(forKey: "lastViewedWeek")
+            if savedWeek != 0 {
+                lastViewedWeek = savedWeek
+            }
+            let savedPage = UserDefaults.standard.integer(forKey: "lastViewedPage")
+            if savedPage < columns.count {
+                lastViewedPage = savedPage
+                currentPage = savedPage
+            } else if let usdIndex = columns.firstIndex(where: { $0.0 == "BTC Price USD" }) {
+                currentPage = usdIndex
+                lastViewedPage = usdIndex
             }
         }
     }
-
+    
     // MARK: - Bottom icons (About + Settings)
     private var bottomIcons: some View {
         VStack {
             Spacer()
             HStack {
-                // ABOUT
                 Button(action: {
                     showAbout = true
                 }) {
@@ -415,10 +414,9 @@ struct ContentView: View {
                         .padding()
                 }
                 .padding(.leading, 15)
-
+                
                 Spacer()
-
-                // SETTINGS
+                
                 Button(action: {
                     showSettings = true
                 }) {
@@ -432,27 +430,25 @@ struct ContentView: View {
             .padding(.bottom, 30)
         }
     }
-
-    // MARK: - Parameters screen with white text fields, no “Reset” button, orange “Run” button
+    
+    // MARK: - Parameters screen
     private var parametersScreen: some View {
         VStack(spacing: 30) {
             Spacer().frame(height: 60)
-
-            Text("BTC Monte Carlo")
+            
+            Text("HODL Simulator")
                 .font(.system(size: 34, weight: .bold))
                 .foregroundColor(.white)
                 .padding(.top, 10)
-
+            
             Text("Set your simulation parameters")
                 .font(.callout)
                 .foregroundColor(.gray)
-
-            // White text fields in a card
+            
             VStack(alignment: .leading, spacing: 16) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Iterations")
                         .foregroundColor(.white)
-                    // White field with black text
                     TextField("e.g. 1000", text: $inputManager.iterations)
                         .keyboardType(.numberPad)
                         .padding(8)
@@ -461,7 +457,7 @@ struct ContentView: View {
                         .foregroundColor(.black)
                         .focused($activeField, equals: .iterations)
                 }
-
+                
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Annual CAGR (%)")
                         .foregroundColor(.white)
@@ -473,7 +469,7 @@ struct ContentView: View {
                         .foregroundColor(.black)
                         .focused($activeField, equals: .annualCAGR)
                 }
-
+                
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Annual Volatility (%)")
                         .foregroundColor(.white)
@@ -492,8 +488,7 @@ struct ContentView: View {
                     .fill(Color(white: 0.1).opacity(0.8))
             )
             .padding(.horizontal, 30)
-
-            // ORANGE “Run Simulation” button
+            
             if !isLoading {
                 Button {
                     activeField = nil
@@ -510,18 +505,18 @@ struct ContentView: View {
                 }
                 .padding(.top, 6)
             }
-
+            
             Spacer()
         }
     }
-
-    // MARK: - The simulation screen (unchanged from your code)
+    
+    // MARK: - The simulation screen
     private var simulationResultsView: some View {
         ScrollViewReader { scrollProxy in
             ZStack {
                 VStack {
                     Spacer().frame(height: 40)
-
+                    
                     VStack(spacing: 0) {
                         // Title row
                         HStack(spacing: 0) {
@@ -624,7 +619,7 @@ struct ContentView: View {
                                                 }
                                             }
                                             
-                                            // Tap areas to scroll horizontally
+                                            // Tap areas for horizontal scroll
                                             GeometryReader { geometry in
                                                 HStack(spacing: 0) {
                                                     Color.clear
@@ -665,7 +660,6 @@ struct ContentView: View {
                             }
                             .coordinateSpace(name: "scrollArea")
                             .onPreferenceChange(RowOffsetPreferenceKey.self) { offsets in
-                                // Track which week is closest to the top
                                 let targetY: CGFloat = 160
                                 let filtered = offsets.filter { (week, _) in week != 1040 }
                                 let mapped = filtered.mapValues { abs($0 - targetY) }
@@ -740,7 +734,7 @@ struct ContentView: View {
                     Spacer()
                 }
                 
-                // Scroll-to-bottom button that hides at the bottom
+                // Scroll-to-bottom button
                 if !isAtBottom {
                     VStack {
                         Spacer()
@@ -760,8 +754,8 @@ struct ContentView: View {
             }
         }
     }
-
-    // MARK: - Jump to results button if data exists
+    
+    // MARK: - Jump to results button
     private var transitionToResultsButton: some View {
         VStack {
             HStack {
@@ -792,7 +786,7 @@ struct ContentView: View {
             Spacer()
         }
     }
-
+    
     // MARK: - Loading Overlay
     private var loadingOverlay: some View {
         ZStack {
@@ -811,18 +805,15 @@ struct ContentView: View {
                     }
                     .padding(.trailing, 20)
                 }
-                .offset(y: 130)
+                .offset(y: 220)
                 
                 InteractiveBitcoinSymbol3DSpinner()
-                    .offset(y: 120)
                     .padding(.bottom, 30)
                 
                 VStack(spacing: 17) {
                     Text("Simulating: \(completedIterations) / \(totalIterations)")
                         .font(.body.monospacedDigit())
                         .foregroundColor(.white)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.5)
                     
                     ProgressView(value: Double(completedIterations), total: Double(totalIterations))
                         .tint(.blue)
@@ -848,20 +839,18 @@ struct ContentView: View {
         .onAppear { startTipCycle() }
         .onDisappear { stopTipCycle() }
     }
-
+    
     // MARK: - Run Simulation
     private func runSimulation() {
         // Load CSV arrays
         historicalBTCWeeklyReturns = loadBTCWeeklyReturns()
         sp500WeeklyReturns = loadSP500WeeklyReturns()
-
-        // Setup states
+        
         isCancelled = false
         isLoading = true
         monteCarloResults = []
         completedIterations = 0
-
-        // Check random seed
+        
         let finalSeed: UInt64?
         if simSettings.lockedRandomSeed {
             finalSeed = simSettings.seedValue
@@ -870,8 +859,7 @@ struct ContentView: View {
         } else {
             finalSeed = nil
         }
-
-        // Kick off background
+        
         DispatchQueue.global(qos: .userInitiated).async {
             guard let total = inputManager.getParsedIterations(), total > 0 else {
                 DispatchQueue.main.async { isLoading = false }
@@ -880,10 +868,10 @@ struct ContentView: View {
             DispatchQueue.main.async {
                 totalIterations = total
             }
-
+            
             let userInputCAGR = inputManager.getParsedAnnualCAGR() / 100.0
             let userInputVolatility = (Double(inputManager.annualVolatility) ?? 1.0) / 100.0
-
+            
             let (medianRun, allIterations) = runMonteCarloSimulationsWithProgress(
                 settings: simSettings,
                 annualCAGR: userInputCAGR,
@@ -902,41 +890,38 @@ struct ContentView: View {
                 },
                 seed: finalSeed
             )
-
+            
             if self.isCancelled {
                 DispatchQueue.main.async {
                     self.isLoading = false
                 }
                 return
             }
-
-            // Done => show results
+            
             DispatchQueue.main.async {
                 self.isLoading = false
                 self.monteCarloResults = medianRun
                 self.isSimulationRun = true
             }
-
-            // Optionally background-process all results
+            
             DispatchQueue.global(qos: .background).async {
                 self.processAllResults(allIterations)
             }
         }
     }
-
-    // The rest is unchanged (startTipCycle, stopTipCycle, processAllResults, getValue, etc.)
+    
     private func startTipCycle() {
         showTip = false
         tipTimer?.invalidate()
         tipTimer = nil
-
+        
         DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
             currentTip = loadingTips.randomElement() ?? ""
             withAnimation(.easeInOut(duration: 2)) {
                 showTip = true
             }
         }
-
+        
         tipTimer = Timer.scheduledTimer(withTimeInterval: 25, repeats: true) { _ in
             withAnimation(.easeInOut(duration: 2)) {
                 showTip = false
@@ -949,17 +934,17 @@ struct ContentView: View {
             }
         }
     }
-
+    
     private func stopTipCycle() {
         tipTimer?.invalidate()
         tipTimer = nil
         showTip = false
     }
-
+    
     private func processAllResults(_ allResults: [[SimulationData]]) {
         // ...
     }
-
+    
     private func getValue(_ item: SimulationData, _ keyPath: PartialKeyPath<SimulationData>) -> String {
         if let value = item[keyPath: keyPath] as? Double {
             switch keyPath {

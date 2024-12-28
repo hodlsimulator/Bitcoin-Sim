@@ -13,7 +13,7 @@ struct AboutView: View {
             VStack(alignment: .leading, spacing: 20) {
 
                 // MAIN TITLE
-                Text("About BTC Monte Carlo")
+                Text("About HODL Simulator")
                     .font(.largeTitle)
                     .bold()
                     .padding(.bottom, 8)
@@ -65,7 +65,9 @@ The simulator calls setRandomSeed(...) at the start of a run. If a seed is provi
                     .font(.title2)
                     .bold()
                 Text("""
-The Settings page lists all bullish and bearish factors. Each has a slider controlling how strong the effect is and a toggle to enable/disable it. For instance, “Scarcity Events” can add up to a 0.025 return boost, ramping up between weeks 700–1040, while “Recession” might subtract -0.004 between weeks 250–400. Tweak these factors to reflect your personal macro assumptions.
+The Settings page lists all bullish and bearish factors. Each has a slider controlling how strong the effect is and a toggle to enable or disable it. For instance, “Scarcity Events” can add up to a 0.025 return boost, ramping up between weeks 700–1040, while “Recession” might subtract -0.004 between weeks 250–400. Tweak these factors to reflect your personal macro assumptions.
+
+Additionally, you can reset any slider to its default value by tapping the small icon (emoji) next to it on the Settings page.
 """)
 
                 // LOCK RANDOM SEED DETAILS
@@ -81,7 +83,7 @@ Turn on “Lock Random Seed” if you want consistent randomness. When locked, t
                     .font(.title2)
                     .bold()
                 Text("""
-Ultimately, BTC Monte Carlo is a toy that helps you visualise scenarios, but it’s not a guarantee of future performance. Real markets are complex, and each factor is purely hypothetical! Still, it’s fun to experiment with toggles, see hypothetical long-term outcomes, and get a feel for how drastically the future can vary.
+Ultimately, HODL Simulator is a toy that helps you visualise scenarios, but it’s not a guarantee of future performance. Real markets are complex, and each factor is purely hypothetical! Still, it’s fun to experiment with toggles, see hypothetical long-term outcomes, and get a feel for how drastically the future can vary.
 """)
             }
             .foregroundColor(.white)
