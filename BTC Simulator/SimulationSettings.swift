@@ -44,6 +44,9 @@ class SimulationSettings: ObservableObject {
     @Published var userWeeks: Int = 52
     @Published var initialBTCPriceUSD: Double = 58000.0
     
+    // Add this if missing:
+    @Published var startingBalance: Double = 0.0
+    
     // MARK: - Random Seed Logic
     
     @Published var lastUsedSeed: UInt64 = 0

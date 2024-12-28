@@ -81,27 +81,36 @@ func runOneFullSimulation(
     // Lock or unlock seed
     setRandomSeed(seed)
 
-    // Start from zero BTC
-    var previousBTCHoldings = 0.0
+    // 1) Figure out the initial BTC price in EUR
+    let firstEURPrice = initialBTCPriceUSD / exchangeRateEURUSD
+    
+    // 2) Convert user’s typed startingBalance (EUR) into BTC
+    //    If user typed 1000 EUR and the firstEURPrice is 20,000 EUR/BTC,
+    //    then they initially have 0.05 BTC.
+    let userStartingBalanceEUR = settings.startingBalance
+    let userStartingBalanceBTC = userStartingBalanceEUR / firstEURPrice
+
+    // Instead of 0.0, we begin from the user’s typed BTC equivalent
+    var previousBTCHoldings = userStartingBalanceBTC
     var previousBTCPriceUSD = initialBTCPriceUSD
 
     // Convert annual CAGR to a weekly portion
     let baseWeeklyGrowth = pow(1.0 + annualCAGR, 1.0 / 52.0) - 1.0
-    // Not strictly used below, but we keep it in case you do random normal draws
     let weeklyVol = annualVolatility / sqrt(52.0)
 
     var results: [SimulationData] = []
 
-    // Append an initial record for week 1
-    let firstEURPrice = initialBTCPriceUSD / exchangeRateEURUSD
+    // 3) Append an initial record for week 1 that reflects the user’s starting BTC
+    //    and initial portfolio value in EUR
+    let initialPortfolioValueEUR = userStartingBalanceBTC * firstEURPrice
     results.append(
         SimulationData(
             week: 1,
-            startingBTC: 0.0,
-            netBTCHoldings: 0.0,
+            startingBTC: 0.0,                     // Or userStartingBalanceBTC if you prefer
+            netBTCHoldings: userStartingBalanceBTC,
             btcPriceUSD: initialBTCPriceUSD,
             btcPriceEUR: firstEURPrice,
-            portfolioValueEUR: 0.0,
+            portfolioValueEUR: initialPortfolioValueEUR,
             contributionEUR: 0.0,
             transactionFeeEUR: 0.0,
             netContributionBTC: 0.0,
@@ -122,24 +131,21 @@ func runOneFullSimulation(
         // 3) Combine with base CAGR
         var combinedWeeklyReturn = dampenedReturn + baseWeeklyGrowth
 
-        // 4) Example toggles (like halving)
+        // 4) Example toggles (halving, adoption factor, etc.)
         if settings.useHalving, halvingWeeks.contains(week) {
             combinedWeeklyReturn += settings.halvingBump
         }
-        // Example: Adoption factor
         if settings.useAdoptionFactor {
             let adoptionFactor = settings.adoptionBaseFactor * Double(week)
             combinedWeeklyReturn += adoptionFactor
         }
-        // You can replicate the others (useInstitutionalDemand, etc.) if needed
 
         // 5) Price update
         var btcPriceUSD = previousBTCPriceUSD * (1.0 + combinedWeeklyReturn)
-        btcPriceUSD = max(btcPriceUSD, 1.0) // floor at $1
+        btcPriceUSD = max(btcPriceUSD, 1.0)
         let btcPriceEUR = btcPriceUSD / exchangeRateEURUSD
 
         // 6) Contribution logic
-        // e.g. €60 for first 52 weeks, €100 after
         let contributionEUR = (week <= 52) ? 60.0 : 100.0
         let fee = contributionEUR * 0.0035
         let netBTC = (contributionEUR - fee) / btcPriceEUR
@@ -165,7 +171,7 @@ func runOneFullSimulation(
         results.append(
             SimulationData(
                 week: week,
-                startingBTC: previousBTCHoldings,
+                startingBTC: previousBTCHoldings,   // How many BTC we had at the start of this week
                 netBTCHoldings: finalHoldings,
                 btcPriceUSD: btcPriceUSD,
                 btcPriceEUR: btcPriceEUR,

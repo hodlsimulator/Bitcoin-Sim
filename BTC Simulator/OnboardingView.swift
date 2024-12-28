@@ -37,6 +37,7 @@ struct OnboardingView: View {
     @State private var currencyPreference: PreferredCurrency = .usd
     
     // Step 3: Starting Balance
+    // (this local state holds what the user types)
     @State private var startingBalance: Double = 0.0
     
     // Step 4: BTC Price (fetched or typed)
@@ -59,7 +60,6 @@ struct OnboardingView: View {
         ZStack {
             // ----------------------------------------------------------
             // 1) BACKGROUND GRADIENT
-            // Covers entire screen behind any content
             // ----------------------------------------------------------
             LinearGradient(
                 gradient: Gradient(colors: [Color.black, Color(white: 0.15), Color.black]),
@@ -70,12 +70,11 @@ struct OnboardingView: View {
             
             // ----------------------------------------------------------
             // 2) SCROLLVIEW FOR STEP CONTENT
-            // This holds everything that needs to scroll if needed
             // ----------------------------------------------------------
             ScrollView {
                 VStack(spacing: 20) {
                     
-                    // Space below status bar
+                    // A bit of space under the status bar/notch
                     Spacer().frame(height: 40)
                     
                     // BITCOIN LOGO
@@ -115,7 +114,6 @@ struct OnboardingView: View {
                         step7_ReviewAndFinish()
                     }
                 }
-                // Tappable to dismiss keyboard
                 .frame(maxWidth: .infinity)
                 .background(Color.clear)
                 .contentShape(Rectangle())
@@ -145,29 +143,22 @@ struct OnboardingView: View {
         )
         // NEXT / FINISH BUTTON (STATIC AT BOTTOM)
         .overlay(
-            // We use a single button that changes label from “Next” to “Finish”
-            // depending on currentStep.
             Button(currentStep == 7 ? "Finish" : "Next") {
                 onNextTapped()
             }
-            .foregroundColor(.white)     // Text colour
-            .padding(.horizontal, 20)    // Left & right in-button padding
-            .padding(.vertical, 12)      // Top & bottom in-button padding
-            .background(Color.orange)    // Button background colour
-            .cornerRadius(6)             // Rounded corners
+            .foregroundColor(.white)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            .background(Color.orange)
+            .cornerRadius(6)
             .shadow(color: .black.opacity(0.3), radius: 4, x: 2, y: 2)
-            // This decides how far from the bottom edge the button sits.
-            // If we’re on step 7 (Finish), we use 100. For any other step, 270.
-            // Adjust these two numbers as needed so the button sits exactly where you want.
+            // Different padding for step 7 if you like
             .padding(.bottom, currentStep == 7 ? 200 : 270),
-            
-            alignment: .bottom // This pins the button to the bottom of the screen
+            alignment: .bottom
         )
-        // IGNORE KEYBOARD SAFE AREA
-        // This is crucial: it prevents iOS from pushing everything up
-        // when the keyboard appears.
+        // Prevent iOS from auto-pushing content up on keyboard show
         .ignoresSafeArea(.keyboard, edges: .bottom)
-        // Fetch BTC price on appear
+        // Async fetch BTC price
         .task {
             await fetchBTCPriceFromAPI()
         }
@@ -386,17 +377,19 @@ struct OnboardingView: View {
         let finalWeeks = (chosenPeriodUnit == .weeks)
             ? totalPeriods
             : totalPeriods * 4
-        
         simSettings.userWeeks = finalWeeks
-        simSettings.initialBTCPriceUSD = finalBTCPrice  // from finalBTCPrice property below
+        
+        // Decide on final BTC price
+        simSettings.initialBTCPriceUSD = finalBTCPrice
         
         // If you store currency preference:
         // simSettings.preferredCurrency = currencyPreference.rawValue
         
-        // If you store startingBalance:
-        // simSettings.startingBalance = startingBalance
+        // Set the user’s typed starting balance into simSettings
+        // (make sure "startingBalance" is declared in SimulationSettings)
+        simSettings.startingBalance = startingBalance
         
-        // If you have inputManager or your simSettings directly handle contributions:
+        // If you have inputManager or your simSettings handle contributions/withdrawals:
         simSettings.inputManager?.firstYearContribution = String(firstYearContribution)
         simSettings.inputManager?.subsequentContribution = String(subsequentContribution)
         simSettings.inputManager?.threshold1 = threshold1
@@ -407,15 +400,15 @@ struct OnboardingView: View {
     
     // MARK: - finalBTCPrice
     private var finalBTCPrice: Double {
-        // If user typed a valid price, use it
+        // 1. If user typed a valid price, use it
         if let typedVal = Double(userBTCPrice), typedVal > 0 {
             return typedVal
         }
-        // If we fetched a valid price, use it
+        // 2. If we fetched a valid price, use it
         if let fetchedVal = Double(fetchedBTCPrice), fetchedVal > 0 {
             return fetchedVal
         }
-        // fallback to 58,000
+        // 3. Fallback if neither is valid
         return 58000
     }
     
