@@ -37,12 +37,12 @@ struct TooltipBubble: View {
     var body: some View {
         VStack(spacing: 0) {
             if arrowDirection == .up {
-                // Arrow physically up => apex at top
                 ArrowShape()
                     .frame(width: 20, height: 10)
                     .foregroundColor(Color.gray.opacity(0.85))
             }
 
+            // No ScrollView, so it just grows
             Text(text)
                 .foregroundColor(.white)
                 .multilineTextAlignment(.leading)
@@ -52,7 +52,6 @@ struct TooltipBubble: View {
                 .cornerRadius(8)
 
             if arrowDirection == .down {
-                // Arrow physically down => apex at bottom
                 ArrowShape()
                     .rotationEffect(.degrees(180))
                     .frame(width: 20, height: 10)
@@ -125,13 +124,12 @@ struct FactorToggleRow: View {
 
             // Slider row
             HStack {
-                // Here's the original slider tint colour
                 Slider(value: $sliderValue, in: sliderRange)
                     .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
                     .disabled(!isOn)
 
                 Text(String(format: "%.4f", sliderValue))
-                    .font(.caption)           // <--- Smaller font size
+                    .font(.caption)
                     .foregroundColor(.secondary)
                     .frame(width: 60, alignment: .trailing)
                     .disabled(!isOn)
