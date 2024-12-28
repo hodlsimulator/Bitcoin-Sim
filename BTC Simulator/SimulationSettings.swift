@@ -40,6 +40,10 @@ extension SimulationSettings {
 
 class SimulationSettings: ObservableObject {
     var inputManager: PersistentInputManager? = nil
+    
+    @Published var userWeeks: Int = 52
+    @Published var initialBTCPriceUSD: Double = 58000.0
+    
     // MARK: - Random Seed Logic
     
     @Published var lastUsedSeed: UInt64 = 0

@@ -818,18 +818,15 @@ struct ContentView: View {
         // Decide which seed to use.
         let finalSeed: UInt64?
         if simSettings.lockedRandomSeed {
-            // If locked, use the locked seed.
             finalSeed = simSettings.seedValue
             simSettings.lastUsedSeed = simSettings.seedValue
         } else if simSettings.useRandomSeed {
-            // If unlocked with "use random seed," generate a fresh random for each run.
             let newRandomSeed = UInt64.random(in: 0..<UInt64.max)
             finalSeed = newRandomSeed
             simSettings.lastUsedSeed = newRandomSeed
         } else {
-            // If unlocked but "useRandomSeed" is false, pass nil => let the sim pick internally
             finalSeed = nil
-            simSettings.lastUsedSeed = 0 // or leave as-is if you prefer
+            simSettings.lastUsedSeed = 0
         }
         
         DispatchQueue.global(qos: .userInitiated).async {
@@ -844,14 +841,21 @@ struct ContentView: View {
             let userInputCAGR = inputManager.getParsedAnnualCAGR() / 100.0
             let userInputVolatility = (Double(inputManager.annualVolatility) ?? 1.0) / 100.0
             
+            // Pull the userWeeks and initialBTCPrice from your onboarding data (instead of hardcoding).
+            // e.g. if you stored them in simSettings after onboarding:
+            let userWeeks = simSettings.userWeeks
+            let userPriceUSD = simSettings.initialBTCPriceUSD
+            
+            // Then pass them directly:
             let (medianRun, allIterations) = runMonteCarloSimulationsWithProgress(
                 settings: simSettings,
                 annualCAGR: userInputCAGR,
                 annualVolatility: userInputVolatility,
                 correlationWithSP500: 0.0,
                 exchangeRateEURUSD: 1.06,
-                totalWeeks: 1040,
+                userWeeks: userWeeks,
                 iterations: total,
+                initialBTCPriceUSD: userPriceUSD, // This now uses your real onboarding value
                 isCancelled: { self.isCancelled },
                 progressCallback: { completed in
                     if !self.isCancelled {

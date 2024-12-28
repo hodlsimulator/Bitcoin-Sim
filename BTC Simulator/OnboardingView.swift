@@ -9,15 +9,20 @@ import SwiftUI
 
 struct OnboardingView: View {
     @Environment(\.dismiss) var dismiss
-    // If you have a SimulationSettings or similar model, you can inject it here:
-    // @EnvironmentObject var simSettings: SimulationSettings
+
+    // 1) Make sure SimulationSettings includes:
+    //    @Published var userWeeks: Int = 52
+    //    @Published var initialBTCPriceUSD: Double = 58000.0
+    // then uncomment the next line so we can store the final user inputs.
+    @EnvironmentObject var simSettings: SimulationSettings
+
+    /// Whether we've finished onboarding (bound to the parent)
+    @Binding var didFinishOnboarding: Bool
 
     /// The current onboarding step, from 0...N
     @State private var currentStep: Int = 0
-    
-    @Binding var didFinishOnboarding: Bool
 
-    /// Temporary storage for user inputs. Move them into your real settings model later.
+    // MARK: - Onboarding Fields
     @State private var preferredCurrency: String = "USD"
     @State private var fetchedBTCPrice: String = ""
     @State private var userSpecifiedBTCPrice: String = ""
@@ -37,16 +42,13 @@ struct OnboardingView: View {
             )
             .ignoresSafeArea()
 
-            // Main content
             VStack {
                 Spacer().frame(height: 40)
 
-                // Title
                 Text("Welcome to HODL Simulator")
                     .font(.system(size: 28, weight: .bold))
                     .foregroundColor(.white)
 
-                // Subheadline
                 Text(subtitle(forStep: currentStep))
                     .font(.callout)
                     .foregroundColor(.gray)
@@ -54,7 +56,7 @@ struct OnboardingView: View {
 
                 Spacer().frame(height: 30)
 
-                // Step content
+                // Show different UI for each onboarding step
                 switch currentStep {
                 case 0:
                     step0_Welcome()
@@ -70,7 +72,6 @@ struct OnboardingView: View {
 
                 Spacer()
 
-                // Navigation controls
                 HStack {
                     if currentStep > 0 {
                         Button("Back") {
@@ -103,19 +104,16 @@ struct OnboardingView: View {
                 .padding(.bottom, 40)
             }
         }
-        .onAppear {
-            // Optionally fetch BTC price in the background
-            fetchBTCPrice()
+        // Fetch BTC price once on appear
+        .task {
+            await fetchBTCPriceAsync()
         }
     }
 
     // MARK: - Step 0
     private func step0_Welcome() -> some View {
         VStack(spacing: 20) {
-            // Replace the system image with the official BTC logo
             OfficialBitcoinLogo()
-                // .frame(width: 120, height: 120) // optional, since OfficialBitcoinLogo itself has a fixed size
-
             Text("This short wizard helps set up your preferences.\nTap **Next** to continue.")
                 .foregroundColor(.white)
                 .multilineTextAlignment(.center)
@@ -124,12 +122,13 @@ struct OnboardingView: View {
         .padding(.top, 40)
     }
 
-    // MARK: - Step 1: Select currency
+    // MARK: - Step 1
     private func step1_SelectCurrency() -> some View {
         VStack(spacing: 24) {
             Text("Select your preferred currency")
                 .foregroundColor(.white)
                 .font(.headline)
+
             Picker("Currency", selection: $preferredCurrency) {
                 Text("USD").tag("USD")
                 Text("EUR").tag("EUR")
@@ -140,7 +139,7 @@ struct OnboardingView: View {
         }
     }
 
-    // MARK: - Step 2: BTC Price Entry
+    // MARK: - Step 2
     private func step2_BTCPriceEntry() -> some View {
         VStack(spacing: 24) {
             Text("Fetched BTC Price: \(fetchedBTCPrice)")
@@ -150,7 +149,7 @@ struct OnboardingView: View {
                 .foregroundColor(.white)
                 .font(.headline)
 
-            TextField("e.g. 27000", text: $userSpecifiedBTCPrice)
+            TextField("e.g. 58000", text: $userSpecifiedBTCPrice)
                 .keyboardType(.decimalPad)
                 .padding(8)
                 .background(Color.white)
@@ -160,7 +159,7 @@ struct OnboardingView: View {
         }
     }
 
-    // MARK: - Step 3: Number of weeks
+    // MARK: - Step 3
     private func step3_NumberOfWeeks() -> some View {
         VStack(spacing: 16) {
             Text("How many weeks do you plan to simulate?")
@@ -179,7 +178,7 @@ struct OnboardingView: View {
         }
     }
 
-    // MARK: - Step 4: Confirmation
+    // MARK: - Step 4
     private func step4_ConfirmFinish() -> some View {
         VStack(spacing: 16) {
             Text("Review & Confirm")
@@ -188,7 +187,7 @@ struct OnboardingView: View {
 
             VStack(alignment: .leading, spacing: 10) {
                 Text("Currency: \(preferredCurrency)")
-                Text("BTC Price: \(userChosenBTCPrice())")
+                Text("BTC Price (Week 1): \(finalDisplayPrice())")
                 Text("Weeks: \(simulationWeeks)")
             }
             .foregroundColor(.white)
@@ -200,9 +199,37 @@ struct OnboardingView: View {
         }
     }
 
-    // MARK: - Helpers
+    // MARK: - Onboarding Step Logic
+    private func onNextTapped() {
+        print("Current step: \(currentStep)")
+        if currentStep == 4 {
+            print("Finish tapped! Setting didFinishOnboarding to true.")
 
-    /// A short subtitle for each step
+            // If you've @EnvironmentObject var simSettings,
+            // store the final price + weeks for the simulation:
+            simSettings.initialBTCPriceUSD = finalPriceForSimulation
+            simSettings.userWeeks = simulationWeeks
+
+            // You could also store userCurrency if you want:
+            // simSettings.userCurrency = preferredCurrency
+
+            didFinishOnboarding = true
+        } else {
+            currentStep += 1
+        }
+    }
+    
+    // MARK: - This var provides a numeric price for the sim
+    private var finalPriceForSimulation: Double {
+        if let typedVal = Double(userSpecifiedBTCPrice), typedVal > 0 {
+            return typedVal
+        }
+        if let fetchedVal = Double(fetchedBTCPrice), fetchedVal > 0 {
+            return fetchedVal
+        }
+        return 58000
+    }
+
     private func subtitle(forStep step: Int) -> String {
         switch step {
         case 0: return "Quick wizard to set up your preferences"
@@ -214,36 +241,54 @@ struct OnboardingView: View {
         }
     }
 
-    /// The label for the Next button
     private func nextButtonTitle(forStep step: Int) -> String {
-        if step == 4 {
-            return "Finish"
-        } else {
-            return "Next"
+        (step == 4) ? "Finish" : "Next"
+    }
+
+    /// The displayed BTC price on the final step
+    private func finalDisplayPrice() -> String {
+        if let typedVal = Double(userSpecifiedBTCPrice), typedVal > 0 {
+            return String(format: "%.2f", typedVal)
         }
-    }
-
-    /// Called whenever user taps the Next button
-    private func onNextTapped() {
-        print("Current step: \(currentStep)")
-        if currentStep == 4 {
-            print("Finish tapped! Setting didFinishOnboarding to true.")
-            didFinishOnboarding = true
-        } else {
-            currentStep += 1
+        if let fetchedVal = Double(fetchedBTCPrice), fetchedVal > 0 {
+            return String(format: "%.2f", fetchedVal)
         }
+        return "58000"
     }
 
-    /// If userSpecifiedBTCPrice is empty, fallback to fetchedBTCPrice
-    private func userChosenBTCPrice() -> String {
-        return userSpecifiedBTCPrice.isEmpty ? fetchedBTCPrice : userSpecifiedBTCPrice
+    // If you need a numeric Double for the sim, just make a var:
+    // var finalPriceForSimulation: Double {
+    //     if let typedVal = Double(userSpecifiedBTCPrice), typedVal > 0 { return typedVal }
+    //     if let fetchedVal = Double(fetchedBTCPrice), fetchedVal > 0 { return fetchedVal }
+    //     return 58000
+    // }
+
+    // MARK: - CoinGecko Fetch
+    private func fetchBTCPriceInUSD() async throws -> Double {
+        let urlString = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"
+        guard let url = URL(string: urlString) else {
+            throw URLError(.badURL)
+        }
+
+        let (data, _) = try await URLSession.shared.data(from: url)
+        struct SimplePriceResponse: Decodable {
+            let bitcoin: [String: Double]
+        }
+        let decoded = try JSONDecoder().decode(SimplePriceResponse.self, from: data)
+        guard let price = decoded.bitcoin["usd"] else {
+            throw URLError(.cannotParseResponse)
+        }
+        return price
     }
 
-    /// Fake a fetch call—here we just set a dummy price after 1s
-    private func fetchBTCPrice() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            // In production, you’d call a real API (CoinGecko, etc.)
-            self.fetchedBTCPrice = "27654.12"
+    private func fetchBTCPriceAsync() async {
+        do {
+            let price = try await fetchBTCPriceInUSD()
+            fetchedBTCPrice = String(format: "%.2f", price)
+            print("Fetched BTC price: \(fetchedBTCPrice)")
+        } catch {
+            print("Failed to fetch BTC price:", error)
+            fetchedBTCPrice = "N/A"
         }
     }
 }
