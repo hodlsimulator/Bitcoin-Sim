@@ -78,6 +78,42 @@ func runOneFullSimulation(
     seed: UInt64? = nil
 ) -> [SimulationData] {
     
+    // A nested struct to hold a static flag
+    struct PrintOnce {
+        static var didPrintFactorSettings: Bool = false
+    }
+    
+    // Print toggles ONLY on the first call
+    if !PrintOnce.didPrintFactorSettings {
+        print("=== FACTOR SETTINGS (once only) ===")
+        print("useHalving: \(settings.useHalving), halvingBump: \(settings.halvingBump)")
+        print("useInstitutionalDemand: \(settings.useInstitutionalDemand), maxDemandBoost: \(settings.maxDemandBoost)")
+        print("useCountryAdoption: \(settings.useCountryAdoption), maxCountryAdBoost: \(settings.maxCountryAdBoost)")
+        print("useRegulatoryClarity: \(settings.useRegulatoryClarity), maxClarityBoost: \(settings.maxClarityBoost)")
+        print("useEtfApproval: \(settings.useEtfApproval), maxEtfBoost: \(settings.maxEtfBoost)")
+        print("useTechBreakthrough: \(settings.useTechBreakthrough), maxTechBoost: \(settings.maxTechBoost)")
+        print("useScarcityEvents: \(settings.useScarcityEvents), maxScarcityBoost: \(settings.maxScarcityBoost)")
+        print("useGlobalMacroHedge: \(settings.useGlobalMacroHedge), maxMacroBoost: \(settings.maxMacroBoost)")
+        print("useStablecoinShift: \(settings.useStablecoinShift), maxStablecoinBoost: \(settings.maxStablecoinBoost)")
+        print("useDemographicAdoption: \(settings.useDemographicAdoption), maxDemoBoost: \(settings.maxDemoBoost)")
+        print("useAltcoinFlight: \(settings.useAltcoinFlight), maxAltcoinBoost: \(settings.maxAltcoinBoost)")
+        print("useAdoptionFactor: \(settings.useAdoptionFactor), adoptionBaseFactor: \(settings.adoptionBaseFactor)")
+        
+        // Bearish toggles
+        print("useRegClampdown: \(settings.useRegClampdown), maxClampDown: \(settings.maxClampDown)")
+        print("useCompetitorCoin: \(settings.useCompetitorCoin), maxCompetitorBoost: \(settings.maxCompetitorBoost)")
+        print("useSecurityBreach: \(settings.useSecurityBreach), breachImpact: \(settings.breachImpact)")
+        print("useBubblePop: \(settings.useBubblePop), maxPopDrop: \(settings.maxPopDrop)")
+        print("useStablecoinMeltdown: \(settings.useStablecoinMeltdown), maxMeltdownDrop: \(settings.maxMeltdownDrop)")
+        print("useBlackSwan: \(settings.useBlackSwan), blackSwanDrop: \(settings.blackSwanDrop)")
+        print("useBearMarket: \(settings.useBearMarket), bearWeeklyDrift: \(settings.bearWeeklyDrift)")
+        print("useMaturingMarket: \(settings.useMaturingMarket), maxMaturingDrop: \(settings.maxMaturingDrop)")
+        print("useRecession: \(settings.useRecession), maxRecessionDrop: \(settings.maxRecessionDrop)")
+        print("====================================")
+        
+        PrintOnce.didPrintFactorSettings = true
+    }
+
     // We no longer reset the seed here; we rely on the caller (if at all)
     // setRandomSeed(seed)
 
@@ -103,7 +139,7 @@ func runOneFullSimulation(
     results.append(
         SimulationData(
             week: 1,
-            startingBTC: 0.0,                     // Or userStartingBalanceBTC if you prefer
+            startingBTC: 0.0, // or userStartingBalanceBTC if you prefer
             netBTCHoldings: userStartingBalanceBTC,
             btcPriceUSD: initialBTCPriceUSD,
             btcPriceEUR: firstEURPrice,
@@ -136,10 +172,80 @@ func runOneFullSimulation(
             let adoptionFactor = settings.adoptionBaseFactor * Double(week)
             combinedWeeklyReturn += adoptionFactor
         }
+        
+        // 4a) Additional bullish toggles
+        if settings.useInstitutionalDemand {
+            combinedWeeklyReturn += Double.random(in: 0 ... settings.maxDemandBoost)
+        }
+        if settings.useCountryAdoption {
+            combinedWeeklyReturn += Double.random(in: 0 ... settings.maxCountryAdBoost)
+        }
+        if settings.useRegulatoryClarity {
+            combinedWeeklyReturn += Double.random(in: 0 ... settings.maxClarityBoost)
+        }
+        if settings.useEtfApproval {
+            combinedWeeklyReturn += Double.random(in: 0 ... settings.maxEtfBoost)
+        }
+        if settings.useTechBreakthrough {
+            combinedWeeklyReturn += Double.random(in: 0 ... settings.maxTechBoost)
+        }
+        if settings.useScarcityEvents {
+            combinedWeeklyReturn += Double.random(in: 0 ... settings.maxScarcityBoost)
+        }
+        if settings.useGlobalMacroHedge {
+            combinedWeeklyReturn += Double.random(in: 0 ... settings.maxMacroBoost)
+        }
+        if settings.useStablecoinShift {
+            combinedWeeklyReturn += Double.random(in: 0 ... settings.maxStablecoinBoost)
+        }
+        if settings.useDemographicAdoption {
+            combinedWeeklyReturn += Double.random(in: 0 ... settings.maxDemoBoost)
+        }
+        if settings.useAltcoinFlight {
+            combinedWeeklyReturn += Double.random(in: 0 ... settings.maxAltcoinBoost)
+        }
+
+        // 4b) Additional bearish toggles
+        if settings.useBearMarket {
+            // Maybe apply a steady bear drift each week
+            combinedWeeklyReturn += settings.bearWeeklyDrift
+        }
+        if settings.useRegClampdown {
+            // Negative random effect
+            combinedWeeklyReturn += Double.random(in: settings.maxClampDown ... 0)
+        }
+        if settings.useCompetitorCoin {
+            combinedWeeklyReturn += Double.random(in: settings.maxCompetitorBoost ... 0)
+        }
+        if settings.useSecurityBreach {
+            // Could do a 1% chance each week to apply the full breach
+            if Double.random(in: 0...1) < 0.01 {
+                combinedWeeklyReturn += settings.breachImpact
+            }
+        }
+        if settings.useBubblePop {
+            combinedWeeklyReturn += Double.random(in: settings.maxPopDrop ... 0)
+        }
+        if settings.useStablecoinMeltdown {
+            combinedWeeklyReturn += Double.random(in: settings.maxMeltdownDrop ... 0)
+        }
+        if settings.useBlackSwan {
+            // Could do a 0.5% chance
+            if Double.random(in: 0...1) < 0.005 {
+                let drop = Double.random(in: settings.blackSwanDrop ... 0) // e.g. -0.60 to 0
+                combinedWeeklyReturn += drop
+            }
+        }
+        if settings.useMaturingMarket {
+            combinedWeeklyReturn += Double.random(in: settings.maxMaturingDrop ... 0)
+        }
+        if settings.useRecession {
+            combinedWeeklyReturn += Double.random(in: settings.maxRecessionDrop ... 0)
+        }
 
         // 5) Price update
         var btcPriceUSD = previousBTCPriceUSD * (1.0 + combinedWeeklyReturn)
-        btcPriceUSD = max(btcPriceUSD, 1.0)
+        btcPriceUSD = max(btcPriceUSD, 1.0)   // clamp to min 1.0
         let btcPriceEUR = btcPriceUSD / exchangeRateEURUSD
         
         // 6) Contribution logic
