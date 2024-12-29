@@ -98,13 +98,14 @@ struct SettingsView: View {
                     title: "Halving",
                     isOn: $simSettings.useHalving,
                     sliderValue: $simSettings.halvingBump,
-                    sliderRange: 0.0...1.0,
+                    // 2× 0.20 = 0.40 => 0.20 is midpoint
+                    sliderRange: 0.0...0.40,
                     defaultValue: 0.20,
                     parameterDescription: """
-    Occurs roughly every four years, reducing the block reward in half.
-    This lowers the new supply entering circulation, often causing supply-demand imbalances.
-    Historically, halving events have coincided with substantial BTC price increases.
-    """,
+        Occurs roughly every four years, reducing the block reward in half.
+        This lowers the new supply entering circulation, often causing supply-demand imbalances.
+        Historically, halving events have coincided with substantial BTC price increases.
+        """,
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
                 )
@@ -115,12 +116,13 @@ struct SettingsView: View {
                     title: "Institutional Demand",
                     isOn: $simSettings.useInstitutionalDemand,
                     sliderValue: $simSettings.maxDemandBoost,
-                    sliderRange: 0.0...0.01,
+                    // 2× 0.004 = 0.008 => 0.004 is midpoint
+                    sliderRange: 0.0...0.008,
                     defaultValue: 0.004,
                     parameterDescription: """
-    Large financial institutions and corporate treasuries entering the BTC market can drive prices up.
-    Increased legitimacy and adoption by well-known firms can attract more mainstream interest.
-    """,
+        Large financial institutions and corporate treasuries entering the BTC market can drive prices up.
+        Increased legitimacy and adoption by well-known firms can attract more mainstream interest.
+        """,
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
                 )
@@ -130,12 +132,13 @@ struct SettingsView: View {
                     title: "Country Adoption",
                     isOn: $simSettings.useCountryAdoption,
                     sliderValue: $simSettings.maxCountryAdBoost,
-                    sliderRange: 0.0...0.01,
+                    // 2× 0.0055 = 0.011 => 0.0055 is midpoint
+                    sliderRange: 0.0...0.011,
                     defaultValue: 0.0055,
                     parameterDescription: """
-    Nations adopting BTC as legal tender or as part of their reserves can lead to massive demand.
-    Wider government acceptance signals mainstream credibility and potential new use cases.
-    """,
+        Nations adopting BTC as legal tender or as part of their reserves can lead to massive demand.
+        Wider government acceptance signals mainstream credibility and potential new use cases.
+        """,
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
                 )
@@ -145,12 +148,13 @@ struct SettingsView: View {
                     title: "Regulatory Clarity",
                     isOn: $simSettings.useRegulatoryClarity,
                     sliderValue: $simSettings.maxClarityBoost,
-                    sliderRange: 0.0...0.01,
+                    // 2× 0.0006 = 0.0012 => 0.0006 is midpoint
+                    sliderRange: 0.0...0.0012,
                     defaultValue: 0.0006,
                     parameterDescription: """
-    Clear, favourable regulations can reduce uncertainty and risk for investors.
-    When watchdogs provide guidelines, more capital may flow into BTC, boosting price.
-    """,
+        Clear, favourable regulations can reduce uncertainty and risk for investors.
+        When watchdogs provide guidelines, more capital may flow into BTC, boosting price.
+        """,
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
                 )
@@ -160,12 +164,13 @@ struct SettingsView: View {
                     title: "ETF Approval",
                     isOn: $simSettings.useEtfApproval,
                     sliderValue: $simSettings.maxEtfBoost,
-                    sliderRange: 0.0...0.01,
+                    // 2× 0.0008 = 0.0016 => 0.0008 is midpoint
+                    sliderRange: 0.0...0.0016,
                     defaultValue: 0.0008,
                     parameterDescription: """
-    Spot BTC ETFs allow traditional investors to gain exposure without holding actual BTC.
-    The ease of acquisition via brokers can significantly expand demand.
-    """,
+        Spot BTC ETFs allow traditional investors to gain exposure without holding actual BTC.
+        The ease of acquisition via brokers can significantly expand demand.
+        """,
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
                 )
@@ -175,12 +180,13 @@ struct SettingsView: View {
                     title: "Tech Breakthrough",
                     isOn: $simSettings.useTechBreakthrough,
                     sliderValue: $simSettings.maxTechBoost,
-                    sliderRange: 0.0...0.01,
+                    // 2× 0.002 = 0.004 => 0.002 is midpoint
+                    sliderRange: 0.0...0.004,
                     defaultValue: 0.002,
                     parameterDescription: """
-    Major improvements in Bitcoin’s protocol or L2 networks (Lightning, etc.)
-    can spur optimism and adoption, enhancing scalability or privacy.
-    """,
+        Major improvements in Bitcoin’s protocol or L2 networks (Lightning, etc.)
+        can spur optimism and adoption, enhancing scalability or privacy.
+        """,
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
                 )
@@ -190,12 +196,13 @@ struct SettingsView: View {
                     title: "Scarcity Events",
                     isOn: $simSettings.useScarcityEvents,
                     sliderValue: $simSettings.maxScarcityBoost,
+                    // 2× 0.025 = 0.05 => 0.025 is midpoint
                     sliderRange: 0.0...0.05,
                     defaultValue: 0.025,
                     parameterDescription: """
-    Unusual events that reduce BTC supply—like large holders moving coins off exchanges—
-    can push prices upward by limiting sell pressure.
-    """,
+        Unusual events that reduce BTC supply—like large holders moving coins off exchanges—
+        can push prices upward by limiting sell pressure.
+        """,
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
                 )
@@ -205,12 +212,13 @@ struct SettingsView: View {
                     title: "Global Macro Hedge",
                     isOn: $simSettings.useGlobalMacroHedge,
                     sliderValue: $simSettings.maxMacroBoost,
-                    sliderRange: 0.0...0.01,
+                    // 2× 0.0015 = 0.003 => 0.0015 is midpoint
+                    sliderRange: 0.0...0.003,
                     defaultValue: 0.0015,
                     parameterDescription: """
-    BTC’s “digital gold” narrative can be strong during uncertainty.
-    Investors may seek refuge in BTC if they lose faith in fiat systems or markets.
-    """,
+        BTC’s “digital gold” narrative can be strong during uncertainty.
+        Investors may seek refuge in BTC if they lose faith in fiat systems or markets.
+        """,
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
                 )
@@ -220,12 +228,13 @@ struct SettingsView: View {
                     title: "Stablecoin Shift",
                     isOn: $simSettings.useStablecoinShift,
                     sliderValue: $simSettings.maxStablecoinBoost,
-                    sliderRange: 0.0...0.01,
+                    // 2× 0.0006 = 0.0012 => 0.0006 is midpoint
+                    sliderRange: 0.0...0.0012,
                     defaultValue: 0.0006,
                     parameterDescription: """
-    Sometimes large sums move from stablecoins directly into BTC.
-    This short-term demand spike can push prices up quickly.
-    """,
+        Sometimes large sums move from stablecoins directly into BTC.
+        This short-term demand spike can push prices up quickly.
+        """,
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
                 )
@@ -235,12 +244,13 @@ struct SettingsView: View {
                     title: "Demographic Adoption",
                     isOn: $simSettings.useDemographicAdoption,
                     sliderValue: $simSettings.maxDemoBoost,
-                    sliderRange: 0.0...0.01,
+                    // 2× 0.001 = 0.002 => 0.001 is midpoint
+                    sliderRange: 0.0...0.002,
                     defaultValue: 0.001,
                     parameterDescription: """
-    Younger, more tech-savvy generations often invest in BTC,
-    accelerating mainstream adoption over time.
-    """,
+        Younger, more tech-savvy generations often invest in BTC,
+        accelerating mainstream adoption over time.
+        """,
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
                 )
@@ -250,12 +260,13 @@ struct SettingsView: View {
                     title: "Altcoin Flight",
                     isOn: $simSettings.useAltcoinFlight,
                     sliderValue: $simSettings.maxAltcoinBoost,
-                    sliderRange: 0.0...0.01,
+                    // 2× 0.001 = 0.002 => 0.001 is midpoint
+                    sliderRange: 0.0...0.002,
                     defaultValue: 0.001,
                     parameterDescription: """
-    During altcoin uncertainty or crackdowns, capital can rotate into BTC,
-    considered the ‘blue-chip’ crypto with the strongest fundamentals.
-    """,
+        During altcoin uncertainty or crackdowns, capital can rotate into BTC,
+        considered the ‘blue-chip’ crypto with the strongest fundamentals.
+        """,
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
                 )
@@ -265,12 +276,13 @@ struct SettingsView: View {
                     title: "Adoption Factor (Incremental Drift)",
                     isOn: $simSettings.useAdoptionFactor,
                     sliderValue: $simSettings.adoptionBaseFactor,
-                    sliderRange: 0.0...0.0001,
-                    defaultValue: 0.000005,
+                    // 2× 0.0000003 = 0.0000006 => 0.0000003 is midpoint
+                    sliderRange: 0.0...0.0000006,
+                    defaultValue: 0.0000003,
                     parameterDescription: """
-    A slow, steady upward drift driven by long-term adoption trends,
-    reflecting BTC’s global growth and brand recognition.
-    """,
+        A slow, steady upward drift. 0.0000003 is your midpoint
+        to help keep growth modest for long-term adoption.
+        """,
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
                 )
@@ -286,12 +298,13 @@ struct SettingsView: View {
                     title: "Regulatory Clampdown",
                     isOn: $simSettings.useRegClampdown,
                     sliderValue: $simSettings.maxClampDown,
-                    sliderRange: -0.01...0.0,
+                    // 2× (-0.0002) = -0.0004 => midpoint at -0.0002
+                    sliderRange: -0.0004...0.0,
                     defaultValue: -0.0002,
                     parameterDescription: """
-    Strict government regulations or bans can curb adoption,
-    leading to lower demand and negative price impacts.
-    """,
+        Strict government regulations or bans can curb adoption,
+        leading to lower demand and negative price impacts.
+        """,
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
                 )
@@ -301,12 +314,13 @@ struct SettingsView: View {
                     title: "Competitor Coin",
                     isOn: $simSettings.useCompetitorCoin,
                     sliderValue: $simSettings.maxCompetitorBoost,
-                    sliderRange: -0.01...0.0,
+                    // 2× (-0.0018) = -0.0036 => midpoint at -0.0018
+                    sliderRange: -0.0036...0.0,
                     defaultValue: -0.0018,
                     parameterDescription: """
-    A rival cryptocurrency that promises superior tech or speed
-    may siphon capital away from BTC, reducing its dominance.
-    """,
+        A rival cryptocurrency that promises superior tech or speed
+        may siphon capital away from BTC, reducing its dominance.
+        """,
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
                 )
@@ -316,12 +330,13 @@ struct SettingsView: View {
                     title: "Security Breach",
                     isOn: $simSettings.useSecurityBreach,
                     sliderValue: $simSettings.breachImpact,
-                    sliderRange: -1.0...0.0,
+                    // 2× (-0.1) = -0.2 => midpoint at -0.1
+                    sliderRange: -0.2...0.0,
                     defaultValue: -0.1,
                     parameterDescription: """
-    A major hack or exploit targeting BTC or big exchanges
-    can severely damage confidence and cause panic selling.
-    """,
+        A major hack or exploit targeting BTC or big exchanges
+        can severely damage confidence and cause panic selling.
+        """,
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
                 )
@@ -331,12 +346,13 @@ struct SettingsView: View {
                     title: "Bubble Pop",
                     isOn: $simSettings.useBubblePop,
                     sliderValue: $simSettings.maxPopDrop,
+                    // 2× (-0.005) = -0.01 => midpoint at -0.005
                     sliderRange: -0.01...0.0,
                     defaultValue: -0.005,
                     parameterDescription: """
-    Speculative bubbles can burst, causing a rapid and sharp crash
-    once fear and profit-taking set in.
-    """,
+        Speculative bubbles can burst, causing a rapid and sharp crash
+        once fear and profit-taking set in.
+        """,
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
                 )
@@ -346,12 +362,13 @@ struct SettingsView: View {
                     title: "Stablecoin Meltdown",
                     isOn: $simSettings.useStablecoinMeltdown,
                     sliderValue: $simSettings.maxMeltdownDrop,
-                    sliderRange: -0.01...0.0,
+                    // 2× (-0.001) = -0.002 => midpoint at -0.001
+                    sliderRange: -0.002...0.0,
                     defaultValue: -0.001,
                     parameterDescription: """
-    Major stablecoins de-pegging or collapsing can spark a crisis of confidence
-    that spills over into BTC markets.
-    """,
+        Major stablecoins de-pegging or collapsing can spark a crisis of confidence
+        that spills over into BTC markets.
+        """,
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
                 )
@@ -361,12 +378,13 @@ struct SettingsView: View {
                     title: "Black Swan Events",
                     isOn: $simSettings.useBlackSwan,
                     sliderValue: $simSettings.blackSwanDrop,
-                    sliderRange: -1.0...0.0,
+                    // 2× (-0.60) = -1.20 => midpoint at -0.60
+                    sliderRange: -1.20...0.0,
                     defaultValue: -0.60,
                     parameterDescription: """
-    Highly unpredictable disasters or wars can undermine all markets,
-    including BTC, causing extreme selloffs.
-    """,
+        Highly unpredictable disasters or wars can undermine all markets,
+        including BTC, causing extreme selloffs.
+        """,
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
                 )
@@ -376,12 +394,13 @@ struct SettingsView: View {
                     title: "Bear Market Conditions",
                     isOn: $simSettings.useBearMarket,
                     sliderValue: $simSettings.bearWeeklyDrift,
-                    sliderRange: -0.05...0.0,
+                    // 2× (-0.01) = -0.02 => midpoint at -0.01
+                    sliderRange: -0.02...0.0,
                     defaultValue: -0.01,
                     parameterDescription: """
-    Prolonged negativity in crypto can produce a steady downward trend,
-    with capitulations and lower trading volumes.
-    """,
+        Prolonged negativity in crypto can produce a steady downward trend,
+        with capitulations and lower trading volumes.
+        """,
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
                 )
@@ -391,12 +410,13 @@ struct SettingsView: View {
                     title: "Declining ARR / Maturing Market",
                     isOn: $simSettings.useMaturingMarket,
                     sliderValue: $simSettings.maxMaturingDrop,
-                    sliderRange: -0.05...0.0,
+                    // 2× (-0.015) = -0.03 => midpoint at -0.015
+                    sliderRange: -0.03...0.0,
                     defaultValue: -0.015,
                     parameterDescription: """
-    As BTC matures, growth rates slow, leading to smaller returns
-    and reduced speculative enthusiasm.
-    """,
+        As BTC matures, growth rates slow, leading to smaller returns
+        and reduced speculative enthusiasm.
+        """,
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
                 )
@@ -406,12 +426,13 @@ struct SettingsView: View {
                     title: "Recession / Macro Crash",
                     isOn: $simSettings.useRecession,
                     sliderValue: $simSettings.maxRecessionDrop,
-                    sliderRange: -0.01...0.0,
+                    // 2× (-0.004) = -0.008 => midpoint at -0.004
+                    sliderRange: -0.008...0.0,
                     defaultValue: -0.004,
                     parameterDescription: """
-    Global economic downturns reduce risk appetite,
-    prompting investors to exit BTC to shore up liquidity.
-    """,
+        Global economic downturns reduce risk appetite,
+        prompting investors to exit BTC to shore up liquidity.
+        """,
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
                 )
