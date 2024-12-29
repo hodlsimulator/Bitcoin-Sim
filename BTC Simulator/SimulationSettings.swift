@@ -196,6 +196,34 @@ class SimulationSettings: ObservableObject {
     @Published var maxRecessionDrop: Double {
         didSet { UserDefaults.standard.set(maxRecessionDrop, forKey: "maxRecessionDrop") }
     }
+    
+    // ============================================
+    //  COMPUTED PROPERTY (outside of init)
+    //  Tells us if ALL factors are currently on
+    // ============================================
+    var areAllFactorsEnabled: Bool {
+        useHalving &&
+        useInstitutionalDemand &&
+        useCountryAdoption &&
+        useRegulatoryClarity &&
+        useEtfApproval &&
+        useTechBreakthrough &&
+        useScarcityEvents &&
+        useGlobalMacroHedge &&
+        useStablecoinShift &&
+        useDemographicAdoption &&
+        useAltcoinFlight &&
+        useAdoptionFactor &&
+        useRegClampdown &&
+        useCompetitorCoin &&
+        useSecurityBreach &&
+        useBubblePop &&
+        useStablecoinMeltdown &&
+        useBlackSwan &&
+        useBearMarket &&
+        useMaturingMarket &&
+        useRecession
+    }
 
     // MARK: - Init
     init() {

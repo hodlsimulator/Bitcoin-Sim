@@ -18,14 +18,14 @@ struct PressableDestructiveButtonStyle: ButtonStyle {
     }
 }
 
-/// Stores the factor title, description, and an anchor to place the tooltip bubble.
+/// A small struct storing which factor’s tooltip is tapped, plus the anchor.
 struct TooltipItem {
     let title: String
     let description: String
     let anchor: Anchor<CGPoint>
 }
 
-/// A preference key collecting anchors from rows. We only display the last one if multiple are tapped.
+/// Collects all anchors in a preference key. If multiple are tapped, we only use the last.
 struct TooltipAnchorKey: PreferenceKey {
     static var defaultValue: [TooltipItem] = []
     static func reduce(value: inout [TooltipItem], nextValue: () -> [TooltipItem]) {
@@ -33,30 +33,34 @@ struct TooltipAnchorKey: PreferenceKey {
     }
 }
 
-/// The main Settings view where we configure bullish & bearish factors, seeds, etc.
+/// The main Settings view that shows bullish & bearish factors, toggles, seeds, etc.
 struct SettingsView: View {
     @EnvironmentObject var simSettings: SimulationSettings
+    
+    /// Whether to show a confirmation alert before resetting criteria.
     @State private var showResetCriteriaConfirmation = false
-
-    /// Which factor's tooltip is currently showing. Nil if none are showing.
+    
+    /// Name of the factor currently showing a tooltip (or nil if none).
     @State private var activeFactor: String? = nil
 
     init() {
-        // Custom navigation bar appearances for large vs. collapsed states
+        // Setup custom nav bar appearances
         let opaqueAppearance = UINavigationBarAppearance()
         opaqueAppearance.configureWithOpaqueBackground()
         opaqueAppearance.backgroundColor = UIColor(white: 0.12, alpha: 1.0)
 
+        // Large title style
         opaqueAppearance.largeTitleTextAttributes = [
             .foregroundColor: UIColor.white,
             .font: UIFont.systemFont(ofSize: 34, weight: .bold)
         ]
+        // Standard title style
         opaqueAppearance.titleTextAttributes = [
             .foregroundColor: UIColor.white,
             .font: UIFont.systemFont(ofSize: 17, weight: .regular)
         ]
 
-        // This is for the collapsed (scrolled) state
+        // Collapsed (scrolled) nav appearance
         let blurredAppearance = UINavigationBarAppearance()
         blurredAppearance.configureWithTransparentBackground()
         blurredAppearance.backgroundEffect = UIBlurEffect(style: .systemMaterialDark)
@@ -75,7 +79,7 @@ struct SettingsView: View {
         opaqueAppearance.backButtonAppearance = backItem
         blurredAppearance.backButtonAppearance = backItem
 
-        // Apply to the UINavigationBar
+        // Apply it
         UINavigationBar.appearance().scrollEdgeAppearance = opaqueAppearance
         UINavigationBar.appearance().standardAppearance   = blurredAppearance
         UINavigationBar.appearance().compactAppearance    = blurredAppearance
@@ -84,10 +88,9 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
-            
-            //==================
+            //====================================
             // BULLISH FACTORS
-            //==================
+            //====================================
             Section("Bullish Factors") {
                 // Example: Halving factor
                 FactorToggleRow(
@@ -98,15 +101,15 @@ struct SettingsView: View {
                     sliderRange: 0.0...1.0,
                     defaultValue: 0.20,
                     parameterDescription: """
-    Occurs roughly every four years, reducing the block reward in half. 
-    This lowers the new supply entering circulation, often causing supply-demand imbalances. 
+    Occurs roughly every four years, reducing the block reward in half.
+    This lowers the new supply entering circulation, often causing supply-demand imbalances.
     Historically, halving events have coincided with substantial BTC price increases.
     """,
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
                 )
-
-                // Additional Bullish FactorToggleRows (Institutional Demand, Country Adoption, etc.)
+                
+                // Additional Bullish FactorToggleRows:
                 FactorToggleRow(
                     iconName: "building.columns.fill",
                     title: "Institutional Demand",
@@ -115,7 +118,7 @@ struct SettingsView: View {
                     sliderRange: 0.0...0.01,
                     defaultValue: 0.004,
                     parameterDescription: """
-    Large financial institutions and corporate treasuries entering the BTC market can drive prices up. 
+    Large financial institutions and corporate treasuries entering the BTC market can drive prices up.
     Increased legitimacy and adoption by well-known firms can attract more mainstream interest.
     """,
                     activeFactor: activeFactor,
@@ -130,7 +133,7 @@ struct SettingsView: View {
                     sliderRange: 0.0...0.01,
                     defaultValue: 0.0055,
                     parameterDescription: """
-    Nations adopting BTC as legal tender or as part of their reserves can lead to massive demand. 
+    Nations adopting BTC as legal tender or as part of their reserves can lead to massive demand.
     Wider government acceptance signals mainstream credibility and potential new use cases.
     """,
                     activeFactor: activeFactor,
@@ -145,8 +148,8 @@ struct SettingsView: View {
                     sliderRange: 0.0...0.01,
                     defaultValue: 0.0006,
                     parameterDescription: """
-    Clear, favourable regulations can reduce uncertainty and risk for investors. 
-    When financial watchdogs provide guidelines, more capital may flow into BTC, boosting price.
+    Clear, favourable regulations can reduce uncertainty and risk for investors.
+    When watchdogs provide guidelines, more capital may flow into BTC, boosting price.
     """,
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
@@ -160,8 +163,8 @@ struct SettingsView: View {
                     sliderRange: 0.0...0.01,
                     defaultValue: 0.0008,
                     parameterDescription: """
-    Spot BTC ETFs allow traditional investors to gain exposure without holding actual BTC. 
-    The ease of acquisition via brokers or retirement accounts can significantly expand demand.
+    Spot BTC ETFs allow traditional investors to gain exposure without holding actual BTC.
+    The ease of acquisition via brokers can significantly expand demand.
     """,
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
@@ -175,8 +178,8 @@ struct SettingsView: View {
                     sliderRange: 0.0...0.01,
                     defaultValue: 0.002,
                     parameterDescription: """
-    Major improvements in Bitcoin’s protocol or related layer-2 networks (e.g., Lightning) 
-    can spur optimism and adoption. Technological leaps can also enhance scalability.
+    Major improvements in Bitcoin’s protocol or L2 networks (Lightning, etc.)
+    can spur optimism and adoption, enhancing scalability or privacy.
     """,
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
@@ -190,8 +193,8 @@ struct SettingsView: View {
                     sliderRange: 0.0...0.05,
                     defaultValue: 0.025,
                     parameterDescription: """
-    Unusual events that reduce BTC supply—such as large holders moving coins off exchanges 
-    or long-term investors hoarding—can push prices upward by limiting sell pressure.
+    Unusual events that reduce BTC supply—like large holders moving coins off exchanges—
+    can push prices upward by limiting sell pressure.
     """,
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
@@ -205,8 +208,8 @@ struct SettingsView: View {
                     sliderRange: 0.0...0.01,
                     defaultValue: 0.0015,
                     parameterDescription: """
-    A narrative of BTC as “digital gold” or a store of value can be strong during times of global uncertainty. 
-    Investors may seek refuge in BTC if they lose faith in fiat systems or traditional markets.
+    BTC’s “digital gold” narrative can be strong during uncertainty.
+    Investors may seek refuge in BTC if they lose faith in fiat systems or markets.
     """,
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
@@ -220,8 +223,8 @@ struct SettingsView: View {
                     sliderRange: 0.0...0.01,
                     defaultValue: 0.0006,
                     parameterDescription: """
-    Sometimes large sums of capital move from stablecoins (like USDT or USDC) directly into BTC. 
-    This immediate demand spike can push the BTC price up in a short period.
+    Sometimes large sums move from stablecoins directly into BTC.
+    This short-term demand spike can push prices up quickly.
     """,
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
@@ -235,8 +238,8 @@ struct SettingsView: View {
                     sliderRange: 0.0...0.01,
                     defaultValue: 0.001,
                     parameterDescription: """
-    Younger generations, often more tech-savvy and open to digital assets, 
-    may increasingly view BTC as a standard investment, accelerating mainstream adoption.
+    Younger, more tech-savvy generations often invest in BTC,
+    accelerating mainstream adoption over time.
     """,
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
@@ -250,8 +253,8 @@ struct SettingsView: View {
                     sliderRange: 0.0...0.01,
                     defaultValue: 0.001,
                     parameterDescription: """
-    During periods of altcoin uncertainty or regulatory crackdowns, capital can rotate 
-    back into BTC, considered the ‘blue-chip’ crypto with the strongest fundamentals.
+    During altcoin uncertainty or crackdowns, capital can rotate into BTC,
+    considered the ‘blue-chip’ crypto with the strongest fundamentals.
     """,
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
@@ -265,8 +268,8 @@ struct SettingsView: View {
                     sliderRange: 0.0...0.0001,
                     defaultValue: 0.000005,
                     parameterDescription: """
-    A slow yet steady upward drift in BTC’s price, driven by long-term adoption trends. 
-    This can reflect consistent global user growth, brand recognition, and network effects.
+    A slow, steady upward drift driven by long-term adoption trends,
+    reflecting BTC’s global growth and brand recognition.
     """,
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
@@ -274,9 +277,9 @@ struct SettingsView: View {
             }
             .listRowBackground(Color(white: 0.15))
 
-            //==================
+            //====================================
             // BEARISH FACTORS
-            //==================
+            //====================================
             Section("Bearish Factors") {
                 FactorToggleRow(
                     iconName: "hand.raised.slash",
@@ -286,7 +289,7 @@ struct SettingsView: View {
                     sliderRange: -0.01...0.0,
                     defaultValue: -0.0002,
                     parameterDescription: """
-    Strict government regulations or outright bans can curb trading and adoption, 
+    Strict government regulations or bans can curb adoption,
     leading to lower demand and negative price impacts.
     """,
                     activeFactor: activeFactor,
@@ -301,8 +304,8 @@ struct SettingsView: View {
                     sliderRange: -0.01...0.0,
                     defaultValue: -0.0018,
                     parameterDescription: """
-    A rival cryptocurrency can siphon capital away from BTC if it promises superior tech, 
-    faster transactions, or better scalability, reducing BTC’s dominance.
+    A rival cryptocurrency that promises superior tech or speed
+    may siphon capital away from BTC, reducing its dominance.
     """,
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
@@ -316,8 +319,8 @@ struct SettingsView: View {
                     sliderRange: -1.0...0.0,
                     defaultValue: -0.1,
                     parameterDescription: """
-    A major exploit or hack targeting BTC itself, major exchanges, or custodial services 
-    can severely damage market confidence and cause panic selling.
+    A major hack or exploit targeting BTC or big exchanges
+    can severely damage confidence and cause panic selling.
     """,
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
@@ -331,8 +334,8 @@ struct SettingsView: View {
                     sliderRange: -0.01...0.0,
                     defaultValue: -0.005,
                     parameterDescription: """
-    Rapidly inflating speculative bubbles can burst, leading to a sudden and sharp price crash. 
-    Hype-driven rallies often correct once fear and profit-taking set in.
+    Speculative bubbles can burst, causing a rapid and sharp crash
+    once fear and profit-taking set in.
     """,
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
@@ -346,8 +349,8 @@ struct SettingsView: View {
                     sliderRange: -0.01...0.0,
                     defaultValue: -0.001,
                     parameterDescription: """
-    If major stablecoins de-peg or collapse, it can trigger a crisis of confidence in crypto. 
-    This can spill over into BTC markets, dragging prices down in panic.
+    Major stablecoins de-pegging or collapsing can spark a crisis of confidence
+    that spills over into BTC markets.
     """,
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
@@ -361,8 +364,8 @@ struct SettingsView: View {
                     sliderRange: -1.0...0.0,
                     defaultValue: -0.60,
                     parameterDescription: """
-    Highly unpredictable events (e.g., large-scale war, catastrophic disaster) 
-    can undermine global markets, including BTC, causing rapid and extreme selloffs.
+    Highly unpredictable disasters or wars can undermine all markets,
+    including BTC, causing extreme selloffs.
     """,
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
@@ -376,8 +379,8 @@ struct SettingsView: View {
                     sliderRange: -0.05...0.0,
                     defaultValue: -0.01,
                     parameterDescription: """
-    A prolonged sentiment of negativity in the crypto space can produce steady downward pressure. 
-    Such bear markets often see capitulations and lower volume trading.
+    Prolonged negativity in crypto can produce a steady downward trend,
+    with capitulations and lower trading volumes.
     """,
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
@@ -391,8 +394,8 @@ struct SettingsView: View {
                     sliderRange: -0.05...0.0,
                     defaultValue: -0.015,
                     parameterDescription: """
-    As BTC becomes more established, rapid growth rates might diminish. 
-    Maturity can mean stable but lower returns, reducing speculative enthusiasm.
+    As BTC matures, growth rates slow, leading to smaller returns
+    and reduced speculative enthusiasm.
     """,
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
@@ -406,8 +409,8 @@ struct SettingsView: View {
                     sliderRange: -0.01...0.0,
                     defaultValue: -0.004,
                     parameterDescription: """
-    Global economic downturns can reduce disposable income and risk appetite, 
-    leading investors to exit BTC positions to shore up liquidity in uncertain times.
+    Global economic downturns reduce risk appetite,
+    prompting investors to exit BTC to shore up liquidity.
     """,
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
@@ -415,30 +418,30 @@ struct SettingsView: View {
             }
             .listRowBackground(Color(white: 0.15))
 
-            // Moved here, just below the factors
+            //====================================
+            // TOGGLE ALL FACTORS
+            //====================================
             Section("Toggle All Factors") {
                 Toggle("Toggle All Factors", isOn: $simSettings.toggleAll)
                     .tint(.orange)
-                    .onAppear {
-                        // Force toggleAll on at first
-                        simSettings.toggleAll = true
-                    }
                     .foregroundColor(.white)
             }
             .listRowBackground(Color(white: 0.15))
             
-            //==================
+            //====================================
             // RANDOM SEED
-            //==================
+            //====================================
             Section("Random Seed") {
                 Toggle("Lock Random Seed", isOn: $simSettings.lockedRandomSeed)
                     .tint(.orange)
                     .onChange(of: simSettings.lockedRandomSeed) { locked in
                         if locked {
+                            // Generate a new seed & fix it
                             let newSeed = UInt64.random(in: 0..<UInt64.max)
                             simSettings.seedValue = newSeed
                             simSettings.useRandomSeed = false
                         } else {
+                            // Unlock the seed
                             simSettings.seedValue = 0
                             simSettings.useRandomSeed = true
                         }
@@ -467,9 +470,9 @@ struct SettingsView: View {
             }
             .listRowBackground(Color(white: 0.15))
 
-            //==================
+            //====================================
             // RESTORE DEFAULTS
-            //==================
+            //====================================
             Section {
                 Button("Restore Defaults") {
                     simSettings.restoreDefaults()
@@ -478,19 +481,20 @@ struct SettingsView: View {
             }
             .listRowBackground(Color(white: 0.15))
 
-            //==================
+            //====================================
             // ABOUT
-            //==================
+            //====================================
             Section {
+                // Remove this if you don’t actually have an AboutView
                 NavigationLink("About") {
                     AboutView()
                 }
             }
             .listRowBackground(Color(white: 0.15))
 
-            //==================
+            //====================================
             // RESET CRITERIA
-            //==================
+            //====================================
             Section("Reset Criteria") {
                 Button("Reset All Criteria") {
                     showResetCriteriaConfirmation = true
@@ -513,16 +517,20 @@ struct SettingsView: View {
         .environment(\.colorScheme, .dark)
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.large)
+        .onAppear {
+            // Only turn 'toggleAll' on if every single factor is already true
+            simSettings.toggleAll = simSettings.areAllFactorsEnabled
+        }
         .overlayPreferenceValue(TooltipAnchorKey.self) { allAnchors in
             GeometryReader { proxy in
-                // If multiple anchors, show the last
+                // Show only the last anchor’s tooltip (if any)
                 if let item = allAnchors.last {
                     ZStack {
-                        // Dim entire screen
+                        // Dim background
                         Color.black.opacity(0.3)
                             .ignoresSafeArea()
                             .onTapGesture {
-                                // Dismiss on background tap
+                                // Tap anywhere outside to dismiss
                                 withAnimation {
                                     activeFactor = nil
                                 }
@@ -533,7 +541,7 @@ struct SettingsView: View {
                         let offset: CGFloat = 8
                         let anchorPt = proxy[item.anchor]
 
-                        // Check if there's enough space below the anchor
+                        // Check how much space is below the anchor
                         let spaceBelow = proxy.size.height - anchorPt.y
                         let arrowDirection: ArrowDirection = spaceBelow > (bubbleHeight + 40) ? .up : .down
 
@@ -543,8 +551,8 @@ struct SettingsView: View {
 
                         // For Y positioning, place below if arrow up, above if arrow down
                         let proposedY = arrowDirection == .up
-                            ? anchorPt.y + offset
-                            : anchorPt.y - offset - bubbleHeight
+                            ? (anchorPt.y + offset)
+                            : (anchorPt.y - offset - bubbleHeight)
                         let clampedY = max(10, min(proposedY, proxy.size.height - bubbleHeight - 10))
 
                         TooltipBubble(text: item.description, arrowDirection: arrowDirection)
@@ -562,7 +570,7 @@ struct SettingsView: View {
         }
     }
 
-    /// Toggles the active factor if tapped again, or sets a new factor if tapped
+    /// If tapped factor is already active, hide it. Otherwise activate it.
     private func toggleFactor(_ tappedTitle: String) {
         withAnimation {
             if activeFactor == tappedTitle {
