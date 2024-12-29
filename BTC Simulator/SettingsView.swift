@@ -518,8 +518,11 @@ struct SettingsView: View {
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.large)
         .onAppear {
-            // Only turn 'toggleAll' on if every single factor is already true
-            simSettings.toggleAll = simSettings.areAllFactorsEnabled
+            let allEnabled = simSettings.areAllFactorsEnabled
+            // Only assign if it actually changes
+            if simSettings.toggleAll != allEnabled {
+                simSettings.toggleAll = allEnabled
+            }
         }
         .overlayPreferenceValue(TooltipAnchorKey.self) { allAnchors in
             GeometryReader { proxy in

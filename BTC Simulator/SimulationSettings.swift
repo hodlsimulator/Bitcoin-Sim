@@ -21,7 +21,7 @@ class SimulationSettings: ObservableObject {
     @Published var averageCostBasis: Double = 25000.0
     
     // The new "toggleAll" property
-    @Published var toggleAll: Bool = false {
+    @Published var toggleAll = false {
         didSet {
             // When toggleAll changes, set each toggle to the same value
             useHalving              = toggleAll
