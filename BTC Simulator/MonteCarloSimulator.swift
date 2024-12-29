@@ -78,15 +78,13 @@ func runOneFullSimulation(
     seed: UInt64? = nil
 ) -> [SimulationData] {
     
-    // Lock or unlock seed
-    setRandomSeed(seed)
+    // We no longer reset the seed here; we rely on the caller (if at all)
+    // setRandomSeed(seed)
 
     // 1) Figure out the initial BTC price in EUR
     let firstEURPrice = initialBTCPriceUSD / exchangeRateEURUSD
     
     // 2) Convert user’s typed startingBalance (EUR) into BTC
-    //    If user typed 1000 EUR and the firstEURPrice is 20,000 EUR/BTC,
-    //    then they initially have 0.05 BTC.
     let userStartingBalanceEUR = settings.startingBalance
     let userStartingBalanceBTC = userStartingBalanceEUR / firstEURPrice
 
@@ -101,7 +99,6 @@ func runOneFullSimulation(
     var results: [SimulationData] = []
 
     // 3) Append an initial record for week 1 that reflects the user’s starting BTC
-    //    and initial portfolio value in EUR
     let initialPortfolioValueEUR = userStartingBalanceBTC * firstEURPrice
     results.append(
         SimulationData(
@@ -120,17 +117,17 @@ func runOneFullSimulation(
 
     // Main loop from week 2 to userWeeks
     for week in 2...userWeeks {
-
+        
         // 1) Pick a random historical weekly return
         let btcArr = useWeightedSampling ? weightedBTCWeeklyReturns : historicalBTCWeeklyReturns
         let histReturn = pickRandomReturn(from: btcArr)
-
+        
         // 2) Dampen extremes
         let dampenedReturn = dampenArctan(histReturn)
-
+        
         // 3) Combine with base CAGR
         var combinedWeeklyReturn = dampenedReturn + baseWeeklyGrowth
-
+        
         // 4) Example toggles (halving, adoption factor, etc.)
         if settings.useHalving, halvingWeeks.contains(week) {
             combinedWeeklyReturn += settings.halvingBump
@@ -144,16 +141,16 @@ func runOneFullSimulation(
         var btcPriceUSD = previousBTCPriceUSD * (1.0 + combinedWeeklyReturn)
         btcPriceUSD = max(btcPriceUSD, 1.0)
         let btcPriceEUR = btcPriceUSD / exchangeRateEURUSD
-
+        
         // 6) Contribution logic
         let contributionEUR = (week <= 52) ? 60.0 : 100.0
         let fee = contributionEUR * 0.0035
         let netBTC = (contributionEUR - fee) / btcPriceEUR
-
+        
         // Hypothetical holdings before withdrawal
         let hypotheticalHoldings = previousBTCHoldings + netBTC
         let hypotheticalValueEUR = hypotheticalHoldings * btcPriceEUR
-
+        
         // 7) Withdrawal logic
         var withdrawalEUR = 0.0
         if hypotheticalValueEUR > 60_000 {
@@ -162,7 +159,7 @@ func runOneFullSimulation(
             withdrawalEUR = 100.0
         }
         let withdrawalBTC = withdrawalEUR / btcPriceEUR
-
+        
         // Final holdings
         let finalHoldings = max(0.0, hypotheticalHoldings - withdrawalBTC)
         let portfolioValEUR = finalHoldings * btcPriceEUR
@@ -171,7 +168,7 @@ func runOneFullSimulation(
         results.append(
             SimulationData(
                 week: week,
-                startingBTC: previousBTCHoldings,   // How many BTC we had at the start of this week
+                startingBTC: previousBTCHoldings,
                 netBTCHoldings: finalHoldings,
                 btcPriceUSD: btcPriceUSD,
                 btcPriceEUR: btcPriceEUR,

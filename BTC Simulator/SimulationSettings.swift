@@ -7,151 +7,133 @@
 
 import SwiftUI
 
-// SimulationSettings.swift
-extension SimulationSettings {
-    func resetUserCriteria() {
-        // If your app checks this key for whether onboarding is done:
-        UserDefaults.standard.set(false, forKey: "hasOnboarded")
-
-        // Clear random seed logic
-        lockedRandomSeed = false
-        seedValue = 0
-        useRandomSeed = true
-
-        // If you want to restore your bullish/bearish factors to defaults:
-        restoreDefaults()
-
-        print(">>> [RESET] Completed resetUserCriteria()")
-        
-        // Or if you want to do partial resets, do so here.
-        // For example:
-        // useHalving = false
-        // halvingBump = 0.0
-        // ... etc.
-
-        // If you have a separate manager for user inputs:
-        // let inputManager = PersistentInputManager() // or from a shared reference
-        // inputManager.resetAll()
-        
-        // Also reset inputManager if you have it hooked up, e.g.:
-        // inputManager?.resetAllInputs()
-    }
-}
-
 class SimulationSettings: ObservableObject {
+    
+    // If you use this InputManager, you can set it up
     var inputManager: PersistentInputManager? = nil
     
+    // The basic fields for your simulation
     @Published var userWeeks: Int = 52
     @Published var initialBTCPriceUSD: Double = 58000.0
     
-    // Add this if missing:
+    // The fields you capture from onboarding
     @Published var startingBalance: Double = 0.0
+    @Published var averageCostBasis: Double = 25000.0
+    
+    // The new "toggleAll" property
+    @Published var toggleAll: Bool = false {
+        didSet {
+            // When toggleAll changes, set each toggle to the same value
+            useHalving              = toggleAll
+            useInstitutionalDemand  = toggleAll
+            useCountryAdoption      = toggleAll
+            useRegulatoryClarity    = toggleAll
+            useEtfApproval          = toggleAll
+            useTechBreakthrough     = toggleAll
+            useScarcityEvents       = toggleAll
+            useGlobalMacroHedge     = toggleAll
+            useStablecoinShift      = toggleAll
+            useDemographicAdoption  = toggleAll
+            useAltcoinFlight        = toggleAll
+            useAdoptionFactor       = toggleAll
+
+            useRegClampdown         = toggleAll
+            useCompetitorCoin       = toggleAll
+            useSecurityBreach       = toggleAll
+            useBubblePop            = toggleAll
+            useStablecoinMeltdown   = toggleAll
+            useBlackSwan            = toggleAll
+            useBearMarket           = toggleAll
+            useMaturingMarket       = toggleAll
+            useRecession            = toggleAll
+        }
+    }
     
     // MARK: - Random Seed Logic
-    
-    @Published var lastUsedSeed: UInt64 = 0
-
-    /// Whether the random seed is locked (so it doesn't change each simulation)
     @Published var lockedRandomSeed: Bool = false {
         didSet {
             UserDefaults.standard.set(lockedRandomSeed, forKey: "lockedRandomSeed")
         }
     }
-    
-    /// The actual seed value. If locked, we'll always use this seed.
-    /// We'll use `0` here to indicate "no locked seed" by default.
     @Published var seedValue: UInt64 = 0 {
         didSet {
             UserDefaults.standard.set(seedValue, forKey: "seedValue")
         }
     }
-    
-    /// Whether we pick a new random seed each run (if lockedRandomSeed is false)
     @Published var useRandomSeed: Bool = true {
         didSet {
             UserDefaults.standard.set(useRandomSeed, forKey: "useRandomSeed")
         }
     }
+    @Published var lastUsedSeed: UInt64 = 0
     
     // MARK: - Bullish Toggles
-    
     @Published var useHalving: Bool {
         didSet { UserDefaults.standard.set(useHalving, forKey: "useHalving") }
     }
     @Published var halvingBump: Double {
         didSet { UserDefaults.standard.set(halvingBump, forKey: "halvingBump") }
     }
-    
     @Published var useInstitutionalDemand: Bool {
         didSet { UserDefaults.standard.set(useInstitutionalDemand, forKey: "useInstitutionalDemand") }
     }
     @Published var maxDemandBoost: Double {
         didSet { UserDefaults.standard.set(maxDemandBoost, forKey: "maxDemandBoost") }
     }
-    
     @Published var useCountryAdoption: Bool {
         didSet { UserDefaults.standard.set(useCountryAdoption, forKey: "useCountryAdoption") }
     }
     @Published var maxCountryAdBoost: Double {
         didSet { UserDefaults.standard.set(maxCountryAdBoost, forKey: "maxCountryAdBoost") }
     }
-    
     @Published var useRegulatoryClarity: Bool {
         didSet { UserDefaults.standard.set(useRegulatoryClarity, forKey: "useRegulatoryClarity") }
     }
     @Published var maxClarityBoost: Double {
         didSet { UserDefaults.standard.set(maxClarityBoost, forKey: "maxClarityBoost") }
     }
-    
     @Published var useEtfApproval: Bool {
         didSet { UserDefaults.standard.set(useEtfApproval, forKey: "useEtfApproval") }
     }
     @Published var maxEtfBoost: Double {
         didSet { UserDefaults.standard.set(maxEtfBoost, forKey: "maxEtfBoost") }
     }
-    
     @Published var useTechBreakthrough: Bool {
         didSet { UserDefaults.standard.set(useTechBreakthrough, forKey: "useTechBreakthrough") }
     }
     @Published var maxTechBoost: Double {
         didSet { UserDefaults.standard.set(maxTechBoost, forKey: "maxTechBoost") }
     }
-    
     @Published var useScarcityEvents: Bool {
         didSet { UserDefaults.standard.set(useScarcityEvents, forKey: "useScarcityEvents") }
     }
     @Published var maxScarcityBoost: Double {
         didSet { UserDefaults.standard.set(maxScarcityBoost, forKey: "maxScarcityBoost") }
     }
-    
     @Published var useGlobalMacroHedge: Bool {
         didSet { UserDefaults.standard.set(useGlobalMacroHedge, forKey: "useGlobalMacroHedge") }
     }
     @Published var maxMacroBoost: Double {
         didSet { UserDefaults.standard.set(maxMacroBoost, forKey: "maxMacroBoost") }
     }
-    
     @Published var useStablecoinShift: Bool {
         didSet { UserDefaults.standard.set(useStablecoinShift, forKey: "useStablecoinShift") }
     }
     @Published var maxStablecoinBoost: Double {
         didSet { UserDefaults.standard.set(maxStablecoinBoost, forKey: "maxStablecoinBoost") }
     }
-    
     @Published var useDemographicAdoption: Bool {
         didSet { UserDefaults.standard.set(useDemographicAdoption, forKey: "useDemographicAdoption") }
     }
     @Published var maxDemoBoost: Double {
         didSet { UserDefaults.standard.set(maxDemoBoost, forKey: "maxDemoBoost") }
     }
-    
     @Published var useAltcoinFlight: Bool {
         didSet { UserDefaults.standard.set(useAltcoinFlight, forKey: "useAltcoinFlight") }
     }
     @Published var maxAltcoinBoost: Double {
         didSet { UserDefaults.standard.set(maxAltcoinBoost, forKey: "maxAltcoinBoost") }
     }
-    
     @Published var useAdoptionFactor: Bool {
         didSet { UserDefaults.standard.set(useAdoptionFactor, forKey: "useAdoptionFactor") }
     }
@@ -160,82 +142,83 @@ class SimulationSettings: ObservableObject {
     }
     
     // MARK: - Bearish Toggles
-    
     @Published var useRegClampdown: Bool {
         didSet { UserDefaults.standard.set(useRegClampdown, forKey: "useRegClampdown") }
     }
     @Published var maxClampDown: Double {
         didSet { UserDefaults.standard.set(maxClampDown, forKey: "maxClampDown") }
     }
-    
     @Published var useCompetitorCoin: Bool {
         didSet { UserDefaults.standard.set(useCompetitorCoin, forKey: "useCompetitorCoin") }
     }
     @Published var maxCompetitorBoost: Double {
         didSet { UserDefaults.standard.set(maxCompetitorBoost, forKey: "maxCompetitorBoost") }
     }
-    
     @Published var useSecurityBreach: Bool {
         didSet { UserDefaults.standard.set(useSecurityBreach, forKey: "useSecurityBreach") }
     }
     @Published var breachImpact: Double {
         didSet { UserDefaults.standard.set(breachImpact, forKey: "breachImpact") }
     }
-    
     @Published var useBubblePop: Bool {
         didSet { UserDefaults.standard.set(useBubblePop, forKey: "useBubblePop") }
     }
     @Published var maxPopDrop: Double {
         didSet { UserDefaults.standard.set(maxPopDrop, forKey: "maxPopDrop") }
     }
-    
     @Published var useStablecoinMeltdown: Bool {
         didSet { UserDefaults.standard.set(useStablecoinMeltdown, forKey: "useStablecoinMeltdown") }
     }
     @Published var maxMeltdownDrop: Double {
         didSet { UserDefaults.standard.set(maxMeltdownDrop, forKey: "maxMeltdownDrop") }
     }
-    
     @Published var useBlackSwan: Bool {
         didSet { UserDefaults.standard.set(useBlackSwan, forKey: "useBlackSwan") }
     }
     @Published var blackSwanDrop: Double {
         didSet { UserDefaults.standard.set(blackSwanDrop, forKey: "blackSwanDrop") }
     }
-    
     @Published var useBearMarket: Bool {
         didSet { UserDefaults.standard.set(useBearMarket, forKey: "useBearMarket") }
     }
     @Published var bearWeeklyDrift: Double {
         didSet { UserDefaults.standard.set(bearWeeklyDrift, forKey: "bearWeeklyDrift") }
     }
-    
     @Published var useMaturingMarket: Bool {
         didSet { UserDefaults.standard.set(useMaturingMarket, forKey: "useMaturingMarket") }
     }
     @Published var maxMaturingDrop: Double {
         didSet { UserDefaults.standard.set(maxMaturingDrop, forKey: "maxMaturingDrop") }
     }
-    
     @Published var useRecession: Bool {
         didSet { UserDefaults.standard.set(useRecession, forKey: "useRecession") }
     }
     @Published var maxRecessionDrop: Double {
         didSet { UserDefaults.standard.set(maxRecessionDrop, forKey: "maxRecessionDrop") }
     }
-    
+
     // MARK: - Init
-    
     init() {
+        
+        // Load user’s saved onboarding data (if any)
+        if let savedBal = UserDefaults.standard.object(forKey: "savedStartingBalance") as? Double {
+            self.startingBalance = savedBal
+        }
+        if let savedACB = UserDefaults.standard.object(forKey: "savedAverageCostBasis") as? Double {
+            self.averageCostBasis = savedACB
+        }
+        if let savedWeeks = UserDefaults.standard.object(forKey: "savedUserWeeks") as? Int {
+            self.userWeeks = savedWeeks
+        }
+        if let savedBTCPrice = UserDefaults.standard.object(forKey: "savedInitialBTCPriceUSD") as? Double {
+            self.initialBTCPriceUSD = savedBTCPrice
+        }
+        
         // --- Load random seed settings ---
         self.lockedRandomSeed = UserDefaults.standard.bool(forKey: "lockedRandomSeed")
-        
-        // Load the stored seed if any; otherwise, leave as 0 (unlocked)
         if let storedSeed = UserDefaults.standard.object(forKey: "seedValue") as? UInt64 {
             self.seedValue = storedSeed
         }
-        
-        // If user hasn’t locked the seed, default to “use random seed” = true
         let storedUseRandom = UserDefaults.standard.object(forKey: "useRandomSeed") as? Bool ?? true
         self.useRandomSeed = storedUseRandom
         
@@ -324,7 +307,7 @@ class SimulationSettings: ObservableObject {
         let storedUseRecession = UserDefaults.standard.object(forKey: "useRecession") as? Bool ?? true
         let storedMaxRecession = UserDefaults.standard.double(forKey: "maxRecessionDrop")
         let finalMaxRecession  = (storedMaxRecession == 0) ? -0.004 : storedMaxRecession
-
+        
         // --- Assign to properties ---
         // Bullish
         self.useHalving = storedUseHalving
@@ -351,7 +334,7 @@ class SimulationSettings: ObservableObject {
         self.maxAltcoinBoost = finalMaxAltcoin
         self.useAdoptionFactor = storedUseAdoption
         self.adoptionBaseFactor = finalAdoptionVal
-
+        
         // Bearish
         self.useRegClampdown = storedUseClamp
         self.maxClampDown = finalMaxClamp
@@ -373,13 +356,49 @@ class SimulationSettings: ObservableObject {
         self.maxRecessionDrop = finalMaxRecession
     }
     
-    // MARK: - Restore Defaults
+    // MARK: - resetUserCriteria (formerly extension)
+    func resetUserCriteria() {
+        // If your app checks this key for whether onboarding is done:
+        UserDefaults.standard.set(false, forKey: "hasOnboarded")
+
+        // Clear random seed logic
+        lockedRandomSeed = false
+        seedValue = 0
+        useRandomSeed = true
+
+        // If you want to restore your bullish/bearish factors to defaults:
+        restoreDefaults()
+
+        print(">>> [RESET] Completed resetUserCriteria()")
+        
+        // Or partial resets if you prefer...
+        // For example:
+        // useHalving = false
+        // halvingBump = 0.0
+        // etc.
+        
+        // If you have a separate manager for user inputs:
+        // inputManager?.resetAllInputs()
+    }
     
+    // MARK: - Restore Defaults
     func restoreDefaults() {
         // Reset random seed logic
         lockedRandomSeed = false
         useRandomSeed = true
         seedValue = 0  // “Unlocked, random each run” by default
+        
+        // Clear the user’s saved onboarding data if you wish:
+        UserDefaults.standard.removeObject(forKey: "savedStartingBalance")
+        UserDefaults.standard.removeObject(forKey: "savedAverageCostBasis")
+        UserDefaults.standard.removeObject(forKey: "savedUserWeeks")
+        UserDefaults.standard.removeObject(forKey: "savedInitialBTCPriceUSD")
+        
+        // Reset your local variables too
+        startingBalance = 0.0
+        averageCostBasis = 25000.0
+        userWeeks = 52
+        initialBTCPriceUSD = 58000.0
         
         // Reset bullish toggles
         useHalving = true

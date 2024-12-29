@@ -24,7 +24,7 @@ struct OnboardingView: View {
     @EnvironmentObject var simSettings: SimulationSettings
     @Binding var didFinishOnboarding: Bool
     
-    // MARK: - Steps from 0..7
+    // MARK: - Steps from 0..8
     @State private var currentStep: Int = 0
     
     // Step 0: Weekly/Monthly
@@ -37,24 +37,26 @@ struct OnboardingView: View {
     @State private var currencyPreference: PreferredCurrency = .usd
     
     // Step 3: Starting Balance
-    // (this local state holds what the user types)
     @State private var startingBalance: Double = 0.0
     
-    // Step 4: BTC Price (fetched or typed)
+    // Step 4: Average BTC Purchase Price
+    @State private var averageCostBasis: Double = 58000
+    
+    // Step 5: BTC Price (fetched or typed)
     @State private var fetchedBTCPrice: String = "N/A"
     @State private var userBTCPrice: String = ""
     
-    // Step 5: Contributions
+    // Step 6: Contributions
     @State private var firstYearContribution: Double = 60.0
     @State private var subsequentContribution: Double = 100.0
     
-    // Step 6: Withdrawals
+    // Step 7: Withdrawals
     @State private var threshold1: Double = 30000.0
     @State private var withdraw1: Double = 100.0
     @State private var threshold2: Double = 60000.0
     @State private var withdraw2: Double = 200.0
     
-    // Step 7: Final Review
+    // Step 8: Final Review
     
     var body: some View {
         ZStack {
@@ -97,7 +99,6 @@ struct OnboardingView: View {
                     switch currentStep {
                     case 0:
                         step0_PeriodFrequency()
-                            .padding(.top, 10)
                     case 1:
                         step1_TotalPeriods()
                     case 2:
@@ -105,13 +106,15 @@ struct OnboardingView: View {
                     case 3:
                         step3_StartingBalance()
                     case 4:
-                        step4_BTCPriceInput()
+                        step4_AverageCostBasis()
                     case 5:
-                        step5_Contributions()
+                        step5_BTCPriceInput()
                     case 6:
-                        step6_Withdrawals()
+                        step6_Contributions()
+                    case 7:
+                        step7_Withdrawals()
                     default:
-                        step7_ReviewAndFinish()
+                        step8_ReviewAndFinish()
                     }
                 }
                 .frame(maxWidth: .infinity)
@@ -122,7 +125,7 @@ struct OnboardingView: View {
                 }
             }
         }
-        // BACK CHEVRON
+        // BACK CHEVRON (only if beyond the first step)
         .overlay(
             Group {
                 if currentStep > 0 {
@@ -143,7 +146,7 @@ struct OnboardingView: View {
         )
         // NEXT / FINISH BUTTON (STATIC AT BOTTOM)
         .overlay(
-            Button(currentStep == 7 ? "Finish" : "Next") {
+            Button(currentStep == 8 ? "Finish" : "Next") {
                 onNextTapped()
             }
             .foregroundColor(.white)
@@ -152,8 +155,8 @@ struct OnboardingView: View {
             .background(Color.orange)
             .cornerRadius(6)
             .shadow(color: .black.opacity(0.3), radius: 4, x: 2, y: 2)
-            // Different padding for step 7 if you like
-            .padding(.bottom, currentStep == 7 ? 200 : 270),
+            // Different padding for final step if you like
+            .padding(.bottom, currentStep == 8 ? 170 : 270),
             alignment: .bottom
         )
         // Prevent iOS from auto-pushing content up on keyboard show
@@ -235,7 +238,27 @@ struct OnboardingView: View {
     }
     
     // MARK: - Step 4
-    private func step4_BTCPriceInput() -> some View {
+    private func step4_AverageCostBasis() -> some View {
+        VStack(spacing: 20) {
+            Text("Enter your average BTC purchase price")
+                .foregroundColor(.white)
+            
+            TextField("e.g. 58000.0", value: $averageCostBasis, format: .number)
+                .keyboardType(.decimalPad)
+                .padding()
+                .background(Color.white.opacity(0.15))
+                .cornerRadius(6)
+                .foregroundColor(.white)
+                .frame(width: 200)
+                .multilineTextAlignment(.center)
+            
+            Text("(in USD)")
+                .foregroundColor(.gray)
+        }
+    }
+    
+    // MARK: - Step 5
+    private func step5_BTCPriceInput() -> some View {
         VStack(spacing: 16) {
             Text("Fetched BTC Price (USD): \(fetchedBTCPrice)")
                 .foregroundColor(.white)
@@ -254,8 +277,8 @@ struct OnboardingView: View {
         }
     }
     
-    // MARK: - Step 5
-    private func step5_Contributions() -> some View {
+    // MARK: - Step 6
+    private func step6_Contributions() -> some View {
         VStack(spacing: 16) {
             Text("Contributions")
                 .foregroundColor(.white)
@@ -287,8 +310,8 @@ struct OnboardingView: View {
         }
     }
     
-    // MARK: - Step 6
-    private func step6_Withdrawals() -> some View {
+    // MARK: - Step 7
+    private func step7_Withdrawals() -> some View {
         VStack(spacing: 16) {
             Text("Withdrawal Rules")
                 .foregroundColor(.white)
@@ -338,8 +361,8 @@ struct OnboardingView: View {
         }
     }
     
-    // MARK: - Step 7
-    private func step7_ReviewAndFinish() -> some View {
+    // MARK: - Step 8
+    private func step8_ReviewAndFinish() -> some View {
         VStack(spacing: 16) {
             Text("Review & Confirm")
                 .foregroundColor(.white)
@@ -350,6 +373,7 @@ struct OnboardingView: View {
                 Text("Periods: \(totalPeriods)")
                 Text("Pref. Currency: \(currencyPreference.rawValue)")
                 Text("Starting Bal: \(startingBalance, specifier: "%.2f") \(currencyPreference.rawValue.uppercased())")
+                Text("Avg. Cost Basis: \(averageCostBasis, specifier: "%.2f") USD")
                 Text("BTC Price: \(finalBTCPrice, specifier: "%.2f") USD")
                 Text("Contrib (Y1/Y2+): \(firstYearContribution, specifier: "%.0f") / \(subsequentContribution, specifier: "%.0f")")
                 Text("Withdraws: \(threshold1, specifier: "%.0f")→\(withdraw1, specifier: "%.0f"), \(threshold2, specifier: "%.0f")→\(withdraw2, specifier: "%.0f")")
@@ -360,8 +384,8 @@ struct OnboardingView: View {
     
     // MARK: - onNextTapped
     private func onNextTapped() {
-        if currentStep == 7 {
-            // Apply everything
+        // If we’re on the last step (8), finalise
+        if currentStep == 8 {
             applySettingsToSim()
             didFinishOnboarding = true
         } else {
@@ -385,9 +409,15 @@ struct OnboardingView: View {
         // If you store currency preference:
         // simSettings.preferredCurrency = currencyPreference.rawValue
         
-        // Set the user’s typed starting balance into simSettings
-        // (make sure "startingBalance" is declared in SimulationSettings)
+        // Set the user’s typed starting balance & average cost basis
         simSettings.startingBalance = startingBalance
+        simSettings.averageCostBasis = averageCostBasis
+        
+        // Persist them to UserDefaults so they’re remembered on app relaunch
+        UserDefaults.standard.set(startingBalance, forKey: "savedStartingBalance")
+        UserDefaults.standard.set(averageCostBasis, forKey: "savedAverageCostBasis")
+        UserDefaults.standard.set(finalWeeks, forKey: "savedUserWeeks")
+        UserDefaults.standard.set(finalBTCPrice, forKey: "savedInitialBTCPriceUSD")
         
         // If you have inputManager or your simSettings handle contributions/withdrawals:
         simSettings.inputManager?.firstYearContribution = String(firstYearContribution)
@@ -439,9 +469,10 @@ struct OnboardingView: View {
         case 1: return "Total Periods"
         case 2: return "Currency"
         case 3: return "Starting Balance"
-        case 4: return "BTC Price"
-        case 5: return "Contributions"
-        case 6: return "Withdrawals"
+        case 4: return "Avg. Cost Basis"
+        case 5: return "BTC Price"
+        case 6: return "Contributions"
+        case 7: return "Withdrawals"
         default: return "Review"
         }
     }
@@ -452,9 +483,10 @@ struct OnboardingView: View {
         case 1: return "How many \(chosenPeriodUnit.rawValue)?"
         case 2: return "USD, EUR, or Both?"
         case 3: return "Set your starting balance"
-        case 4: return "Fetch or type BTC price"
-        case 5: return "Contributions per step"
-        case 6: return "Set your withdrawal triggers"
+        case 4: return "Enter your cost basis"
+        case 5: return "Fetch or type BTC price"
+        case 6: return "Contributions per step"
+        case 7: return "Set your withdrawal triggers"
         default: return "Confirm your setup"
         }
     }
