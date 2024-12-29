@@ -458,200 +458,265 @@ struct ContentView: View {
         }
     }
     
-    // MARK: - The simulation screen
+    /// Displays the simulation results table, including:
+    ///  - A chevron‐only back button, slightly inset from the left edge
+    ///  - Three separate orange buttons (10th, Median, 90th) spaced out on the right
+    ///  - Extra top padding so the table headings are moved down a bit
     private var simulationResultsView: some View {
         ScrollViewReader { scrollProxy in
             ZStack {
-                VStack {
-                    Spacer().frame(height: 40)
-                    
-                    VStack(spacing: 0) {
-                        // Title row
-                        HStack(spacing: 0) {
-                            Text("Week")
-                                .frame(width: 60, alignment: .leading)
-                                .font(.headline)
-                                .padding(.leading, 50)
-                                .padding(.vertical, 8)
-                                .background(Color.orange)
+                VStack(spacing: 0) {
+
+                    // -----------------------------
+                    // 1) TOP BAR WITH CHEVRON & 10TH/MEDIAN/90TH
+                    // -----------------------------
+                    HStack(spacing: 0) {
+                        // CHEVRON-ONLY BACK BUTTON
+                        Button(action: {
+                            // Save current scroll state
+                            UserDefaults.standard.set(lastViewedWeek, forKey: "lastViewedWeek")
+                            UserDefaults.standard.set(currentPage, forKey: "lastViewedPage")
+                            lastViewedPage = currentPage
+                            // Return to main/parameters screen
+                            isSimulationRun = false
+                        }) {
+                            Image(systemName: "chevron.left")
+                                .imageScale(.large)
                                 .foregroundColor(.white)
-                            
-                            ZStack {
-                                Text(columns[currentPage].0)
-                                    .font(.headline)
-                                    .padding(.leading, 100)
-                                    .padding(.vertical, 8)
-                                    .background(Color.orange)
-                                    .foregroundColor(.white)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                
-                                // Horizontal tap zones
-                                GeometryReader { geometry in
-                                    HStack(spacing: 0) {
-                                        Color.clear
-                                            .frame(width: geometry.size.width * 0.2)
-                                            .contentShape(Rectangle())
-                                            .gesture(
-                                                TapGesture()
-                                                    .onEnded {
-                                                        if currentPage > 0 {
-                                                            withAnimation {
-                                                                currentPage -= 1
-                                                            }
+                        }
+                        // Increase the left padding so it’s not off-screen
+                        .padding(.leading, 55)
+
+                        Spacer()
+
+                        // THREE INDIVIDUAL ORANGE BUTTONS
+                        HStack(spacing: 16) {
+                            Button("10th") {
+                                // e.g. set monteCarloResults to your 10th-percentile run
+                            }
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 10)
+                            .background(Color.orange)
+                            .cornerRadius(8)
+
+                            Button("Median") {
+                                // e.g. set monteCarloResults to your median run
+                            }
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 10)
+                            .background(Color.orange)
+                            .cornerRadius(8)
+
+                            Button("90th") {
+                                // e.g. set monteCarloResults to your 90th-percentile run
+                            }
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 10)
+                            .background(Color.orange)
+                            .cornerRadius(8)
+                        }
+                        .padding(.trailing, 70)
+
+                        Spacer()
+                    }
+                    // Extra top padding to move everything down from the notch
+                    .padding(.top, 60)
+                    .padding(.bottom, 10)
+                    .background(Color(white: 0.14))
+
+                    // -----------------------------
+                    // 2) TABLE HEADER ROW (WEEK + COLUMN)
+                    // -----------------------------
+                    HStack(spacing: 0) {
+                        Text("Week")
+                            .frame(width: 60, alignment: .leading)
+                            .font(.headline)
+                            .padding(.leading, 50)
+                            .padding(.vertical, 8)
+                            .foregroundColor(.orange)
+                            .background(Color(white: 0.14))
+
+                        ZStack {
+                            Text(columns[currentPage].0)
+                                .font(.headline)
+                                .padding(.leading, 100)
+                                .padding(.vertical, 8)
+                                .foregroundColor(.orange)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(Color(white: 0.14))
+
+                            // Tap zones for switching columns left/right
+                            GeometryReader { geometry in
+                                HStack(spacing: 0) {
+                                    Color.clear
+                                        .frame(width: geometry.size.width * 0.2)
+                                        .contentShape(Rectangle())
+                                        .gesture(
+                                            TapGesture()
+                                                .onEnded {
+                                                    if currentPage > 0 {
+                                                        withAnimation {
+                                                            currentPage -= 1
                                                         }
                                                     }
-                                            )
-                                        Spacer()
-                                        Color.clear
-                                            .frame(width: geometry.size.width * 0.2)
-                                            .contentShape(Rectangle())
-                                            .gesture(
-                                                TapGesture()
-                                                    .onEnded {
-                                                        if currentPage < columns.count - 1 {
-                                                            withAnimation {
-                                                                currentPage += 1
-                                                            }
+                                                }
+                                        )
+                                    Spacer()
+                                    Color.clear
+                                        .frame(width: geometry.size.width * 0.2)
+                                        .contentShape(Rectangle())
+                                        .gesture(
+                                            TapGesture()
+                                                .onEnded {
+                                                    if currentPage < columns.count - 1 {
+                                                        withAnimation {
+                                                            currentPage += 1
                                                         }
                                                     }
-                                            )
-                                    }
+                                                }
+                                        )
                                 }
                             }
-                            .frame(height: 50)
                         }
-                        .background(Color.orange)
-                        
-                        // Data table
-                        ScrollView(.vertical, showsIndicators: !hideScrollIndicators) {
-                            HStack(spacing: 0) {
-                                // Left column (Week numbers)
-                                VStack(spacing: 0) {
-                                    ForEach(monteCarloResults.indices, id: \.self) { index in
-                                        let result = monteCarloResults[index]
-                                        let rowBackground = index.isMultiple(of: 2)
-                                            ? Color(white: 0.10)
-                                            : Color(white: 0.14)
-                                        
-                                        Text("\(result.week)")
-                                            .frame(width: 70, alignment: .leading)
-                                            .padding(.leading, 50)
-                                            .padding(.vertical, 12)
-                                            .padding(.horizontal, 8)
-                                            .background(rowBackground)
-                                            .foregroundColor(.white)
-                                            .id("week-\(result.week)")
-                                            .background(RowOffsetReporter(week: result.week))
-                                    }
+                        .frame(height: 50)
+                    }
+                    .background(Color(white: 0.14))
+
+                    // -----------------------------
+                    // 3) TABLE CONTENT
+                    // -----------------------------
+                    ScrollView(.vertical, showsIndicators: !hideScrollIndicators) {
+                        HStack(spacing: 0) {
+                            // Left column (Week numbers)
+                            VStack(spacing: 0) {
+                                ForEach(monteCarloResults.indices, id: \.self) { index in
+                                    let result = monteCarloResults[index]
+                                    let rowBackground = index.isMultiple(of: 2)
+                                        ? Color(white: 0.10)
+                                        : Color(white: 0.14)
+
+                                    Text("\(result.week)")
+                                        .frame(width: 70, alignment: .leading)
+                                        .padding(.leading, 50)
+                                        .padding(.vertical, 12)
+                                        .padding(.horizontal, 8)
+                                        .background(rowBackground)
+                                        .foregroundColor(.white)
+                                        .id("week-\(result.week)")
+                                        .background(RowOffsetReporter(week: result.week))
                                 }
-                                
-                                // Main columns in a TabView
-                                TabView(selection: $currentPage) {
-                                    ForEach(0..<columns.count, id: \.self) { index in
-                                        ZStack {
-                                            VStack(spacing: 0) {
-                                                ForEach(monteCarloResults.indices, id: \.self) { rowIndex in
-                                                    let rowResult = monteCarloResults[rowIndex]
-                                                    let rowBackground = rowIndex.isMultiple(of: 2)
-                                                        ? Color(white: 0.10)
-                                                        : Color(white: 0.14)
-                                                    
-                                                    Text(getValue(rowResult, columns[index].1))
-                                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                                        .padding(.leading, 80)
-                                                        .padding(.vertical, 12)
-                                                        .padding(.horizontal, 8)
-                                                        .background(rowBackground)
-                                                        .foregroundColor(.white)
-                                                        .id("data-week-\(rowResult.week)")
-                                                        .background(RowOffsetReporter(week: rowResult.week))
-                                                }
-                                            }
-                                            
-                                            // More tap areas for left/right
-                                            GeometryReader { geometry in
-                                                HStack(spacing: 0) {
-                                                    Color.clear
-                                                        .frame(width: geometry.size.width * 0.2)
-                                                        .contentShape(Rectangle())
-                                                        .gesture(
-                                                            TapGesture()
-                                                                .onEnded {
-                                                                    if currentPage > 0 {
-                                                                        withAnimation {
-                                                                            currentPage -= 1
-                                                                        }
-                                                                    }
-                                                                }
-                                                        )
-                                                    Spacer()
-                                                    Color.clear
-                                                        .frame(width: geometry.size.width * 0.2)
-                                                        .contentShape(Rectangle())
-                                                        .gesture(
-                                                            TapGesture()
-                                                                .onEnded {
-                                                                    if currentPage < columns.count - 1 {
-                                                                        withAnimation {
-                                                                            currentPage += 1
-                                                                        }
-                                                                    }
-                                                                }
-                                                        )
-                                                }
+                            }
+
+                            // Main data in a TabView (for horizontal "paging" through columns)
+                            TabView(selection: $currentPage) {
+                                ForEach(0..<columns.count, id: \.self) { index in
+                                    ZStack {
+                                        VStack(spacing: 0) {
+                                            ForEach(monteCarloResults.indices, id: \.self) { rowIndex in
+                                                let rowResult = monteCarloResults[rowIndex]
+                                                let rowBackground = rowIndex.isMultiple(of: 2)
+                                                    ? Color(white: 0.10)
+                                                    : Color(white: 0.14)
+
+                                                Text(getValue(rowResult, columns[index].1))
+                                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                                    .padding(.leading, 80)
+                                                    .padding(.vertical, 12)
+                                                    .padding(.horizontal, 8)
+                                                    .background(rowBackground)
+                                                    .foregroundColor(.white)
+                                                    .id("data-week-\(rowResult.week)")
+                                                    .background(RowOffsetReporter(week: rowResult.week))
                                             }
                                         }
-                                        .tag(index)
-                                    }
-                                }
-                                .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
-                                .frame(width: UIScreen.main.bounds.width - 60)
-                            }
-                            .coordinateSpace(name: "scrollArea")
-                            .onPreferenceChange(RowOffsetPreferenceKey.self) { offsets in
-                                let targetY: CGFloat = 160
-                                let filtered = offsets.filter { (week, _) in week != 1040 }
-                                let mapped = filtered.mapValues { abs($0 - targetY) }
-                                if let (closestWeek, _) = mapped.min(by: { $0.value < $1.value }) {
-                                    lastViewedWeek = closestWeek
-                                }
-                            }
-                            .onChange(of: scrollToBottom) { value in
-                                if value, let lastResult = monteCarloResults.last {
-                                    withAnimation {
-                                        scrollProxy.scrollTo("week-\(lastResult.week)", anchor: .bottom)
-                                    }
-                                    scrollToBottom = false
-                                }
-                            }
-                            .background(
-                                GeometryReader { geometry -> Color in
-                                    DispatchQueue.main.async {
-                                        let atBottom = geometry.frame(in: .global).maxY <= UIScreen.main.bounds.height
-                                        if atBottom != self.isAtBottom {
-                                            self.isAtBottom = atBottom
+
+                                        // Extra tap areas for switching columns
+                                        GeometryReader { geometry in
+                                            HStack(spacing: 0) {
+                                                Color.clear
+                                                    .frame(width: geometry.size.width * 0.2)
+                                                    .contentShape(Rectangle())
+                                                    .gesture(
+                                                        TapGesture()
+                                                            .onEnded {
+                                                                if currentPage > 0 {
+                                                                    withAnimation {
+                                                                        currentPage -= 1
+                                                                    }
+                                                                }
+                                                            }
+                                                    )
+                                                Spacer()
+                                                Color.clear
+                                                    .frame(width: geometry.size.width * 0.2)
+                                                    .contentShape(Rectangle())
+                                                    .gesture(
+                                                        TapGesture()
+                                                            .onEnded {
+                                                                if currentPage < columns.count - 1 {
+                                                                    withAnimation {
+                                                                        currentPage += 1
+                                                                    }
+                                                                }
+                                                            }
+                                                    )
+                                            }
                                         }
                                     }
-                                    return Color(white: 0.12)
+                                    .tag(index)
                                 }
-                            )
-                            .simultaneousGesture(
-                                DragGesture(minimumDistance: 0)
-                                    .onChanged { _ in
-                                        hideScrollIndicators = false
-                                        lastScrollTime = Date()
-                                    }
-                                    .onEnded { _ in
-                                        lastScrollTime = Date()
-                                    }
-                            )
-                        }
-                        .onReceive(
-                            Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()
-                        ) { _ in
-                            if Date().timeIntervalSince(lastScrollTime) > 1.5 {
-                                hideScrollIndicators = true
                             }
+                            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+                            .frame(width: UIScreen.main.bounds.width - 60)
+                        }
+                        .coordinateSpace(name: "scrollArea")
+                        .onPreferenceChange(RowOffsetPreferenceKey.self) { offsets in
+                            // Track which week is closest to a certain vertical offset
+                            let targetY: CGFloat = 160
+                            let filtered = offsets.filter { (week, _) in week != 1040 }
+                            let mapped = filtered.mapValues { abs($0 - targetY) }
+                            if let (closestWeek, _) = mapped.min(by: { $0.value < $1.value }) {
+                                lastViewedWeek = closestWeek
+                            }
+                        }
+                        .onChange(of: scrollToBottom) { value in
+                            if value, let lastResult = monteCarloResults.last {
+                                withAnimation {
+                                    scrollProxy.scrollTo("week-\(lastResult.week)", anchor: .bottom)
+                                }
+                                scrollToBottom = false
+                            }
+                        }
+                        .background(
+                            GeometryReader { geometry -> Color in
+                                DispatchQueue.main.async {
+                                    let atBottom = geometry.frame(in: .global).maxY <= UIScreen.main.bounds.height
+                                    if atBottom != self.isAtBottom {
+                                        self.isAtBottom = atBottom
+                                    }
+                                }
+                                return Color(white: 0.12)
+                            }
+                        )
+                        .simultaneousGesture(
+                            DragGesture(minimumDistance: 0)
+                                .onChanged { _ in
+                                    hideScrollIndicators = false
+                                    lastScrollTime = Date()
+                                }
+                                .onEnded { _ in
+                                    lastScrollTime = Date()
+                                }
+                        )
+                    }
+                    .onReceive(
+                        Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()
+                    ) { _ in
+                        if Date().timeIntervalSince(lastScrollTime) > 1.5 {
+                            hideScrollIndicators = true
                         }
                     }
                 }
@@ -661,44 +726,6 @@ struct ContentView: View {
                 .onDisappear {
                     UserDefaults.standard.set(lastViewedWeek, forKey: "lastViewedWeek")
                     UserDefaults.standard.set(currentPage, forKey: "lastViewedPage")
-                }
-                
-                // “Back” button top-left
-                VStack {
-                    HStack {
-                        Button(action: {
-                            UserDefaults.standard.set(lastViewedWeek, forKey: "lastViewedWeek")
-                            UserDefaults.standard.set(currentPage, forKey: "lastViewedPage")
-                            lastViewedPage = currentPage
-                            isSimulationRun = false
-                        }) {
-                            Image(systemName: "chevron.left")
-                                .foregroundColor(.white)
-                                .imageScale(.large)
-                                .padding(.leading, 50)
-                                .padding(.vertical, 8)
-                        }
-                        Spacer()
-                    }
-                    Spacer()
-                }
-                
-                // Scroll-to-bottom button
-                if !isAtBottom {
-                    VStack {
-                        Spacer()
-                        Button(action: {
-                            scrollToBottom = true
-                        }) {
-                            Image(systemName: "chevron.down")
-                                .foregroundColor(.white)
-                                .imageScale(.large)
-                                .padding()
-                                .background(Color(white: 0.2).opacity(0.9))
-                                .clipShape(Circle())
-                        }
-                        .padding()
-                    }
                 }
             }
         }
@@ -848,6 +875,36 @@ struct ContentView: View {
                 },
                 seed: finalSeed
             )
+            
+            // Local formatter function for thousands separators & 2 decimals
+            func formatNumber(_ value: Double) -> String {
+                let formatter = NumberFormatter()
+                formatter.numberStyle = .decimal
+                formatter.groupingSeparator = ","
+                formatter.minimumFractionDigits = 2
+                formatter.maximumFractionDigits = 2
+                return formatter.string(from: NSNumber(value: value)) ?? "\(value)"
+            }
+            
+            // Print the median run's final price in USD
+            let medianFinalPrice = medianRun.last?.btcPriceUSD ?? -999
+            print("[DEBUG] Median run final price = \(formatNumber(medianFinalPrice))")
+            
+            // Compute 10th & 90th percentile final USD prices
+            let finalPrices = allIterations.compactMap { $0.last?.btcPriceUSD }
+            let sortedPrices = finalPrices.sorted()
+            if sortedPrices.count > 1 {
+                let tenthIndex = Int(Double(sortedPrices.count - 1) * 0.1)
+                let ninetiethIndex = Int(Double(sortedPrices.count - 1) * 0.9)
+                
+                let tenthValue = sortedPrices[tenthIndex]
+                let ninetiethValue = sortedPrices[ninetiethIndex]
+                
+                print("[DEBUG] 10th percentile final price = \(formatNumber(tenthValue))")
+                print("[DEBUG] 90th percentile final price = \(formatNumber(ninetiethValue))")
+            } else {
+                print("[DEBUG] Not enough runs to compute percentiles.")
+            }
             
             if self.isCancelled {
                 DispatchQueue.main.async {

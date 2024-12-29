@@ -20,10 +20,10 @@ class SimulationSettings: ObservableObject {
     @Published var startingBalance: Double = 0.0
     @Published var averageCostBasis: Double = 25000.0
     
-    // The new "toggleAll" property
+    // A simple "toggleAll"
     @Published var toggleAll = false {
         didSet {
-            // When toggleAll changes, set each toggle to the same value
+            // Turn on/off each factor
             useHalving              = toggleAll
             useInstitutionalDemand  = toggleAll
             useCountryAdoption      = toggleAll
@@ -66,6 +66,12 @@ class SimulationSettings: ObservableObject {
         }
     }
     @Published var lastUsedSeed: UInt64 = 0
+
+    // MARK: - (New) Results Storage
+    // We store the final run (median) in `lastRunResults`,
+    // and all the runs in `allRuns` if needed.
+    @Published var lastRunResults: [SimulationData] = []
+    @Published var allRuns: [[SimulationData]] = []
     
     // MARK: - Bullish Toggles
     @Published var useHalving: Bool {
@@ -197,10 +203,7 @@ class SimulationSettings: ObservableObject {
         didSet { UserDefaults.standard.set(maxRecessionDrop, forKey: "maxRecessionDrop") }
     }
     
-    // ============================================
-    //  COMPUTED PROPERTY (outside of init)
-    //  Tells us if ALL factors are currently on
-    // ============================================
+    // Check if all factors are on
     var areAllFactorsEnabled: Bool {
         useHalving &&
         useInstitutionalDemand &&
@@ -224,10 +227,9 @@ class SimulationSettings: ObservableObject {
         useMaturingMarket &&
         useRecession
     }
-
+    
     // MARK: - Init
     init() {
-        
         // Load user’s saved onboarding data (if any)
         if let savedBal = UserDefaults.standard.object(forKey: "savedStartingBalance") as? Double {
             self.startingBalance = savedBal
@@ -242,7 +244,7 @@ class SimulationSettings: ObservableObject {
             self.initialBTCPriceUSD = savedBTCPrice
         }
         
-        // --- Load random seed settings ---
+        // Random seed logic
         self.lockedRandomSeed = UserDefaults.standard.bool(forKey: "lockedRandomSeed")
         if let storedSeed = UserDefaults.standard.object(forKey: "seedValue") as? UInt64 {
             self.seedValue = storedSeed
@@ -250,7 +252,7 @@ class SimulationSettings: ObservableObject {
         let storedUseRandom = UserDefaults.standard.object(forKey: "useRandomSeed") as? Bool ?? true
         self.useRandomSeed = storedUseRandom
         
-        // --- Load bullish toggles ---
+        // Load bullish toggles
         let storedUseHalving  = UserDefaults.standard.object(forKey: "useHalving") as? Bool ?? true
         let storedHalvingBump = UserDefaults.standard.double(forKey: "halvingBump")
         let finalHalvingBump  = (storedHalvingBump == 0) ? 0.20 : storedHalvingBump
@@ -298,8 +300,8 @@ class SimulationSettings: ObservableObject {
         let storedUseAdoption = UserDefaults.standard.object(forKey: "useAdoptionFactor") as? Bool ?? true
         let storedAdoptionVal = UserDefaults.standard.double(forKey: "adoptionBaseFactor")
         let finalAdoptionVal  = (storedAdoptionVal == 0) ? 0.000005 : storedAdoptionVal
-
-        // --- Load bearish toggles ---
+        
+        // Load bearish toggles
         let storedUseClamp  = UserDefaults.standard.object(forKey: "useRegClampdown") as? Bool ?? true
         let storedMaxClamp  = UserDefaults.standard.double(forKey: "maxClampDown")
         let finalMaxClamp   = (storedMaxClamp == 0) ? -0.0002 : storedMaxClamp
@@ -336,8 +338,7 @@ class SimulationSettings: ObservableObject {
         let storedMaxRecession = UserDefaults.standard.double(forKey: "maxRecessionDrop")
         let finalMaxRecession  = (storedMaxRecession == 0) ? -0.004 : storedMaxRecession
         
-        // --- Assign to properties ---
-        // Bullish
+        // Assign
         self.useHalving = storedUseHalving
         self.halvingBump = finalHalvingBump
         self.useInstitutionalDemand = storedUseInst
@@ -362,8 +363,7 @@ class SimulationSettings: ObservableObject {
         self.maxAltcoinBoost = finalMaxAltcoin
         self.useAdoptionFactor = storedUseAdoption
         self.adoptionBaseFactor = finalAdoptionVal
-        
-        // Bearish
+
         self.useRegClampdown = storedUseClamp
         self.maxClampDown = finalMaxClamp
         self.useCompetitorCoin = storedUseCompet
@@ -384,112 +384,107 @@ class SimulationSettings: ObservableObject {
         self.maxRecessionDrop = finalMaxRecession
     }
     
-    // MARK: - resetUserCriteria (formerly extension)
+    // MARK: - Run Simulation
+    // This is how we actually store the final (median) run and all runs
+    func runSimulation(
+        annualCAGR: Double,
+        annualVolatility: Double,
+        iterations: Int,
+        exchangeRateEURUSD: Double = 1.06
+    ) {
+        // Decide on seed
+        let finalSeed: UInt64? = lockedRandomSeed ? seedValue : nil
+        
+        let (medianRun, allIterations) = runMonteCarloSimulationsWithProgress(
+            settings: self,
+            annualCAGR: annualCAGR,
+            annualVolatility: annualVolatility,
+            correlationWithSP500: 0.0,
+            exchangeRateEURUSD: exchangeRateEURUSD,
+            userWeeks: self.userWeeks,
+            iterations: iterations,
+            initialBTCPriceUSD: self.initialBTCPriceUSD,
+            isCancelled: { false },
+            progressCallback: { _ in },
+            seed: finalSeed
+        )
+        
+        DispatchQueue.main.async {
+            // Store them so your UI sees the new data
+            self.lastRunResults = medianRun
+            self.allRuns = allIterations
+        }
+    }
+    
+    // MARK: - resetUserCriteria
     func resetUserCriteria() {
-        // If your app checks this key for whether onboarding is done:
         UserDefaults.standard.set(false, forKey: "hasOnboarded")
-
-        // Clear random seed logic
         lockedRandomSeed = false
         seedValue = 0
         useRandomSeed = true
-
-        // If you want to restore your bullish/bearish factors to defaults:
         restoreDefaults()
-
         print(">>> [RESET] Completed resetUserCriteria()")
-        
-        // Or partial resets if you prefer...
-        // For example:
-        // useHalving = false
-        // halvingBump = 0.0
-        // etc.
-        
-        // If you have a separate manager for user inputs:
-        // inputManager?.resetAllInputs()
     }
     
-    // MARK: - Restore Defaults
+    // MARK: - restoreDefaults
     func restoreDefaults() {
-        // Reset random seed logic
         lockedRandomSeed = false
         useRandomSeed = true
-        seedValue = 0  // “Unlocked, random each run” by default
+        seedValue = 0
         
-        // Clear the user’s saved onboarding data if you wish:
         UserDefaults.standard.removeObject(forKey: "savedStartingBalance")
         UserDefaults.standard.removeObject(forKey: "savedAverageCostBasis")
         UserDefaults.standard.removeObject(forKey: "savedUserWeeks")
         UserDefaults.standard.removeObject(forKey: "savedInitialBTCPriceUSD")
         
-        // Reset your local variables too
         startingBalance = 0.0
         averageCostBasis = 25000.0
         userWeeks = 52
         initialBTCPriceUSD = 58000.0
         
-        // Reset bullish toggles
+        // Bullish toggles
         useHalving = true
         halvingBump = 0.20
-        
         useInstitutionalDemand = true
         maxDemandBoost = 0.004
-        
         useCountryAdoption = true
         maxCountryAdBoost = 0.0055
-        
         useRegulatoryClarity = true
         maxClarityBoost = 0.0006
-        
         useEtfApproval = true
         maxEtfBoost = 0.0008
-        
         useTechBreakthrough = true
         maxTechBoost = 0.002
-        
         useScarcityEvents = true
         maxScarcityBoost = 0.025
-        
         useGlobalMacroHedge = true
         maxMacroBoost = 0.0015
-        
         useStablecoinShift = true
         maxStablecoinBoost = 0.0006
-        
         useDemographicAdoption = true
         maxDemoBoost = 0.001
-        
         useAltcoinFlight = true
         maxAltcoinBoost = 0.001
-        
         useAdoptionFactor = true
         adoptionBaseFactor = 0.000005
         
-        // Reset bearish toggles
+        // Bearish toggles
         useRegClampdown = true
         maxClampDown = -0.0002
-        
         useCompetitorCoin = true
         maxCompetitorBoost = -0.0018
-        
         useSecurityBreach = true
         breachImpact = -0.1
-        
         useBubblePop = true
         maxPopDrop = -0.005
-        
         useStablecoinMeltdown = true
         maxMeltdownDrop = -0.001
-        
         useBlackSwan = true
         blackSwanDrop = -0.60
-        
         useBearMarket = true
         bearWeeklyDrift = -0.01
-        
         useMaturingMarket = true
         maxMaturingDrop = -0.015
-        
         useRecession = true
         maxRecessionDrop = -0.004
     }
