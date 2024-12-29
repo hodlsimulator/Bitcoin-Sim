@@ -35,15 +35,12 @@ struct RowOffsetReporter: View {
 
 // MARK: - PersistentInputManager
 class PersistentInputManager: ObservableObject {
-
     @Published var firstYearContribution: String {
         didSet { UserDefaults.standard.set(firstYearContribution, forKey: "firstYearContribution") }
     }
-
     @Published var subsequentContribution: String {
         didSet { UserDefaults.standard.set(subsequentContribution, forKey: "subsequentContribution") }
     }
-
     @Published var iterations: String {
         didSet { UserDefaults.standard.set(iterations, forKey: "iterations") }
     }
@@ -136,7 +133,7 @@ class PersistentInputManager: ObservableObject {
         UserDefaults.standard.set(btcHoldingsMinInput, forKey: "btcHoldingsMinInput")
         UserDefaults.standard.set(btcHoldingsMaxInput, forKey: "btcHoldingsMaxInput")
         UserDefaults.standard.set(btcGrowthRate, forKey: "btcGrowthRate")
-
+        
         UserDefaults.standard.set(threshold1, forKey: "threshold1")
         UserDefaults.standard.set(withdrawAmount1, forKey: "withdrawAmount1")
         UserDefaults.standard.set(threshold2, forKey: "threshold2")
@@ -243,6 +240,11 @@ struct InteractiveBitcoinSymbol3DSpinner: View {
     }
 }
 
+// MARK: - PercentileChoice
+enum PercentileChoice {
+    case tenth, median, ninetieth
+}
+
 // MARK: - ContentView
 struct ContentView: View {
     
@@ -288,6 +290,14 @@ struct ContentView: View {
     @EnvironmentObject var simSettings: SimulationSettings
     @State private var showSettings = false
     @State private var showAbout = false
+    
+    // Three arrays for each percentile
+    @State private var tenthPercentileResults: [SimulationData] = []
+    @State private var medianResults: [SimulationData] = []
+    @State private var ninetiethPercentileResults: [SimulationData] = []
+    
+    // Track the currently chosen percentile
+    @State private var selectedPercentile: PercentileChoice = .median
     
     var body: some View {
         ZStack {
@@ -458,97 +468,103 @@ struct ContentView: View {
         }
     }
     
-    /// Displays the simulation results table, including:
-    ///  - A chevron‐only back button, slightly inset from the left edge
-    ///  - Three separate orange buttons (10th, Median, 90th) spaced out on the right
-    ///  - Extra top padding so the table headings are moved down a bit
+    // MARK: - The simulation screen
     private var simulationResultsView: some View {
         ScrollViewReader { scrollProxy in
             ZStack {
+                // Same grey background as before
+                Color(white: 0.12)
+                    .edgesIgnoringSafeArea(.top)
+                
                 VStack(spacing: 0) {
-
-                    // -----------------------------
-                    // 1) TOP BAR WITH CHEVRON & 10TH/MEDIAN/90TH
-                    // -----------------------------
-                    HStack(spacing: 0) {
-                        // CHEVRON-ONLY BACK BUTTON
+                    
+                    // Navigation bar area (dark grey with back/menu)
+                    HStack {
+                        // Back button (white)
                         Button(action: {
-                            // Save current scroll state
                             UserDefaults.standard.set(lastViewedWeek, forKey: "lastViewedWeek")
                             UserDefaults.standard.set(currentPage, forKey: "lastViewedPage")
                             lastViewedPage = currentPage
-                            // Return to main/parameters screen
                             isSimulationRun = false
                         }) {
                             Image(systemName: "chevron.left")
-                                .imageScale(.large)
                                 .foregroundColor(.white)
+                                .imageScale(.large)
                         }
-                        // Increase the left padding so it’s not off-screen
-                        .padding(.leading, 55)
-
+                        
                         Spacer()
-
-                        // THREE INDIVIDUAL ORANGE BUTTONS
-                        HStack(spacing: 16) {
-                            Button("10th") {
-                                // e.g. set monteCarloResults to your 10th-percentile run
+                        
+                        // Percentile menu (icon only)
+                        Menu {
+                            // 10th Percentile
+                            Button {
+                                selectedPercentile = .tenth
+                                self.monteCarloResults = self.tenthPercentileResults
+                            } label: {
+                                if selectedPercentile == .tenth {
+                                    Label("10th Percentile", systemImage: "checkmark")
+                                        .foregroundColor(.orange)
+                                } else {
+                                    Text("10th Percentile")
+                                }
                             }
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 10)
-                            .background(Color.orange)
-                            .cornerRadius(8)
-
-                            Button("Median") {
-                                // e.g. set monteCarloResults to your median run
+                            
+                            // Median
+                            Button {
+                                selectedPercentile = .median
+                                self.monteCarloResults = self.medianResults
+                            } label: {
+                                if selectedPercentile == .median {
+                                    Label("Median", systemImage: "checkmark")
+                                        .foregroundColor(.orange)
+                                } else {
+                                    Text("Median")
+                                }
                             }
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 10)
-                            .background(Color.orange)
-                            .cornerRadius(8)
-
-                            Button("90th") {
-                                // e.g. set monteCarloResults to your 90th-percentile run
+                            
+                            // 90th Percentile
+                            Button {
+                                selectedPercentile = .ninetieth
+                                self.monteCarloResults = self.ninetiethPercentileResults
+                            } label: {
+                                if selectedPercentile == .ninetieth {
+                                    Label("90th Percentile", systemImage: "checkmark")
+                                        .foregroundColor(.orange)
+                                } else {
+                                    Text("90th Percentile")
+                                }
                             }
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 10)
-                            .background(Color.orange)
-                            .cornerRadius(8)
+                        } label: {
+                            Image(systemName: "line.horizontal.3.decrease.circle")
+                                .foregroundColor(.white)
+                                .imageScale(.large)
                         }
-                        .padding(.trailing, 70)
-
-                        Spacer()
+                        .preferredColorScheme(.dark)
                     }
-                    // Extra top padding to move everything down from the notch
-                    .padding(.top, 60)
-                    .padding(.bottom, 10)
-                    .background(Color(white: 0.14))
-
-                    // -----------------------------
-                    // 2) TABLE HEADER ROW (WEEK + COLUMN)
-                    // -----------------------------
+                    .padding(.horizontal, 55)
+                    .padding(.vertical, 10)
+                    .background(Color(white: 0.12))
+                    
+                    // Title row (black)
                     HStack(spacing: 0) {
                         Text("Week")
                             .frame(width: 60, alignment: .leading)
                             .font(.headline)
                             .padding(.leading, 50)
                             .padding(.vertical, 8)
+                            .background(Color.black)
                             .foregroundColor(.orange)
-                            .background(Color(white: 0.14))
-
+                        
                         ZStack {
                             Text(columns[currentPage].0)
                                 .font(.headline)
                                 .padding(.leading, 100)
                                 .padding(.vertical, 8)
+                                .background(Color.black)
                                 .foregroundColor(.orange)
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(Color(white: 0.14))
-
-                            // Tap zones for switching columns left/right
+                            
+                            // Horizontal tap zones
                             GeometryReader { geometry in
                                 HStack(spacing: 0) {
                                     Color.clear
@@ -583,11 +599,9 @@ struct ContentView: View {
                         }
                         .frame(height: 50)
                     }
-                    .background(Color(white: 0.14))
-
-                    // -----------------------------
-                    // 3) TABLE CONTENT
-                    // -----------------------------
+                    .background(Color.black)
+                    
+                    // Data table
                     ScrollView(.vertical, showsIndicators: !hideScrollIndicators) {
                         HStack(spacing: 0) {
                             // Left column (Week numbers)
@@ -597,7 +611,7 @@ struct ContentView: View {
                                     let rowBackground = index.isMultiple(of: 2)
                                         ? Color(white: 0.10)
                                         : Color(white: 0.14)
-
+                                    
                                     Text("\(result.week)")
                                         .frame(width: 70, alignment: .leading)
                                         .padding(.leading, 50)
@@ -609,8 +623,8 @@ struct ContentView: View {
                                         .background(RowOffsetReporter(week: result.week))
                                 }
                             }
-
-                            // Main data in a TabView (for horizontal "paging" through columns)
+                            
+                            // Main columns in a TabView
                             TabView(selection: $currentPage) {
                                 ForEach(0..<columns.count, id: \.self) { index in
                                     ZStack {
@@ -620,7 +634,7 @@ struct ContentView: View {
                                                 let rowBackground = rowIndex.isMultiple(of: 2)
                                                     ? Color(white: 0.10)
                                                     : Color(white: 0.14)
-
+                                                
                                                 Text(getValue(rowResult, columns[index].1))
                                                     .frame(maxWidth: .infinity, alignment: .leading)
                                                     .padding(.leading, 80)
@@ -632,8 +646,8 @@ struct ContentView: View {
                                                     .background(RowOffsetReporter(week: rowResult.week))
                                             }
                                         }
-
-                                        // Extra tap areas for switching columns
+                                        
+                                        // Extra tap areas for left/right
                                         GeometryReader { geometry in
                                             HStack(spacing: 0) {
                                                 Color.clear
@@ -674,7 +688,6 @@ struct ContentView: View {
                         }
                         .coordinateSpace(name: "scrollArea")
                         .onPreferenceChange(RowOffsetPreferenceKey.self) { offsets in
-                            // Track which week is closest to a certain vertical offset
                             let targetY: CGFloat = 160
                             let filtered = offsets.filter { (week, _) in week != 1040 }
                             let mapped = filtered.mapValues { abs($0 - targetY) }
@@ -726,6 +739,24 @@ struct ContentView: View {
                 .onDisappear {
                     UserDefaults.standard.set(lastViewedWeek, forKey: "lastViewedWeek")
                     UserDefaults.standard.set(currentPage, forKey: "lastViewedPage")
+                }
+                
+                // Scroll-to-bottom button
+                if !isAtBottom {
+                    VStack {
+                        Spacer()
+                        Button(action: {
+                            scrollToBottom = true
+                        }) {
+                            Image(systemName: "chevron.down")
+                                .foregroundColor(.white)
+                                .imageScale(.large)
+                                .padding()
+                                .background(Color(white: 0.2).opacity(0.9))
+                                .clipShape(Circle())
+                        }
+                        .padding()
+                    }
                 }
             }
         }
@@ -890,6 +921,10 @@ struct ContentView: View {
             let medianFinalPrice = medianRun.last?.btcPriceUSD ?? -999
             print("[DEBUG] Median run final price = \(formatNumber(medianFinalPrice))")
             
+            // Prepare to compute full percentile runs
+            let finalRuns = allIterations.map { ($0.last?.btcPriceUSD ?? 0.0, $0) }
+            var sortedRuns = finalRuns.sorted { $0.0 < $1.0 }
+            
             // Compute 10th & 90th percentile final USD prices
             let finalPrices = allIterations.compactMap { $0.last?.btcPriceUSD }
             let sortedPrices = finalPrices.sorted()
@@ -906,6 +941,7 @@ struct ContentView: View {
                 print("[DEBUG] Not enough runs to compute percentiles.")
             }
             
+            // If user cancelled, bail out
             if self.isCancelled {
                 DispatchQueue.main.async {
                     self.isLoading = false
@@ -913,12 +949,36 @@ struct ContentView: View {
                 return
             }
             
-            DispatchQueue.main.async {
-                self.isLoading = false
-                self.monteCarloResults = medianRun
-                self.isSimulationRun = true
+            // Sort runs by final portfolio value and pick 10th / median / 90th runs
+            if !sortedRuns.isEmpty {
+                let tenthIndex     = max(0, Int(Double(sortedRuns.count - 1) * 0.10))
+                let medianIndex    = sortedRuns.count / 2
+                let ninetiethIndex = min(sortedRuns.count - 1, Int(Double(sortedRuns.count - 1) * 0.90))
+                
+                let tenthRun       = sortedRuns[tenthIndex].1
+                let medianRun      = sortedRuns[medianIndex].1
+                let ninetiethRun   = sortedRuns[ninetiethIndex].1
+                
+                DispatchQueue.main.async {
+                    // Store each percentile in separate arrays
+                    self.tenthPercentileResults     = tenthRun
+                    self.medianResults              = medianRun
+                    self.ninetiethPercentileResults = ninetiethRun
+                    
+                    // Default: show median
+                    self.monteCarloResults   = medianRun
+                    self.selectedPercentile  = .median
+                    self.isSimulationRun     = true
+                    self.isLoading           = false
+                }
+            } else {
+                // Fallback if no runs
+                DispatchQueue.main.async {
+                    self.isLoading = false
+                }
             }
             
+            // Process results in background (if needed)
             DispatchQueue.global(qos: .background).async {
                 self.processAllResults(allIterations)
             }
