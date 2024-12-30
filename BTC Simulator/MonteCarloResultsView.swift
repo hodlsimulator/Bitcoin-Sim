@@ -45,20 +45,27 @@ func computeMedianLine(simulations: [SimulationRun]) -> [WeekPoint] {
     return medianPoints
 }
 
-// MARK: - Number Formatting (k, M, B, T)
+// MARK: - Number Formatting (k, M, B, T, Q)
 
 func formatSuffix(_ value: Double) -> String {
     let absVal = abs(value)
     let sign = value < 0 ? "-" : ""
     
     switch absVal {
+    case 1_000_000_000_000_000...:
+        // 1,000,000,000,000,000 == 1 Quadrillion (Q)
+        return "\(sign)\(Int(absVal / 1_000_000_000_000_000))Q"
     case 1_000_000_000_000...:
+        // 1,000,000,000,000 == 1 Trillion (T)
         return "\(sign)\(Int(absVal / 1_000_000_000_000))T"
     case 1_000_000_000...:
+        // 1,000,000,000 == 1 Billion (B)
         return "\(sign)\(Int(absVal / 1_000_000_000))B"
     case 1_000_000...:
+        // 1,000,000 == 1 Million (M)
         return "\(sign)\(Int(absVal / 1_000_000))M"
     case 1_000...:
+        // 1,000 == 1 Thousand (k)
         return "\(sign)\(Int(absVal / 1_000))k"
     default:
         return "\(sign)\(Int(absVal))"
@@ -69,20 +76,41 @@ func formatSuffix(_ value: Double) -> String {
 
 @ChartContentBuilder
 func simulationLines(simulations: [SimulationRun]) -> some ChartContent {
+    // Mixed bright + pastel palette (including yellow/red, fewer greens/purples).
+    // Feel free to customise the hue/saturation/brightness as needed.
+    let customPalette: [Color] = [
+        // Reds/oranges/yellows
+        Color(hue: 0.0,  saturation: 1.0, brightness: 0.8),  // bright red
+        Color(hue: 0.0,  saturation: 0.3, brightness: 1.0),  // pastel pink
+        Color(hue: 0.08, saturation: 1.0, brightness: 1.0),  // bright orange
+        Color(hue: 0.08, saturation: 0.3, brightness: 1.0),  // pastel orange
+        Color(hue: 0.13, saturation: 1.0, brightness: 1.0),  // bright yellow
+        Color(hue: 0.13, saturation: 0.3, brightness: 1.0),  // pastel yellow
+        
+        // Some blues/purples but not too many
+        Color(hue: 0.55, saturation: 1.0, brightness: 0.9),  // bright blue
+        Color(hue: 0.55, saturation: 0.3, brightness: 0.9),  // pastel blue
+        Color(hue: 0.7,  saturation: 0.6, brightness: 0.8),  // purple
+        Color(hue: 0.7,  saturation: 0.3, brightness: 0.9),  // pastel purple
+        
+        // Greens/cyans but muted
+        Color(hue: 0.28, saturation: 0.7, brightness: 0.8),  // mild green
+        Color(hue: 0.28, saturation: 0.3, brightness: 0.9),  // pastel green
+        Color(hue: 0.47, saturation: 0.7, brightness: 0.8),  // teal
+        Color(hue: 0.47, saturation: 0.3, brightness: 0.9),  // pastel teal
+    ]
+    
     ForEach(simulations.indices, id: \.self) { index in
         let sim = simulations[index]
-        
-        // Hue-based approach for distinct lines
-        let hue = Double(index) / Double(max(simulations.count - 1, 1))
-        let runColor = Color(hue: hue, saturation: 0.8, brightness: 0.8)
+        let colour = customPalette[index % customPalette.count]
         
         ForEach(sim.points) { pt in
             LineMark(
                 x: .value("Week", pt.week),
                 y: .value("BTC Price (USD)", pt.value)
             )
-            .foregroundStyle(runColor.opacity(0.2))             // 20% opacity
-            .foregroundStyle(by: .value("SeriesIndex", index))  // Distinct series
+            .foregroundStyle(colour.opacity(0.2))
+            .foregroundStyle(by: .value("SeriesIndex", index))
             .lineStyle(StrokeStyle(lineWidth: 0.5,
                                    lineCap: .round,
                                    lineJoin: .round))
@@ -97,8 +125,9 @@ func medianLines(_ medianLine: [WeekPoint]) -> some ChartContent {
             x: .value("Week", pt.week),
             y: .value("BTC Price (USD)", pt.value)
         )
-        .foregroundStyle(.orange)
-        .lineStyle(StrokeStyle(lineWidth: 1.5))  // Thicker median
+        // Reduced opacity on the median line’s orange
+        .foregroundStyle(.orange.opacity(0.7))
+        .lineStyle(StrokeStyle(lineWidth: 1.5))
         .interpolationMethod(.monotone)
     }
 }
@@ -126,7 +155,7 @@ struct MonteCarloChartView: View {
                         if let weeks = axisValue.as(Int.self) {
                             let years = weeks / 52
                             Text("\(years)")
-                                .font(.system(size: 14))   // Slightly smaller X-axis font
+                                .font(.system(size: 14))
                                 .foregroundColor(.white)
                         }
                     }
@@ -139,7 +168,7 @@ struct MonteCarloChartView: View {
                     AxisValueLabel {
                         if let val = axisValue.as(Double.self) {
                             Text(formatSuffix(val))
-                                .font(.system(size: 14))  // Slightly smaller Y-axis font
+                                .font(.system(size: 14))
                                 .foregroundColor(.white)
                         }
                     }
