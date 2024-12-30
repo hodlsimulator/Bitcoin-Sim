@@ -248,6 +248,7 @@ enum PercentileChoice {
 // MARK: - ContentView
 struct ContentView: View {
     
+    // State variables
     @State private var monteCarloResults: [SimulationData] = []
     @State private var isLoading: Bool = false
     @FocusState private var activeField: ActiveField?
@@ -272,8 +273,8 @@ struct ContentView: View {
     
     @State private var hideScrollIndicators = true
     @State private var lastScrollTime = Date()
-
-    // Updated tips array:
+    
+    // Updated tips array
     @State private var loadingTips: [String] = [
         // Existing "technical simulation" messages:
         "Gathering historical data from CSV files...",
@@ -343,7 +344,7 @@ struct ContentView: View {
         "Tip: Combine bullish and bearish toggles to mirror your market view.",
         "Tip: Remember, all factors can be toggled off for a simpler baseline."
     ]
-
+    
     let columns: [(String, PartialKeyPath<SimulationData>)] = [
         ("Starting BTC (BTC)", \SimulationData.startingBTC),
         ("Net BTC Holdings (BTC)", \SimulationData.netBTCHoldings),
@@ -359,6 +360,7 @@ struct ContentView: View {
     @EnvironmentObject var simSettings: SimulationSettings
     @State private var showSettings = false
     @State private var showAbout = false
+    @State private var showHistograms = false
     
     // Three arrays for each percentile
     @State private var tenthPercentileResults: [SimulationData] = []
@@ -369,64 +371,70 @@ struct ContentView: View {
     @State private var selectedPercentile: PercentileChoice = .median
     
     var body: some View {
-        ZStack {
-            if isSimulationRun {
-                Color(white: 0.14).ignoresSafeArea()
-            } else {
-                LinearGradient(
-                    gradient: Gradient(colors: [Color.black, Color(white: 0.15), Color.black]),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()
-            }
-            
-            Color.clear
-                .contentShape(Rectangle())
-                .highPriorityGesture(
-                    TapGesture()
-                        .onEnded {
-                            activeField = nil
-                        }
-                )
-            
-            if !isSimulationRun {
-                parametersScreen
-                if !isLoading && activeField == nil {
-                    bottomIcons
+        // If you already have a NavigationStack at a higher level, remove this stack:
+        NavigationStack {
+            ZStack {
+                if isSimulationRun {
+                    Color(white: 0.14).ignoresSafeArea()
+                } else {
+                    LinearGradient(
+                        gradient: Gradient(colors: [Color.black, Color(white: 0.15), Color.black]),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    .ignoresSafeArea()
                 }
-            } else {
-                simulationResultsView
+                
+                Color.clear
+                    .contentShape(Rectangle())
+                    .highPriorityGesture(
+                        TapGesture()
+                            .onEnded {
+                                activeField = nil
+                            }
+                    )
+                
+                if !isSimulationRun {
+                    parametersScreen
+                    if !isLoading && activeField == nil {
+                        bottomIcons
+                    }
+                } else {
+                    simulationResultsView
+                }
+                
+                // If we have results, show the jump arrow
+                if !isSimulationRun && !monteCarloResults.isEmpty {
+                    transitionToResultsButton
+                }
+                
+                if isLoading {
+                    loadingOverlay
+                }
             }
-            
-            // If we have results, show the jump arrow
-            if !isSimulationRun && !monteCarloResults.isEmpty {
-                transitionToResultsButton
+            .navigationDestination(isPresented: $showSettings) {
+                SettingsView()
+                    .environmentObject(simSettings)
             }
-            
-            if isLoading {
-                loadingOverlay
+            .navigationDestination(isPresented: $showAbout) {
+                AboutView()
             }
-        }
-        .navigationDestination(isPresented: $showSettings) {
-            SettingsView()
-                .environmentObject(simSettings)
-        }
-        .navigationDestination(isPresented: $showAbout) {
-            AboutView()
-        }
-        .onAppear {
-            let savedWeek = UserDefaults.standard.integer(forKey: "lastViewedWeek")
-            if savedWeek != 0 {
-                lastViewedWeek = savedWeek
+            .navigationDestination(isPresented: $showHistograms) {
+                HistogramView()  // We'll define HistogramView below
             }
-            let savedPage = UserDefaults.standard.integer(forKey: "lastViewedPage")
-            if savedPage < columns.count {
-                lastViewedPage = savedPage
-                currentPage = savedPage
-            } else if let usdIndex = columns.firstIndex(where: { $0.0 == "BTC Price USD" }) {
-                currentPage = usdIndex
-                lastViewedPage = usdIndex
+            .onAppear {
+                let savedWeek = UserDefaults.standard.integer(forKey: "lastViewedWeek")
+                if savedWeek != 0 {
+                    lastViewedWeek = savedWeek
+                }
+                let savedPage = UserDefaults.standard.integer(forKey: "lastViewedPage")
+                if savedPage < columns.count {
+                    lastViewedPage = savedPage
+                    currentPage = savedPage
+                } else if let usdIndex = columns.firstIndex(where: { $0.0 == "BTC Price USD" }) {
+                    currentPage = usdIndex
+                    lastViewedPage = usdIndex
+                }
             }
         }
     }
@@ -602,6 +610,13 @@ struct ContentView: View {
                                 } else {
                                     Text("90th Percentile")
                                 }
+                            }
+                            
+                            // New Histograms Button
+                            Button {
+                                showHistograms = true
+                            } label: {
+                                Text("View Histograms")
                             }
                         } label: {
                             Image(systemName: "line.horizontal.3.decrease.circle")
@@ -1111,5 +1126,18 @@ struct ContentView: View {
         } else {
             return ""
         }
+    }
+}
+
+// MARK: - HistogramView (Placeholder)
+struct HistogramView: View {
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+            Text("Histograms Coming Soon!")
+                .foregroundColor(.white)
+                .font(.title)
+        }
+        .navigationTitle("Histograms")
     }
 }
