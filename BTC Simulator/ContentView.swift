@@ -388,7 +388,7 @@ struct ContentView: View {
         // e.g. if you have `allSimData: [[SimulationData]]` accessible:
         allSimData.map { singleRun -> SimulationRun in
             let wpoints = singleRun.map { row in
-                WeekPoint(week: row.week, value: row.portfolioValueEUR)
+                WeekPoint(week: row.week, value: row.btcPriceUSD)
             }
             return SimulationRun(points: wpoints)
         }
@@ -449,7 +449,6 @@ struct ContentView: View {
             // Hook up the chart-based view with real data
             .navigationDestination(isPresented: $showHistograms) {
                 MonteCarloResultsView(
-                    originalRun: convertOriginalToWeekPoints(),
                     simulations: convertAllSimsToWeekPoints()
                 )
             }
