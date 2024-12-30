@@ -276,7 +276,7 @@ struct ContentView: View {
     
     // Updated tips array
     @State private var loadingTips: [String] = [
-        // Existing "technical simulation" messages:
+        // (existing technical simulation messages)
         "Gathering historical data from CSV files...",
         "Spinning up random seeds...",
         "Projecting future halving cycles...",
@@ -310,7 +310,7 @@ struct ContentView: View {
         "Summoning lightning speed calculations...",
         "Twisting code knobs for final results...",
         
-        // New "tips on how to use the app" messages:
+        // (new "tips on how to use the app" messages)
         "Tip: Drag the 3D spinner to change its speed.",
         "Tip: Double-tap the spinner to flip its rotation angle.",
         "Tip: Scroll horizontally in the table to see extra columns.",
@@ -361,6 +361,7 @@ struct ContentView: View {
     @State private var showSettings = false
     @State private var showAbout = false
     @State private var showHistograms = false
+    @State private var showGraphics = false
     
     // Three arrays for each percentile
     @State private var tenthPercentileResults: [SimulationData] = []
@@ -370,8 +371,8 @@ struct ContentView: View {
     // Track the currently chosen percentile
     @State private var selectedPercentile: PercentileChoice = .median
     
+    // MARK: - BODY
     var body: some View {
-        // If you already have a NavigationStack at a higher level, remove this stack:
         NavigationStack {
             ZStack {
                 if isSimulationRun {
@@ -385,6 +386,7 @@ struct ContentView: View {
                     .ignoresSafeArea()
                 }
                 
+                // Transparent overlay for dismissing keyboard if tapped
                 Color.clear
                     .contentShape(Rectangle())
                     .highPriorityGesture(
@@ -394,6 +396,7 @@ struct ContentView: View {
                             }
                     )
                 
+                // Show either parameter setup or simulation results
                 if !isSimulationRun {
                     parametersScreen
                     if !isLoading && activeField == nil {
@@ -403,11 +406,12 @@ struct ContentView: View {
                     simulationResultsView
                 }
                 
-                // If we have results, show the jump arrow
+                // Jump arrow if results exist
                 if !isSimulationRun && !monteCarloResults.isEmpty {
                     transitionToResultsButton
                 }
                 
+                // Loading overlay
                 if isLoading {
                     loadingOverlay
                 }
@@ -419,8 +423,9 @@ struct ContentView: View {
             .navigationDestination(isPresented: $showAbout) {
                 AboutView()
             }
+            // Hook up the chart-based view with real data
             .navigationDestination(isPresented: $showHistograms) {
-                HistogramView()  // We'll define HistogramView below
+                MonteCarloResultsView(data: convertMonteCarloResultsToYearlyData())
             }
             .onAppear {
                 let savedWeek = UserDefaults.standard.integer(forKey: "lastViewedWeek")
@@ -437,6 +442,45 @@ struct ContentView: View {
                 }
             }
         }
+    }
+    
+    // MARK: - Convert to Yearly Data
+    /// The function that turns your final tenth/median/ninetieth arrays into [YearlyPercentileData] for the chart.
+    func convertMonteCarloResultsToYearlyData() -> [YearlyPercentileData] {
+        // We assume each array has 20 "years" worth of data (or you adapt as needed).
+        // We'll grab the final BTC Price from each year's last weekly data for each percentile
+        // Then build a YearlyPercentileData record.
+        
+        let years = 20
+        var resultArray: [YearlyPercentileData] = []
+        
+        // For demonstration, let's say you have 52 weeks/year => yearIndex * 52 to find weekly offsets
+        // or adapt if your data structure differs.
+        
+        for y in 1...years {
+            // We'll define a helper to extract the last weekly item for each percentile's array for that "year."
+            let finalWeekIndex = y * 52 - 1 // e.g. year 1 => 51, year 2 => 103, etc.
+            
+            // Safety check to avoid out-of-range
+            let tenthIdx      = min(finalWeekIndex, tenthPercentileResults.count - 1)
+            let medianIdx     = min(finalWeekIndex, medianResults.count - 1)
+            let ninetiethIdx  = min(finalWeekIndex, ninetiethPercentileResults.count - 1)
+            
+            let tenthPrice      = tenthPercentileResults.isEmpty ? 0.0  : tenthPercentileResults[tenthIdx].btcPriceUSD
+            let medianPrice     = medianResults.isEmpty ? 0.0          : medianResults[medianIdx].btcPriceUSD
+            let ninetiethPrice  = ninetiethPercentileResults.isEmpty ? 0.0 : ninetiethPercentileResults[ninetiethIdx].btcPriceUSD
+            
+            resultArray.append(
+                YearlyPercentileData(
+                    year: y,
+                    tenth: tenthPrice,
+                    median: medianPrice,
+                    ninetieth: ninetiethPrice
+                )
+            )
+        }
+        
+        return resultArray
     }
     
     // MARK: - Bottom icons
@@ -549,15 +593,15 @@ struct ContentView: View {
     private var simulationResultsView: some View {
         ScrollViewReader { scrollProxy in
             ZStack {
-                // Same grey background as before
+                // Same grey background
                 Color(white: 0.12)
                     .edgesIgnoringSafeArea(.top)
                 
                 VStack(spacing: 0) {
                     
-                    // Navigation bar area (dark grey with back/menu)
+                    // Navigation bar area
                     HStack {
-                        // Back button (white)
+                        // Back button
                         Button(action: {
                             UserDefaults.standard.set(lastViewedWeek, forKey: "lastViewedWeek")
                             UserDefaults.standard.set(currentPage, forKey: "lastViewedPage")
@@ -612,11 +656,11 @@ struct ContentView: View {
                                 }
                             }
                             
-                            // New Histograms Button
+                            // "View Graphics" => line chart with error band
                             Button {
                                 showHistograms = true
                             } label: {
-                                Text("View Histograms")
+                                Text("View Graphics")
                             }
                         } label: {
                             Image(systemName: "line.horizontal.3.decrease.circle")
@@ -648,7 +692,7 @@ struct ContentView: View {
                                 .foregroundColor(.orange)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             
-                            // Horizontal tap zones
+                            // Tap zones for changing columns
                             GeometryReader { geometry in
                                 HStack(spacing: 0) {
                                     Color.clear
@@ -688,7 +732,7 @@ struct ContentView: View {
                     // Data table
                     ScrollView(.vertical, showsIndicators: !hideScrollIndicators) {
                         HStack(spacing: 0) {
-                            // Left column (Week numbers)
+                            // Left column (Week #)
                             VStack(spacing: 0) {
                                 ForEach(monteCarloResults.indices, id: \.self) { index in
                                     let result = monteCarloResults[index]
@@ -731,7 +775,7 @@ struct ContentView: View {
                                             }
                                         }
                                         
-                                        // Extra tap areas for left/right
+                                        // Tap zones for nav left/right
                                         GeometryReader { geometry in
                                             HStack(spacing: 0) {
                                                 Color.clear
@@ -991,7 +1035,7 @@ struct ContentView: View {
                 seed: finalSeed
             )
             
-            // Local formatter function for thousands separators & 2 decimals
+            // (Optional) Local formatter
             func formatNumber(_ value: Double) -> String {
                 let formatter = NumberFormatter()
                 formatter.numberStyle = .decimal
@@ -1001,7 +1045,6 @@ struct ContentView: View {
                 return formatter.string(from: NSNumber(value: value)) ?? "\(value)"
             }
             
-            // Print the median run's final price in USD
             let medianFinalPrice = medianRun.last?.btcPriceUSD ?? -999
             print("[DEBUG] Median run final price = \(formatNumber(medianFinalPrice))")
             
@@ -1009,7 +1052,6 @@ struct ContentView: View {
             let finalRuns = allIterations.map { ($0.last?.btcPriceUSD ?? 0.0, $0) }
             var sortedRuns = finalRuns.sorted { $0.0 < $1.0 }
             
-            // Compute 10th & 90th percentile final USD prices
             let finalPrices = allIterations.compactMap { $0.last?.btcPriceUSD }
             let sortedPrices = finalPrices.sorted()
             if sortedPrices.count > 1 {
@@ -1062,7 +1104,7 @@ struct ContentView: View {
                 }
             }
             
-            // Process results in background (if needed)
+            // (Optional) post-processing
             DispatchQueue.global(qos: .background).async {
                 self.processAllResults(allIterations)
             }
