@@ -65,15 +65,6 @@ func formatSuffix(_ value: Double) -> String {
     }
 }
 
-// MARK: - Random Colour Generator
-
-func randomColor() -> Color {
-    let hue = Double.random(in: 0...1)
-    let saturation = Double.random(in: 0.5...1)
-    let brightness = Double.random(in: 0.7...1)
-    return Color(hue: hue, saturation: saturation, brightness: brightness)
-}
-
 // MARK: - Chart Content Builders
 
 @ChartContentBuilder
@@ -81,20 +72,20 @@ func simulationLines(simulations: [SimulationRun]) -> some ChartContent {
     ForEach(simulations.indices, id: \.self) { index in
         let sim = simulations[index]
         
-        // Pick a random colour for this entire simulation run
-        let runColor = randomColor()
+        // Hue-based approach for distinct lines
+        let hue = Double(index) / Double(max(simulations.count - 1, 1))
+        let runColor = Color(hue: hue, saturation: 0.8, brightness: 0.8)
         
         ForEach(sim.points) { pt in
             LineMark(
                 x: .value("Week", pt.week),
                 y: .value("BTC Price (USD)", pt.value)
             )
-            // Use a lower opacity for these lines
-            .foregroundStyle(runColor.opacity(0.2))
-            // Distinguish runs as separate series
-            .foregroundStyle(by: .value("SeriesIndex", index))
-            // Thinner lines for simulations
-            .lineStyle(StrokeStyle(lineWidth: 0.5, lineCap: .round, lineJoin: .round))
+            .foregroundStyle(runColor.opacity(0.2))             // 20% opacity
+            .foregroundStyle(by: .value("SeriesIndex", index))  // Distinct series
+            .lineStyle(StrokeStyle(lineWidth: 0.5,
+                                   lineCap: .round,
+                                   lineJoin: .round))
         }
     }
 }
@@ -107,8 +98,7 @@ func medianLines(_ medianLine: [WeekPoint]) -> some ChartContent {
             y: .value("BTC Price (USD)", pt.value)
         )
         .foregroundStyle(.orange)
-        // Median line is thicker
-        .lineStyle(StrokeStyle(lineWidth: 3))
+        .lineStyle(StrokeStyle(lineWidth: 1.5))  // Thicker median
         .interpolationMethod(.monotone)
     }
 }
@@ -120,46 +110,48 @@ struct MonteCarloChartView: View {
     let medianLine: [WeekPoint]
     
     var body: some View {
-        Chart {
-            simulationLines(simulations: simulations)
-            medianLines(medianLine)
-        }
-        .chartLegend(.hidden)
-        .frame(height: 350)
-        .chartYScale(domain: .automatic(includesZero: false), type: .log)
-        .chartXAxis {
-            // Let's say we want axis marks at 5, 10, 15, and 20 years.
-            // In "weeks", that's 260, 520, 780, 1040.
-            let yearMarkers = [260, 520, 780, 1040]
-            
-            AxisMarks(values: yearMarkers) { axisValue in
-                AxisGridLine()
-                AxisTick()
-                AxisValueLabel {
-                    if let weeks = axisValue.as(Int.self) {
-                        let years = weeks / 52  // integer division
-                        Text("\(years)")
+        GeometryReader { geo in
+            Chart {
+                simulationLines(simulations: simulations)
+                medianLines(medianLine)
+            }
+            .chartLegend(.hidden)
+            .chartYScale(domain: .automatic(includesZero: false), type: .log)
+            .chartXAxis {
+                let yearMarkers = [260, 520, 780, 1040]
+                AxisMarks(values: yearMarkers) { axisValue in
+                    AxisGridLine()
+                    AxisTick()
+                    AxisValueLabel {
+                        if let weeks = axisValue.as(Int.self) {
+                            let years = weeks / 52
+                            Text("\(years)")
+                                .font(.system(size: 14))   // Slightly smaller X-axis font
+                                .foregroundColor(.white)
+                        }
                     }
                 }
             }
-        }
-        .chartYAxis {
-            AxisMarks(position: .leading) { axisValue in
-                AxisGridLine()
-                AxisTick()
-                AxisValueLabel {
-                    if let val = axisValue.as(Double.self) {
-                        Text(formatSuffix(val))
-                            .foregroundColor(.white)
+            .chartYAxis {
+                AxisMarks(position: .leading) { axisValue in
+                    AxisGridLine()
+                    AxisTick()
+                    AxisValueLabel {
+                        if let val = axisValue.as(Double.self) {
+                            Text(formatSuffix(val))
+                                .font(.system(size: 14))  // Slightly smaller Y-axis font
+                                .foregroundColor(.white)
+                        }
                     }
                 }
             }
+            .frame(width: geo.size.width, height: geo.size.height)
+            .padding()
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.black.opacity(0.2))
+            )
         }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.black.opacity(0.2))
-        )
     }
 }
 
@@ -174,22 +166,18 @@ struct MonteCarloResultsView: View {
     }
     
     var body: some View {
-        let medianLine = computeMedianLine(simulations: simulations)
-        
-        ScrollView {
-            VStack(spacing: 20) {
-                Text("Monte Carlo – BTC Price (USD)")
-                    .font(.title2)
-                    .bold()
-                    .foregroundColor(.white)
-                
+        NavigationStack {
+            let medianLine = computeMedianLine(simulations: simulations)
+            
+            VStack(spacing: 0) {
                 MonteCarloChartView(
                     simulations: simulations,
                     medianLine: medianLine
                 )
             }
-            .padding(.horizontal)
+            .background(Color.black.ignoresSafeArea())
+            .navigationTitle("Monte Carlo – BTC Price (USD)")
+            .navigationBarTitleDisplayMode(.inline)
         }
-        .background(Color.black.ignoresSafeArea())
     }
 }

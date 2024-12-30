@@ -276,7 +276,6 @@ struct ContentView: View {
     
     // Updated tips array
     @State private var loadingTips: [String] = [
-        // (existing technical simulation messages)
         "Gathering historical data from CSV files...",
         "Spinning up random seeds...",
         "Projecting future halving cycles...",
@@ -310,7 +309,7 @@ struct ContentView: View {
         "Summoning lightning speed calculations...",
         "Twisting code knobs for final results...",
         
-        // (new "tips on how to use the app" messages)
+        // Additional usage tips
         "Tip: Drag the 3D spinner to change its speed.",
         "Tip: Double-tap the spinner to flip its rotation angle.",
         "Tip: Scroll horizontally in the table to see extra columns.",
@@ -328,7 +327,7 @@ struct ContentView: View {
         "Tip: ‘Maturing Market’ can limit growth in later stages of adoption.",
         "Tip: ‘Bubble Pop’ adds a risk of rapid correction after a big rally.",
         "Tip: Snap screenshots of results to share or compare runs later.",
-        "Tip: ‘Halving’ typically occurs every 210k blocks—about four years.",
+        "Tip: ‘Halving’ typically occurs every four years or so.",
         "Tip: El Salvador style? Enable ‘Country Adoption’ for big demand bumps.",
         "Tip: ‘Global Macro Hedge’ imagines BTC as ‘digital gold’ in crises.",
         "Tip: Return to Parameters to tweak your inputs before the next run.",
@@ -371,23 +370,26 @@ struct ContentView: View {
     // Track the currently chosen percentile
     @State private var selectedPercentile: PercentileChoice = .median
     
+    // Chart-compatible arrays
     @State private var medianSimData: [SimulationData] = []
     @State private var allSimData: [[SimulationData]] = []
     
-    // 1) Converts your “original” run (e.g. medianSimData) into [WeekPoint].
+    // MARK: - Convert single run to [WeekPoint]
+    /// In your existing MonteCarloResultsView.swift, you presumably define `WeekPoint` & `SimulationRun`.
+    /// We just transform `[SimulationData]` to `[WeekPoint]` for a single run (if needed).
     func convertOriginalToWeekPoints() -> [WeekPoint] {
-        // For instance, if you have an array `medianSimData: [SimulationData]`
-        // accessible in this scope, do something like:
         medianSimData.map { row in
             WeekPoint(week: row.week, value: row.portfolioValueEUR)
         }
     }
 
-    // 2) Converts all simulation runs (e.g. allSimData: [[SimulationData]]) into [SimulationRun].
+    // MARK: - Convert all runs to [SimulationRun]
+    /// We transform the entire `[[SimulationData]]` to `[SimulationRun]`,
+    /// so MonteCarloResultsView can display multiple lines.
     func convertAllSimsToWeekPoints() -> [SimulationRun] {
-        // e.g. if you have `allSimData: [[SimulationData]]` accessible:
         allSimData.map { singleRun -> SimulationRun in
             let wpoints = singleRun.map { row in
+                // e.g. you can chart row.btcPriceUSD or row.portfolioValueEUR
                 WeekPoint(week: row.week, value: row.btcPriceUSD)
             }
             return SimulationRun(points: wpoints)
@@ -446,8 +448,9 @@ struct ContentView: View {
             .navigationDestination(isPresented: $showAbout) {
                 AboutView()
             }
-            // Hook up the chart-based view with real data
             .navigationDestination(isPresented: $showHistograms) {
+                // Here’s where we show the existing MonteCarloResultsView
+                // using the data we saved (allSimData).
                 MonteCarloResultsView(
                     simulations: convertAllSimsToWeekPoints()
                 )
@@ -467,45 +470,6 @@ struct ContentView: View {
                 }
             }
         }
-    }
-    
-    // MARK: - Convert to Yearly Data
-    /// The function that turns your final tenth/median/ninetieth arrays into [YearlyPercentileData] for the chart.
-    func convertMonteCarloResultsToYearlyData() -> [YearlyPercentileData] {
-        // We assume each array has 20 "years" worth of data (or you adapt as needed).
-        // We'll grab the final BTC Price from each year's last weekly data for each percentile
-        // Then build a YearlyPercentileData record.
-        
-        let years = 20
-        var resultArray: [YearlyPercentileData] = []
-        
-        // For demonstration, let's say you have 52 weeks/year => yearIndex * 52 to find weekly offsets
-        // or adapt if your data structure differs.
-        
-        for y in 1...years {
-            // We'll define a helper to extract the last weekly item for each percentile's array for that "year."
-            let finalWeekIndex = y * 52 - 1 // e.g. year 1 => 51, year 2 => 103, etc.
-            
-            // Safety check to avoid out-of-range
-            let tenthIdx      = min(finalWeekIndex, tenthPercentileResults.count - 1)
-            let medianIdx     = min(finalWeekIndex, medianResults.count - 1)
-            let ninetiethIdx  = min(finalWeekIndex, ninetiethPercentileResults.count - 1)
-            
-            let tenthPrice      = tenthPercentileResults.isEmpty ? 0.0  : tenthPercentileResults[tenthIdx].btcPriceUSD
-            let medianPrice     = medianResults.isEmpty ? 0.0          : medianResults[medianIdx].btcPriceUSD
-            let ninetiethPrice  = ninetiethPercentileResults.isEmpty ? 0.0 : ninetiethPercentileResults[ninetiethIdx].btcPriceUSD
-            
-            resultArray.append(
-                YearlyPercentileData(
-                    year: y,
-                    tenth: tenthPrice,
-                    median: medianPrice,
-                    ninetieth: ninetiethPrice
-                )
-            )
-        }
-        
-        return resultArray
     }
     
     // MARK: - Bottom icons
@@ -681,7 +645,7 @@ struct ContentView: View {
                                 }
                             }
                             
-                            // "View Graphics" => line chart with error band
+                            // "View Graphics" => line chart with multi-run lines
                             Button {
                                 // This line triggers the chart navigation
                                 showHistograms = true
@@ -1101,7 +1065,7 @@ struct ContentView: View {
                 return
             }
             
-            // Sort runs by final portfolio value and pick 10th / median / 90th runs
+            // Sort runs by final BTC price and pick 10th / median / 90th runs
             if !sortedRuns.isEmpty {
                 let tenthIndex     = max(0, Int(Double(sortedRuns.count - 1) * 0.10))
                 let medianIndex    = sortedRuns.count / 2
@@ -1126,8 +1090,7 @@ struct ContentView: View {
                     self.isLoading           = false
                     
                     // -------------------------------------
-                    // Assign medianSimData / allSimData here
-                    // so we can reference them later (e.g. for charts)
+                    // Store data for charts:
                     self.medianSimData = medianRun
                     self.allSimData    = allIterations
                     // -------------------------------------
@@ -1203,18 +1166,5 @@ struct ContentView: View {
         } else {
             return ""
         }
-    }
-}
-
-// MARK: - HistogramView (Placeholder)
-struct HistogramView: View {
-    var body: some View {
-        ZStack {
-            Color.black.ignoresSafeArea()
-            Text("Histograms Coming Soon!")
-                .foregroundColor(.white)
-                .font(.title)
-        }
-        .navigationTitle("Histograms")
     }
 }
