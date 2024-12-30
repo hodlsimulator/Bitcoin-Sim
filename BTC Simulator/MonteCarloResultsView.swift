@@ -35,7 +35,7 @@ struct MonteCarloResultsView: View {
                         .bold()
                         .foregroundColor(.white)
                     
-                    // MARK: - The Chart
+                    // MARK: - The Chart (with log scale)
                     chartSection
                 }
                 .padding()
@@ -62,20 +62,20 @@ struct MonteCarloResultsView: View {
         .navigationBarTitle("Monte Carlo Results", displayMode: .inline)
     }
     
-    // MARK: - The Chart
+    // MARK: - The Chart (using log10 to avoid flat lines)
     @ViewBuilder
     private var chartSection: some View {
         Chart {
             // ---- Error Band (Area) ----
             ForEach(data) { item in
-                let yearValue = item.year
-                let yStart = item.tenth
-                let yEnd = item.ninetieth
+                let yearValue       = item.year
+                let logTenth        = log10(max(item.tenth, 1))       // Avoid log10(0)
+                let logNinetieth    = log10(max(item.ninetieth, 1))
                 
                 AreaMark(
                     x: .value("Year", yearValue),
-                    yStart: .value("10th", yStart),
-                    yEnd: .value("90th", yEnd)
+                    yStart: .value("10th (log)", logTenth),
+                    yEnd: .value("90th (log)", logNinetieth)
                 )
                 .foregroundStyle(
                     .linearGradient(
@@ -91,12 +91,12 @@ struct MonteCarloResultsView: View {
             
             // ---- Median Line ----
             ForEach(data) { item in
-                let yearValue = item.year
-                let medianValue = item.median
+                let yearValue    = item.year
+                let logMedian    = log10(max(item.median, 1))
                 
                 LineMark(
                     x: .value("Year", yearValue),
-                    y: .value("Median", medianValue)
+                    y: .value("Median (log)", logMedian)
                 )
                 .foregroundStyle(.orange)
                 .interpolationMethod(.cardinal)
@@ -105,12 +105,12 @@ struct MonteCarloResultsView: View {
             
             // ---- Optional Points on the Median ----
             ForEach(data) { item in
-                let yearValue = item.year
-                let medianValue = item.median
+                let yearValue   = item.year
+                let logMedian   = log10(max(item.median, 1))
                 
                 PointMark(
                     x: .value("Year", yearValue),
-                    y: .value("Median", medianValue)
+                    y: .value("Median (log)", logMedian)
                 )
                 .foregroundStyle(.orange)
                 .symbolSize(30)
@@ -118,14 +118,26 @@ struct MonteCarloResultsView: View {
         }
         .frame(height: 300)
         .chartXAxis {
+            // Year labels
             AxisMarks(values: .stride(by: 1)) { _ in
                 AxisGridLine()
                 AxisTick()
-                AxisValueLabel() // default text
+                AxisValueLabel()
             }
         }
         .chartYAxis {
-            AxisMarks(position: .leading)
+            AxisMarks(position: .leading) { axisValue in
+                // Convert back from log to normal for display labels, if you want
+                if let doubleValue = axisValue.as(Double.self) {
+                    let exponent = pow(10, doubleValue)
+                    AxisGridLine()
+                    AxisTick()
+                    // Format exponent as a short number:
+                    AxisValueLabel {
+                        Text(exponent.formatted(.number.precision(.fractionLength(0))))
+                    }
+                }
+            }
         }
     }
     
@@ -181,26 +193,12 @@ struct MonteCarloResultsView: View {
 struct MonteCarloResultsView_Previews: PreviewProvider {
     
     static let sampleData: [YearlyPercentileData] = [
-        .init(year: 1,  tenth: 10000, median: 15000, ninetieth: 30000),
-        .init(year: 2,  tenth: 11000, median: 17000, ninetieth: 34000),
-        .init(year: 3,  tenth: 13000, median: 20000, ninetieth: 45000),
-        .init(year: 4,  tenth: 15000, median: 25000, ninetieth: 60000),
-        .init(year: 5,  tenth: 18000, median: 30000, ninetieth: 72000),
-        .init(year: 6,  tenth: 21000, median: 35000, ninetieth: 90000),
-        .init(year: 7,  tenth: 25000, median: 42000, ninetieth: 110000),
-        .init(year: 8,  tenth: 28000, median: 50000, ninetieth: 130000),
-        .init(year: 9,  tenth: 32000, median: 56000, ninetieth: 150000),
-        .init(year: 10, tenth: 37000, median: 62000, ninetieth: 180000),
-        .init(year: 11, tenth: 42000, median: 69000, ninetieth: 210000),
-        .init(year: 12, tenth: 50000, median: 78000, ninetieth: 250000),
-        .init(year: 13, tenth: 54000, median: 85000, ninetieth: 300000),
-        .init(year: 14, tenth: 59000, median: 95000, ninetieth: 350000),
-        .init(year: 15, tenth: 65000, median: 110000, ninetieth: 420000),
-        .init(year: 16, tenth: 70000, median: 130000, ninetieth: 480000),
-        .init(year: 17, tenth: 78000, median: 150000, ninetieth: 600000),
-        .init(year: 18, tenth: 85000, median: 170000, ninetieth: 750000),
-        .init(year: 19, tenth: 95000, median: 200000, ninetieth: 900000),
-        .init(year: 20, tenth: 110000, median: 250000, ninetieth: 1200000),
+        .init(year: 1,  tenth: 1.7e5,  median: 1.16e5,   ninetieth: 1.76e5),
+        .init(year: 2,  tenth: 4486,   median: 6.38e5,   ninetieth: 1.98e5),
+        .init(year: 3,  tenth: 1316,   median: 1.46e6,   ninetieth: 1.52e6),
+        .init(year: 4,  tenth: 2000,   median: 3.00e6,   ninetieth: 3.50e7),
+        .init(year: 5,  tenth: 1.2e4,  median: 1.80e7,   ninetieth: 3.00e9),
+        // etc.
     ]
     
     static var previews: some View {
