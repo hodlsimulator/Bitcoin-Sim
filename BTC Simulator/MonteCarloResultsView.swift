@@ -89,10 +89,12 @@ func simulationLines(simulations: [SimulationRun]) -> some ChartContent {
                 x: .value("Week", pt.week),
                 y: .value("BTC Price (USD)", pt.value)
             )
-            // We'll explicitly give each run a random color...
-            .foregroundStyle(runColor)
-            // ...and also let Swift Charts see each run as a distinct "Series."
+            // Use a lower opacity for these lines
+            .foregroundStyle(runColor.opacity(0.2))
+            // Distinguish runs as separate series
             .foregroundStyle(by: .value("SeriesIndex", index))
+            // Thinner lines for simulations
+            .lineStyle(StrokeStyle(lineWidth: 0.5, lineCap: .round, lineJoin: .round))
         }
     }
 }
@@ -105,6 +107,7 @@ func medianLines(_ medianLine: [WeekPoint]) -> some ChartContent {
             y: .value("BTC Price (USD)", pt.value)
         )
         .foregroundStyle(.orange)
+        // Median line is thicker
         .lineStyle(StrokeStyle(lineWidth: 3))
         .interpolationMethod(.monotone)
     }
@@ -121,15 +124,23 @@ struct MonteCarloChartView: View {
             simulationLines(simulations: simulations)
             medianLines(medianLine)
         }
-        // Hide default legend, or show it if you like
         .chartLegend(.hidden)
         .frame(height: 350)
         .chartYScale(domain: .automatic(includesZero: false), type: .log)
         .chartXAxis {
-            AxisMarks(values: Array(stride(from: 10, through: 1040, by: 10))) {
+            // Let's say we want axis marks at 5, 10, 15, and 20 years.
+            // In "weeks", that's 260, 520, 780, 1040.
+            let yearMarkers = [260, 520, 780, 1040]
+            
+            AxisMarks(values: yearMarkers) { axisValue in
                 AxisGridLine()
                 AxisTick()
-                AxisValueLabel()
+                AxisValueLabel {
+                    if let weeks = axisValue.as(Int.self) {
+                        let years = weeks / 52  // integer division
+                        Text("\(years)")
+                    }
+                }
             }
         }
         .chartYAxis {
