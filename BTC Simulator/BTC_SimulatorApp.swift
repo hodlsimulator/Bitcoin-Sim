@@ -8,18 +8,9 @@
 import SwiftUI
 
 @main
-struct BTCMoteCarloApp: App {
+struct BTCMonteCarloApp: App {
+    @AppStorage("hasOnboarded") private var didFinishOnboarding = false
     @StateObject private var simSettings = SimulationSettings()
-
-    // Track whether onboarding is done.
-    @State private var didFinishOnboarding: Bool
-
-    init() {
-        // Check a UserDefaults key to see if onboarding was completed.
-        let hasOnboarded = UserDefaults.standard.bool(forKey: "hasOnboarded")
-        print(">>> hasOnboarded in init is:", hasOnboarded)
-        _didFinishOnboarding = State(initialValue: hasOnboarded)
-    }
 
     var body: some Scene {
         WindowGroup {
@@ -31,10 +22,6 @@ struct BTCMoteCarloApp: App {
             } else {
                 OnboardingView(didFinishOnboarding: $didFinishOnboarding)
                     .environmentObject(simSettings)
-                    .onDisappear {
-                        print("OnboardingView disappeared, switching to main content.")
-                        UserDefaults.standard.set(true, forKey: "hasOnboarded")
-                    }
             }
         }
     }

@@ -37,6 +37,9 @@ struct TooltipAnchorKey: PreferenceKey {
 struct SettingsView: View {
     @EnvironmentObject var simSettings: SimulationSettings
     
+    /// 1) Use @AppStorage to tie directly to the "hasOnboarded" key.
+    @AppStorage("hasOnboarded") private var didFinishOnboarding = false
+    
     /// Whether to show a confirmation alert before resetting criteria.
     @State private var showResetCriteriaConfirmation = false
     
@@ -603,6 +606,9 @@ struct SettingsView: View {
 
                         // Sync toggleAll state
                         simSettings.toggleAll = true
+
+                        // 2) Ensure "hasOnboarded" is false so onboarding reappears
+                        didFinishOnboarding = false
                     }
                     Button("Cancel", role: .cancel) { }
                 } message: {
@@ -617,7 +623,7 @@ struct SettingsView: View {
         .environment(\.colorScheme, .dark)
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.large)
-        // .onAppear block is now commented out
+        // .onAppear block is commented out
         /*
         .onAppear {
             let defaults = UserDefaults.standard
