@@ -129,10 +129,11 @@ struct FactorToggleRow: View {
                     .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
                     .disabled(!isOn)
 
-                Text(String(format: "%.4f", sliderValue))
+                // Now showing a percentage sign by multiplying sliderValue * 100
+                Text(String(format: "%.4f%%", sliderValue * 100))
                     .font(.caption)
                     .foregroundColor(.secondary)
-                    .frame(width: 60, alignment: .trailing)
+                    .frame(width: 70, alignment: .trailing)
                     .disabled(!isOn)
             }
             .opacity(isOn ? 1.0 : 0.6)

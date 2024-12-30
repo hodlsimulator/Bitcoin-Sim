@@ -444,48 +444,48 @@ class SimulationSettings: ObservableObject {
         
         // Bullish toggles
         useHalving = true
-        halvingBump = 0.20
+        halvingBump = 0.06666665673255921
         useInstitutionalDemand = true
-        maxDemandBoost = 0.004
+        maxDemandBoost = 0.0012041112184524537
         useCountryAdoption = true
-        maxCountryAdBoost = 0.0055
+        maxCountryAdBoost = 0.0026894273459911345
         useRegulatoryClarity = true
-        maxClarityBoost = 0.0006
+        maxClarityBoost = 0.0005488986611366271
         useEtfApproval = true
         maxEtfBoost = 0.0008
         useTechBreakthrough = true
-        maxTechBoost = 0.002
+        maxTechBoost = 0.0007312775254249572
         useScarcityEvents = true
-        maxScarcityBoost = 0.025
+        maxScarcityBoost = 0.0016519824042916299
         useGlobalMacroHedge = true
         maxMacroBoost = 0.0015
         useStablecoinShift = true
-        maxStablecoinBoost = 0.0006
+        maxStablecoinBoost = 0.00043788542747497556
         useDemographicAdoption = true
         maxDemoBoost = 0.001
         useAltcoinFlight = true
-        maxAltcoinBoost = 0.001
+        maxAltcoinBoost = 0.00044493392109870914
         useAdoptionFactor = true
-        adoptionBaseFactor = 0.000005
+        adoptionBaseFactor = 6e-07
         
         // Bearish toggles
         useRegClampdown = true
-        maxClampDown = -0.0002
+        maxClampDown = -0.0004
         useCompetitorCoin = true
-        maxCompetitorBoost = -0.0018
+        maxCompetitorBoost = -0.0005629956722259521
         useSecurityBreach = true
-        breachImpact = -0.1
+        breachImpact = -0.03303965330123901
         useBubblePop = true
-        maxPopDrop = -0.005
+        maxPopDrop = -0.0012555068731307985
         useStablecoinMeltdown = true
-        maxMeltdownDrop = -0.001
+        maxMeltdownDrop = -0.000756240963935852
         useBlackSwan = true
-        blackSwanDrop = -0.60
+        blackSwanDrop = -0.45550661087036126
         useBearMarket = true
-        bearWeeklyDrift = -0.01
+        bearWeeklyDrift = -0.0007195305824279769
         useMaturingMarket = true
-        maxMaturingDrop = -0.015
+        maxMaturingDrop = -0.001255506277084352
         useRecession = true
-        maxRecessionDrop = -0.004
+        maxRecessionDrop = -0.0014508080482482913
     }
 }
