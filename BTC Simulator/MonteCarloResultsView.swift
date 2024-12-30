@@ -13,7 +13,7 @@ import Charts
 struct WeekPoint: Identifiable {
     let id = UUID()
     let week: Int
-    let value: Double
+    let value: Double // We'll treat 'value' as BTC price in USD
 }
 
 struct SimulationRun: Identifiable {
@@ -65,6 +65,15 @@ func formatSuffix(_ value: Double) -> String {
     }
 }
 
+// MARK: - Random Colour Generator
+
+func randomColor() -> Color {
+    let hue = Double.random(in: 0...1)
+    let saturation = Double.random(in: 0.5...1)
+    let brightness = Double.random(in: 0.7...1)
+    return Color(hue: hue, saturation: saturation, brightness: brightness)
+}
+
 // MARK: - Chart Content Builders
 
 @ChartContentBuilder
@@ -72,13 +81,18 @@ func simulationLines(simulations: [SimulationRun]) -> some ChartContent {
     ForEach(simulations.indices, id: \.self) { index in
         let sim = simulations[index]
         
-        // Use .foregroundStyle(by:) to let Swift Charts auto-assign distinct colours
+        // Pick a random colour for this entire simulation run
+        let runColor = randomColor()
+        
         ForEach(sim.points) { pt in
             LineMark(
                 x: .value("Week", pt.week),
-                y: .value("Value", pt.value)
+                y: .value("BTC Price (USD)", pt.value)
             )
-            .foregroundStyle(by: .value("SimulationIndex", index))
+            // We'll explicitly give each run a random color...
+            .foregroundStyle(runColor)
+            // ...and also let Swift Charts see each run as a distinct "Series."
+            .foregroundStyle(by: .value("SeriesIndex", index))
         }
     }
 }
@@ -88,7 +102,7 @@ func medianLines(_ medianLine: [WeekPoint]) -> some ChartContent {
     ForEach(medianLine) { pt in
         LineMark(
             x: .value("Week", pt.week),
-            y: .value("Value", pt.value)
+            y: .value("BTC Price (USD)", pt.value)
         )
         .foregroundStyle(.orange)
         .lineStyle(StrokeStyle(lineWidth: 3))
@@ -107,6 +121,7 @@ struct MonteCarloChartView: View {
             simulationLines(simulations: simulations)
             medianLines(medianLine)
         }
+        // Hide default legend, or show it if you like
         .chartLegend(.hidden)
         .frame(height: 350)
         .chartYScale(domain: .automatic(includesZero: false), type: .log)
@@ -152,7 +167,7 @@ struct MonteCarloResultsView: View {
         
         ScrollView {
             VStack(spacing: 20) {
-                Text("Cumulative Returns of Monte Carlo Simulations")
+                Text("Monte Carlo – BTC Price (USD)")
                     .font(.title2)
                     .bold()
                     .foregroundColor(.white)
