@@ -1,3 +1,4 @@
+//
 //  SettingsView.swift
 //  BTCMonteCarlo
 //
@@ -536,7 +537,72 @@ struct SettingsView: View {
                 .buttonStyle(PressableDestructiveButtonStyle())
                 .alert("Confirm Reset", isPresented: $showResetCriteriaConfirmation) {
                     Button("Reset", role: .destructive) {
-                        simSettings.resetUserCriteria()
+                        // Reset all factor settings to defaults
+                        simSettings.useHalving = true
+                        simSettings.halvingBump = 0.06666665673255921
+
+                        simSettings.useInstitutionalDemand = true
+                        simSettings.maxDemandBoost = 0.0012041112184524537
+
+                        simSettings.useCountryAdoption = true
+                        simSettings.maxCountryAdBoost = 0.0026894273459911345
+
+                        simSettings.useRegulatoryClarity = true
+                        simSettings.maxClarityBoost = 0.0005488986611366271
+
+                        simSettings.useEtfApproval = true
+                        simSettings.maxEtfBoost = 0.0008
+
+                        simSettings.useTechBreakthrough = true
+                        simSettings.maxTechBoost = 0.0007312775254249572
+
+                        simSettings.useScarcityEvents = true
+                        simSettings.maxScarcityBoost = 0.0016519824042916299
+
+                        simSettings.useGlobalMacroHedge = true
+                        simSettings.maxMacroBoost = 0.0015
+
+                        simSettings.useStablecoinShift = true
+                        simSettings.maxStablecoinBoost = 0.00043788542747497556
+
+                        simSettings.useDemographicAdoption = true
+                        simSettings.maxDemoBoost = 0.001
+
+                        simSettings.useAltcoinFlight = true
+                        simSettings.maxAltcoinBoost = 0.00044493392109870914
+
+                        simSettings.useAdoptionFactor = true
+                        simSettings.adoptionBaseFactor = 6e-07
+
+                        simSettings.useRegClampdown = true
+                        simSettings.maxClampDown = -0.0004
+
+                        simSettings.useCompetitorCoin = true
+                        simSettings.maxCompetitorBoost = -0.0005629956722259521
+
+                        simSettings.useSecurityBreach = true
+                        simSettings.breachImpact = -0.03303965330123901
+
+                        simSettings.useBubblePop = true
+                        simSettings.maxPopDrop = -0.0012555068731307985
+
+                        simSettings.useStablecoinMeltdown = true
+                        simSettings.maxMeltdownDrop = -0.000756240963935852
+
+                        simSettings.useBlackSwan = true
+                        simSettings.blackSwanDrop = -0.45550661087036126
+
+                        simSettings.useBearMarket = true
+                        simSettings.bearWeeklyDrift = -0.0007195305824279769
+
+                        simSettings.useMaturingMarket = true
+                        simSettings.maxMaturingDrop = -0.001255506277084352
+
+                        simSettings.useRecession = true
+                        simSettings.maxRecessionDrop = -0.0014508080482482913
+
+                        // Sync toggleAll state
+                        simSettings.toggleAll = true
                     }
                     Button("Cancel", role: .cancel) { }
                 } message: {
@@ -551,84 +617,22 @@ struct SettingsView: View {
         .environment(\.colorScheme, .dark)
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.large)
+        // .onAppear block is now commented out
+        /*
         .onAppear {
-            // Ensure 'toggleAll' reflects the correct state
-            let allEnabled = simSettings.areAllFactorsEnabled
-            if simSettings.toggleAll != allEnabled {
-                simSettings.toggleAll = allEnabled
-            }
-
-            // Perform a one-time sync of default values
             let defaults = UserDefaults.standard
+
+            // Perform a one-time sync of default values if not already synced
             if !defaults.bool(forKey: "hasPerformedInitialSync") {
-                // Apply default values from old logs
-                simSettings.useHalving = true
-                simSettings.halvingBump = 0.06666665673255921
-
-                simSettings.useInstitutionalDemand = true
-                simSettings.maxDemandBoost = 0.0012041112184524537
-
-                simSettings.useCountryAdoption = true
-                simSettings.maxCountryAdBoost = 0.0026894273459911345
-
-                simSettings.useRegulatoryClarity = true
-                simSettings.maxClarityBoost = 0.0005488986611366271
-
-                simSettings.useEtfApproval = true
-                simSettings.maxEtfBoost = 0.0008
-
-                simSettings.useTechBreakthrough = true
-                simSettings.maxTechBoost = 0.0007312775254249572
-
-                simSettings.useScarcityEvents = true
-                simSettings.maxScarcityBoost = 0.0016519824042916299
-
-                simSettings.useGlobalMacroHedge = true
-                simSettings.maxMacroBoost = 0.0015
-
-                simSettings.useStablecoinShift = true
-                simSettings.maxStablecoinBoost = 0.00043788542747497556
-
-                simSettings.useDemographicAdoption = true
-                simSettings.maxDemoBoost = 0.001
-
-                simSettings.useAltcoinFlight = true
-                simSettings.maxAltcoinBoost = 0.00044493392109870914
-
-                simSettings.useAdoptionFactor = true
-                simSettings.adoptionBaseFactor = 6e-07
-
-                simSettings.useRegClampdown = true
-                simSettings.maxClampDown = -0.0004
-
-                simSettings.useCompetitorCoin = true
-                simSettings.maxCompetitorBoost = -0.0005629956722259521
-
-                simSettings.useSecurityBreach = true
-                simSettings.breachImpact = -0.03303965330123901
-
-                simSettings.useBubblePop = true
-                simSettings.maxPopDrop = -0.0012555068731307985
-
-                simSettings.useStablecoinMeltdown = true
-                simSettings.maxMeltdownDrop = -0.000756240963935852
-
-                simSettings.useBlackSwan = true
-                simSettings.blackSwanDrop = -0.45550661087036126
-
-                simSettings.useBearMarket = true
-                simSettings.bearWeeklyDrift = -0.0007195305824279769
-
-                simSettings.useMaturingMarket = true
-                simSettings.maxMaturingDrop = -0.001255506277084352
-
-                simSettings.useRecession = true
-                simSettings.maxRecessionDrop = -0.0014508080482482913
-
-                // Mark the sync as completed
+                // ...original code that reassigns toggles to default...
                 defaults.set(true, forKey: "hasPerformedInitialSync")
+            } else {
+                // ...original code that reassigns toggles based on UserDefaults bool...
             }
+
+            // syncToggleAll()
         }
+        */
         // Tooltip overlay
         .overlayPreferenceValue(TooltipAnchorKey.self) { allAnchors in
             GeometryReader { proxy in
@@ -687,6 +691,33 @@ struct SettingsView: View {
                 )
             }
         }
+    }
+    
+    /// Syncs the toggleAll state based on the current state of individual toggles
+    private func syncToggleAll() {
+        let allFactorsOn = simSettings.useHalving &&
+                           simSettings.useInstitutionalDemand &&
+                           simSettings.useCountryAdoption &&
+                           simSettings.useRegulatoryClarity &&
+                           simSettings.useEtfApproval &&
+                           simSettings.useTechBreakthrough &&
+                           simSettings.useScarcityEvents &&
+                           simSettings.useGlobalMacroHedge &&
+                           simSettings.useStablecoinShift &&
+                           simSettings.useDemographicAdoption &&
+                           simSettings.useAltcoinFlight &&
+                           simSettings.useAdoptionFactor &&
+                           simSettings.useRegClampdown &&
+                           simSettings.useCompetitorCoin &&
+                           simSettings.useSecurityBreach &&
+                           simSettings.useBubblePop &&
+                           simSettings.useStablecoinMeltdown &&
+                           simSettings.useBlackSwan &&
+                           simSettings.useBearMarket &&
+                           simSettings.useMaturingMarket &&
+                           simSettings.useRecession
+
+        simSettings.toggleAll = allFactorsOn
     }
 
     /// If tapped factor is already active, hide it. Otherwise activate it.
