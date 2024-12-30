@@ -1,4 +1,3 @@
-//
 //  SettingsView.swift
 //  BTCMonteCarlo
 //
@@ -108,7 +107,24 @@ struct SettingsView: View {
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
                 )
-
+                // Anchor for the Halving tooltip
+                .anchorPreference(
+                    key: TooltipAnchorKey.self,
+                    value: .center
+                ) { pt in
+                    guard
+                        activeFactor == "Halving",
+                        let desc = """
+                            Occurs roughly every four years, reducing the block reward in half.
+                            Historically, halving events have coincided with substantial BTC price increases.
+                            """ as String?,
+                        !desc.isEmpty
+                    else {
+                        return []
+                    }
+                    return [TooltipItem(title: "Halving", description: desc, anchor: pt)]
+                }
+                
                 // Institutional Demand
                 FactorToggleRow(
                     iconName: "building.columns.fill",
