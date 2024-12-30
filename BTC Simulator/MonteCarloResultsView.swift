@@ -10,30 +10,26 @@ import Charts
 
 // MARK: - Data Models
 
-/// A single data point (e.g. for a single “week” & numeric “value”).
 struct WeekPoint: Identifiable {
     let id = UUID()
     let week: Int
     let value: Double
 }
 
-/// One simulation run, containing multiple WeekPoints.
 struct SimulationRun: Identifiable {
     let id = UUID()
     let points: [WeekPoint]
 }
 
-// MARK: - Median Calculation
+// MARK: - Compute Median
 
 func computeMedianLine(simulations: [SimulationRun]) -> [WeekPoint] {
-    // If no simulations, return empty
     guard let firstRun = simulations.first else { return [] }
     let countPerRun = firstRun.points.count
     var medianPoints: [WeekPoint] = []
     
     for index in 0..<countPerRun {
         let week = firstRun.points[index].week
-        // Gather the value at this index from every simulation
         let allValues = simulations.map { $0.points[index].value }.sorted()
         
         let middle = allValues.count / 2
@@ -49,13 +45,15 @@ func computeMedianLine(simulations: [SimulationRun]) -> [WeekPoint] {
     return medianPoints
 }
 
-// MARK: - Number Formatting (10k, 1M, 1B)
+// MARK: - Number Formatting (k, M, B, T)
 
 func formatSuffix(_ value: Double) -> String {
     let absVal = abs(value)
     let sign = value < 0 ? "-" : ""
     
     switch absVal {
+    case 1_000_000_000_000...:
+        return "\(sign)\(Int(absVal / 1_000_000_000_000))T"
     case 1_000_000_000...:
         return "\(sign)\(Int(absVal / 1_000_000_000))B"
     case 1_000_000...:
@@ -71,16 +69,16 @@ func formatSuffix(_ value: Double) -> String {
 
 @ChartContentBuilder
 func simulationLines(simulations: [SimulationRun]) -> some ChartContent {
-    ForEach(simulations) { sim in
+    ForEach(simulations.indices, id: \.self) { index in
+        let sim = simulations[index]
+        
+        // Use .foregroundStyle(by:) to let Swift Charts auto-assign distinct colours
         ForEach(sim.points) { pt in
             LineMark(
                 x: .value("Week", pt.week),
                 y: .value("Value", pt.value)
             )
-            .foregroundStyle(by: .value("Simulation", sim.id.uuidString))
-            .opacity(0.2)
-            .interpolationMethod(.monotone)
-            .lineStyle(StrokeStyle(lineWidth: 0.1))
+            .foregroundStyle(by: .value("SimulationIndex", index))
         }
     }
 }
@@ -92,13 +90,13 @@ func medianLines(_ medianLine: [WeekPoint]) -> some ChartContent {
             x: .value("Week", pt.week),
             y: .value("Value", pt.value)
         )
-        .foregroundStyle(.black)
+        .foregroundStyle(.orange)
         .lineStyle(StrokeStyle(lineWidth: 3))
         .interpolationMethod(.monotone)
     }
 }
 
-// MARK: - The Chart Sub-View
+// MARK: - Chart Subview
 
 struct MonteCarloChartView: View {
     let simulations: [SimulationRun]
@@ -109,26 +107,24 @@ struct MonteCarloChartView: View {
             simulationLines(simulations: simulations)
             medianLines(medianLine)
         }
-        .chartLegend(.hidden)  // Hide the giant legend
+        .chartLegend(.hidden)
         .frame(height: 350)
-        // Use a log scale on the Y-axis
         .chartYScale(domain: .automatic(includesZero: false), type: .log)
-        // Custom X-axis ticks: 10, 20, ... 520
         .chartXAxis {
-            AxisMarks(values: Array(stride(from: 10, through: 520, by: 10))) {
+            AxisMarks(values: Array(stride(from: 10, through: 1040, by: 10))) {
                 AxisGridLine()
                 AxisTick()
                 AxisValueLabel()
             }
         }
-        // Custom Y-axis suffix labels
         .chartYAxis {
             AxisMarks(position: .leading) { axisValue in
                 AxisGridLine()
                 AxisTick()
                 AxisValueLabel {
                     if let val = axisValue.as(Double.self) {
-                        Text(formatSuffix(val)).foregroundColor(.white)
+                        Text(formatSuffix(val))
+                            .foregroundColor(.white)
                     }
                 }
             }
@@ -144,7 +140,12 @@ struct MonteCarloChartView: View {
 // MARK: - Main View
 
 struct MonteCarloResultsView: View {
-    let simulations: [SimulationRun] // Called from ContentView
+    let simulations: [SimulationRun]
+    
+    init(simulations: [SimulationRun]) {
+        self.simulations = simulations
+        print("[DEBUG] simulations.count = \(simulations.count)")
+    }
     
     var body: some View {
         let medianLine = computeMedianLine(simulations: simulations)
@@ -156,7 +157,6 @@ struct MonteCarloResultsView: View {
                     .bold()
                     .foregroundColor(.white)
                 
-                // Subview for the Swift Charts
                 MonteCarloChartView(
                     simulations: simulations,
                     medianLine: medianLine
