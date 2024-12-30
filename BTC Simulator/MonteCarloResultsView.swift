@@ -2,209 +2,108 @@
 //  MonteCarloResultsView.swift
 //  BTCMonteCarlo
 //
-//  Created by Conor on ... 2024.
+//  Created by Conor on 30/12/2024.
 //
 
 import SwiftUI
 import Charts
 
-/// A simple model for each year’s simulation data.
-struct YearlyPercentileData: Identifiable {
+// MARK: - Data Models
+
+/// Simple struct representing a single data point:
+///  - `week` is your integer week number.
+///  - `value` is the numeric data you want to plot.
+struct WeekPoint: Identifiable {
     let id = UUID()
-    let year: Int
-    let tenth: Double
-    let median: Double
-    let ninetieth: Double
+    let week: Int
+    let value: Double
 }
 
-/// A sleek results screen showing a line chart with an error band (10th–90th)
-/// plus a scrolling list of stacked year “cards.”
+/// One entire simulation run, containing multiple WeekPoint instances.
+struct SimulationRun: Identifiable {
+    let id = UUID()
+    let points: [WeekPoint]
+}
+
+// MARK: - Main View
+
+/// A SwiftUI chart that draws:
+///  - Many faint orange lines for each simulation in `simulations`
+///  - One bold blue line for the “original” run in `originalRun`
+///  - Uses a **log scale** on the Y-axis
+///  - Week numbers on the X-axis
 struct MonteCarloResultsView: View {
     
-    // Replace this with your actual simulation data
-    let data: [YearlyPercentileData]
+    /// The “original” single run, displayed as a bold line
+    let originalRun: [WeekPoint]
+    
+    /// Multiple simulations, each drawn as faint lines
+    let simulations: [SimulationRun]
     
     var body: some View {
         ScrollView {
             VStack(spacing: 30) {
                 
-                // Title above the chart
+                // Title + Chart
                 VStack(alignment: .leading, spacing: 8) {
                     Text("BTC Price Over 20 Years")
                         .font(.title2)
                         .bold()
                         .foregroundColor(.white)
                     
-                    // MARK: - The Chart (with log scale)
-                    chartSection
-                }
-                .padding()
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.black.opacity(0.2))
-                )
-                .padding(.horizontal)
-                
-                // MARK: - The Yearly Cards
-                yearCardsSection
-                    .padding(.bottom, 40)
-            }
-        }
-        .background(
-            // A dark gradient backdrop (similar to your main screen)
-            LinearGradient(
-                gradient: Gradient(colors: [Color.black, Color(white: 0.15), Color.black]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
-        )
-        .navigationBarTitle("Monte Carlo Results", displayMode: .inline)
-    }
-    
-    // MARK: - The Chart (using log10 to avoid flat lines)
-    @ViewBuilder
-    private var chartSection: some View {
-        Chart {
-            // ---- Error Band (Area) ----
-            ForEach(data) { item in
-                let yearValue       = item.year
-                let logTenth        = log10(max(item.tenth, 1))       // Avoid log10(0)
-                let logNinetieth    = log10(max(item.ninetieth, 1))
-                
-                AreaMark(
-                    x: .value("Year", yearValue),
-                    yStart: .value("10th (log)", logTenth),
-                    yEnd: .value("90th (log)", logNinetieth)
-                )
-                .foregroundStyle(
-                    .linearGradient(
-                        colors: [
-                            Color.orange.opacity(0.2),
-                            Color.orange.opacity(0.01)
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-            }
-            
-            // ---- Median Line ----
-            ForEach(data) { item in
-                let yearValue    = item.year
-                let logMedian    = log10(max(item.median, 1))
-                
-                LineMark(
-                    x: .value("Year", yearValue),
-                    y: .value("Median (log)", logMedian)
-                )
-                .foregroundStyle(.orange)
-                .interpolationMethod(.cardinal)
-                .lineStyle(StrokeStyle(lineWidth: 3))
-            }
-            
-            // ---- Optional Points on the Median ----
-            ForEach(data) { item in
-                let yearValue   = item.year
-                let logMedian   = log10(max(item.median, 1))
-                
-                PointMark(
-                    x: .value("Year", yearValue),
-                    y: .value("Median (log)", logMedian)
-                )
-                .foregroundStyle(.orange)
-                .symbolSize(30)
-            }
-        }
-        .frame(height: 300)
-        .chartXAxis {
-            // Year labels
-            AxisMarks(values: .stride(by: 1)) { _ in
-                AxisGridLine()
-                AxisTick()
-                AxisValueLabel()
-            }
-        }
-        .chartYAxis {
-            AxisMarks(position: .leading) { axisValue in
-                // Convert back from log to normal for display labels, if you want
-                if let doubleValue = axisValue.as(Double.self) {
-                    let exponent = pow(10, doubleValue)
-                    AxisGridLine()
-                    AxisTick()
-                    // Format exponent as a short number:
-                    AxisValueLabel {
-                        Text(exponent.formatted(.number.precision(.fractionLength(0))))
-                    }
-                }
-            }
-        }
-    }
-    
-    // MARK: - The Yearly Cards
-    @ViewBuilder
-    private var yearCardsSection: some View {
-        VStack(spacing: 20) {
-            ForEach(data) { item in
-                // One "card" per year
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.black.opacity(0.15))
-                    
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Year \(item.year)")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                        
-                        HStack(alignment: .firstTextBaseline, spacing: 12) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("10th:")
-                                    .foregroundColor(.gray)
-                                Text("\(item.tenth, format: .number.precision(.fractionLength(2)))")
-                                    .foregroundColor(.white)
-                            }
-                            
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Median:")
-                                    .foregroundColor(.gray)
-                                Text("\(item.median, format: .number.precision(.fractionLength(2)))")
-                                    .foregroundColor(.white)
-                            }
-                            
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("90th:")
-                                    .foregroundColor(.gray)
-                                Text("\(item.ninetieth, format: .number.precision(.fractionLength(2)))")
-                                    .foregroundColor(.white)
+                    // The Chart (all marks inline, no separate sub-ViewBuilders)
+                    Chart {
+                        // 1) Faint lines for each simulation
+                        ForEach(simulations) { sim in
+                            ForEach(sim.points) { pt in
+                                LineMark(
+                                    x: .value("Week", pt.week),
+                                    y: .value("Value", pt.value)
+                                )
+                                .foregroundStyle(.orange.opacity(0.2))
+                                .lineStyle(StrokeStyle(lineWidth: 1))
+                                .interpolationMethod(.monotone)
                             }
                         }
-                        .font(.subheadline)
+                        
+                        // 2) Bold line for the original run
+                        ForEach(originalRun) { pt in
+                            LineMark(
+                                x: .value("Week", pt.week),
+                                y: .value("Value", pt.value)
+                            )
+                            .foregroundStyle(.blue)
+                            .lineStyle(StrokeStyle(lineWidth: 3))
+                            .interpolationMethod(.monotone)
+                        }
+                    }
+                    .frame(height: 350)
+                    // Log scale on Y
+                    .chartYScale(domain: .automatic(includesZero: false), type: .log)
+                    // Mark X-axis weeks 10, 20, 30, ...
+                    .chartXAxis {
+                        AxisMarks(values: Array(stride(from: 10, through: 520, by: 10))) {
+                            AxisGridLine()
+                            AxisTick()
+                            AxisValueLabel()
+                        }
+                    }
+                    // Standard Y-axis on the left
+                    .chartYAxis {
+                        AxisMarks(position: .leading) { axisValue in
+                            AxisGridLine()
+                            AxisTick()
+                            AxisValueLabel()
+                        }
                     }
                     .padding()
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.black.opacity(0.2))
+                    )
                 }
-                .shadow(color: .black.opacity(0.3), radius: 3, x: 2, y: 2)
-                .padding(.horizontal)
             }
         }
-    }
-}
-
-// MARK: - Preview
-struct MonteCarloResultsView_Previews: PreviewProvider {
-    
-    static let sampleData: [YearlyPercentileData] = [
-        .init(year: 1,  tenth: 1.7e5,  median: 1.16e5,   ninetieth: 1.76e5),
-        .init(year: 2,  tenth: 4486,   median: 6.38e5,   ninetieth: 1.98e5),
-        .init(year: 3,  tenth: 1316,   median: 1.46e6,   ninetieth: 1.52e6),
-        .init(year: 4,  tenth: 2000,   median: 3.00e6,   ninetieth: 3.50e7),
-        .init(year: 5,  tenth: 1.2e4,  median: 1.80e7,   ninetieth: 3.00e9),
-        // etc.
-    ]
-    
-    static var previews: some View {
-        NavigationStack {
-            MonteCarloResultsView(data: sampleData)
-        }
-        .preferredColorScheme(.dark)
+        .background(Color.black.ignoresSafeArea())
     }
 }

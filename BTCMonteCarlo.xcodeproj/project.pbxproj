@@ -38,6 +38,7 @@
 		E191AD702D1B8B1A00020DBE /* Bitcoin Historical Data.csv in Resources */ = {isa = PBXBuildFile; fileRef = E191AD6E2D1B8B1A00020DBE /* Bitcoin Historical Data.csv */; };
 		E191AD712D1B8B1A00020DBE /* SP500 Historical Data.csv in Resources */ = {isa = PBXBuildFile; fileRef = E191AD6F2D1B8B1A00020DBE /* SP500 Historical Data.csv */; };
 		E1C543B82D224D23005E416D /* MonteCarloResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1C543B72D224D21005E416D /* MonteCarloResultsView.swift */; };
+		E1C543BA2D2283A2005E416D /* YearlyPercentileData.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1C543B92D22839F005E416D /* YearlyPercentileData.swift */; };
 		E1CD4B3B2CF0F35C0070E8E3 /* BTC20YearProjection.csv in Resources */ = {isa = PBXBuildFile; fileRef = E1CD4B2E2CF0F35C0070E8E3 /* BTC20YearProjection.csv */; };
 		E1CD4B3C2CF0F35C0070E8E3 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E1CD4B302CF0F35C0070E8E3 /* Preview Assets.xcassets */; };
 		E1CD4B3D2CF0F35C0070E8E3 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E1CD4B322CF0F35C0070E8E3 /* Assets.xcassets */; };
@@ -85,6 +86,7 @@
 		E191AD6E2D1B8B1A00020DBE /* Bitcoin Historical Data.csv */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Bitcoin Historical Data.csv"; sourceTree = "<group>"; };
 		E191AD6F2D1B8B1A00020DBE /* SP500 Historical Data.csv */ = {isa = PBXFileReference; lastKnownFileType = text; path = "SP500 Historical Data.csv"; sourceTree = "<group>"; };
 		E1C543B72D224D21005E416D /* MonteCarloResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonteCarloResultsView.swift; sourceTree = "<group>"; };
+		E1C543B92D22839F005E416D /* YearlyPercentileData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YearlyPercentileData.swift; sourceTree = "<group>"; };
 		E1CD4B2E2CF0F35C0070E8E3 /* BTC20YearProjection.csv */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = BTC20YearProjection.csv; sourceTree = "<group>"; };
 		E1CD4B2F2CF0F35C0070E8E3 /* BTCMonteCarloSimulator.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = BTCMonteCarloSimulator.entitlements; sourceTree = "<group>"; };
 		E1CD4B302CF0F35C0070E8E3 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
@@ -162,6 +164,7 @@
 				E1883F392D1DD94C007AA90B /* SimulationSettings.swift */,
 				E166A8AF2CF855C20003F518 /* SimulationData.swift */,
 				E1883F412D1E43D7007AA90B /* VisualEffectBlur.swift */,
+				E1C543B92D22839F005E416D /* YearlyPercentileData.swift */,
 				E191AD6E2D1B8B1A00020DBE /* Bitcoin Historical Data.csv */,
 				E191AD6F2D1B8B1A00020DBE /* SP500 Historical Data.csv */,
 				E12CCD8E2CF823610059931D /* Assets.xcassets */,
@@ -348,6 +351,7 @@
 				E1883F482D1E8E21007AA90B /* AboutView.swift in Sources */,
 				E166A8B22CF85B2B0003F518 /* ContentView.swift in Sources */,
 				E1C543B82D224D23005E416D /* MonteCarloResultsView.swift in Sources */,
+				E1C543BA2D2283A2005E416D /* YearlyPercentileData.swift in Sources */,
 				E1883F502D1FCEBD007AA90B /* OnboardingView.swift in Sources */,
 				E1883F402D1E0DCB007AA90B /* InputManager.swift in Sources */,
 				E191AD672D1B764400020DBE /* CSVLoaderBTC.swift in Sources */,

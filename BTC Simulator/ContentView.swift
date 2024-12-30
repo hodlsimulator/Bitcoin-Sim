@@ -371,6 +371,29 @@ struct ContentView: View {
     // Track the currently chosen percentile
     @State private var selectedPercentile: PercentileChoice = .median
     
+    @State private var medianSimData: [SimulationData] = []
+    @State private var allSimData: [[SimulationData]] = []
+    
+    // 1) Converts your “original” run (e.g. medianSimData) into [WeekPoint].
+    func convertOriginalToWeekPoints() -> [WeekPoint] {
+        // For instance, if you have an array `medianSimData: [SimulationData]`
+        // accessible in this scope, do something like:
+        medianSimData.map { row in
+            WeekPoint(week: row.week, value: row.portfolioValueEUR)
+        }
+    }
+
+    // 2) Converts all simulation runs (e.g. allSimData: [[SimulationData]]) into [SimulationRun].
+    func convertAllSimsToWeekPoints() -> [SimulationRun] {
+        // e.g. if you have `allSimData: [[SimulationData]]` accessible:
+        allSimData.map { singleRun -> SimulationRun in
+            let wpoints = singleRun.map { row in
+                WeekPoint(week: row.week, value: row.portfolioValueEUR)
+            }
+            return SimulationRun(points: wpoints)
+        }
+    }
+
     // MARK: - BODY
     var body: some View {
         NavigationStack {
@@ -425,7 +448,10 @@ struct ContentView: View {
             }
             // Hook up the chart-based view with real data
             .navigationDestination(isPresented: $showHistograms) {
-                MonteCarloResultsView(data: convertMonteCarloResultsToYearlyData())
+                MonteCarloResultsView(
+                    originalRun: convertOriginalToWeekPoints(),
+                    simulations: convertAllSimsToWeekPoints()
+                )
             }
             .onAppear {
                 let savedWeek = UserDefaults.standard.integer(forKey: "lastViewedWeek")
@@ -658,6 +684,7 @@ struct ContentView: View {
                             
                             // "View Graphics" => line chart with error band
                             Button {
+                                // This line triggers the chart navigation
                                 showHistograms = true
                             } label: {
                                 Text("View Graphics")
@@ -1094,8 +1121,17 @@ struct ContentView: View {
                     // Default: show median
                     self.monteCarloResults   = medianRun
                     self.selectedPercentile  = .median
+                    
+                    // Update UI
                     self.isSimulationRun     = true
                     self.isLoading           = false
+                    
+                    // -------------------------------------
+                    // Assign medianSimData / allSimData here
+                    // so we can reference them later (e.g. for charts)
+                    self.medianSimData = medianRun
+                    self.allSimData    = allIterations
+                    // -------------------------------------
                 }
             } else {
                 // Fallback if no runs
