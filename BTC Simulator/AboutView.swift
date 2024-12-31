@@ -18,65 +18,62 @@ struct AboutView: View {
                     .bold()
                     .padding(.bottom, 8)
 
-                // INTRODUCTION
+                // INTRO SECTION
                 Text("""
-HODL Simulator is your tool for exploring Bitcoin’s potential future. Whether you’re curious about long-term price trends, the effects of macro events, or Bitcoin-specific milestones like halvings, this app lets you simulate scenarios and visualise outcomes. Dive into the numbers and discover what could shape Bitcoin over the next 20 years.
+HODL Simulator is a forward-looking modelling tool for anyone seeking to understand Bitcoin’s potential price paths over the next 20 years. By weaving together historical BTC returns, market volatility, and a wide array of bullish and bearish factors, it provides a comprehensive picture of how Bitcoin’s future might unfold. Whether you're studying halving cycles, technological breakthroughs, or recession risks, the app’s Monte Carlo approach lets you spin up thousands of “what if” scenarios.
 """)
-
-                // WHAT THE APP DOES
-                Text("What Does It Do?")
-                    .font(.title2)
-                    .bold()
-                Text("""
-HODL Simulator models Bitcoin’s price over 20 years (~1,040 weeks) by combining historical price patterns with adjustable bullish and bearish factors. From Halvings to Global Recessions, you control the assumptions. The app runs hundreds or thousands of simulations to show a range of potential outcomes, helping you explore how your BTC holdings might grow—or shrink—under different conditions.
-""")
-
-                // KEY FEATURES
-                Text("Key Features")
-                    .font(.title2)
-                    .bold()
-                Text("""
-- **Bullish and Bearish Factors**: Adjust events like Institutional Demand, ETF Approval, Recessions, or Black Swan events to see their impact on Bitcoin’s price.
-- **Monte Carlo Simulations**: Run randomised scenarios to understand the range of possible futures.
-- **Customised Parameters**: Set annual growth rates, volatility, and contribution amounts to match your personal outlook.
-- **Portfolio Insights**: See how your contributions, withdrawals, and Bitcoin holdings evolve over time.
-- **Factor Explanations**: Each factor includes a detailed description to help you understand its role in the simulation.
-""")
-
-                // SETTINGS PAGE
-                Text("Customising Simulations")
-                    .font(.title2)
-                    .bold()
-                Text("""
-Head to the Settings page to tailor your simulation. Each factor has a toggle to turn it on or off and a slider to adjust its strength. For example:
-- **Halving**: Models Bitcoin’s supply cuts, historically linked to price rallies.
-- **Regulatory Clarity**: Adds positive effects from clear and favourable crypto regulations.
-- **Scarcity Events**: Reflects reduced BTC supply on exchanges, leading to price increases.
-Whether you’re bullish, bearish, or somewhere in between, you can customise your settings to match your view of Bitcoin’s future.
-""")
-
-                // RANDOM SEED
-                Text("Consistent Results with Random Seed")
-                    .font(.title2)
-                    .bold()
-                Text("""
-By default, each simulation is random, producing unique results. If you want consistent outcomes to compare scenarios, turn on “Lock Random Seed.” This feature ensures that random elements—like weekly returns—stay the same across runs. It’s perfect for testing individual factors, such as “Institutional Demand On vs. Off.”
-""")
-
+                
                 // HOW IT WORKS
                 Text("How It Works")
                     .font(.title2)
                     .bold()
                 Text("""
-The simulator starts with historical BTC price data and runs week-by-week for 20 years. Each week, it applies randomised returns adjusted by the factors you’ve selected. Contributions and withdrawals are tracked as your portfolio evolves, showing how your BTC holdings might grow—or contract—over time. After completing the simulations, you’ll see a range of possible outcomes, including a median scenario.
+1. **Historical Data Foundation**  
+   We use real BTC weekly returns as a baseline, sampling them at random to preserve market realism. Over 1,040 weeks (~20 years), the simulator adjusts these returns with your chosen settings.  
+
+2. **Bullish and Bearish Factors**  
+   Each factor represents a plausible event or trend—think new institutional demand, breakthroughs in Bitcoin technology, or macroeconomic turmoil. Toggle these factors on or off, setting their strengths to see how events might stack up.
+
+3. **Monte Carlo Simulation**  
+   Rather than producing one deterministic path, HODL Simulator runs many randomised trials. In each trial, weekly BTC returns are drawn from historical data, shaped by your factor settings. This process is repeated hundreds or thousands of times, painting a full distribution of possible outcomes.
+
+4. **Portfolio Evolution**  
+   You can configure personal contributions, initial balances, and cost bases. Each simulation tracks your hypothetical BTC holdings, adjusted weekly by performance and contributions. This shows how your portfolio’s value might shift under various conditions.
+
+5. **Week-by-Week Median**  
+   After all runs complete, the app computes a *median line*—a realistic midpoint at each week. On the chart, it’s rendered in orange, so you can see how the “middle ground” compares to the many individual paths.
 """)
 
-                // EXPERIMENTATION
-                Text("Experiment and Explore")
+                // THE CHART
+                Text("Visualising the Future")
                     .font(.title2)
                     .bold()
                 Text("""
-HODL Simulator is designed to help you think about Bitcoin’s long-term potential. While no tool can predict the future, this app lets you explore different scenarios and better understand the forces that could shape Bitcoin in the years ahead. Tweak settings, test assumptions, and see how the future could unfold.
+The simulator’s chart displays each run as a faint line on a **log-scale** y-axis, capturing Bitcoin’s capacity for large moves. The orange line indicates the median BTC price at every week, offering a single “most typical” reference curve. This visualisation makes it straightforward to grasp how varied Bitcoin’s trajectory could be, spanning moderate price growth, explosive rallies, or marked downturns.
+""")
+
+                // SETTINGS & TOGGLES
+                Text("Settings & Toggles")
+                    .font(.title2)
+                    .bold()
+                Text("""
+- **Toggle All**: Flip all bullish and bearish factors on or off instantly, to create fully bear or bull scenarios.  
+- **Annual CAGR & Volatility**: Adjust the broader growth rate and price swings to align with your expectations.  
+- **Random Seed**: Lock the seed for reproducible runs, or leave it random for fresh outcomes.  
+- **Factors**: Incorporate halving bumps, scarcity events, black swans, regulatory clampdowns, and more—each factor is customisable to match your outlook.
+""")
+
+                // WHO ITS FOR
+                Text("Who Is It For?")
+                    .font(.title2)
+                    .bold()
+                Text("""
+HODL Simulator serves those keen to experiment with data-driven, long-term Bitcoin scenarios. If you’re interested in how supply shocks, market psychology, and global economic conditions might affect Bitcoin’s journey, this tool can help you test your theories in a structured, scenario-based environment.
+""")
+
+                // CLOSING
+                Text("""
+By configuring different assumptions, you can see just how dramatically Bitcoin’s outlook might change with shifts in demand, regulatory stances, or major technological developments. We hope HODL Simulator offers a nuanced perspective on Bitcoin’s evolution, helping you refine your projections and cultivate a deeper understanding of the market’s potential.
 """)
             }
             .foregroundColor(.white)

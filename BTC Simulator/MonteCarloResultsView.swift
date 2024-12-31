@@ -89,28 +89,27 @@ func formatSuffix(_ value: Double) -> String {
 
 @ChartContentBuilder
 func simulationLines(simulations: [SimulationRun]) -> some ChartContent {
-    // Mixed bright + pastel palette (including yellow/red, fewer greens/purples).
-    // Feel free to customise the hue/saturation/brightness as needed.
+    // Mixed bright + pastel palette.
     let customPalette: [Color] = [
         // Reds/oranges/yellows
-        Color(hue: 0.0,  saturation: 1.0, brightness: 0.8),  // bright red
-        Color(hue: 0.0,  saturation: 0.3, brightness: 1.0),  // pastel pink
-        Color(hue: 0.08, saturation: 1.0, brightness: 1.0),  // bright orange
-        Color(hue: 0.08, saturation: 0.3, brightness: 1.0),  // pastel orange
-        Color(hue: 0.13, saturation: 1.0, brightness: 1.0),  // bright yellow
-        Color(hue: 0.13, saturation: 0.3, brightness: 1.0),  // pastel yellow
+        Color(hue: 0.0,  saturation: 1.0, brightness: 0.8),
+        Color(hue: 0.0,  saturation: 0.3, brightness: 1.0),
+        Color(hue: 0.08, saturation: 1.0, brightness: 1.0),
+        Color(hue: 0.08, saturation: 0.3, brightness: 1.0),
+        Color(hue: 0.13, saturation: 1.0, brightness: 1.0),
+        Color(hue: 0.13, saturation: 0.3, brightness: 1.0),
         
         // Some blues/purples but not too many
-        Color(hue: 0.55, saturation: 1.0, brightness: 0.9),  // bright blue
-        Color(hue: 0.55, saturation: 0.3, brightness: 0.9),  // pastel blue
-        Color(hue: 0.7,  saturation: 0.6, brightness: 0.8),  // purple
-        Color(hue: 0.7,  saturation: 0.3, brightness: 0.9),  // pastel purple
+        Color(hue: 0.55, saturation: 1.0, brightness: 0.9),
+        Color(hue: 0.55, saturation: 0.3, brightness: 0.9),
+        Color(hue: 0.7,  saturation: 0.6, brightness: 0.8),
+        Color(hue: 0.7,  saturation: 0.3, brightness: 0.9),
         
         // Greens/cyans but muted
-        Color(hue: 0.28, saturation: 0.7, brightness: 0.8),  // mild green
-        Color(hue: 0.28, saturation: 0.3, brightness: 0.9),  // pastel green
-        Color(hue: 0.47, saturation: 0.7, brightness: 0.8),  // teal
-        Color(hue: 0.47, saturation: 0.3, brightness: 0.9),  // pastel teal
+        Color(hue: 0.28, saturation: 0.7, brightness: 0.8),
+        Color(hue: 0.28, saturation: 0.3, brightness: 0.9),
+        Color(hue: 0.47, saturation: 0.7, brightness: 0.8),
+        Color(hue: 0.47, saturation: 0.3, brightness: 0.9),
     ]
     
     ForEach(simulations.indices, id: \.self) { index in
@@ -122,7 +121,7 @@ func simulationLines(simulations: [SimulationRun]) -> some ChartContent {
                 x: .value("Week", pt.week),
                 y: .value("BTC Price (USD)", pt.value)
             )
-            .foregroundStyle(colour.opacity(0.2))
+            .foregroundStyle(colour.opacity(0.3))
             .foregroundStyle(by: .value("SeriesIndex", index))
             .lineStyle(StrokeStyle(lineWidth: 0.5,
                                    lineCap: .round,
@@ -138,7 +137,7 @@ func medianLines(_ medianLine: [WeekPoint]) -> some ChartContent {
             x: .value("Week", pt.week),
             y: .value("BTC Price (USD)", pt.value)
         )
-        // Reduced opacity on the median line’s orange
+        // Reduced opacity on median line
         .foregroundStyle(.orange.opacity(0.7))
         .lineStyle(StrokeStyle(lineWidth: 1.5))
         .interpolationMethod(.monotone)
@@ -163,7 +162,9 @@ struct MonteCarloChartView: View {
                 let yearMarkers = [260, 520, 780, 1040]
                 AxisMarks(values: yearMarkers) { axisValue in
                     AxisGridLine()
+                        .foregroundStyle(.white.opacity(0.3))   // <– Less transparent grid line
                     AxisTick()
+                        .foregroundStyle(.white.opacity(0.3))   // <– Less transparent tick
                     AxisValueLabel {
                         if let weeks = axisValue.as(Int.self) {
                             let years = weeks / 52
@@ -177,7 +178,9 @@ struct MonteCarloChartView: View {
             .chartYAxis {
                 AxisMarks(position: .leading) { axisValue in
                     AxisGridLine()
+                        .foregroundStyle(.white.opacity(0.3))  // <– Use lower opacity here
                     AxisTick()
+                        .foregroundStyle(.white.opacity(0.3))
                     AxisValueLabel {
                         if let val = axisValue.as(Double.self) {
                             Text(formatSuffix(val))

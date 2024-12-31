@@ -78,6 +78,7 @@
 		E1883F472D1E8E1C007AA90B /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
 		E1883F4F2D1FCEB9007AA90B /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		E1883F512D1FDDB0007AA90B /* BitcoinShapes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BitcoinShapes.swift; sourceTree = "<group>"; };
+		E18C2BDB2D24055C006E7438 /* Untitled.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Untitled.swift; sourceTree = "<group>"; };
 		E191AD5C2D1B06E000020DBE /* BitcoinHistoricalData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BitcoinHistoricalData.swift; sourceTree = "<group>"; };
 		E191AD5E2D1B07B800020DBE /* CSVLoaderHistorical.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVLoaderHistorical.swift; sourceTree = "<group>"; };
 		E191AD622D1B0C9100020DBE /* CSVLoaderSP500.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVLoaderSP500.swift; sourceTree = "<group>"; };
@@ -163,6 +164,7 @@
 				E1883F372D1DD4C5007AA90B /* SettingsView.swift */,
 				E1883F392D1DD94C007AA90B /* SimulationSettings.swift */,
 				E166A8AF2CF855C20003F518 /* SimulationData.swift */,
+				E18C2BDB2D24055C006E7438 /* Untitled.swift */,
 				E1883F412D1E43D7007AA90B /* VisualEffectBlur.swift */,
 				E1C543B92D22839F005E416D /* YearlyPercentileData.swift */,
 				E191AD6E2D1B8B1A00020DBE /* Bitcoin Historical Data.csv */,
