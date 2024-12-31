@@ -327,6 +327,7 @@ struct SettingsView: View {
                     onTitleTap: toggleFactor
                 )
 
+                // Competitor Coin
                 FactorToggleRow(
                     iconName: "bitcoinsign.circle",
                     title: "Competitor Coin",
