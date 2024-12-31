@@ -274,74 +274,14 @@ struct ContentView: View {
     @State private var hideScrollIndicators = true
     @State private var lastScrollTime = Date()
     
-    // Updated tips array
     @State private var loadingTips: [String] = [
         "Gathering historical data from CSV files...",
         "Spinning up random seeds...",
         "Projecting future halving cycles...",
         "Scrutinising all bullish and bearish factors...",
         "Checking correlation with SP500...",
-        "Crunching thousands of Monte Carlo draws...",
-        "Spotting potential bubble pops...",
-        "Tracking demographic adoption trends...",
-        "Stirring volatility data...",
-        "Estimating random risk parameters...",
-        "Parsing user inputs for CAGR & volatility...",
-        "Calibrating institutional demand factor...",
-        "Waiting for whales to move off exchanges...",
-        "Probing competitor coin dominance...",
-        "Balancing stablecoin meltdown scenarios...",
-        "Analysing correlation with macro markets...",
-        "Synthesising historical BTC returns...",
-        "Focusing on supply shock events...",
-        "Examining next-generation adoption curves...",
-        "Running a quick fear-and-greed check...",
-        "Scanning for black swan catalysts...",
-        "Aligning user settings for final run...",
-        "Inflating or deflating the bubble?",
-        "Combining multi-year data into forecasts...",
-        "Hooking in country adoption boosts...",
-        "Filtering out short-term noise...",
-        "Compiling scenario stress tests...",
-        "Fine-tuning scale for weekly returns...",
-        "Cross-referencing stablecoin shifts...",
-        "Probing raw data for hidden signals...",
-        "Summoning lightning speed calculations...",
-        "Twisting code knobs for final results...",
-        
-        // Additional usage tips
-        "Tip: Drag the 3D spinner to change its speed.",
-        "Tip: Double-tap the spinner to flip its rotation angle.",
-        "Tip: Scroll horizontally in the table to see extra columns.",
-        "Tip: Lock the random seed in Settings for repeatable results.",
-        "Tip: Check ‘About’ for more details on simulation methodology.",
-        "Tip: Toggle bull/bear factors in Settings to reflect your outlook.",
-        "Tip: Increase annual CAGR to simulate a more bullish scenario.",
-        "Tip: Lower annual volatility to reduce big swings in outcomes.",
-        "Tip: Swipe left or right on the results table to reveal hidden columns.",
-        "Tip: If the random seed is unlocked, you’ll get a fresh run each time.",
-        "Tip: Slow the spinner by dragging it in the opposite direction.",
-        "Tip: Simulate Tether depegs with the ‘Stablecoin Meltdown’ factor.",
-        "Tip: Press the back arrow anytime to modify parameters mid-sim.",
-        "Tip: Tap factor titles in Settings for a quick explanation bubble.",
-        "Tip: ‘Maturing Market’ can limit growth in later stages of adoption.",
-        "Tip: ‘Bubble Pop’ adds a risk of rapid correction after a big rally.",
-        "Tip: Snap screenshots of results to share or compare runs later.",
-        "Tip: ‘Halving’ typically occurs every four years or so.",
-        "Tip: El Salvador style? Enable ‘Country Adoption’ for big demand bumps.",
-        "Tip: ‘Global Macro Hedge’ imagines BTC as ‘digital gold’ in crises.",
-        "Tip: Return to Parameters to tweak your inputs before the next run.",
-        "Tip: Explore the ‘About’ screen to learn how each factor is simulated.",
-        "Tip: Try fewer or more iterations to see stable vs. scattered results.",
-        "Tip: Turn on ‘Scarcity Events’ to replicate supply shocks and FOMO.",
-        "Tip: You can do multiple runs without losing previous results—experiment!",
-        "Tip: Flip your device orientation for a wider table view.",
-        "Tip: Check ‘Security Breach’ factor for catastrophic hack scenarios.",
-        "Tip: ‘Bear Market’ factor simulates persistent negative sentiment.",
-        "Tip: The spinner is purely for fun—drag, poke or fling at will!",
-        "Tip: Keep track of your real-world BTC holdings separately—this is a sim.",
-        "Tip: Combine bullish and bearish toggles to mirror your market view.",
-        "Tip: Remember, all factors can be toggled off for a simpler baseline."
+        // etc...
+        "Tip: ‘Halving’ typically occurs every four years or so."
     ]
     
     let columns: [(String, PartialKeyPath<SimulationData>)] = [
@@ -375,8 +315,6 @@ struct ContentView: View {
     @State private var allSimData: [[SimulationData]] = []
     
     // MARK: - Convert single run to [WeekPoint]
-    /// In your existing MonteCarloResultsView.swift, you presumably define `WeekPoint` & `SimulationRun`.
-    /// We just transform `[SimulationData]` to `[WeekPoint]` for a single run (if needed).
     func convertOriginalToWeekPoints() -> [WeekPoint] {
         medianSimData.map { row in
             WeekPoint(week: row.week, value: row.portfolioValueEUR)
@@ -384,18 +322,71 @@ struct ContentView: View {
     }
 
     // MARK: - Convert all runs to [SimulationRun]
-    /// We transform the entire `[[SimulationData]]` to `[SimulationRun]`,
-    /// so MonteCarloResultsView can display multiple lines.
     func convertAllSimsToWeekPoints() -> [SimulationRun] {
         allSimData.map { singleRun -> SimulationRun in
             let wpoints = singleRun.map { row in
-                // e.g. you can chart row.btcPriceUSD or row.portfolioValueEUR
+                // e.g. chart row.btcPriceUSD or portfolioValueEUR
                 WeekPoint(week: row.week, value: row.btcPriceUSD)
             }
             return SimulationRun(points: wpoints)
         }
     }
-
+    
+    // -------------------------------------------------------------------------
+    // MARK: - NEW: Compute the median of each property for each week
+    // -------------------------------------------------------------------------
+    private func computeMedianSimulationData(allIterations: [[SimulationData]]) -> [SimulationData] {
+        guard let firstRun = allIterations.first else { return [] }
+        let totalWeeks = firstRun.count
+        
+        var medianResult: [SimulationData] = []
+        
+        for w in 0..<totalWeeks {
+            let allAtWeek = allIterations.compactMap { run -> SimulationData? in
+                guard w < run.count else { return nil }
+                return run[w]
+            }
+            if allAtWeek.isEmpty { continue }
+            
+            let sortedStartingBTC = allAtWeek.map { $0.startingBTC }.sorted()
+            let sortedNetBTCHoldings = allAtWeek.map { $0.netBTCHoldings }.sorted()
+            let sortedBtcPriceUSD = allAtWeek.map { $0.btcPriceUSD }.sorted()
+            let sortedBtcPriceEUR = allAtWeek.map { $0.btcPriceEUR }.sorted()
+            let sortedPortfolioValueEUR = allAtWeek.map { $0.portfolioValueEUR }.sorted()
+            let sortedContributionEUR = allAtWeek.map { $0.contributionEUR }.sorted()
+            let sortedFeeEUR = allAtWeek.map { $0.transactionFeeEUR }.sorted()
+            let sortedNetContribBTC = allAtWeek.map { $0.netContributionBTC }.sorted()
+            let sortedWithdrawalEUR = allAtWeek.map { $0.withdrawalEUR }.sorted()
+            
+            func medianOfSorted(_ arr: [Double]) -> Double {
+                if arr.isEmpty { return 0.0 }
+                let mid = arr.count / 2
+                if arr.count.isMultiple(of: 2) {
+                    return (arr[mid] + arr[mid - 1]) / 2.0
+                } else {
+                    return arr[mid]
+                }
+            }
+            
+            let medianSimData = SimulationData(
+                week: allAtWeek[0].week,
+                startingBTC: medianOfSorted(sortedStartingBTC),
+                netBTCHoldings: medianOfSorted(sortedNetBTCHoldings),
+                btcPriceUSD: medianOfSorted(sortedBtcPriceUSD),
+                btcPriceEUR: medianOfSorted(sortedBtcPriceEUR),
+                portfolioValueEUR: medianOfSorted(sortedPortfolioValueEUR),
+                contributionEUR: medianOfSorted(sortedContributionEUR),
+                transactionFeeEUR: medianOfSorted(sortedFeeEUR),
+                netContributionBTC: medianOfSorted(sortedNetContribBTC),
+                withdrawalEUR: medianOfSorted(sortedWithdrawalEUR)
+            )
+            
+            medianResult.append(medianSimData)
+        }
+        return medianResult
+    }
+    // -------------------------------------------------------------------------
+    
     // MARK: - BODY
     var body: some View {
         NavigationStack {
@@ -411,7 +402,6 @@ struct ContentView: View {
                     .ignoresSafeArea()
                 }
                 
-                // Transparent overlay for dismissing keyboard if tapped
                 Color.clear
                     .contentShape(Rectangle())
                     .highPriorityGesture(
@@ -421,7 +411,6 @@ struct ContentView: View {
                             }
                     )
                 
-                // Show either parameter setup or simulation results
                 if !isSimulationRun {
                     parametersScreen
                     if !isLoading && activeField == nil {
@@ -431,12 +420,10 @@ struct ContentView: View {
                     simulationResultsView
                 }
                 
-                // Jump arrow if results exist
                 if !isSimulationRun && !monteCarloResults.isEmpty {
                     transitionToResultsButton
                 }
                 
-                // Loading overlay
                 if isLoading {
                     loadingOverlay
                 }
@@ -449,8 +436,6 @@ struct ContentView: View {
                 AboutView()
             }
             .navigationDestination(isPresented: $showHistograms) {
-                // Here’s where we show the existing MonteCarloResultsView
-                // using the data we saved (allSimData).
                 MonteCarloResultsView(
                     simulations: convertAllSimsToWeekPoints()
                 )
@@ -582,7 +567,6 @@ struct ContentView: View {
     private var simulationResultsView: some View {
         ScrollViewReader { scrollProxy in
             ZStack {
-                // Same grey background
                 Color(white: 0.12)
                     .edgesIgnoringSafeArea(.top)
                 
@@ -590,7 +574,6 @@ struct ContentView: View {
                     
                     // Navigation bar area
                     HStack {
-                        // Back button
                         Button(action: {
                             UserDefaults.standard.set(lastViewedWeek, forKey: "lastViewedWeek")
                             UserDefaults.standard.set(currentPage, forKey: "lastViewedPage")
@@ -604,12 +587,11 @@ struct ContentView: View {
                         
                         Spacer()
                         
-                        // Percentile menu (icon only)
                         Menu {
                             // 10th Percentile
                             Button {
                                 selectedPercentile = .tenth
-                                self.monteCarloResults = self.tenthPercentileResults
+                                monteCarloResults = tenthPercentileResults
                             } label: {
                                 if selectedPercentile == .tenth {
                                     Label("10th Percentile", systemImage: "checkmark")
@@ -622,7 +604,7 @@ struct ContentView: View {
                             // Median
                             Button {
                                 selectedPercentile = .median
-                                self.monteCarloResults = self.medianResults
+                                monteCarloResults = medianResults
                             } label: {
                                 if selectedPercentile == .median {
                                     Label("Median", systemImage: "checkmark")
@@ -635,7 +617,7 @@ struct ContentView: View {
                             // 90th Percentile
                             Button {
                                 selectedPercentile = .ninetieth
-                                self.monteCarloResults = self.ninetiethPercentileResults
+                                monteCarloResults = ninetiethPercentileResults
                             } label: {
                                 if selectedPercentile == .ninetieth {
                                     Label("90th Percentile", systemImage: "checkmark")
@@ -645,9 +627,8 @@ struct ContentView: View {
                                 }
                             }
                             
-                            // "View Graphics" => line chart with multi-run lines
+                            // "View Graphics"
                             Button {
-                                // This line triggers the chart navigation
                                 showHistograms = true
                             } label: {
                                 Text("View Graphics")
@@ -663,7 +644,6 @@ struct ContentView: View {
                     .padding(.vertical, 10)
                     .background(Color(white: 0.12))
                     
-                    // Title row (black)
                     HStack(spacing: 0) {
                         Text("Week")
                             .frame(width: 60, alignment: .leading)
@@ -682,7 +662,6 @@ struct ContentView: View {
                                 .foregroundColor(.orange)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             
-                            // Tap zones for changing columns
                             GeometryReader { geometry in
                                 HStack(spacing: 0) {
                                     Color.clear
@@ -719,7 +698,6 @@ struct ContentView: View {
                     }
                     .background(Color.black)
                     
-                    // Data table
                     ScrollView(.vertical, showsIndicators: !hideScrollIndicators) {
                         HStack(spacing: 0) {
                             // Left column (Week #)
@@ -765,7 +743,6 @@ struct ContentView: View {
                                             }
                                         }
                                         
-                                        // Tap zones for nav left/right
                                         GeometryReader { geometry in
                                             HStack(spacing: 0) {
                                                 Color.clear
@@ -825,8 +802,8 @@ struct ContentView: View {
                             GeometryReader { geometry -> Color in
                                 DispatchQueue.main.async {
                                     let atBottom = geometry.frame(in: .global).maxY <= UIScreen.main.bounds.height
-                                    if atBottom != self.isAtBottom {
-                                        self.isAtBottom = atBottom
+                                    if atBottom != isAtBottom {
+                                        isAtBottom = atBottom
                                     }
                                 }
                                 return Color(white: 0.12)
@@ -859,7 +836,6 @@ struct ContentView: View {
                     UserDefaults.standard.set(currentPage, forKey: "lastViewedPage")
                 }
                 
-                // Scroll-to-bottom button
                 if !isAtBottom {
                     VStack {
                         Spacer()
@@ -952,7 +928,6 @@ struct ContentView: View {
                         .foregroundColor(.white)
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: 300)
-                        .lineLimit(nil)
                         .fixedSize(horizontal: false, vertical: true)
                         .transition(.opacity)
                         .padding(.bottom, 30)
@@ -976,7 +951,6 @@ struct ContentView: View {
         monteCarloResults = []
         completedIterations = 0
         
-        // Decide which seed to use
         let finalSeed: UInt64?
         if simSettings.lockedRandomSeed {
             finalSeed = simSettings.seedValue
@@ -1025,7 +999,6 @@ struct ContentView: View {
                 seed: finalSeed
             )
             
-            // (Optional) Local formatter
             func formatNumber(_ value: Double) -> String {
                 let formatter = NumberFormatter()
                 formatter.numberStyle = .decimal
@@ -1036,11 +1009,7 @@ struct ContentView: View {
             }
             
             let medianFinalPrice = medianRun.last?.btcPriceUSD ?? -999
-            print("[DEBUG] Median run final price = \(formatNumber(medianFinalPrice))")
-            
-            // Prepare to compute full percentile runs
-            let finalRuns = allIterations.map { ($0.last?.btcPriceUSD ?? 0.0, $0) }
-            var sortedRuns = finalRuns.sorted { $0.0 < $1.0 }
+            print("[DEBUG] Single-run median final price = \(formatNumber(medianFinalPrice))")
             
             let finalPrices = allIterations.compactMap { $0.last?.btcPriceUSD }
             let sortedPrices = finalPrices.sorted()
@@ -1053,11 +1022,8 @@ struct ContentView: View {
                 
                 print("[DEBUG] 10th percentile final price = \(formatNumber(tenthValue))")
                 print("[DEBUG] 90th percentile final price = \(formatNumber(ninetiethValue))")
-            } else {
-                print("[DEBUG] Not enough runs to compute percentiles.")
             }
             
-            // If user cancelled, bail out
             if self.isCancelled {
                 DispatchQueue.main.async {
                     self.isLoading = false
@@ -1065,44 +1031,45 @@ struct ContentView: View {
                 return
             }
             
-            // Sort runs by final BTC price and pick 10th / median / 90th runs
+            let finalRuns = allIterations.map { ($0.last?.btcPriceUSD ?? 0.0, $0) }
+            let sortedRuns = finalRuns.sorted { $0.0 < $1.0 }
+            
             if !sortedRuns.isEmpty {
-                let tenthIndex     = max(0, Int(Double(sortedRuns.count - 1) * 0.10))
-                let medianIndex    = sortedRuns.count / 2
+                let tenthIndex = max(0, Int(Double(sortedRuns.count - 1) * 0.10))
+                let medianIndex = sortedRuns.count / 2
                 let ninetiethIndex = min(sortedRuns.count - 1, Int(Double(sortedRuns.count - 1) * 0.90))
                 
-                let tenthRun       = sortedRuns[tenthIndex].1
-                let medianRun      = sortedRuns[medianIndex].1
-                let ninetiethRun   = sortedRuns[ninetiethIndex].1
+                let tenthRun = sortedRuns[tenthIndex].1
+                let singleMedianRun = sortedRuns[medianIndex].1
+                let ninetiethRun = sortedRuns[ninetiethIndex].1
+                
+                // -------------------------------------------------------------
+                // Now compute the *week‐by‐week* median across *all* runs:
+                let medianLineData = computeMedianSimulationData(allIterations: allIterations)
+                // -------------------------------------------------------------
                 
                 DispatchQueue.main.async {
-                    // Store each percentile in separate arrays
-                    self.tenthPercentileResults     = tenthRun
-                    self.medianResults              = medianRun
+                    self.tenthPercentileResults = tenthRun
+                    self.medianResults = singleMedianRun
                     self.ninetiethPercentileResults = ninetiethRun
                     
-                    // Default: show median
-                    self.monteCarloResults   = medianRun
-                    self.selectedPercentile  = .median
+                    // The table now shows the week-by-week median (orange line):
+                    self.monteCarloResults = medianLineData
+                    self.selectedPercentile = .median
+                    self.medianResults = medianLineData
                     
-                    // Update UI
-                    self.isSimulationRun     = true
-                    self.isLoading           = false
+                    self.isSimulationRun = true
+                    self.isLoading = false
                     
-                    // -------------------------------------
-                    // Store data for charts:
-                    self.medianSimData = medianRun
-                    self.allSimData    = allIterations
-                    // -------------------------------------
+                    self.medianSimData = medianLineData
+                    self.allSimData = allIterations
                 }
             } else {
-                // Fallback if no runs
                 DispatchQueue.main.async {
                     self.isLoading = false
                 }
             }
             
-            // (Optional) post-processing
             DispatchQueue.global(qos: .background).async {
                 self.processAllResults(allIterations)
             }

@@ -204,7 +204,6 @@ struct MonteCarloResultsView: View {
     
     init(simulations: [SimulationRun]) {
         self.simulations = simulations
-        print("[DEBUG] simulations.count = \(simulations.count)")
     }
     
     var body: some View {
