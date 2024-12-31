@@ -50,24 +50,37 @@ func computeMedianLine(simulations: [SimulationRun]) -> [WeekPoint] {
 func formatSuffix(_ value: Double) -> String {
     let absVal = abs(value)
     let sign = value < 0 ? "-" : ""
-    
+
     switch absVal {
+    case 1_000_000_000_000_000_000_000_000_000...:
+        // 10^27 => 1 Octillion => "Oc"
+        return "\(sign)\(Int(absVal / 1_000_000_000_000_000_000_000_000_000))Oc"
+    case 1_000_000_000_000_000_000_000_000...:
+        // 10^24 => 1 Septillion => "Sp"
+        return "\(sign)\(Int(absVal / 1_000_000_000_000_000_000_000_000))Sp"
+    case 1_000_000_000_000_000_000_000...:
+        // 10^21 => 1 Sextillion => "Sx"
+        return "\(sign)\(Int(absVal / 1_000_000_000_000_000_000_000))Sx"
+    case 1_000_000_000_000_000_000...:
+        // 10^18 => 1 Quintillion => "Qt"
+        return "\(sign)\(Int(absVal / 1_000_000_000_000_000_000))Qt"
     case 1_000_000_000_000_000...:
-        // 1,000,000,000,000,000 == 1 Quadrillion (Q)
+        // 10^15 => 1 Quadrillion => "Q"
         return "\(sign)\(Int(absVal / 1_000_000_000_000_000))Q"
     case 1_000_000_000_000...:
-        // 1,000,000,000,000 == 1 Trillion (T)
+        // 10^12 => 1 Trillion => "T"
         return "\(sign)\(Int(absVal / 1_000_000_000_000))T"
     case 1_000_000_000...:
-        // 1,000,000,000 == 1 Billion (B)
+        // 10^9 => 1 Billion => "B"
         return "\(sign)\(Int(absVal / 1_000_000_000))B"
     case 1_000_000...:
-        // 1,000,000 == 1 Million (M)
+        // 10^6 => 1 Million => "M"
         return "\(sign)\(Int(absVal / 1_000_000))M"
     case 1_000...:
-        // 1,000 == 1 Thousand (k)
+        // 10^3 => 1 Thousand => "k"
         return "\(sign)\(Int(absVal / 1_000))k"
     default:
+        // No suffix => integer as-is
         return "\(sign)\(Int(absVal))"
     }
 }
