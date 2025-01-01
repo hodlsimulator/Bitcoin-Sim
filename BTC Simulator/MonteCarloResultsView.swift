@@ -213,31 +213,22 @@ struct MonteCarloResultsView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Make the entire underlying page black
+                // Black background behind everything
                 Color.black
                     .ignoresSafeArea()
                 
+                // If we already have a cached snapshot, just show it
                 if let snapshotImage = chartDataCache.chartSnapshot {
-                    Group {
-                        Image(uiImage: snapshotImage)
-                            .resizable()
-                            .scaledToFill()
-                            // Pin top, clip any spillover, but add space at bottom
-                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                            .clipped()
-                            .padding(.bottom, 90) // Adjust as needed
-                            .ignoresSafeArea(edges: .top)
-                            .transition(.move(edge: .bottom))
-                    }
-                    .animation(.easeInOut(duration: 0.5), value: chartDataCache.chartSnapshot)
+                    SnapshotView(snapshot: snapshotImage)
                 } else {
-                    // Fallback: show the live SwiftUI Chart
+                    // Otherwise, show the live SwiftUI Chart
                     VStack(spacing: 0) {
                         MonteCarloChartView(viewModel: viewModel)
                     }
                     .background(Color.black.ignoresSafeArea())
                 }
                 
+                // Loading overlay if needed
                 if viewModel.isLoading {
                     Color.black.opacity(0.6).ignoresSafeArea()
                     ProgressView("Loading…")
@@ -249,6 +240,7 @@ struct MonteCarloResultsView: View {
             .navigationBarTitleDisplayMode(.inline)
         }
         .onAppear {
+            // Observe orientation changes; show a spinner if no snapshot is available
             NotificationCenter.default.addObserver(
                 forName: UIDevice.orientationDidChangeNotification,
                 object: nil,
@@ -262,5 +254,24 @@ struct MonteCarloResultsView: View {
                 }
             }
         }
+    }
+}
+
+// A simple view that only displays the cached snapshot.
+// That way, we skip building the fallback chart if the snapshot is present.
+struct SnapshotView: View {
+    let snapshot: UIImage
+    
+    var body: some View {
+        Image(uiImage: snapshot)
+            .resizable()
+            .scaledToFill()
+            // Pin top, clip any overflow, add space at the bottom
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .clipped()
+            .padding(.bottom, 90) // Adjust to taste
+            .ignoresSafeArea(edges: .top)
+            .transition(.move(edge: .bottom))
+            .animation(.easeInOut(duration: 0.5), value: snapshot)
     }
 }

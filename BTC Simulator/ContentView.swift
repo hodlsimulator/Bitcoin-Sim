@@ -633,18 +633,14 @@ struct ContentView: View {
                     
                     // --- CREATE SNAPSHOT IMMEDIATELY AFTER SIMULATION ---
                     // Build the chart off-screen and snapshot it so it's ready.
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                        print("// DEBUG: Generating chart snapshot right after simulation.")
-                        
-                        // Provide environment objects so MonteCarloResultsView
-                        // can see chartDataCache, simSettings, etc.
+                    DispatchQueue.main.async {
+                        // Generate snapshot immediately
                         let chartView = MonteCarloResultsView(simulations: allSimsAsWeekPoints)
                             .environmentObject(self.chartDataCache)
                             .environmentObject(self.simSettings)
                         
                         let snapshot = chartView.snapshot()
                         self.chartDataCache.chartSnapshot = snapshot
-                        print("// DEBUG: Chart snapshot done, Conor.")
                     }
                 }
             } else {
