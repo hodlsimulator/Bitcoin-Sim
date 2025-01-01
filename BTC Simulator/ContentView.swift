@@ -253,6 +253,10 @@ fileprivate enum ChartLoadingState {
 // MARK: - ContentView
 struct ContentView: View {
     
+    // Use your own SimulationData, SimulationSettings, runMonteCarloSimulationsWithProgress, etc.
+    
+    // We'll assume you have them defined elsewhere and imported
+    
     // State variables
     @State private var monteCarloResults: [SimulationData] = []
     @State private var isLoading: Bool = false
@@ -285,7 +289,6 @@ struct ContentView: View {
         "Projecting future halving cycles...",
         "Scrutinising all bullish and bearish factors...",
         "Checking correlation with SP500...",
-        // etc...
         "Tip: ‘Halving’ typically occurs every four years or so."
     ]
     
@@ -301,7 +304,9 @@ struct ContentView: View {
         ("Withdrawal EUR", \SimulationData.withdrawalEUR)
     ]
     
+    // Provide your real SimulationSettings from another file
     @EnvironmentObject var simSettings: SimulationSettings
+    
     @State private var showSettings = false
     @State private var showAbout = false
     @State private var showHistograms = false
@@ -320,75 +325,9 @@ struct ContentView: View {
     // Track chart loading state for the normal spinner
     @State private var chartLoadingState: ChartLoadingState = .none
     
-    // MARK: - Convert single run to [WeekPoint]
-    func convertOriginalToWeekPoints() -> [WeekPoint] {
-        medianSimData.map { row in
-            WeekPoint(week: row.week, value: row.portfolioValueEUR)
-        }
-    }
-
-    // MARK: - Convert all runs to [SimulationRun]
-    func convertAllSimsToWeekPoints() -> [SimulationRun] {
-        allSimData.map { singleRun -> SimulationRun in
-            let wpoints = singleRun.map { row in
-                // e.g. chart row.btcPriceUSD or row.portfolioValueEUR
-                WeekPoint(week: row.week, value: row.btcPriceUSD)
-            }
-            return SimulationRun(points: wpoints)
-        }
-    }
-    
-    // Keep your existing median logic intact
-    private func computeMedianSimulationData(allIterations: [[SimulationData]]) -> [SimulationData] {
-        guard let firstRun = allIterations.first else { return [] }
-        let totalWeeks = firstRun.count
-        
-        var medianResult: [SimulationData] = []
-        
-        for w in 0..<totalWeeks {
-            let allAtWeek = allIterations.compactMap { run -> SimulationData? in
-                guard w < run.count else { return nil }
-                return run[w]
-            }
-            if allAtWeek.isEmpty { continue }
-            
-            let sortedStartingBTC = allAtWeek.map { $0.startingBTC }.sorted()
-            let sortedNetBTCHoldings = allAtWeek.map { $0.netBTCHoldings }.sorted()
-            let sortedBtcPriceUSD = allAtWeek.map { $0.btcPriceUSD }.sorted()
-            let sortedBtcPriceEUR = allAtWeek.map { $0.btcPriceEUR }.sorted()
-            let sortedPortfolioValueEUR = allAtWeek.map { $0.portfolioValueEUR }.sorted()
-            let sortedContributionEUR = allAtWeek.map { $0.contributionEUR }.sorted()
-            let sortedFeeEUR = allAtWeek.map { $0.transactionFeeEUR }.sorted()
-            let sortedNetContribBTC = allAtWeek.map { $0.netContributionBTC }.sorted()
-            let sortedWithdrawalEUR = allAtWeek.map { $0.withdrawalEUR }.sorted()
-            
-            func medianOfSorted(_ arr: [Double]) -> Double {
-                if arr.isEmpty { return 0.0 }
-                let mid = arr.count / 2
-                if arr.count.isMultiple(of: 2) {
-                    return (arr[mid] + arr[mid - 1]) / 2.0
-                } else {
-                    return arr[mid]
-                }
-            }
-            
-            let medianSimData = SimulationData(
-                week: allAtWeek[0].week,
-                startingBTC: medianOfSorted(sortedStartingBTC),
-                netBTCHoldings: medianOfSorted(sortedNetBTCHoldings),
-                btcPriceUSD: medianOfSorted(sortedBtcPriceUSD),
-                btcPriceEUR: medianOfSorted(sortedBtcPriceEUR),
-                portfolioValueEUR: medianOfSorted(sortedPortfolioValueEUR),
-                contributionEUR: medianOfSorted(sortedContributionEUR),
-                transactionFeeEUR: medianOfSorted(sortedFeeEUR),
-                netContributionBTC: medianOfSorted(sortedNetContribBTC),
-                withdrawalEUR: medianOfSorted(sortedWithdrawalEUR)
-            )
-            
-            medianResult.append(medianSimData)
-        }
-        return medianResult
-    }
+    // Instead of storing chart data in local state, we can store it in an EnvironmentObject
+    // But here's a simpler approach: just store the built chart in local state, to avoid re-building
+    @State private var storedChartView: MonteCarloResultsView? = nil
     
     // MARK: - BODY
     var body: some View {
@@ -405,7 +344,6 @@ struct ContentView: View {
                     .ignoresSafeArea()
                 }
                 
-                // Dismiss keyboard if tapped outside
                 Color.clear
                     .contentShape(Rectangle())
                     .highPriorityGesture(
@@ -417,7 +355,6 @@ struct ContentView: View {
                 
                 if !isSimulationRun {
                     parametersScreen
-                    // Show bottom icons if not loading & no focus
                     if !isLoading && activeField == nil {
                         bottomIcons
                     }
@@ -425,17 +362,14 @@ struct ContentView: View {
                     simulationResultsView
                 }
                 
-                // Jump to results if we already have them
                 if !isSimulationRun && !monteCarloResults.isEmpty {
                     transitionToResultsButton
                 }
                 
-                // Main simulation loading overlay
                 if isLoading {
                     loadingOverlay
                 }
                 
-                // Chart loading overlay (normal spinner) if chartLoadingState == .loading
                 if chartLoadingState == .loading {
                     chartLoadingOverlay
                 }
@@ -448,9 +382,13 @@ struct ContentView: View {
                 AboutView()
             }
             .navigationDestination(isPresented: $showHistograms) {
-                MonteCarloResultsView(
-                    simulations: convertAllSimsToWeekPoints()
-                )
+                // Show the stored chart if we have it
+                if let existingChartView = storedChartView {
+                    existingChartView
+                } else {
+                    Text("Loading chart...")
+                        .foregroundColor(.white)
+                }
             }
             .onAppear {
                 let savedWeek = UserDefaults.standard.integer(forKey: "lastViewedWeek")
@@ -464,6 +402,272 @@ struct ContentView: View {
                 } else if let usdIndex = columns.firstIndex(where: { $0.0 == "BTC Price USD" }) {
                     currentPage = usdIndex
                     lastViewedPage = usdIndex
+                }
+            }
+        }
+    }
+    
+    // MARK: - The simulation screen
+    private var simulationResultsView: some View {
+        ScrollViewReader { scrollProxy in
+            ZStack {
+                Color(white: 0.12)
+                    .edgesIgnoringSafeArea(.top)
+                
+                VStack(spacing: 0) {
+                    
+                    // Navigation bar
+                    HStack {
+                        Button(action: {
+                            UserDefaults.standard.set(lastViewedWeek, forKey: "lastViewedWeek")
+                            UserDefaults.standard.set(currentPage, forKey: "lastViewedPage")
+                            lastViewedPage = currentPage
+                            isSimulationRun = false
+                        }) {
+                            Image(systemName: "chevron.left")
+                                .foregroundColor(.white)
+                                .imageScale(.large)
+                        }
+                        
+                        Spacer()
+                        
+                        // Chart icon: show chart immediately if we have it
+                        Button(action: {
+                            if let _ = storedChartView {
+                                // Already built => show instantly
+                                chartLoadingState = .none
+                                showHistograms = true
+                            } else {
+                                // Build it after a 2s spinner
+                                chartLoadingState = .loading
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                                    if chartLoadingState == .loading {
+                                        let allSimulations = convertAllSimsToWeekPoints()
+                                        storedChartView = MonteCarloResultsView(simulations: allSimulations)
+                                        chartLoadingState = .none
+                                        showHistograms = true
+                                    }
+                                }
+                            }
+                        }) {
+                            Image(systemName: "chart.line.uptrend.xyaxis")
+                                .foregroundColor(.white)
+                                .imageScale(.large)
+                        }
+                    }
+                    .padding(.horizontal, 55)
+                    .padding(.vertical, 10)
+                    .background(Color(white: 0.12))
+                    
+                    // Column titles
+                    HStack(spacing: 0) {
+                        Text("Week")
+                            .frame(width: 60, alignment: .leading)
+                            .font(.headline)
+                            .padding(.leading, 50)
+                            .padding(.vertical, 8)
+                            .background(Color.black)
+                            .foregroundColor(.orange)
+                        
+                        ZStack {
+                            Text(columns[currentPage].0)
+                                .font(.headline)
+                                .padding(.leading, 100)
+                                .padding(.vertical, 8)
+                                .background(Color.black)
+                                .foregroundColor(.orange)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            
+                            GeometryReader { geometry in
+                                HStack(spacing: 0) {
+                                    // Tap left
+                                    Color.clear
+                                        .frame(width: geometry.size.width * 0.2)
+                                        .contentShape(Rectangle())
+                                        .gesture(
+                                            TapGesture()
+                                                .onEnded {
+                                                    if currentPage > 0 {
+                                                        withAnimation {
+                                                            currentPage -= 1
+                                                        }
+                                                    }
+                                                }
+                                        )
+                                    Spacer()
+                                    // Tap right
+                                    Color.clear
+                                        .frame(width: geometry.size.width * 0.2)
+                                        .contentShape(Rectangle())
+                                        .gesture(
+                                            TapGesture()
+                                                .onEnded {
+                                                    if currentPage < columns.count - 1 {
+                                                        withAnimation {
+                                                            currentPage += 1
+                                                        }
+                                                    }
+                                                }
+                                        )
+                                }
+                            }
+                        }
+                        .frame(height: 50)
+                    }
+                    .background(Color.black)
+                    
+                    // Main table
+                    ScrollView(.vertical, showsIndicators: !hideScrollIndicators) {
+                        HStack(spacing: 0) {
+                            VStack(spacing: 0) {
+                                ForEach(monteCarloResults.indices, id: \.self) { index in
+                                    let result = monteCarloResults[index]
+                                    let rowBackground = index.isMultiple(of: 2)
+                                        ? Color(white: 0.10)
+                                        : Color(white: 0.14)
+                                    
+                                    Text("\(result.week)")
+                                        .frame(width: 70, alignment: .leading)
+                                        .padding(.leading, 50)
+                                        .padding(.vertical, 12)
+                                        .padding(.horizontal, 8)
+                                        .background(rowBackground)
+                                        .foregroundColor(.white)
+                                        .id("week-\(result.week)")
+                                        .background(RowOffsetReporter(week: result.week))
+                                }
+                            }
+                            
+                            TabView(selection: $currentPage) {
+                                ForEach(0..<columns.count, id: \.self) { index in
+                                    ZStack {
+                                        VStack(spacing: 0) {
+                                            ForEach(monteCarloResults.indices, id: \.self) { rowIndex in
+                                                let rowResult = monteCarloResults[rowIndex]
+                                                let rowBackground = rowIndex.isMultiple(of: 2)
+                                                    ? Color(white: 0.10)
+                                                    : Color(white: 0.14)
+                                                
+                                                Text(getValue(rowResult, columns[index].1))
+                                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                                    .padding(.leading, 80)
+                                                    .padding(.vertical, 12)
+                                                    .padding(.horizontal, 8)
+                                                    .background(rowBackground)
+                                                    .foregroundColor(.white)
+                                                    .id("data-week-\(rowResult.week)")
+                                                    .background(RowOffsetReporter(week: rowResult.week))
+                                            }
+                                        }
+                                        GeometryReader { geometry in
+                                            HStack(spacing: 0) {
+                                                Color.clear
+                                                    .frame(width: geometry.size.width * 0.2)
+                                                    .contentShape(Rectangle())
+                                                    .gesture(
+                                                        TapGesture()
+                                                            .onEnded {
+                                                                if currentPage > 0 {
+                                                                    withAnimation {
+                                                                        currentPage -= 1
+                                                                    }
+                                                                }
+                                                            }
+                                                    )
+                                                Spacer()
+                                                Color.clear
+                                                    .frame(width: geometry.size.width * 0.2)
+                                                    .contentShape(Rectangle())
+                                                    .gesture(
+                                                        TapGesture()
+                                                            .onEnded {
+                                                                if currentPage < columns.count - 1 {
+                                                                    withAnimation {
+                                                                        currentPage += 1
+                                                                    }
+                                                                }
+                                                            }
+                                                    )
+                                            }
+                                        }
+                                    }
+                                    .tag(index)
+                                }
+                            }
+                            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+                            .frame(width: UIScreen.main.bounds.width - 60)
+                        }
+                        .coordinateSpace(name: "scrollArea")
+                        .onPreferenceChange(RowOffsetPreferenceKey.self) { offsets in
+                            let targetY: CGFloat = 160
+                            let filtered = offsets.filter { (week, _) in week != 1040 }
+                            let mapped = filtered.mapValues { abs($0 - targetY) }
+                            if let (closestWeek, _) = mapped.min(by: { $0.value < $1.value }) {
+                                lastViewedWeek = closestWeek
+                            }
+                        }
+                        .onChange(of: scrollToBottom) { value in
+                            if value, let lastResult = monteCarloResults.last {
+                                withAnimation {
+                                    scrollProxy.scrollTo("week-\(lastResult.week)", anchor: .bottom)
+                                }
+                                scrollToBottom = false
+                            }
+                        }
+                        .background(
+                            GeometryReader { geometry -> Color in
+                                DispatchQueue.main.async {
+                                    let atBottom = geometry.frame(in: .global).maxY <= UIScreen.main.bounds.height
+                                    if atBottom != isAtBottom {
+                                        isAtBottom = atBottom
+                                    }
+                                }
+                                return Color(white: 0.12)
+                            }
+                        )
+                        .simultaneousGesture(
+                            DragGesture(minimumDistance: 0)
+                                .onChanged { _ in
+                                    hideScrollIndicators = false
+                                    lastScrollTime = Date()
+                                }
+                                .onEnded { _ in
+                                    lastScrollTime = Date()
+                                }
+                        )
+                    }
+                    .onReceive(
+                        Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()
+                    ) { _ in
+                        if Date().timeIntervalSince(lastScrollTime) > 1.5 {
+                            hideScrollIndicators = true
+                        }
+                    }
+                }
+                .onAppear {
+                    contentScrollProxy = scrollProxy
+                }
+                .onDisappear {
+                    UserDefaults.standard.set(lastViewedWeek, forKey: "lastViewedWeek")
+                    UserDefaults.standard.set(currentPage, forKey: "lastViewedPage")
+                }
+                
+                // A "scroll to bottom" button
+                if !isAtBottom {
+                    VStack {
+                        Spacer()
+                        Button(action: {
+                            scrollToBottom = true
+                        }) {
+                            Image(systemName: "chevron.down")
+                                .foregroundColor(.white)
+                                .imageScale(.large)
+                                .padding()
+                                .background(Color(white: 0.2).opacity(0.9))
+                                .clipShape(Circle())
+                        }
+                        .padding()
+                    }
                 }
             }
         }
@@ -576,268 +780,6 @@ struct ContentView: View {
         }
     }
     
-    // MARK: - The simulation screen
-    private var simulationResultsView: some View {
-        ScrollViewReader { scrollProxy in
-            ZStack {
-                Color(white: 0.12)
-                    .edgesIgnoringSafeArea(.top)
-                
-                VStack(spacing: 0) {
-                    
-                    // Navigation bar area
-                    HStack {
-                        // Back button
-                        Button(action: {
-                            UserDefaults.standard.set(lastViewedWeek, forKey: "lastViewedWeek")
-                            UserDefaults.standard.set(currentPage, forKey: "lastViewedPage")
-                            lastViewedPage = currentPage
-                            isSimulationRun = false
-                        }) {
-                            Image(systemName: "chevron.left")
-                                .foregroundColor(.white)
-                                .imageScale(.large)
-                        }
-                        
-                        Spacer()
-                        
-                        // Chart icon with arrow ("chart.line.uptrend.xyaxis")
-                        Button(action: {
-                            // Show normal spinner, let user cancel
-                            chartLoadingState = .loading
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                                if chartLoadingState == .loading {
-                                    chartLoadingState = .none
-                                    showHistograms = true
-                                }
-                            }
-                        }) {
-                            Image(systemName: "chart.line.uptrend.xyaxis")
-                                .foregroundColor(.white)
-                                .imageScale(.large)
-                        }
-                    }
-                    .padding(.horizontal, 55)
-                    .padding(.vertical, 10)
-                    .background(Color(white: 0.12))
-                    
-                    // Column titles
-                    HStack(spacing: 0) {
-                        Text("Week")
-                            .frame(width: 60, alignment: .leading)
-                            .font(.headline)
-                            .padding(.leading, 50)
-                            .padding(.vertical, 8)
-                            .background(Color.black)
-                            .foregroundColor(.orange)
-                        
-                        ZStack {
-                            Text(columns[currentPage].0)
-                                .font(.headline)
-                                .padding(.leading, 100)
-                                .padding(.vertical, 8)
-                                .background(Color.black)
-                                .foregroundColor(.orange)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            
-                            // Tapping left/right side to switch columns
-                            GeometryReader { geometry in
-                                HStack(spacing: 0) {
-                                    Color.clear
-                                        .frame(width: geometry.size.width * 0.2)
-                                        .contentShape(Rectangle())
-                                        .gesture(
-                                            TapGesture()
-                                                .onEnded {
-                                                    if currentPage > 0 {
-                                                        withAnimation {
-                                                            currentPage -= 1
-                                                        }
-                                                    }
-                                                }
-                                        )
-                                    Spacer()
-                                    Color.clear
-                                        .frame(width: geometry.size.width * 0.2)
-                                        .contentShape(Rectangle())
-                                        .gesture(
-                                            TapGesture()
-                                                .onEnded {
-                                                    if currentPage < columns.count - 1 {
-                                                        withAnimation {
-                                                            currentPage += 1
-                                                        }
-                                                    }
-                                                }
-                                        )
-                                }
-                            }
-                        }
-                        .frame(height: 50)
-                    }
-                    .background(Color.black)
-                    
-                    // Main table
-                    ScrollView(.vertical, showsIndicators: !hideScrollIndicators) {
-                        HStack(spacing: 0) {
-                            // Left column (Week #)
-                            VStack(spacing: 0) {
-                                ForEach(monteCarloResults.indices, id: \.self) { index in
-                                    let result = monteCarloResults[index]
-                                    let rowBackground = index.isMultiple(of: 2)
-                                        ? Color(white: 0.10)
-                                        : Color(white: 0.14)
-                                    
-                                    Text("\(result.week)")
-                                        .frame(width: 70, alignment: .leading)
-                                        .padding(.leading, 50)
-                                        .padding(.vertical, 12)
-                                        .padding(.horizontal, 8)
-                                        .background(rowBackground)
-                                        .foregroundColor(.white)
-                                        .id("week-\(result.week)")
-                                        .background(RowOffsetReporter(week: result.week))
-                                }
-                            }
-                            
-                            // Main columns in a TabView
-                            TabView(selection: $currentPage) {
-                                ForEach(0..<columns.count, id: \.self) { index in
-                                    ZStack {
-                                        VStack(spacing: 0) {
-                                            ForEach(monteCarloResults.indices, id: \.self) { rowIndex in
-                                                let rowResult = monteCarloResults[rowIndex]
-                                                let rowBackground = rowIndex.isMultiple(of: 2)
-                                                    ? Color(white: 0.10)
-                                                    : Color(white: 0.14)
-                                                
-                                                Text(getValue(rowResult, columns[index].1))
-                                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                                    .padding(.leading, 80)
-                                                    .padding(.vertical, 12)
-                                                    .padding(.horizontal, 8)
-                                                    .background(rowBackground)
-                                                    .foregroundColor(.white)
-                                                    .id("data-week-\(rowResult.week)")
-                                                    .background(RowOffsetReporter(week: rowResult.week))
-                                            }
-                                        }
-                                        
-                                        // Tap left/right to change columns
-                                        GeometryReader { geometry in
-                                            HStack(spacing: 0) {
-                                                Color.clear
-                                                    .frame(width: geometry.size.width * 0.2)
-                                                    .contentShape(Rectangle())
-                                                    .gesture(
-                                                        TapGesture()
-                                                            .onEnded {
-                                                                if currentPage > 0 {
-                                                                    withAnimation {
-                                                                        currentPage -= 1
-                                                                    }
-                                                                }
-                                                            }
-                                                    )
-                                                Spacer()
-                                                Color.clear
-                                                    .frame(width: geometry.size.width * 0.2)
-                                                    .contentShape(Rectangle())
-                                                    .gesture(
-                                                        TapGesture()
-                                                            .onEnded {
-                                                                if currentPage < columns.count - 1 {
-                                                                    withAnimation {
-                                                                        currentPage += 1
-                                                                    }
-                                                                }
-                                                            }
-                                                    )
-                                            }
-                                        }
-                                    }
-                                    .tag(index)
-                                }
-                            }
-                            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
-                            .frame(width: UIScreen.main.bounds.width - 60)
-                        }
-                        .coordinateSpace(name: "scrollArea")
-                        .onPreferenceChange(RowOffsetPreferenceKey.self) { offsets in
-                            let targetY: CGFloat = 160
-                            let filtered = offsets.filter { (week, _) in week != 1040 }
-                            let mapped = filtered.mapValues { abs($0 - targetY) }
-                            if let (closestWeek, _) = mapped.min(by: { $0.value < $1.value }) {
-                                lastViewedWeek = closestWeek
-                            }
-                        }
-                        .onChange(of: scrollToBottom) { value in
-                            if value, let lastResult = monteCarloResults.last {
-                                withAnimation {
-                                    scrollProxy.scrollTo("week-\(lastResult.week)", anchor: .bottom)
-                                }
-                                scrollToBottom = false
-                            }
-                        }
-                        .background(
-                            GeometryReader { geometry -> Color in
-                                DispatchQueue.main.async {
-                                    let atBottom = geometry.frame(in: .global).maxY <= UIScreen.main.bounds.height
-                                    if atBottom != isAtBottom {
-                                        isAtBottom = atBottom
-                                    }
-                                }
-                                return Color(white: 0.12)
-                            }
-                        )
-                        .simultaneousGesture(
-                            DragGesture(minimumDistance: 0)
-                                .onChanged { _ in
-                                    hideScrollIndicators = false
-                                    lastScrollTime = Date()
-                                }
-                                .onEnded { _ in
-                                    lastScrollTime = Date()
-                                }
-                        )
-                    }
-                    .onReceive(
-                        Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()
-                    ) { _ in
-                        if Date().timeIntervalSince(lastScrollTime) > 1.5 {
-                            hideScrollIndicators = true
-                        }
-                    }
-                }
-                .onAppear {
-                    contentScrollProxy = scrollProxy
-                }
-                .onDisappear {
-                    UserDefaults.standard.set(lastViewedWeek, forKey: "lastViewedWeek")
-                    UserDefaults.standard.set(currentPage, forKey: "lastViewedPage")
-                }
-                
-                // Scroll-to-bottom button
-                if !isAtBottom {
-                    VStack {
-                        Spacer()
-                        Button(action: {
-                            scrollToBottom = true
-                        }) {
-                            Image(systemName: "chevron.down")
-                                .foregroundColor(.white)
-                                .imageScale(.large)
-                                .padding()
-                                .background(Color(white: 0.2).opacity(0.9))
-                                .clipShape(Circle())
-                        }
-                        .padding()
-                    }
-                }
-            }
-        }
-    }
-    
     // MARK: - Jump to results button
     private var transitionToResultsButton: some View {
         VStack {
@@ -870,7 +812,7 @@ struct ContentView: View {
         }
     }
     
-    // MARK: - Loading Overlay (unchanged 3D Bitcoin spinner)
+    // MARK: - Loading Overlay
     private var loadingOverlay: some View {
         ZStack {
             Color.black.opacity(0.6).ignoresSafeArea()
@@ -890,7 +832,6 @@ struct ContentView: View {
                 }
                 .offset(y: 220)
                 
-                // The original 3D spinner for main simulation
                 InteractiveBitcoinSymbol3DSpinner()
                     .padding(.bottom, 30)
                 
@@ -923,7 +864,7 @@ struct ContentView: View {
         .onDisappear { stopTipCycle() }
     }
     
-    // MARK: - Chart loading overlay (normal spinner)
+    // MARK: - Chart loading overlay
     private var chartLoadingOverlay: some View {
         ZStack {
             Color.black.opacity(0.6).ignoresSafeArea()
@@ -933,7 +874,6 @@ struct ContentView: View {
                     .progressViewStyle(CircularProgressViewStyle(tint: .white))
                     .scaleEffect(2.0)
                 
-                // Cancel chart loading
                 Button(action: {
                     chartLoadingState = .cancelled
                     chartLoadingState = .none
@@ -951,9 +891,9 @@ struct ContentView: View {
         }
     }
     
-    // MARK: - Run Simulation (unchanged logic, as requested)
+    // MARK: - Run Simulation
     private func runSimulation() {
-        // Load CSV arrays (in your real code)
+        // We assume loadBTCWeeklyReturns(), loadSP500WeeklyReturns(), etc. exist in your codebase
         historicalBTCWeeklyReturns = loadBTCWeeklyReturns()
         sp500WeeklyReturns = loadSP500WeeklyReturns()
         
@@ -1010,6 +950,7 @@ struct ContentView: View {
                 seed: finalSeed
             )
             
+            // Example of printing final prices
             func formatNumber(_ value: Double) -> String {
                 let formatter = NumberFormatter()
                 formatter.numberStyle = .decimal
@@ -1027,10 +968,8 @@ struct ContentView: View {
             if sortedPrices.count > 1 {
                 let tenthIndex = Int(Double(sortedPrices.count - 1) * 0.1)
                 let ninetiethIndex = Int(Double(sortedPrices.count - 1) * 0.9)
-                
                 let tenthValue = sortedPrices[tenthIndex]
                 let ninetiethValue = sortedPrices[ninetiethIndex]
-                
                 print("[DEBUG] 10th percentile final price = \(formatNumber(tenthValue))")
                 print("[DEBUG] 90th percentile final price = \(formatNumber(ninetiethValue))")
             }
@@ -1054,7 +993,7 @@ struct ContentView: View {
                 let singleMedianRun = sortedRuns[medianIndex].1
                 let ninetiethRun = sortedRuns[ninetiethIndex].1
                 
-                // Compute median line across all runs
+                // Build the median line across all runs
                 let medianLineData = computeMedianSimulationData(allIterations: allIterations)
                 
                 DispatchQueue.main.async {
@@ -1062,7 +1001,7 @@ struct ContentView: View {
                     self.medianResults = singleMedianRun
                     self.ninetiethPercentileResults = ninetiethRun
                     
-                    // The table uses the week-by-week median for display
+                    // For the table, we show the week-by-week median
                     self.monteCarloResults = medianLineData
                     self.selectedPercentile = .median
                     self.medianResults = medianLineData
@@ -1070,6 +1009,7 @@ struct ContentView: View {
                     self.isSimulationRun = true
                     self.isLoading = false
                     
+                    // Keep these so we can build the chart later
                     self.medianSimData = medianLineData
                     self.allSimData = allIterations
                 }
@@ -1085,6 +1025,107 @@ struct ContentView: View {
         }
     }
     
+    // Compute your median line from all runs
+    private func computeMedianSimulationData(allIterations: [[SimulationData]]) -> [SimulationData] {
+        // Keep your existing logic. Example:
+        guard let firstRun = allIterations.first else { return [] }
+        let totalWeeks = firstRun.count
+        
+        var medianResult: [SimulationData] = []
+        
+        for w in 0..<totalWeeks {
+            let allAtWeek = allIterations.compactMap { run -> SimulationData? in
+                guard w < run.count else { return nil }
+                return run[w]
+            }
+            if allAtWeek.isEmpty { continue }
+            
+            let sortedStartingBTC = allAtWeek.map { $0.startingBTC }.sorted()
+            let sortedNetBTCHoldings = allAtWeek.map { $0.netBTCHoldings }.sorted()
+            let sortedBtcPriceUSD = allAtWeek.map { $0.btcPriceUSD }.sorted()
+            let sortedBtcPriceEUR = allAtWeek.map { $0.btcPriceEUR }.sorted()
+            let sortedPortfolioValueEUR = allAtWeek.map { $0.portfolioValueEUR }.sorted()
+            let sortedContributionEUR = allAtWeek.map { $0.contributionEUR }.sorted()
+            let sortedFeeEUR = allAtWeek.map { $0.transactionFeeEUR }.sorted()
+            let sortedNetContribBTC = allAtWeek.map { $0.netContributionBTC }.sorted()
+            let sortedWithdrawalEUR = allAtWeek.map { $0.withdrawalEUR }.sorted()
+            
+            func medianOfSorted(_ arr: [Double]) -> Double {
+                if arr.isEmpty { return 0.0 }
+                let mid = arr.count / 2
+                if arr.count.isMultiple(of: 2) {
+                    return (arr[mid] + arr[mid - 1]) / 2.0
+                } else {
+                    return arr[mid]
+                }
+            }
+            
+            let medianSimData = SimulationData(
+                week: allAtWeek[0].week,
+                startingBTC: medianOfSorted(sortedStartingBTC),
+                netBTCHoldings: medianOfSorted(sortedNetBTCHoldings),
+                btcPriceUSD: medianOfSorted(sortedBtcPriceUSD),
+                btcPriceEUR: medianOfSorted(sortedBtcPriceEUR),
+                portfolioValueEUR: medianOfSorted(sortedPortfolioValueEUR),
+                contributionEUR: medianOfSorted(sortedContributionEUR),
+                transactionFeeEUR: medianOfSorted(sortedFeeEUR),
+                netContributionBTC: medianOfSorted(sortedNetContribBTC),
+                withdrawalEUR: medianOfSorted(sortedWithdrawalEUR)
+            )
+            
+            medianResult.append(medianSimData)
+        }
+        return medianResult
+    }
+    
+    // Convert single run to [WeekPoint]
+    func convertOriginalToWeekPoints() -> [WeekPoint] {
+        medianSimData.map { row in
+            WeekPoint(week: row.week, value: row.portfolioValueEUR)
+        }
+    }
+
+    // Convert all runs to [SimulationRun]
+    func convertAllSimsToWeekPoints() -> [SimulationRun] {
+        allSimData.map { singleRun -> SimulationRun in
+            let wpoints = singleRun.map { row in
+                // chart row.btcPriceUSD or row.portfolioValueEUR, etc.
+                WeekPoint(week: row.week, value: row.btcPriceUSD)
+            }
+            return SimulationRun(points: wpoints)
+        }
+    }
+    
+    // Called after all results are done to do more post-processing
+    private func processAllResults(_ allResults: [[SimulationData]]) {
+        // ...
+    }
+    
+    private func getValue(_ item: SimulationData, _ keyPath: PartialKeyPath<SimulationData>) -> String {
+        if let value = item[keyPath: keyPath] as? Double {
+            switch keyPath {
+            case \SimulationData.startingBTC,
+                 \SimulationData.netBTCHoldings,
+                 \SimulationData.netContributionBTC:
+                return value.formattedBTC()
+            case \SimulationData.btcPriceUSD,
+                 \SimulationData.btcPriceEUR,
+                 \SimulationData.portfolioValueEUR,
+                 \SimulationData.contributionEUR,
+                 \SimulationData.transactionFeeEUR,
+                 \SimulationData.withdrawalEUR:
+                return value.formattedCurrency()
+            default:
+                return String(format: "%.2f", value)
+            }
+        } else if let value = item[keyPath: keyPath] as? Int {
+            return "\(value)"
+        } else {
+            return ""
+        }
+    }
+    
+    // MARK: - Start/Stop the tip cycle
     private func startTipCycle() {
         showTip = false
         tipTimer?.invalidate()
@@ -1115,32 +1156,5 @@ struct ContentView: View {
         tipTimer = nil
         showTip = false
     }
-    
-    private func processAllResults(_ allResults: [[SimulationData]]) {
-        // ...
-    }
-    
-    private func getValue(_ item: SimulationData, _ keyPath: PartialKeyPath<SimulationData>) -> String {
-        if let value = item[keyPath: keyPath] as? Double {
-            switch keyPath {
-            case \SimulationData.startingBTC,
-                 \SimulationData.netBTCHoldings,
-                 \SimulationData.netContributionBTC:
-                return value.formattedBTC()
-            case \SimulationData.btcPriceUSD,
-                 \SimulationData.btcPriceEUR,
-                 \SimulationData.portfolioValueEUR,
-                 \SimulationData.contributionEUR,
-                 \SimulationData.transactionFeeEUR,
-                 \SimulationData.withdrawalEUR:
-                return value.formattedCurrency()
-            default:
-                return String(format: "%.2f", value)
-            }
-        } else if let value = item[keyPath: keyPath] as? Int {
-            return "\(value)"
-        } else {
-            return ""
-        }
-    }
 }
+    

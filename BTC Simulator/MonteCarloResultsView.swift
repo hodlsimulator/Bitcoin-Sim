@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Charts
+import Combine
 
 // MARK: - Data Models
 
@@ -21,77 +22,65 @@ struct SimulationRun: Identifiable {
     let points: [WeekPoint]
 }
 
-// MARK: - Compute Median
+// MARK: - View Model
 
-func computeMedianLine(simulations: [SimulationRun]) -> [WeekPoint] {
-    guard let firstRun = simulations.first else { return [] }
-    let countPerRun = firstRun.points.count
-    var medianPoints: [WeekPoint] = []
+class ChartViewModel: ObservableObject {
+    @Published var simulations: [SimulationRun]
+    @Published var isLoading: Bool = false
     
-    for index in 0..<countPerRun {
-        let week = firstRun.points[index].week
-        let allValues = simulations.map { $0.points[index].value }.sorted()
-        
-        let middle = allValues.count / 2
-        let median: Double
-        if allValues.count.isMultiple(of: 2) {
-            median = (allValues[middle] + allValues[middle - 1]) / 2
-        } else {
-            median = allValues[middle]
-        }
-        
-        medianPoints.append(WeekPoint(week: week, value: median))
+    init(simulations: [SimulationRun]) {
+        // Keep the data so it's not lost on rotation
+        self.simulations = simulations
     }
-    return medianPoints
+    
+    // Compute Median once, from the same data
+    var medianLine: [WeekPoint] {
+        guard let firstRun = simulations.first else { return [] }
+        let countPerRun = firstRun.points.count
+        var medianPoints: [WeekPoint] = []
+        
+        for index in 0..<countPerRun {
+            let week = firstRun.points[index].week
+            let allValues = simulations.map { $0.points[index].value }.sorted()
+            
+            let middle = allValues.count / 2
+            let median: Double
+            if allValues.count.isMultiple(of: 2) {
+                median = (allValues[middle] + allValues[middle - 1]) / 2
+            } else {
+                median = allValues[middle]
+            }
+            
+            medianPoints.append(WeekPoint(week: week, value: median))
+        }
+        return medianPoints
+    }
 }
 
-// MARK: - Number Formatting (k, M, B, T, Q)
+// MARK: - Number Formatting
 
 func formatSuffix(_ value: Double) -> String {
-    let absVal = abs(value)
-    let sign = value < 0 ? "-" : ""
+    if value >= 1_000_000_000_000_000_000 { return "\(Int(value / 1_000_000_000_000_000_000))Q" } // Quadrillion etc.
+    if value >= 1_000_000_000_000 { return "\(Int(value / 1_000_000_000_000))T" }                 // Trillion
+    if value >= 1_000_000_000 { return "\(Int(value / 1_000_000_000))B" }                         // Billion
+    if value >= 1_000_000 { return "\(Int(value / 1_000_000))M" }                                 // Million
+    if value >= 1_000 { return "\(Int(value / 1_000))k" }                                         // Thousand
+    return String(Int(value))
+}
 
-    switch absVal {
-    case 1_000_000_000_000_000_000_000_000_000...:
-        // 10^27 => 1 Octillion => "Oc"
-        return "\(sign)\(Int(absVal / 1_000_000_000_000_000_000_000_000_000))Oc"
-    case 1_000_000_000_000_000_000_000_000...:
-        // 10^24 => 1 Septillion => "Sp"
-        return "\(sign)\(Int(absVal / 1_000_000_000_000_000_000_000_000))Sp"
-    case 1_000_000_000_000_000_000_000...:
-        // 10^21 => 1 Sextillion => "Sx"
-        return "\(sign)\(Int(absVal / 1_000_000_000_000_000_000_000))Sx"
-    case 1_000_000_000_000_000_000...:
-        // 10^18 => 1 Quintillion => "Qt"
-        return "\(sign)\(Int(absVal / 1_000_000_000_000_000_000))Qt"
-    case 1_000_000_000_000_000...:
-        // 10^15 => 1 Quadrillion => "Q"
-        return "\(sign)\(Int(absVal / 1_000_000_000_000_000))Q"
-    case 1_000_000_000_000...:
-        // 10^12 => 1 Trillion => "T"
-        return "\(sign)\(Int(absVal / 1_000_000_000_000))T"
-    case 1_000_000_000...:
-        // 10^9 => 1 Billion => "B"
-        return "\(sign)\(Int(absVal / 1_000_000_000))B"
-    case 1_000_000...:
-        // 10^6 => 1 Million => "M"
-        return "\(sign)\(Int(absVal / 1_000_000))M"
-    case 1_000...:
-        // 10^3 => 1 Thousand => "k"
-        return "\(sign)\(Int(absVal / 1_000))k"
-    default:
-        // No suffix => integer as-is
-        return "\(sign)\(Int(absVal))"
-    }
+// MARK: - Convert Weeks to Years
+
+fileprivate func weeksToYears(_ weeks: Int) -> Double {
+    Double(weeks) / 52.0
 }
 
 // MARK: - Chart Content Builders
 
 @ChartContentBuilder
 func simulationLines(simulations: [SimulationRun]) -> some ChartContent {
-    // Mixed bright + pastel palette.
+    // The same customPalette & exact .foregroundStyle calls as your original
     let customPalette: [Color] = [
-        // Reds/oranges/yellows
+        // Reds / Oranges / Yellows
         Color(hue: 0.0,  saturation: 1.0, brightness: 0.8),
         Color(hue: 0.0,  saturation: 0.3, brightness: 1.0),
         Color(hue: 0.08, saturation: 1.0, brightness: 1.0),
@@ -99,13 +88,13 @@ func simulationLines(simulations: [SimulationRun]) -> some ChartContent {
         Color(hue: 0.13, saturation: 1.0, brightness: 1.0),
         Color(hue: 0.13, saturation: 0.3, brightness: 1.0),
         
-        // Some blues/purples but not too many
+        // Some blues/purples
         Color(hue: 0.55, saturation: 1.0, brightness: 0.9),
         Color(hue: 0.55, saturation: 0.3, brightness: 0.9),
         Color(hue: 0.7,  saturation: 0.6, brightness: 0.8),
         Color(hue: 0.7,  saturation: 0.3, brightness: 0.9),
         
-        // Greens/cyans but muted
+        // Greens / cyans but muted
         Color(hue: 0.28, saturation: 0.7, brightness: 0.8),
         Color(hue: 0.28, saturation: 0.3, brightness: 0.9),
         Color(hue: 0.47, saturation: 0.7, brightness: 0.8),
@@ -118,9 +107,10 @@ func simulationLines(simulations: [SimulationRun]) -> some ChartContent {
         
         ForEach(sim.points) { pt in
             LineMark(
-                x: .value("Week", pt.week),
+                x: .value("Year", weeksToYears(pt.week)),
                 y: .value("BTC Price (USD)", pt.value)
             )
+            // EXACT order: .foregroundStyle(colour.opacity(0.3)), then .foregroundStyle(by: ...)
             .foregroundStyle(colour.opacity(0.3))
             .foregroundStyle(by: .value("SeriesIndex", index))
             .lineStyle(StrokeStyle(lineWidth: 0.5,
@@ -130,15 +120,31 @@ func simulationLines(simulations: [SimulationRun]) -> some ChartContent {
     }
 }
 
+// Instead of darkening from the first iteration, start it at iteration 70
+// and only go as dark as brightness=0.4 at iteration 1000 (so it's not too dark).
+// Everything else remains the same hue/sat logic, just adjusted to your new start/end points.
+
 @ChartContentBuilder
-func medianLines(_ medianLine: [WeekPoint]) -> some ChartContent {
+func medianLines(simulations: [SimulationRun], medianLine: [WeekPoint]) -> some ChartContent {
+    let iterationCount = Double(simulations.count)
+    let startDarkeningAt = 70.0
+    let maxDarkeningAt   = 1000.0
+    
+    // Calculate a fraction that stays at 0 for <70 iterations, then goes up to 1 at 1000
+    let fraction = max(0, min(1, (iterationCount - startDarkeningAt) / (maxDarkeningAt - startDarkeningAt)))
+    
+    // We now go from brightness = 1.0 (for 70 or fewer iterations) down to 0.4 (not 0.3) at 1000
+    let brightness = 1.0 - 0.6 * fraction
+    
+    // Same hue/saturation, just altered brightness
+    let darkeningOrange = Color(hue: 0.08, saturation: 1.0, brightness: brightness)
+    
     ForEach(medianLine) { pt in
         LineMark(
-            x: .value("Week", pt.week),
+            x: .value("Year", weeksToYears(pt.week)),
             y: .value("BTC Price (USD)", pt.value)
         )
-        // Reduced opacity on median line
-        .foregroundStyle(.orange.opacity(0.7))
+        .foregroundStyle(darkeningOrange)
         .lineStyle(StrokeStyle(lineWidth: 1.5))
         .interpolationMethod(.monotone)
     }
@@ -147,38 +153,49 @@ func medianLines(_ medianLine: [WeekPoint]) -> some ChartContent {
 // MARK: - Chart Subview
 
 struct MonteCarloChartView: View {
-    let simulations: [SimulationRun]
-    let medianLine: [WeekPoint]
+    @ObservedObject var viewModel: ChartViewModel
     
     var body: some View {
-        GeometryReader { geo in
+        // Show a loading indicator if isLoading = true,
+        // otherwise the Chart
+        if viewModel.isLoading {
+            ProgressView("Loading…")
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.black.ignoresSafeArea())
+        } else {
             Chart {
-                simulationLines(simulations: simulations)
-                medianLines(medianLine)
+                simulationLines(simulations: viewModel.simulations)
+                medianLines(simulations: viewModel.simulations,
+                            medianLine: viewModel.medianLine)
             }
             .chartLegend(.hidden)
+            // X-axis in years, from 0..20
+            .chartXScale(domain: 0.0...20.0, type: .linear)
+            // Y-axis is log scale, auto domain
             .chartYScale(domain: .automatic(includesZero: false), type: .log)
+            // Custom X-axis at 5, 10, 15, 20
             .chartXAxis {
-                let yearMarkers = [260, 520, 780, 1040]
+                let yearMarkers = [5.0, 10.0, 15.0, 20.0]
                 AxisMarks(values: yearMarkers) { axisValue in
-                    AxisGridLine()
-                        .foregroundStyle(.white.opacity(0.3))   // <– Less transparent grid line
-                    AxisTick()
-                        .foregroundStyle(.white.opacity(0.3))   // <– Less transparent tick
-                    AxisValueLabel {
-                        if let weeks = axisValue.as(Int.self) {
-                            let years = weeks / 52
-                            Text("\(years)")
+                    AxisGridLine(centered: false)
+                        .foregroundStyle(.white.opacity(0.3))
+                    AxisTick(centered: false)
+                        .foregroundStyle(.white.opacity(0.3))
+                    AxisValueLabel(centered: false) {
+                        if let yearVal = axisValue.as(Double.self) {
+                            Text("\(Int(yearVal))")
                                 .font(.system(size: 14))
                                 .foregroundColor(.white)
                         }
                     }
                 }
             }
+            // Y-axis with horizontal lines
             .chartYAxis {
                 AxisMarks(position: .leading) { axisValue in
                     AxisGridLine()
-                        .foregroundStyle(.white.opacity(0.3))  // <– Use lower opacity here
+                        .foregroundStyle(.white.opacity(0.3))
                     AxisTick()
                         .foregroundStyle(.white.opacity(0.3))
                     AxisValueLabel {
@@ -190,8 +207,8 @@ struct MonteCarloChartView: View {
                     }
                 }
             }
-            .frame(width: geo.size.width, height: geo.size.height)
-            .padding()
+            // Vertical padding so it's not cramped
+            .padding(.vertical, 16)
             .background(
                 RoundedRectangle(cornerRadius: 12)
                     .fill(Color.black.opacity(0.2))
@@ -203,25 +220,35 @@ struct MonteCarloChartView: View {
 // MARK: - Main View
 
 struct MonteCarloResultsView: View {
-    let simulations: [SimulationRun]
+    // We keep data in a StateObject so it isn't re-fetched on rotation
+    @StateObject private var viewModel: ChartViewModel
     
     init(simulations: [SimulationRun]) {
-        self.simulations = simulations
+        _viewModel = StateObject(wrappedValue: ChartViewModel(simulations: simulations))
     }
     
     var body: some View {
         NavigationStack {
-            let medianLine = computeMedianLine(simulations: simulations)
-            
             VStack(spacing: 0) {
-                MonteCarloChartView(
-                    simulations: simulations,
-                    medianLine: medianLine
-                )
+                MonteCarloChartView(viewModel: viewModel)
             }
             .background(Color.black.ignoresSafeArea())
             .navigationTitle("Monte Carlo – BTC Price (USD)")
             .navigationBarTitleDisplayMode(.inline)
+        }
+        .onAppear {
+            // Listen for orientation changes, show a quick loading spinner
+            NotificationCenter.default.addObserver(
+                forName: UIDevice.orientationDidChangeNotification,
+                object: nil,
+                queue: .main
+            ) { _ in
+                viewModel.isLoading = true
+                // Hide spinner after 0.4s
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                    viewModel.isLoading = false
+                }
+            }
         }
     }
 }
