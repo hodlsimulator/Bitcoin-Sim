@@ -79,7 +79,6 @@ fileprivate func weeksToYears(_ weeks: Int) -> Double {
 
 @ChartContentBuilder
 func simulationLines(simulations: [SimulationRun]) -> some ChartContent {
-    // The same customPalette & exact .foregroundStyle calls as your original
     let customPalette: [Color] = [
         // Reds / Oranges / Yellows
         Color(hue: 0.0,  saturation: 1.0, brightness: 0.8),
@@ -111,7 +110,6 @@ func simulationLines(simulations: [SimulationRun]) -> some ChartContent {
                 x: .value("Year", weeksToYears(pt.week)),
                 y: .value("BTC Price (USD)", pt.value)
             )
-            // EXACT order: .foregroundStyle(colour.opacity(0.3)), then .foregroundStyle(by: ...)
             .foregroundStyle(colour.opacity(0.3))
             .foregroundStyle(by: .value("SeriesIndex", index))
             .lineStyle(StrokeStyle(lineWidth: 0.5,
@@ -121,23 +119,14 @@ func simulationLines(simulations: [SimulationRun]) -> some ChartContent {
     }
 }
 
-// Instead of darkening from the first iteration, start it at iteration 70
-// and only go as dark as brightness=0.4 at iteration 1000 (so it's not too dark).
-// Everything else remains the same hue/sat logic, just adjusted to your new start/end points.
-
 @ChartContentBuilder
 func medianLines(simulations: [SimulationRun], medianLine: [WeekPoint]) -> some ChartContent {
     let iterationCount = Double(simulations.count)
     let startDarkeningAt = 70.0
     let maxDarkeningAt   = 1000.0
     
-    // Calculate a fraction that stays at 0 for <70 iterations, then goes up to 1 at 1000
     let fraction = max(0, min(1, (iterationCount - startDarkeningAt) / (maxDarkeningAt - startDarkeningAt)))
-    
-    // We now go from brightness = 1.0 (for 70 or fewer iterations) down to 0.4 (not 0.3) at 1000
     let brightness = 1.0 - 0.6 * fraction
-    
-    // Same hue/saturation, just altered brightness
     let darkeningOrange = Color(hue: 0.08, saturation: 1.0, brightness: brightness)
     
     ForEach(medianLine) { pt in
@@ -157,8 +146,6 @@ struct MonteCarloChartView: View {
     @ObservedObject var viewModel: ChartViewModel
     
     var body: some View {
-        // Show a loading indicator if isLoading = true,
-        // otherwise the Chart
         if viewModel.isLoading {
             ProgressView("Loading…")
                 .foregroundColor(.white)
@@ -171,11 +158,8 @@ struct MonteCarloChartView: View {
                             medianLine: viewModel.medianLine)
             }
             .chartLegend(.hidden)
-            // X-axis in years, from 0..20
             .chartXScale(domain: 0.0...20.0, type: .linear)
-            // Y-axis is log scale, auto domain
             .chartYScale(domain: .automatic(includesZero: false), type: .log)
-            // Custom X-axis at 5, 10, 15, 20
             .chartXAxis {
                 let yearMarkers = [5.0, 10.0, 15.0, 20.0]
                 AxisMarks(values: yearMarkers) { axisValue in
@@ -192,7 +176,6 @@ struct MonteCarloChartView: View {
                     }
                 }
             }
-            // Y-axis with horizontal lines
             .chartYAxis {
                 AxisMarks(position: .leading) { axisValue in
                     AxisGridLine()
@@ -208,7 +191,6 @@ struct MonteCarloChartView: View {
                     }
                 }
             }
-            // Vertical padding so it's not cramped
             .padding(.vertical, 16)
             .background(
                 RoundedRectangle(cornerRadius: 12)
@@ -221,10 +203,7 @@ struct MonteCarloChartView: View {
 // MARK: - Main View
 
 struct MonteCarloResultsView: View {
-    // Keep data in a StateObject so it isn't re-fetched on rotation
     @StateObject private var viewModel: ChartViewModel
-    
-    // We'll grab the snapshot if it's cached
     @EnvironmentObject var chartDataCache: ChartDataCache
     
     init(simulations: [SimulationRun]) {
@@ -234,12 +213,23 @@ struct MonteCarloResultsView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // If there's a snapshot in the cache, show it immediately.
+                // Make the entire underlying page black
+                Color.black
+                    .ignoresSafeArea()
+                
                 if let snapshotImage = chartDataCache.chartSnapshot {
-                    Image(uiImage: snapshotImage)
-                        .resizable()
-                        .scaledToFit()
-                        .background(Color.black.ignoresSafeArea())
+                    Group {
+                        Image(uiImage: snapshotImage)
+                            .resizable()
+                            .scaledToFill()
+                            // Pin top, clip any spillover, but add space at bottom
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                            .clipped()
+                            .padding(.bottom, 90) // Adjust as needed
+                            .ignoresSafeArea(edges: .top)
+                            .transition(.move(edge: .bottom))
+                    }
+                    .animation(.easeInOut(duration: 0.5), value: chartDataCache.chartSnapshot)
                 } else {
                     // Fallback: show the live SwiftUI Chart
                     VStack(spacing: 0) {
@@ -248,7 +238,6 @@ struct MonteCarloResultsView: View {
                     .background(Color.black.ignoresSafeArea())
                 }
                 
-                // If isLoading is true, overlay a spinner
                 if viewModel.isLoading {
                     Color.black.opacity(0.6).ignoresSafeArea()
                     ProgressView("Loading…")
@@ -260,15 +249,11 @@ struct MonteCarloResultsView: View {
             .navigationBarTitleDisplayMode(.inline)
         }
         .onAppear {
-            print("// DEBUG: MonteCarloResultsView onAppear, chartDataCache =", chartDataCache)
-            // Listen for orientation changes, show a quick loading spinner
             NotificationCenter.default.addObserver(
                 forName: UIDevice.orientationDidChangeNotification,
                 object: nil,
                 queue: .main
             ) { _ in
-                // If we’re displaying the SwiftUI chart (no snapshot),
-                // show the spinner briefly on orientation change
                 if chartDataCache.chartSnapshot == nil {
                     viewModel.isLoading = true
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
