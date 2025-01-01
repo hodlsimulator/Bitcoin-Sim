@@ -29,6 +29,7 @@ class ChartViewModel: ObservableObject {
     @Published var isLoading: Bool = false
     
     init(simulations: [SimulationRun]) {
+        print("// DEBUG: MonteCarloResultsView init -> I'm being created. chartDataCache not accessible yet here.")
         // Keep the data so it's not lost on rotation
         self.simulations = simulations
     }
@@ -220,8 +221,11 @@ struct MonteCarloChartView: View {
 // MARK: - Main View
 
 struct MonteCarloResultsView: View {
-    // We keep data in a StateObject so it isn't re-fetched on rotation
+    // Keep data in a StateObject so it isn't re-fetched on rotation
     @StateObject private var viewModel: ChartViewModel
+    
+    // We'll grab the snapshot if it's cached
+    @EnvironmentObject var chartDataCache: ChartDataCache
     
     init(simulations: [SimulationRun]) {
         _viewModel = StateObject(wrappedValue: ChartViewModel(simulations: simulations))
@@ -229,24 +233,47 @@ struct MonteCarloResultsView: View {
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                MonteCarloChartView(viewModel: viewModel)
+            ZStack {
+                // If there's a snapshot in the cache, show it immediately.
+                if let snapshotImage = chartDataCache.chartSnapshot {
+                    Image(uiImage: snapshotImage)
+                        .resizable()
+                        .scaledToFit()
+                        .background(Color.black.ignoresSafeArea())
+                } else {
+                    // Fallback: show the live SwiftUI Chart
+                    VStack(spacing: 0) {
+                        MonteCarloChartView(viewModel: viewModel)
+                    }
+                    .background(Color.black.ignoresSafeArea())
+                }
+                
+                // If isLoading is true, overlay a spinner
+                if viewModel.isLoading {
+                    Color.black.opacity(0.6).ignoresSafeArea()
+                    ProgressView("Loading…")
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        .scaleEffect(2.0)
+                }
             }
-            .background(Color.black.ignoresSafeArea())
             .navigationTitle("Monte Carlo – BTC Price (USD)")
             .navigationBarTitleDisplayMode(.inline)
         }
         .onAppear {
+            print("// DEBUG: MonteCarloResultsView onAppear, chartDataCache =", chartDataCache)
             // Listen for orientation changes, show a quick loading spinner
             NotificationCenter.default.addObserver(
                 forName: UIDevice.orientationDidChangeNotification,
                 object: nil,
                 queue: .main
             ) { _ in
-                viewModel.isLoading = true
-                // Hide spinner after 0.4s
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-                    viewModel.isLoading = false
+                // If we’re displaying the SwiftUI chart (no snapshot),
+                // show the spinner briefly on orientation change
+                if chartDataCache.chartSnapshot == nil {
+                    viewModel.isLoading = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                        viewModel.isLoading = false
+                    }
                 }
             }
         }

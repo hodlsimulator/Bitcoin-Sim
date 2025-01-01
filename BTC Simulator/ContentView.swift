@@ -9,6 +9,26 @@ import SwiftUI
 import PDFKit
 import UniformTypeIdentifiers
 import PocketSVG
+import UIKit
+
+extension View {
+    func snapshot() -> UIImage {
+        let controller = UIHostingController(rootView: self)
+        
+        // Force layout so SwiftUI knows its size
+        controller.view.layoutIfNeeded()
+        
+        // Create a suitable size
+        let targetSize = controller.sizeThatFits(in: UIScreen.main.bounds.size)
+        controller.view.bounds = CGRect(origin: .zero, size: targetSize)
+        
+        // Render into UIImage
+        let renderer = UIGraphicsImageRenderer(size: targetSize)
+        return renderer.image { _ in
+            controller.view.drawHierarchy(in: controller.view.bounds, afterScreenUpdates: true)
+        }
+    }
+}
 
 // MARK: - RowOffset Helpers
 struct RowOffsetPreferenceKey: PreferenceKey {
@@ -75,7 +95,7 @@ class PersistentInputManager: ObservableObject {
         didSet { UserDefaults.standard.set(btcGrowthRate, forKey: "btcGrowthRate") }
     }
 
-    // Stored as Double:
+    // Doubles
     @Published var threshold1: Double {
         didSet { UserDefaults.standard.set(threshold1, forKey: "threshold1") }
     }
@@ -250,12 +270,17 @@ fileprivate enum ChartLoadingState {
     case none, loading, cancelled
 }
 
+// MARK: - ChartDataCache
+class ChartDataCache: ObservableObject {
+    @Published var allRuns: [SimulationRun]? = nil
+    @Published var storedInputsHash: Int? = nil
+    
+    // For iOS, store a snapshot as UIImage
+    @Published var chartSnapshot: UIImage? = nil
+}
+
 // MARK: - ContentView
 struct ContentView: View {
-    
-    // Use your own SimulationData, SimulationSettings, runMonteCarloSimulationsWithProgress, etc.
-    
-    // We'll assume you have them defined elsewhere and imported
     
     // State variables
     @State private var monteCarloResults: [SimulationData] = []
@@ -304,8 +329,8 @@ struct ContentView: View {
         ("Withdrawal EUR", \SimulationData.withdrawalEUR)
     ]
     
-    // Provide your real SimulationSettings from another file
     @EnvironmentObject var simSettings: SimulationSettings
+    @EnvironmentObject var chartDataCache: ChartDataCache
     
     @State private var showSettings = false
     @State private var showAbout = false
@@ -318,18 +343,86 @@ struct ContentView: View {
     @State private var ninetiethPercentileResults: [SimulationData] = []
     @State private var selectedPercentile: PercentileChoice = .median
     
-    // Chart arrays
+    // We'll store the raw runs for the chart
     @State private var medianSimData: [SimulationData] = []
     @State private var allSimData: [[SimulationData]] = []
     
-    // Track chart loading state for the normal spinner
+    // Track chart loading state
     @State private var chartLoadingState: ChartLoadingState = .none
     
-    // Instead of storing chart data in local state, we can store it in an EnvironmentObject
-    // But here's a simpler approach: just store the built chart in local state, to avoid re-building
-    @State private var storedChartView: MonteCarloResultsView? = nil
+    @State private var oldIterationsValue: String = ""
+    @State private var oldAnnualCAGRValue: String = ""
+    @State private var oldAnnualVolatilityValue: String = ""
     
-    // MARK: - BODY
+    // MARK: - Convert single run to [WeekPoint]
+    func convertOriginalToWeekPoints() -> [WeekPoint] {
+        medianSimData.map { row in
+            WeekPoint(week: row.week, value: row.portfolioValueEUR)
+        }
+    }
+
+    // MARK: - Convert all runs to [SimulationRun]
+    func convertAllSimsToWeekPoints() -> [SimulationRun] {
+        allSimData.map { singleRun -> SimulationRun in
+            let wpoints = singleRun.map { row in
+                WeekPoint(week: row.week, value: row.btcPriceUSD)
+            }
+            return SimulationRun(points: wpoints)
+        }
+    }
+    
+    // MARK: - Median logic
+    private func computeMedianSimulationData(allIterations: [[SimulationData]]) -> [SimulationData] {
+        guard let firstRun = allIterations.first else { return [] }
+        let totalWeeks = firstRun.count
+        
+        var medianResult: [SimulationData] = []
+        
+        for w in 0..<totalWeeks {
+            let allAtWeek = allIterations.compactMap { run -> SimulationData? in
+                guard w < run.count else { return nil }
+                return run[w]
+            }
+            if allAtWeek.isEmpty { continue }
+            
+            let sortedStartingBTC = allAtWeek.map { $0.startingBTC }.sorted()
+            let sortedNetBTCHoldings = allAtWeek.map { $0.netBTCHoldings }.sorted()
+            let sortedBtcPriceUSD = allAtWeek.map { $0.btcPriceUSD }.sorted()
+            let sortedBtcPriceEUR = allAtWeek.map { $0.btcPriceEUR }.sorted()
+            let sortedPortfolioValueEUR = allAtWeek.map { $0.portfolioValueEUR }.sorted()
+            let sortedContributionEUR = allAtWeek.map { $0.contributionEUR }.sorted()
+            let sortedFeeEUR = allAtWeek.map { $0.transactionFeeEUR }.sorted()
+            let sortedNetContribBTC = allAtWeek.map { $0.netContributionBTC }.sorted()
+            let sortedWithdrawalEUR = allAtWeek.map { $0.withdrawalEUR }.sorted()
+            
+            func medianOfSorted(_ arr: [Double]) -> Double {
+                if arr.isEmpty { return 0.0 }
+                let mid = arr.count / 2
+                if arr.count.isMultiple(of: 2) {
+                    return (arr[mid] + arr[mid - 1]) / 2.0
+                } else {
+                    return arr[mid]
+                }
+            }
+            
+            let medianSimData = SimulationData(
+                week: allAtWeek[0].week,
+                startingBTC: medianOfSorted(sortedStartingBTC),
+                netBTCHoldings: medianOfSorted(sortedNetBTCHoldings),
+                btcPriceUSD: medianOfSorted(sortedBtcPriceUSD),
+                btcPriceEUR: medianOfSorted(sortedBtcPriceEUR),
+                portfolioValueEUR: medianOfSorted(sortedPortfolioValueEUR),
+                contributionEUR: medianOfSorted(sortedContributionEUR),
+                transactionFeeEUR: medianOfSorted(sortedFeeEUR),
+                netContributionBTC: medianOfSorted(sortedNetContribBTC),
+                withdrawalEUR: medianOfSorted(sortedWithdrawalEUR)
+            )
+            medianResult.append(medianSimData)
+        }
+        return medianResult
+    }
+    
+    // MARK: - Body
     var body: some View {
         NavigationStack {
             ZStack {
@@ -362,6 +455,7 @@ struct ContentView: View {
                     simulationResultsView
                 }
                 
+                // If we already have results from a previous run:
                 if !isSimulationRun && !monteCarloResults.isEmpty {
                     transitionToResultsButton
                 }
@@ -382,15 +476,18 @@ struct ContentView: View {
                 AboutView()
             }
             .navigationDestination(isPresented: $showHistograms) {
-                // Show the stored chart if we have it
-                if let existingChartView = storedChartView {
-                    existingChartView
+                if let existingChartData = chartDataCache.allRuns {
+                    MonteCarloResultsView(simulations: existingChartData)
+                        .environmentObject(chartDataCache)
+                        .environmentObject(simSettings)
                 } else {
                     Text("Loading chart...")
                         .foregroundColor(.white)
                 }
             }
             .onAppear {
+                print("// DEBUG: ContentView onAppear called.")
+                
                 let savedWeek = UserDefaults.standard.integer(forKey: "lastViewedWeek")
                 if savedWeek != 0 {
                     lastViewedWeek = savedWeek
@@ -407,7 +504,292 @@ struct ContentView: View {
         }
     }
     
-    // MARK: - The simulation screen
+    // MARK: - Invalidate chart if inputs change
+    private func invalidateChartIfInputChanged() {
+        // DEBUG:
+        print("DEBUG: invalidateChartIfInputChanged() called => clearing chartDataCache. (Backtrace: \(Thread.callStackSymbols))")
+        chartDataCache.allRuns = nil
+        chartDataCache.storedInputsHash = nil
+        chartDataCache.chartSnapshot = nil  // We also clear the snapshot
+    }
+    
+    // MARK: - Compute inputs hash
+    private func computeInputsHash() -> Int {
+        let combinedString = """
+        \(inputManager.iterations)_\(inputManager.annualCAGR)_\(inputManager.annualVolatility)_\
+        \(simSettings.userWeeks)_\(simSettings.initialBTCPriceUSD)
+        """
+        return combinedString.hashValue
+    }
+    
+    // MARK: - Run Simulation
+    private func runSimulation() {
+        let newHash = computeInputsHash()
+        print("// DEBUG: runSimulation() => newHash = \(newHash), storedInputsHash = \(String(describing: chartDataCache.storedInputsHash))")
+        
+        if chartDataCache.storedInputsHash == newHash, let _ = chartDataCache.allRuns {
+            print("// DEBUG: Skipping simulation - same inputs, Conor.")
+            isSimulationRun = true
+            return
+        }
+        
+        print("// DEBUG: Running simulation with new inputs.")
+        
+        // Pretend to load CSV
+        historicalBTCWeeklyReturns = loadBTCWeeklyReturns()
+        sp500WeeklyReturns = loadSP500WeeklyReturns()
+        
+        isCancelled = false
+        isLoading = true
+        monteCarloResults = []
+        completedIterations = 0
+        
+        let finalSeed: UInt64?
+        if simSettings.lockedRandomSeed {
+            finalSeed = simSettings.seedValue
+            simSettings.lastUsedSeed = simSettings.seedValue
+        } else if simSettings.useRandomSeed {
+            let newRandomSeed = UInt64.random(in: 0..<UInt64.max)
+            finalSeed = newRandomSeed
+            simSettings.lastUsedSeed = newRandomSeed
+        } else {
+            finalSeed = nil
+            simSettings.lastUsedSeed = 0
+        }
+        
+        DispatchQueue.global(qos: .userInitiated).async {
+            guard let total = inputManager.getParsedIterations(), total > 0 else {
+                DispatchQueue.main.async { isLoading = false }
+                return
+            }
+            DispatchQueue.main.async {
+                totalIterations = total
+            }
+            
+            let userInputCAGR = inputManager.getParsedAnnualCAGR() / 100.0
+            let userInputVolatility = (Double(inputManager.annualVolatility) ?? 1.0) / 100.0
+            
+            let userWeeks = simSettings.userWeeks
+            let userPriceUSD = simSettings.initialBTCPriceUSD
+            
+            let (medianRun, allIterations) = runMonteCarloSimulationsWithProgress(
+                settings: simSettings,
+                annualCAGR: userInputCAGR,
+                annualVolatility: userInputVolatility,
+                correlationWithSP500: 0.0,
+                exchangeRateEURUSD: 1.06,
+                userWeeks: userWeeks,
+                iterations: total,
+                initialBTCPriceUSD: userPriceUSD,
+                isCancelled: { self.isCancelled },
+                progressCallback: { completed in
+                    if !self.isCancelled {
+                        DispatchQueue.main.async {
+                            self.completedIterations = completed
+                        }
+                    }
+                },
+                seed: finalSeed
+            )
+            
+            if self.isCancelled {
+                DispatchQueue.main.async {
+                    self.isLoading = false
+                }
+                return
+            }
+            
+            let finalRuns = allIterations.map { ($0.last?.btcPriceUSD ?? 0.0, $0) }
+            let sortedRuns = finalRuns.sorted { $0.0 < $1.0 }
+            
+            if !sortedRuns.isEmpty {
+                let tenthIndex = max(0, Int(Double(sortedRuns.count - 1) * 0.10))
+                let medianIndex = sortedRuns.count / 2
+                let ninetiethIndex = min(sortedRuns.count - 1, Int(Double(sortedRuns.count - 1) * 0.90))
+                
+                let tenthRun = sortedRuns[tenthIndex].1
+                let singleMedianRun = sortedRuns[medianIndex].1
+                let ninetiethRun = sortedRuns[ninetiethIndex].1
+                
+                let medianLineData = computeMedianSimulationData(allIterations: allIterations)
+                
+                DispatchQueue.main.async {
+                    self.tenthPercentileResults = tenthRun
+                    self.medianResults = singleMedianRun
+                    self.ninetiethPercentileResults = ninetiethRun
+                    self.monteCarloResults = medianLineData
+                    self.selectedPercentile = .median
+                    self.medianResults = medianLineData
+                    self.allSimData = allIterations
+                    let allSimsAsWeekPoints = self.convertAllSimsToWeekPoints()
+                    
+                    self.chartDataCache.allRuns = allSimsAsWeekPoints
+                    self.chartDataCache.storedInputsHash = newHash
+                    self.chartDataCache.chartSnapshot = nil
+                    
+                    self.isSimulationRun = true
+                    self.isLoading = false
+                    self.medianSimData = medianLineData
+                    
+                    // --- CREATE SNAPSHOT IMMEDIATELY AFTER SIMULATION ---
+                    // Build the chart off-screen and snapshot it so it's ready.
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                        print("// DEBUG: Generating chart snapshot right after simulation.")
+                        
+                        // Provide environment objects so MonteCarloResultsView
+                        // can see chartDataCache, simSettings, etc.
+                        let chartView = MonteCarloResultsView(simulations: allSimsAsWeekPoints)
+                            .environmentObject(self.chartDataCache)
+                            .environmentObject(self.simSettings)
+                        
+                        let snapshot = chartView.snapshot()
+                        self.chartDataCache.chartSnapshot = snapshot
+                        print("// DEBUG: Chart snapshot done, Conor.")
+                    }
+                }
+            } else {
+                DispatchQueue.main.async {
+                    self.isLoading = false
+                }
+            }
+            
+            DispatchQueue.global(qos: .background).async {
+                self.processAllResults(allIterations)
+            }
+        }
+    }
+    
+    // MARK: - UI
+    private var bottomIcons: some View {
+        VStack {
+            Spacer()
+            HStack {
+                Button(action: { showAbout = true }) {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 28))
+                        .foregroundColor(.white)
+                        .padding()
+                }
+                .padding(.leading, 15)
+                
+                Spacer()
+                
+                Button(action: { showSettings = true }) {
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 28))
+                        .foregroundColor(.white)
+                        .padding()
+                }
+                .padding(.trailing, 15)
+            }
+            .padding(.bottom, 30)
+        }
+    }
+    
+    private var parametersScreen: some View {
+        VStack(spacing: 30) {
+            Spacer().frame(height: 60)
+            
+            Text("HODL Simulator")
+                .font(.system(size: 34, weight: .bold))
+                .foregroundColor(.white)
+                .padding(.top, 10)
+            
+            Text("Set your simulation parameters")
+                .font(.callout)
+                .foregroundColor(.gray)
+            
+            VStack(alignment: .leading, spacing: 16) {
+                
+                // Iterations Field
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Iterations")
+                        .foregroundColor(.white)
+                    TextField("e.g. 1000", text: $inputManager.iterations)
+                        .keyboardType(.numberPad)
+                        .padding(8)
+                        .background(Color.white)
+                        .cornerRadius(6)
+                        .foregroundColor(.black)
+                        .focused($activeField, equals: .iterations)
+                        .onChange(of: inputManager.iterations) { newValue in
+                            print("DEBUG: Iterations changed from \(oldIterationsValue) to \(newValue)")
+                            if newValue != oldIterationsValue {
+                                oldIterationsValue = newValue
+                                invalidateChartIfInputChanged()
+                            }
+                        }
+                }
+                
+                // Annual CAGR Field
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Annual CAGR (%)")
+                        .foregroundColor(.white)
+                    TextField("e.g. 40.0", text: $inputManager.annualCAGR)
+                        .keyboardType(.decimalPad)
+                        .padding(8)
+                        .background(Color.white)
+                        .cornerRadius(6)
+                        .foregroundColor(.black)
+                        .focused($activeField, equals: .annualCAGR)
+                        .onChange(of: inputManager.annualCAGR) { newValue in
+                            print("DEBUG: annualCAGR changed from \(oldAnnualCAGRValue) to \(newValue)")
+                            if newValue != oldAnnualCAGRValue {
+                                oldAnnualCAGRValue = newValue
+                                invalidateChartIfInputChanged()
+                            }
+                        }
+                }
+                
+                // Annual Volatility Field
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Annual Volatility (%)")
+                        .foregroundColor(.white)
+                    TextField("e.g. 80.0", text: $inputManager.annualVolatility)
+                        .keyboardType(.decimalPad)
+                        .padding(8)
+                        .background(Color.white)
+                        .cornerRadius(6)
+                        .foregroundColor(.black)
+                        .focused($activeField, equals: .annualVolatility)
+                        .onChange(of: inputManager.annualVolatility) { newValue in
+                            print("DEBUG: annualVolatility changed from \(oldAnnualVolatilityValue) to \(newValue)")
+                            if newValue != oldAnnualVolatilityValue {
+                                oldAnnualVolatilityValue = newValue
+                                invalidateChartIfInputChanged()
+                            }
+                        }
+                }
+            }
+            .padding(20)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color(white: 0.1).opacity(0.8))
+            )
+            .padding(.horizontal, 30)
+            
+            if !isLoading {
+                Button {
+                    print("// DEBUG: Run Simulation button tapped in parametersScreen.")
+                    activeField = nil
+                    runSimulation()
+                } label: {
+                    Text("RUN SIMULATION")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 32)
+                        .padding(.vertical, 14)
+                        .background(Color.orange)
+                        .cornerRadius(8)
+                        .shadow(color: .black.opacity(0.3), radius: 4, x: 2, y: 2)
+                }
+                .padding(.top, 6)
+            }
+            
+            Spacer()
+        }
+    }
+    
     private var simulationResultsView: some View {
         ScrollViewReader { scrollProxy in
             ZStack {
@@ -415,10 +797,10 @@ struct ContentView: View {
                     .edgesIgnoringSafeArea(.top)
                 
                 VStack(spacing: 0) {
-                    
-                    // Navigation bar
+                    // Top bar
                     HStack {
                         Button(action: {
+                            print("// DEBUG: Back button tapped in simulationResultsView.")
                             UserDefaults.standard.set(lastViewedWeek, forKey: "lastViewedWeek")
                             UserDefaults.standard.set(currentPage, forKey: "lastViewedPage")
                             lastViewedPage = currentPage
@@ -431,23 +813,32 @@ struct ContentView: View {
                         
                         Spacer()
                         
-                        // Chart icon: show chart immediately if we have it
+                        // The chart button
                         Button(action: {
-                            if let _ = storedChartView {
-                                // Already built => show instantly
+                            print("// DEBUG: Chart button tapped in simulationResultsView.")
+                            
+                            // Check if we already have a snapshot
+                            if let existingSnapshot = chartDataCache.chartSnapshot {
+                                // We already have a stored image => skip generation
+                                print("// DEBUG: Using stored chart snapshot, Conor.")
                                 chartLoadingState = .none
                                 showHistograms = true
-                            } else {
-                                // Build it after a 2s spinner
+                            } else if let existing = chartDataCache.allRuns {
+                                // We have data but no snapshot => generate a quick snapshot once
+                                print("// DEBUG: No snapshot yet => generating quickly.")
                                 chartLoadingState = .loading
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
                                     if chartLoadingState == .loading {
-                                        let allSimulations = convertAllSimsToWeekPoints()
-                                        storedChartView = MonteCarloResultsView(simulations: allSimulations)
+                                        let chartView = MonteCarloResultsView(simulations: existing)
+                                        let snapshot = chartView.snapshot()
+                                        chartDataCache.chartSnapshot = snapshot
                                         chartLoadingState = .none
                                         showHistograms = true
                                     }
                                 }
+                            } else {
+                                // We have no data => fallback
+                                print("// DEBUG: No chart data in cache => can't show chart or snapshot.")
                             }
                         }) {
                             Image(systemName: "chart.line.uptrend.xyaxis")
@@ -459,7 +850,7 @@ struct ContentView: View {
                     .padding(.vertical, 10)
                     .background(Color(white: 0.12))
                     
-                    // Column titles
+                    // Column headers
                     HStack(spacing: 0) {
                         Text("Week")
                             .frame(width: 60, alignment: .leading)
@@ -480,7 +871,6 @@ struct ContentView: View {
                             
                             GeometryReader { geometry in
                                 HStack(spacing: 0) {
-                                    // Tap left
                                     Color.clear
                                         .frame(width: geometry.size.width * 0.2)
                                         .contentShape(Rectangle())
@@ -495,7 +885,6 @@ struct ContentView: View {
                                                 }
                                         )
                                     Spacer()
-                                    // Tap right
                                     Color.clear
                                         .frame(width: geometry.size.width * 0.2)
                                         .contentShape(Rectangle())
@@ -648,11 +1037,12 @@ struct ContentView: View {
                     contentScrollProxy = scrollProxy
                 }
                 .onDisappear {
+                    print("// DEBUG: simulationResultsView onDisappear => saving lastViewedWeek, lastViewedPage.")
                     UserDefaults.standard.set(lastViewedWeek, forKey: "lastViewedWeek")
                     UserDefaults.standard.set(currentPage, forKey: "lastViewedPage")
                 }
                 
-                // A "scroll to bottom" button
+                // Scroll-to-bottom button
                 if !isAtBottom {
                     VStack {
                         Spacer()
@@ -673,119 +1063,12 @@ struct ContentView: View {
         }
     }
     
-    // MARK: - Bottom icons
-    private var bottomIcons: some View {
-        VStack {
-            Spacer()
-            HStack {
-                Button(action: { showAbout = true }) {
-                    Image(systemName: "info.circle")
-                        .font(.system(size: 28))
-                        .foregroundColor(.white)
-                        .padding()
-                }
-                .padding(.leading, 15)
-                
-                Spacer()
-                
-                Button(action: { showSettings = true }) {
-                    Image(systemName: "gearshape")
-                        .font(.system(size: 28))
-                        .foregroundColor(.white)
-                        .padding()
-                }
-                .padding(.trailing, 15)
-            }
-            .padding(.bottom, 30)
-        }
-    }
-    
-    // MARK: - Parameters screen
-    private var parametersScreen: some View {
-        VStack(spacing: 30) {
-            Spacer().frame(height: 60)
-            
-            Text("HODL Simulator")
-                .font(.system(size: 34, weight: .bold))
-                .foregroundColor(.white)
-                .padding(.top, 10)
-            
-            Text("Set your simulation parameters")
-                .font(.callout)
-                .foregroundColor(.gray)
-            
-            VStack(alignment: .leading, spacing: 16) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Iterations")
-                        .foregroundColor(.white)
-                    TextField("e.g. 1000", text: $inputManager.iterations)
-                        .keyboardType(.numberPad)
-                        .padding(8)
-                        .background(Color.white)
-                        .cornerRadius(6)
-                        .foregroundColor(.black)
-                        .focused($activeField, equals: .iterations)
-                }
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Annual CAGR (%)")
-                        .foregroundColor(.white)
-                    TextField("e.g. 40.0", text: $inputManager.annualCAGR)
-                        .keyboardType(.decimalPad)
-                        .padding(8)
-                        .background(Color.white)
-                        .cornerRadius(6)
-                        .foregroundColor(.black)
-                        .focused($activeField, equals: .annualCAGR)
-                }
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Annual Volatility (%)")
-                        .foregroundColor(.white)
-                    TextField("e.g. 80.0", text: $inputManager.annualVolatility)
-                        .keyboardType(.decimalPad)
-                        .padding(8)
-                        .background(Color.white)
-                        .cornerRadius(6)
-                        .foregroundColor(.black)
-                        .focused($activeField, equals: .annualVolatility)
-                }
-            }
-            .padding(20)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(white: 0.1).opacity(0.8))
-            )
-            .padding(.horizontal, 30)
-            
-            // Run Simulation button
-            if !isLoading {
-                Button {
-                    activeField = nil
-                    runSimulation()
-                } label: {
-                    Text("RUN SIMULATION")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 32)
-                        .padding(.vertical, 14)
-                        .background(Color.orange)
-                        .cornerRadius(8)
-                        .shadow(color: .black.opacity(0.3), radius: 4, x: 2, y: 2)
-                }
-                .padding(.top, 6)
-            }
-            
-            Spacer()
-        }
-    }
-    
-    // MARK: - Jump to results button
     private var transitionToResultsButton: some View {
         VStack {
             HStack {
                 Spacer()
                 Button(action: {
+                    print("// DEBUG: transitionToResultsButton tapped => showing simulation screen.")
                     isSimulationRun = true
                     currentPage = lastViewedPage
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -812,7 +1095,6 @@ struct ContentView: View {
         }
     }
     
-    // MARK: - Loading Overlay
     private var loadingOverlay: some View {
         ZStack {
             Color.black.opacity(0.6).ignoresSafeArea()
@@ -821,6 +1103,7 @@ struct ContentView: View {
                 HStack {
                     Spacer()
                     Button(action: {
+                        print("// DEBUG: Cancel button tapped in loadingOverlay.")
                         isCancelled = true
                         isLoading = false
                     }) {
@@ -864,7 +1147,6 @@ struct ContentView: View {
         .onDisappear { stopTipCycle() }
     }
     
-    // MARK: - Chart loading overlay
     private var chartLoadingOverlay: some View {
         ZStack {
             Color.black.opacity(0.6).ignoresSafeArea()
@@ -875,6 +1157,7 @@ struct ContentView: View {
                     .scaleEffect(2.0)
                 
                 Button(action: {
+                    print("// DEBUG: Cancel button tapped in chartLoadingOverlay.")
                     chartLoadingState = .cancelled
                     chartLoadingState = .none
                 }) {
@@ -891,241 +1174,7 @@ struct ContentView: View {
         }
     }
     
-    // MARK: - Run Simulation
-    private func runSimulation() {
-        // We assume loadBTCWeeklyReturns(), loadSP500WeeklyReturns(), etc. exist in your codebase
-        historicalBTCWeeklyReturns = loadBTCWeeklyReturns()
-        sp500WeeklyReturns = loadSP500WeeklyReturns()
-        
-        isCancelled = false
-        isLoading = true
-        monteCarloResults = []
-        completedIterations = 0
-        
-        let finalSeed: UInt64?
-        if simSettings.lockedRandomSeed {
-            finalSeed = simSettings.seedValue
-            simSettings.lastUsedSeed = simSettings.seedValue
-        } else if simSettings.useRandomSeed {
-            let newRandomSeed = UInt64.random(in: 0..<UInt64.max)
-            finalSeed = newRandomSeed
-            simSettings.lastUsedSeed = newRandomSeed
-        } else {
-            finalSeed = nil
-            simSettings.lastUsedSeed = 0
-        }
-        
-        DispatchQueue.global(qos: .userInitiated).async {
-            guard let total = inputManager.getParsedIterations(), total > 0 else {
-                DispatchQueue.main.async { isLoading = false }
-                return
-            }
-            DispatchQueue.main.async {
-                totalIterations = total
-            }
-            
-            let userInputCAGR = inputManager.getParsedAnnualCAGR() / 100.0
-            let userInputVolatility = (Double(inputManager.annualVolatility) ?? 1.0) / 100.0
-            
-            let userWeeks = simSettings.userWeeks
-            let userPriceUSD = simSettings.initialBTCPriceUSD
-            
-            let (medianRun, allIterations) = runMonteCarloSimulationsWithProgress(
-                settings: simSettings,
-                annualCAGR: userInputCAGR,
-                annualVolatility: userInputVolatility,
-                correlationWithSP500: 0.0,
-                exchangeRateEURUSD: 1.06,
-                userWeeks: userWeeks,
-                iterations: total,
-                initialBTCPriceUSD: userPriceUSD,
-                isCancelled: { self.isCancelled },
-                progressCallback: { completed in
-                    if !self.isCancelled {
-                        DispatchQueue.main.async {
-                            self.completedIterations = completed
-                        }
-                    }
-                },
-                seed: finalSeed
-            )
-            
-            // Example of printing final prices
-            func formatNumber(_ value: Double) -> String {
-                let formatter = NumberFormatter()
-                formatter.numberStyle = .decimal
-                formatter.groupingSeparator = ","
-                formatter.minimumFractionDigits = 2
-                formatter.maximumFractionDigits = 2
-                return formatter.string(from: NSNumber(value: value)) ?? "\(value)"
-            }
-            
-            let medianFinalPrice = medianRun.last?.btcPriceUSD ?? -999
-            print("[DEBUG] Single-run median final price = \(formatNumber(medianFinalPrice))")
-            
-            let finalPrices = allIterations.compactMap { $0.last?.btcPriceUSD }
-            let sortedPrices = finalPrices.sorted()
-            if sortedPrices.count > 1 {
-                let tenthIndex = Int(Double(sortedPrices.count - 1) * 0.1)
-                let ninetiethIndex = Int(Double(sortedPrices.count - 1) * 0.9)
-                let tenthValue = sortedPrices[tenthIndex]
-                let ninetiethValue = sortedPrices[ninetiethIndex]
-                print("[DEBUG] 10th percentile final price = \(formatNumber(tenthValue))")
-                print("[DEBUG] 90th percentile final price = \(formatNumber(ninetiethValue))")
-            }
-            
-            if self.isCancelled {
-                DispatchQueue.main.async {
-                    self.isLoading = false
-                }
-                return
-            }
-            
-            let finalRuns = allIterations.map { ($0.last?.btcPriceUSD ?? 0.0, $0) }
-            let sortedRuns = finalRuns.sorted { $0.0 < $1.0 }
-            
-            if !sortedRuns.isEmpty {
-                let tenthIndex = max(0, Int(Double(sortedRuns.count - 1) * 0.10))
-                let medianIndex = sortedRuns.count / 2
-                let ninetiethIndex = min(sortedRuns.count - 1, Int(Double(sortedRuns.count - 1) * 0.90))
-                
-                let tenthRun = sortedRuns[tenthIndex].1
-                let singleMedianRun = sortedRuns[medianIndex].1
-                let ninetiethRun = sortedRuns[ninetiethIndex].1
-                
-                // Build the median line across all runs
-                let medianLineData = computeMedianSimulationData(allIterations: allIterations)
-                
-                DispatchQueue.main.async {
-                    self.tenthPercentileResults = tenthRun
-                    self.medianResults = singleMedianRun
-                    self.ninetiethPercentileResults = ninetiethRun
-                    
-                    // For the table, we show the week-by-week median
-                    self.monteCarloResults = medianLineData
-                    self.selectedPercentile = .median
-                    self.medianResults = medianLineData
-                    
-                    self.isSimulationRun = true
-                    self.isLoading = false
-                    
-                    // Keep these so we can build the chart later
-                    self.medianSimData = medianLineData
-                    self.allSimData = allIterations
-                }
-            } else {
-                DispatchQueue.main.async {
-                    self.isLoading = false
-                }
-            }
-            
-            DispatchQueue.global(qos: .background).async {
-                self.processAllResults(allIterations)
-            }
-        }
-    }
-    
-    // Compute your median line from all runs
-    private func computeMedianSimulationData(allIterations: [[SimulationData]]) -> [SimulationData] {
-        // Keep your existing logic. Example:
-        guard let firstRun = allIterations.first else { return [] }
-        let totalWeeks = firstRun.count
-        
-        var medianResult: [SimulationData] = []
-        
-        for w in 0..<totalWeeks {
-            let allAtWeek = allIterations.compactMap { run -> SimulationData? in
-                guard w < run.count else { return nil }
-                return run[w]
-            }
-            if allAtWeek.isEmpty { continue }
-            
-            let sortedStartingBTC = allAtWeek.map { $0.startingBTC }.sorted()
-            let sortedNetBTCHoldings = allAtWeek.map { $0.netBTCHoldings }.sorted()
-            let sortedBtcPriceUSD = allAtWeek.map { $0.btcPriceUSD }.sorted()
-            let sortedBtcPriceEUR = allAtWeek.map { $0.btcPriceEUR }.sorted()
-            let sortedPortfolioValueEUR = allAtWeek.map { $0.portfolioValueEUR }.sorted()
-            let sortedContributionEUR = allAtWeek.map { $0.contributionEUR }.sorted()
-            let sortedFeeEUR = allAtWeek.map { $0.transactionFeeEUR }.sorted()
-            let sortedNetContribBTC = allAtWeek.map { $0.netContributionBTC }.sorted()
-            let sortedWithdrawalEUR = allAtWeek.map { $0.withdrawalEUR }.sorted()
-            
-            func medianOfSorted(_ arr: [Double]) -> Double {
-                if arr.isEmpty { return 0.0 }
-                let mid = arr.count / 2
-                if arr.count.isMultiple(of: 2) {
-                    return (arr[mid] + arr[mid - 1]) / 2.0
-                } else {
-                    return arr[mid]
-                }
-            }
-            
-            let medianSimData = SimulationData(
-                week: allAtWeek[0].week,
-                startingBTC: medianOfSorted(sortedStartingBTC),
-                netBTCHoldings: medianOfSorted(sortedNetBTCHoldings),
-                btcPriceUSD: medianOfSorted(sortedBtcPriceUSD),
-                btcPriceEUR: medianOfSorted(sortedBtcPriceEUR),
-                portfolioValueEUR: medianOfSorted(sortedPortfolioValueEUR),
-                contributionEUR: medianOfSorted(sortedContributionEUR),
-                transactionFeeEUR: medianOfSorted(sortedFeeEUR),
-                netContributionBTC: medianOfSorted(sortedNetContribBTC),
-                withdrawalEUR: medianOfSorted(sortedWithdrawalEUR)
-            )
-            
-            medianResult.append(medianSimData)
-        }
-        return medianResult
-    }
-    
-    // Convert single run to [WeekPoint]
-    func convertOriginalToWeekPoints() -> [WeekPoint] {
-        medianSimData.map { row in
-            WeekPoint(week: row.week, value: row.portfolioValueEUR)
-        }
-    }
-
-    // Convert all runs to [SimulationRun]
-    func convertAllSimsToWeekPoints() -> [SimulationRun] {
-        allSimData.map { singleRun -> SimulationRun in
-            let wpoints = singleRun.map { row in
-                // chart row.btcPriceUSD or row.portfolioValueEUR, etc.
-                WeekPoint(week: row.week, value: row.btcPriceUSD)
-            }
-            return SimulationRun(points: wpoints)
-        }
-    }
-    
-    // Called after all results are done to do more post-processing
-    private func processAllResults(_ allResults: [[SimulationData]]) {
-        // ...
-    }
-    
-    private func getValue(_ item: SimulationData, _ keyPath: PartialKeyPath<SimulationData>) -> String {
-        if let value = item[keyPath: keyPath] as? Double {
-            switch keyPath {
-            case \SimulationData.startingBTC,
-                 \SimulationData.netBTCHoldings,
-                 \SimulationData.netContributionBTC:
-                return value.formattedBTC()
-            case \SimulationData.btcPriceUSD,
-                 \SimulationData.btcPriceEUR,
-                 \SimulationData.portfolioValueEUR,
-                 \SimulationData.contributionEUR,
-                 \SimulationData.transactionFeeEUR,
-                 \SimulationData.withdrawalEUR:
-                return value.formattedCurrency()
-            default:
-                return String(format: "%.2f", value)
-            }
-        } else if let value = item[keyPath: keyPath] as? Int {
-            return "\(value)"
-        } else {
-            return ""
-        }
-    }
-    
-    // MARK: - Start/Stop the tip cycle
+    // MARK: - Tip cycle
     private func startTipCycle() {
         showTip = false
         tipTimer?.invalidate()
@@ -1156,5 +1205,32 @@ struct ContentView: View {
         tipTimer = nil
         showTip = false
     }
-}
     
+    private func processAllResults(_ allResults: [[SimulationData]]) {
+        // ...
+    }
+    
+    private func getValue(_ item: SimulationData, _ keyPath: PartialKeyPath<SimulationData>) -> String {
+        if let value = item[keyPath: keyPath] as? Double {
+            switch keyPath {
+            case \SimulationData.startingBTC,
+                 \SimulationData.netBTCHoldings,
+                 \SimulationData.netContributionBTC:
+                return value.formattedBTC()
+            case \SimulationData.btcPriceUSD,
+                 \SimulationData.btcPriceEUR,
+                 \SimulationData.portfolioValueEUR,
+                 \SimulationData.contributionEUR,
+                 \SimulationData.transactionFeeEUR,
+                 \SimulationData.withdrawalEUR:
+                return value.formattedCurrency()
+            default:
+                return String(format: "%.2f", value)
+            }
+        } else if let value = item[keyPath: keyPath] as? Int {
+            return "\(value)"
+        } else {
+            return ""
+        }
+    }
+}
