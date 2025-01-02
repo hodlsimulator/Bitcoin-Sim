@@ -29,14 +29,16 @@ class ChartViewModel: ObservableObject {
     @Published var isLoading: Bool = false
     
     init(simulations: [SimulationRun]) {
-        print("// DEBUG: MonteCarloResultsView init -> I'm being created. chartDataCache not accessible yet here.")
-        // Keep the data so it's not lost on rotation
+        print("// DEBUG: ChartViewModel init -> Created. Simulations count: \(simulations.count)")
         self.simulations = simulations
     }
     
     // Compute Median once, from the same data
     var medianLine: [WeekPoint] {
-        guard let firstRun = simulations.first else { return [] }
+        guard let firstRun = simulations.first else {
+            print("// DEBUG: medianLine -> No simulations present.")
+            return []
+        }
         let countPerRun = firstRun.points.count
         var medianPoints: [WeekPoint] = []
         
@@ -61,7 +63,7 @@ class ChartViewModel: ObservableObject {
 // MARK: - Number Formatting
 
 func formatSuffix(_ value: Double) -> String {
-    if value >= 1_000_000_000_000_000_000 { return "\(Int(value / 1_000_000_000_000_000_000))Q" } // Quadrillion etc.
+    if value >= 1_000_000_000_000_000 { return "\(Int(value / 1_000_000_000_000_000))Q" }         // Quadrillion etc.
     if value >= 1_000_000_000_000 { return "\(Int(value / 1_000_000_000_000))T" }                 // Trillion
     if value >= 1_000_000_000 { return "\(Int(value / 1_000_000_000))B" }                         // Billion
     if value >= 1_000_000 { return "\(Int(value / 1_000_000))M" }                                 // Million
@@ -146,56 +148,61 @@ struct MonteCarloChartView: View {
     @ObservedObject var viewModel: ChartViewModel
     
     var body: some View {
-        if viewModel.isLoading {
-            ProgressView("Loading…")
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color.black.ignoresSafeArea())
-        } else {
-            Chart {
-                simulationLines(simulations: viewModel.simulations)
-                medianLines(simulations: viewModel.simulations,
-                            medianLine: viewModel.medianLine)
-            }
-            .chartLegend(.hidden)
-            .chartXScale(domain: 0.0...20.0, type: .linear)
-            .chartYScale(domain: .automatic(includesZero: false), type: .log)
-            .chartXAxis {
-                let yearMarkers = [5.0, 10.0, 15.0, 20.0]
-                AxisMarks(values: yearMarkers) { axisValue in
-                    AxisGridLine(centered: false)
-                        .foregroundStyle(.white.opacity(0.3))
-                    AxisTick(centered: false)
-                        .foregroundStyle(.white.opacity(0.3))
-                    AxisValueLabel(centered: false) {
-                        if let yearVal = axisValue.as(Double.self) {
-                            Text("\(Int(yearVal))")
-                                .font(.system(size: 14))
-                                .foregroundColor(.white)
+        // Safe to log outside the ViewBuilder:
+        print("// DEBUG: MonteCarloChartView -> Checking isLoading: \(viewModel.isLoading)")
+        
+        return Group {
+            if viewModel.isLoading {
+                ProgressView("Loading…")
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color.black.ignoresSafeArea())
+            } else {
+                Chart {
+                    simulationLines(simulations: viewModel.simulations)
+                    medianLines(simulations: viewModel.simulations,
+                                medianLine: viewModel.medianLine)
+                }
+                .chartLegend(.hidden)
+                .chartXScale(domain: 0.0...20.0, type: .linear)
+                .chartYScale(domain: .automatic(includesZero: false), type: .log)
+                .chartXAxis {
+                    let yearMarkers = [5.0, 10.0, 15.0, 20.0]
+                    AxisMarks(values: yearMarkers) { axisValue in
+                        AxisGridLine(centered: false)
+                            .foregroundStyle(.white.opacity(0.3))
+                        AxisTick(centered: false)
+                            .foregroundStyle(.white.opacity(0.3))
+                        AxisValueLabel(centered: false) {
+                            if let yearVal = axisValue.as(Double.self) {
+                                Text("\(Int(yearVal))")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.white)
+                            }
                         }
                     }
                 }
-            }
-            .chartYAxis {
-                AxisMarks(position: .leading) { axisValue in
-                    AxisGridLine()
-                        .foregroundStyle(.white.opacity(0.3))
-                    AxisTick()
-                        .foregroundStyle(.white.opacity(0.3))
-                    AxisValueLabel {
-                        if let val = axisValue.as(Double.self) {
-                            Text(formatSuffix(val))
-                                .font(.system(size: 14))
-                                .foregroundColor(.white)
+                .chartYAxis {
+                    AxisMarks(position: .leading) { axisValue in
+                        AxisGridLine()
+                            .foregroundStyle(.white.opacity(0.3))
+                        AxisTick()
+                            .foregroundStyle(.white.opacity(0.3))
+                        AxisValueLabel {
+                            if let val = axisValue.as(Double.self) {
+                                Text(formatSuffix(val))
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.white)
+                            }
                         }
                     }
                 }
+                .padding(.vertical, 16)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.black.opacity(0.2))
+                )
             }
-            .padding(.vertical, 16)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.black.opacity(0.2))
-            )
         }
     }
 }
@@ -206,72 +213,73 @@ struct MonteCarloResultsView: View {
     @StateObject private var viewModel: ChartViewModel
     @EnvironmentObject var chartDataCache: ChartDataCache
     
+    // This is an init, so `print` is fine (it doesn't live in a builder).
     init(simulations: [SimulationRun]) {
+        print("// DEBUG: MonteCarloResultsView -> init with \(simulations.count) sims.")
         _viewModel = StateObject(wrappedValue: ChartViewModel(simulations: simulations))
     }
     
     var body: some View {
         NavigationStack {
             ZStack {
-                // Black background behind everything
-                Color.black
-                    .ignoresSafeArea()
+                Color.black.ignoresSafeArea()
                 
-                // If we already have a cached snapshot, just show it
+                // if/else must only produce Views - so no direct prints in here:
                 if let snapshotImage = chartDataCache.chartSnapshot {
                     SnapshotView(snapshot: snapshotImage)
+                        .onAppear {
+                            // Debug logging is safe inside onAppear
+                            print("// DEBUG: We have a cached snapshot -> SnapshotView.")
+                        }
                 } else {
-                    // Otherwise, show the live SwiftUI Chart
                     VStack(spacing: 0) {
                         MonteCarloChartView(viewModel: viewModel)
                     }
                     .background(Color.black.ignoresSafeArea())
+                    .onAppear {
+                        print("// DEBUG: No snapshot -> showing live chart.")
+                    }
                 }
                 
-                // Loading overlay if needed
+                // The loading overlay condition:
                 if viewModel.isLoading {
                     Color.black.opacity(0.6).ignoresSafeArea()
                     ProgressView("Loading…")
                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                         .scaleEffect(2.0)
+                        .onAppear {
+                            print("// DEBUG: viewModel.isLoading is true -> overlay.")
+                        }
                 }
             }
             .navigationTitle("Monte Carlo – BTC Price (USD)")
             .navigationBarTitleDisplayMode(.inline)
-        }
-        .onAppear {
-            // Observe orientation changes; show a spinner if no snapshot is available
-            NotificationCenter.default.addObserver(
-                forName: UIDevice.orientationDidChangeNotification,
-                object: nil,
-                queue: .main
-            ) { _ in
-                if chartDataCache.chartSnapshot == nil {
-                    viewModel.isLoading = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-                        viewModel.isLoading = false
-                    }
-                }
+            // Safe area for logging in onAppear:
+            .onAppear {
+                print("// DEBUG: MonteCarloResultsView onAppear -> checking chartSnapshot.")
             }
         }
     }
 }
 
-// A simple view that only displays the cached snapshot.
-// That way, we skip building the fallback chart if the snapshot is present.
+// MARK: - SnapshotView
+
 struct SnapshotView: View {
     let snapshot: UIImage
     
     var body: some View {
+        // Logging in onAppear instead of inline:
         Image(uiImage: snapshot)
             .resizable()
             .scaledToFill()
-            // Pin top, clip any overflow, add space at the bottom
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .clipped()
-            .padding(.bottom, 90) // Adjust to taste
+            .padding(.bottom, 90) // Adjust as needed
             .ignoresSafeArea(edges: .top)
             .transition(.move(edge: .bottom))
             .animation(.easeInOut(duration: 0.5), value: snapshot)
+            .onAppear {
+                print("// DEBUG: SnapshotView -> displaying snapshot.")
+            }
     }
 }

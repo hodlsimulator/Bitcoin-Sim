@@ -272,6 +272,8 @@ fileprivate enum ChartLoadingState {
 
 // MARK: - ChartDataCache
 class ChartDataCache: ObservableObject {
+    let id = UUID()  // <-- Add this line to track the identity
+    
     @Published var allRuns: [SimulationRun]? = nil
     @Published var storedInputsHash: Int? = nil
     
@@ -353,6 +355,8 @@ struct ContentView: View {
     @State private var oldIterationsValue: String = ""
     @State private var oldAnnualCAGRValue: String = ""
     @State private var oldAnnualVolatilityValue: String = ""
+    
+    @State private var showSnapshotView = false
     
     // MARK: - Convert single run to [WeekPoint]
     func convertOriginalToWeekPoints() -> [WeekPoint] {
@@ -476,12 +480,18 @@ struct ContentView: View {
                 AboutView()
             }
             .navigationDestination(isPresented: $showHistograms) {
-                if let existingChartData = chartDataCache.allRuns {
+                if let snapshot = chartDataCache.chartSnapshot {
+                    // If we have a cached snapshot, show that ONLY
+                    ChartSnapshotView(snapshot: snapshot)
+                        .environmentObject(chartDataCache)
+                } else if let existingChartData = chartDataCache.allRuns {
+                    // Otherwise, if we have data but no snapshot, build the live chart
                     MonteCarloResultsView(simulations: existingChartData)
                         .environmentObject(chartDataCache)
                         .environmentObject(simSettings)
                 } else {
-                    Text("Loading chart...")
+                    // Fallback if we have no data at all
+                    Text("Loading chart…")
                         .foregroundColor(.white)
                 }
             }
@@ -506,11 +516,10 @@ struct ContentView: View {
     
     // MARK: - Invalidate chart if inputs change
     private func invalidateChartIfInputChanged() {
-        // DEBUG:
         print("DEBUG: invalidateChartIfInputChanged() called => clearing chartDataCache. (Backtrace: \(Thread.callStackSymbols))")
         chartDataCache.allRuns = nil
         chartDataCache.storedInputsHash = nil
-        chartDataCache.chartSnapshot = nil  // We also clear the snapshot
+        // chartDataCache.chartSnapshot = nil  // Comment out or remove this if you don't want to reset the snapshot
     }
     
     // MARK: - Compute inputs hash
@@ -527,18 +536,11 @@ struct ContentView: View {
         let newHash = computeInputsHash()
         print("// DEBUG: runSimulation() => newHash = \(newHash), storedInputsHash = \(String(describing: chartDataCache.storedInputsHash))")
         
-        if chartDataCache.storedInputsHash == newHash, let _ = chartDataCache.allRuns {
-            print("// DEBUG: Skipping simulation - same inputs, Conor.")
-            isSimulationRun = true
-            return
-        }
-        
-        print("// DEBUG: Running simulation with new inputs.")
-        
         // Pretend to load CSV
         historicalBTCWeeklyReturns = loadBTCWeeklyReturns()
         sp500WeeklyReturns = loadSP500WeeklyReturns()
         
+        print("// DEBUG: Setting up for new simulation run. Clearing existing results & marking isLoading=true.")
         isCancelled = false
         isLoading = true
         monteCarloResults = []
@@ -548,22 +550,27 @@ struct ContentView: View {
         if simSettings.lockedRandomSeed {
             finalSeed = simSettings.seedValue
             simSettings.lastUsedSeed = simSettings.seedValue
+            print("// DEBUG: Using lockedRandomSeed: \(finalSeed ?? 0)")
         } else if simSettings.useRandomSeed {
             let newRandomSeed = UInt64.random(in: 0..<UInt64.max)
             finalSeed = newRandomSeed
             simSettings.lastUsedSeed = newRandomSeed
+            print("// DEBUG: Using a fresh random seed: \(finalSeed ?? 0)")
         } else {
             finalSeed = nil
             simSettings.lastUsedSeed = 0
+            print("// DEBUG: No seed locked or random => finalSeed is nil.")
         }
         
         DispatchQueue.global(qos: .userInitiated).async {
             guard let total = inputManager.getParsedIterations(), total > 0 else {
+                print("// DEBUG: No valid iteration count => bailing out.")
                 DispatchQueue.main.async { isLoading = false }
                 return
             }
             DispatchQueue.main.async {
                 totalIterations = total
+                print("// DEBUG: totalIterations set to: \(total)")
             }
             
             let userInputCAGR = inputManager.getParsedAnnualCAGR() / 100.0
@@ -571,6 +578,8 @@ struct ContentView: View {
             
             let userWeeks = simSettings.userWeeks
             let userPriceUSD = simSettings.initialBTCPriceUSD
+            
+            print("// DEBUG: Starting runMonteCarloSimulationsWithProgress (CAGR=\(userInputCAGR), volatility=\(userInputVolatility), weeks=\(userWeeks), initialPrice=\(userPriceUSD)).")
             
             let (medianRun, allIterations) = runMonteCarloSimulationsWithProgress(
                 settings: simSettings,
@@ -592,13 +601,16 @@ struct ContentView: View {
                 seed: finalSeed
             )
             
+            // Check if user cancelled
             if self.isCancelled {
+                print("// DEBUG: isCancelled == true => stopping simulation run.")
                 DispatchQueue.main.async {
                     self.isLoading = false
                 }
                 return
             }
             
+            // Sort final runs by last week's BTC price
             let finalRuns = allIterations.map { ($0.last?.btcPriceUSD ?? 0.0, $0) }
             let sortedRuns = finalRuns.sorted { $0.0 < $1.0 }
             
@@ -614,6 +626,7 @@ struct ContentView: View {
                 let medianLineData = computeMedianSimulationData(allIterations: allIterations)
                 
                 DispatchQueue.main.async {
+                    print("// DEBUG: Assigning results to UI state. tenthIndex=\(tenthIndex), medianIndex=\(medianIndex), ninetiethIndex=\(ninetiethIndex)")
                     self.tenthPercentileResults = tenthRun
                     self.medianResults = singleMedianRun
                     self.ninetiethPercentileResults = ninetiethRun
@@ -625,6 +638,11 @@ struct ContentView: View {
                     
                     self.chartDataCache.allRuns = allSimsAsWeekPoints
                     self.chartDataCache.storedInputsHash = newHash
+                    
+                    // Invalidate any old snapshot
+                    if self.chartDataCache.chartSnapshot != nil {
+                        print("// DEBUG: Clearing old chartSnapshot to force fresh one.")
+                    }
                     self.chartDataCache.chartSnapshot = nil
                     
                     self.isSimulationRun = true
@@ -632,18 +650,33 @@ struct ContentView: View {
                     self.medianSimData = medianLineData
                     
                     // --- CREATE SNAPSHOT IMMEDIATELY AFTER SIMULATION ---
-                    // Build the chart off-screen and snapshot it so it's ready.
                     DispatchQueue.main.async {
-                        // Generate snapshot immediately
-                        let chartView = MonteCarloResultsView(simulations: allSimsAsWeekPoints)
-                            .environmentObject(self.chartDataCache)
-                            .environmentObject(self.simSettings)
-                        
-                        let snapshot = chartView.snapshot()
-                        self.chartDataCache.chartSnapshot = snapshot
+                        print("// DEBUG: Preparing to build off-screen MonteCarloResultsView for snapshot.")
+
+                        // Give SwiftUI a short delay to settle the layout
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            print("// DEBUG: Building off-screen MonteCarloResultsView for snapshot.")
+                            let chartView = MonteCarloResultsView(simulations: allSimsAsWeekPoints)
+                                .environmentObject(self.chartDataCache)
+                                .environmentObject(self.simSettings)
+                            
+                            // Option 1: Use your existing .snapshot() extension
+                            let snapshot = chartView.snapshot()
+                            print("// DEBUG: Snapshot generated. size: \(snapshot.size) => setting chartDataCache.chartSnapshot.")
+                            self.chartDataCache.chartSnapshot = snapshot
+                            
+                            // Option 2: Force layout if needed:
+                            /*
+                            // If you have a custom layout approach:
+                            let forcedSizedImage = chartView.snapshotWithForcedLayout(CGSize(width: 400, height: 600))
+                            print("// DEBUG: Forced layout snapshot size: \(forcedSizedImage.size)")
+                            self.chartDataCache.chartSnapshot = forcedSizedImage
+                            */
+                        }
                     }
                 }
             } else {
+                print("// DEBUG: sortedRuns is empty => no results => setting isLoading=false.")
                 DispatchQueue.main.async {
                     self.isLoading = false
                 }
@@ -811,35 +844,41 @@ struct ContentView: View {
                         
                         // The chart button
                         Button(action: {
-                            print("// DEBUG: Chart button tapped in simulationResultsView.")
-                            
-                            // Check if we already have a snapshot
-                            if let existingSnapshot = chartDataCache.chartSnapshot {
-                                // We already have a stored image => skip generation
-                                print("// DEBUG: Using stored chart snapshot, Conor.")
-                                chartLoadingState = .none
-                                showHistograms = true
-                            } else if let existing = chartDataCache.allRuns {
-                                // We have data but no snapshot => generate a quick snapshot once
-                                print("// DEBUG: No snapshot yet => generating quickly.")
-                                chartLoadingState = .loading
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                                    if chartLoadingState == .loading {
-                                        let chartView = MonteCarloResultsView(simulations: existing)
-                                        let snapshot = chartView.snapshot()
-                                        chartDataCache.chartSnapshot = snapshot
-                                        chartLoadingState = .none
-                                        showHistograms = true
-                                    }
-                                }
+                            // Log each time the chart button is pressed.
+                            // Also log whether we have a snapshot, how many runs exist, etc.
+                            print("// DEBUG: Chart button pressed.")
+                            print("// DEBUG: chartDataCache.chartSnapshot == \(chartDataCache.chartSnapshot == nil ? "nil" : "non-nil")")
+                            if let allRuns = chartDataCache.allRuns {
+                                print("// DEBUG: chartDataCache.allRuns has \(allRuns.count) runs.")
                             } else {
-                                // We have no data => fallback
-                                print("// DEBUG: No chart data in cache => can't show chart or snapshot.")
+                                print("// DEBUG: chartDataCache.allRuns is nil.")
+                            }
+                            
+                            // If you added a UUID in ChartDataCache, log that as well:
+                            // print("// DEBUG: chartDataCache.id = \(chartDataCache.id)")
+                            
+                            if let snapshot = chartDataCache.chartSnapshot {
+                                // We already have the snapshot => go straight to ChartSnapshotView
+                                showSnapshotView = true
+                            } else if let existingRuns = chartDataCache.allRuns {
+                                // There's data but no snapshot => build the chart or create a snapshot
+                                // showHistograms = true // If that navigates to a live chart
+                                // or generate the snapshot here if you'd like
+                            } else {
+                                // No snapshot, no data, fallback or show an alert
                             }
                         }) {
                             Image(systemName: "chart.line.uptrend.xyaxis")
                                 .foregroundColor(.white)
                                 .imageScale(.large)
+                        }
+                        .navigationDestination(isPresented: $showSnapshotView) {
+                            if let snapshot = chartDataCache.chartSnapshot {
+                                ChartSnapshotView(snapshot: snapshot)
+                            } else {
+                                Text("No snapshot available")
+                                    .foregroundColor(.white)
+                            }
                         }
                     }
                     .padding(.horizontal, 55)
