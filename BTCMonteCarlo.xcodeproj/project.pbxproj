@@ -19,6 +19,7 @@
 		E166A8B92CF955ED0003F518 /* ContentOffsetScrollView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E166A8B82CF955E80003F518 /* ContentOffsetScrollView.swift */; };
 		E17A47FE2CF11AC000AAC885 /* project.pbxproj in Resources */ = {isa = PBXBuildFile; fileRef = E17A47FD2CF11AC000AAC885 /* project.pbxproj */; };
 		E17A48012CF178C600AAC885 /* MonteCarloVisualisations.swift in Sources */ = {isa = PBXBuildFile; fileRef = E17A48002CF178C600AAC885 /* MonteCarloVisualisations.swift */; };
+		E17B2F222D26A9F300ECE087 /* SimulationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = E17B2F212D26A9F000ECE087 /* SimulationCoordinator.swift */; };
 		E17DDF9C2D1BD13E008700A8 /* PocketSVG in Frameworks */ = {isa = PBXBuildFile; productRef = E17DDF9B2D1BD13E008700A8 /* PocketSVG */; };
 		E1883F382D1DD4C8007AA90B /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1883F372D1DD4C5007AA90B /* SettingsView.swift */; };
 		E1883F3A2D1DD94F007AA90B /* SimulationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1883F392D1DD94C007AA90B /* SimulationSettings.swift */; };
@@ -69,6 +70,7 @@
 		E17A47FD2CF11AC000AAC885 /* project.pbxproj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.pbxproject; path = project.pbxproj; sourceTree = "<group>"; };
 		E17A47FF2CF11D3200AAC885 /* BTCMonteCarlo.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = BTCMonteCarlo.entitlements; sourceTree = "<group>"; };
 		E17A48002CF178C600AAC885 /* MonteCarloVisualisations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonteCarloVisualisations.swift; sourceTree = "<group>"; };
+		E17B2F212D26A9F000ECE087 /* SimulationCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulationCoordinator.swift; sourceTree = "<group>"; };
 		E1883F372D1DD4C5007AA90B /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		E1883F392D1DD94C007AA90B /* SimulationSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulationSettings.swift; sourceTree = "<group>"; };
 		E1883F3B2D1DDC75007AA90B /* ParametersFormView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParametersFormView.swift; sourceTree = "<group>"; };
@@ -164,6 +166,7 @@
 				E1883F4F2D1FCEB9007AA90B /* OnboardingView.swift */,
 				E1883F3B2D1DDC75007AA90B /* ParametersFormView.swift */,
 				E1883F372D1DD4C5007AA90B /* SettingsView.swift */,
+				E17B2F212D26A9F000ECE087 /* SimulationCoordinator.swift */,
 				E1883F392D1DD94C007AA90B /* SimulationSettings.swift */,
 				E166A8AF2CF855C20003F518 /* SimulationData.swift */,
 				E1883F412D1E43D7007AA90B /* VisualEffectBlur.swift */,
@@ -365,6 +368,7 @@
 				E18C2BE12D259248006E7438 /* ChartSnapshotView.swift in Sources */,
 				E166A8AA2CF855B00003F518 /* CSVLoader.swift in Sources */,
 				E1883F442D1E69B9007AA90B /* FactorToggleRow.swift in Sources */,
+				E17B2F222D26A9F300ECE087 /* SimulationCoordinator.swift in Sources */,
 				E12CCD8B2CF8235F0059931D /* BTC_SimulatorApp.swift in Sources */,
 				E1883F3E2D1E0D7A007AA90B /* ActiveField.swift in Sources */,
 				E1883F3A2D1DD94F007AA90B /* SimulationSettings.swift in Sources */,

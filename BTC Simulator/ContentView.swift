@@ -260,12 +260,6 @@ struct InteractiveBitcoinSymbol3DSpinner: View {
     }
 }
 
-// MARK: - PercentileChoice
-enum PercentileChoice {
-    case tenth, median, ninetieth
-}
-
-// For chart loading overlay
 fileprivate enum ChartLoadingState {
     case none, loading, cancelled
 }
@@ -279,21 +273,18 @@ class ChartDataCache: ObservableObject {
     
     // For iOS, store a snapshot as UIImage
     @Published var chartSnapshot: UIImage? = nil
+    
+    @Published var chartSnapshotLandscape: UIImage? = nil
 }
 
 // MARK: - ContentView
 struct ContentView: View {
     
-    // We keep your existing isLoading, but let's add a second flag
-    // to differentiate the "building chart" phase from "running simulation".
-    @State private var isChartBuilding: Bool = false
+    @StateObject private var coordinator: SimulationCoordinator
     
-    // State variables
-    @State private var monteCarloResults: [SimulationData] = []
-    @State private var isLoading: Bool = false
+    // Various states
     @FocusState private var activeField: ActiveField?
     @StateObject var inputManager = PersistentInputManager()
-    @State private var isSimulationRun: Bool = false
     @State private var isCancelled = false
     
     @State private var scrollToBottom: Bool = false
@@ -308,8 +299,6 @@ struct ContentView: View {
     @State private var currentTip: String = ""
     @State private var showTip: Bool = false
     @State private var tipTimer: Timer? = nil
-    @State private var completedIterations: Int = 0
-    @State private var totalIterations: Int = 1000
     
     @State private var hideScrollIndicators = true
     @State private var lastScrollTime = Date()
@@ -336,24 +325,20 @@ struct ContentView: View {
     ]
     
     @EnvironmentObject var simSettings: SimulationSettings
-    @EnvironmentObject var chartDataCache: ChartDataCache
     
     @State private var showSettings = false
     @State private var showAbout = false
     @State private var showHistograms = false
     @State private var showGraphics = false
     
-    // Keep arrays and logic for each percentile
     @State private var tenthPercentileResults: [SimulationData] = []
     @State private var medianResults: [SimulationData] = []
     @State private var ninetiethPercentileResults: [SimulationData] = []
     @State private var selectedPercentile: PercentileChoice = .median
     
-    // We'll store the raw runs for the chart
     @State private var medianSimData: [SimulationData] = []
     @State private var allSimData: [[SimulationData]] = []
     
-    // Track chart loading state
     @State private var chartLoadingState: ChartLoadingState = .none
     
     @State private var oldIterationsValue: String = ""
@@ -362,86 +347,36 @@ struct ContentView: View {
     
     @State private var showSnapshotView = false
     
+    // We initialize the coordinator by injecting references:
+    init() {
+        let temporaryInputManager = PersistentInputManager()
+        let simSettings = SimulationSettings()
+        let chartDataCache = ChartDataCache()
+        
+        _coordinator = StateObject(
+            wrappedValue: SimulationCoordinator(
+                chartDataCache: chartDataCache,
+                simSettings: simSettings,
+                inputManager: temporaryInputManager
+            )
+        )
+    }
+    
     // MARK: - Convert single run to [WeekPoint]
     func convertOriginalToWeekPoints() -> [WeekPoint] {
         medianSimData.map { row in
             WeekPoint(week: row.week, value: row.portfolioValueEUR)
         }
     }
-
-    // MARK: - Convert all runs to [SimulationRun]
-    func convertAllSimsToWeekPoints() -> [SimulationRun] {
-        allSimData.map { singleRun -> SimulationRun in
-            let wpoints = singleRun.map { row in
-                WeekPoint(week: row.week, value: row.btcPriceUSD)
-            }
-            return SimulationRun(points: wpoints)
-        }
-    }
-    
-    // MARK: - Median logic
-    private func computeMedianSimulationData(allIterations: [[SimulationData]]) -> [SimulationData] {
-        guard let firstRun = allIterations.first else { return [] }
-        let totalWeeks = firstRun.count
-        
-        var medianResult: [SimulationData] = []
-        
-        for w in 0..<totalWeeks {
-            let allAtWeek = allIterations.compactMap { run -> SimulationData? in
-                guard w < run.count else { return nil }
-                return run[w]
-            }
-            if allAtWeek.isEmpty { continue }
-            
-            let sortedStartingBTC = allAtWeek.map { $0.startingBTC }.sorted()
-            let sortedNetBTCHoldings = allAtWeek.map { $0.netBTCHoldings }.sorted()
-            let sortedBtcPriceUSD = allAtWeek.map { $0.btcPriceUSD }.sorted()
-            let sortedBtcPriceEUR = allAtWeek.map { $0.btcPriceEUR }.sorted()
-            let sortedPortfolioValueEUR = allAtWeek.map { $0.portfolioValueEUR }.sorted()
-            let sortedContributionEUR = allAtWeek.map { $0.contributionEUR }.sorted()
-            let sortedFeeEUR = allAtWeek.map { $0.transactionFeeEUR }.sorted()
-            let sortedNetContribBTC = allAtWeek.map { $0.netContributionBTC }.sorted()
-            let sortedWithdrawalEUR = allAtWeek.map { $0.withdrawalEUR }.sorted()
-            
-            func medianOfSorted(_ arr: [Double]) -> Double {
-                if arr.isEmpty { return 0.0 }
-                let mid = arr.count / 2
-                if arr.count.isMultiple(of: 2) {
-                    return (arr[mid] + arr[mid - 1]) / 2.0
-                } else {
-                    return arr[mid]
-                }
-            }
-            
-            let medianSimData = SimulationData(
-                week: allAtWeek[0].week,
-                startingBTC: medianOfSorted(sortedStartingBTC),
-                netBTCHoldings: medianOfSorted(sortedNetBTCHoldings),
-                btcPriceUSD: medianOfSorted(sortedBtcPriceUSD),
-                btcPriceEUR: medianOfSorted(sortedBtcPriceEUR),
-                portfolioValueEUR: medianOfSorted(sortedPortfolioValueEUR),
-                contributionEUR: medianOfSorted(sortedContributionEUR),
-                transactionFeeEUR: medianOfSorted(sortedFeeEUR),
-                netContributionBTC: medianOfSorted(sortedNetContribBTC),
-                withdrawalEUR: medianOfSorted(sortedWithdrawalEUR)
-            )
-            medianResult.append(medianSimData)
-        }
-        return medianResult
-    }
     
     // MARK: - Body
     var body: some View {
         NavigationStack {
             ZStack {
-                // If the user hasn't pressed "Run Simulation" or it's done,
-                // we show the main content. If it's running or building the chart,
-                // we display the overlay.
-                
-                if !isSimulationRun {
+                if !coordinator.isSimulationRun {
                     // If user hasn't run the sim yet, show param screen + icons
                     parametersScreen
-                    if !isLoading && activeField == nil {
+                    if !coordinator.isLoading && activeField == nil {
                         bottomIcons
                     }
                 } else {
@@ -450,16 +385,16 @@ struct ContentView: View {
                 }
                 
                 // If we already have results from a previous run:
-                if !isSimulationRun && !monteCarloResults.isEmpty {
+                if !coordinator.isSimulationRun && !coordinator.monteCarloResults.isEmpty {
                     transitionToResultsButton
                 }
                 
                 // The combined overlay for both "Running simulation" and "Building chart"
-                if isLoading || isChartBuilding {
+                if coordinator.isLoading || coordinator.isChartBuilding {
                     loadingOverlayCombined
                 }
             }
-            // Keep your existing destinations
+            // Destinations
             .navigationDestination(isPresented: $showSettings) {
                 SettingsView()
                     .environmentObject(simSettings)
@@ -468,14 +403,16 @@ struct ContentView: View {
                 AboutView()
             }
             .navigationDestination(isPresented: $showHistograms) {
-                if let snapshot = chartDataCache.chartSnapshot {
+                if let snapshot = coordinator.chartDataCache.chartSnapshot {
                     ChartSnapshotView(snapshot: snapshot)
-                        .environmentObject(chartDataCache)
-                } else if let existingChartData = chartDataCache.allRuns {
+                        .environmentObject(coordinator.chartDataCache)
+                }
+                else if let existingChartData = coordinator.chartDataCache.allRuns {
                     MonteCarloResultsView(simulations: existingChartData)
-                        .environmentObject(chartDataCache)
+                        .environmentObject(coordinator.chartDataCache)
                         .environmentObject(simSettings)
-                } else {
+                }
+                else {
                     Text("Loading chart…")
                         .foregroundColor(.white)
                 }
@@ -487,6 +424,7 @@ struct ContentView: View {
                 if savedWeek != 0 {
                     lastViewedWeek = savedWeek
                 }
+                
                 let savedPage = UserDefaults.standard.integer(forKey: "lastViewedPage")
                 if savedPage < columns.count {
                     lastViewedPage = savedPage
@@ -504,7 +442,6 @@ struct ContentView: View {
         ZStack {
             Color.black.opacity(0.6).ignoresSafeArea()
             VStack(spacing: 0) {
-                // Keep this top spacer to position everything where it was
                 Spacer().frame(height: 250)
                 
                 HStack {
@@ -512,11 +449,11 @@ struct ContentView: View {
                     
                     // Show the cancel (X) button only if still loading simulation,
                     // and not when the chart is building.
-                    if isLoading && !isChartBuilding {
+                    if coordinator.isLoading && !coordinator.isChartBuilding {
                         Button(action: {
                             print("// DEBUG: Cancel button tapped in combined overlay.")
                             isCancelled = true
-                            isLoading = false
+                            coordinator.isLoading = false
                         }) {
                             Image(systemName: "xmark")
                                 .foregroundColor(.white)
@@ -527,29 +464,29 @@ struct ContentView: View {
                 }
                 .offset(y: 220)
 
-                if isLoading {
-                    // Original simulation spinner logic
+                if coordinator.isLoading {
                     InteractiveBitcoinSymbol3DSpinner()
                         .padding(.bottom, 30)
                     
                     VStack(spacing: 17) {
-                        Text("Simulating: \(completedIterations) / \(totalIterations)")
+                        Text("Simulating: \(coordinator.completedIterations) / \(coordinator.totalIterations)")
                             .font(.body.monospacedDigit())
                             .foregroundColor(.white)
                         
-                        ProgressView(value: Double(completedIterations), total: Double(totalIterations))
+                        ProgressView(value: Double(coordinator.completedIterations),
+                                     total: Double(coordinator.totalIterations))
                             .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
                             .scaleEffect(x: 1, y: 2, anchor: .center)
                             .frame(width: 200)
                     }
                     .padding(.bottom, 20)
                     
-                } else if isChartBuilding {
+                } else if coordinator.isChartBuilding {
                     VStack(spacing: 12) {
                         Text("Generating Chart…")
                             .font(.headline)
                             .foregroundColor(.white)
-                            .padding(.bottom, 20)  // <-- Increase gap beneath the text
+                            .padding(.bottom, 20)
 
                         ProgressView()
                             .progressViewStyle(
@@ -561,12 +498,10 @@ struct ContentView: View {
                     }
                     .offset(y: 270)
 
-                    // Optionally add a tiny spacer if you want
                     Spacer().frame(height: 30)
                 }
                 
-                // Show tips only while simulation is loading
-                if showTip && isLoading {
+                if showTip && coordinator.isLoading {
                     Text(currentTip)
                         .foregroundColor(.white)
                         .multilineTextAlignment(.center)
@@ -583,185 +518,17 @@ struct ContentView: View {
         .onDisappear { stopTipCycle() }
     }
     
-    // MARK: - Run Simulation
-    private func runSimulation() {
-        let newHash = computeInputsHash()
-        print("// DEBUG: runSimulation() => newHash = \(newHash), storedInputsHash = \(String(describing: chartDataCache.storedInputsHash))")
-        
-        // CSV loads
-        historicalBTCWeeklyReturns = loadBTCWeeklyReturns()
-        sp500WeeklyReturns = loadSP500WeeklyReturns()
-        
-        print("// DEBUG: Setting up for new simulation run. isLoading=true.")
-        isCancelled = false
-        isLoading = true
-        isChartBuilding = false
-        monteCarloResults = []
-        completedIterations = 0
-        
-        let finalSeed: UInt64?
-        if simSettings.lockedRandomSeed {
-            finalSeed = simSettings.seedValue
-            simSettings.lastUsedSeed = simSettings.seedValue
-            print("// DEBUG: Using lockedRandomSeed: \(finalSeed ?? 0)")
-        } else if simSettings.useRandomSeed {
-            let newRandomSeed = UInt64.random(in: 0..<UInt64.max)
-            finalSeed = newRandomSeed
-            simSettings.lastUsedSeed = newRandomSeed
-            print("// DEBUG: Using a fresh random seed: \(finalSeed ?? 0)")
-        } else {
-            finalSeed = nil
-            simSettings.lastUsedSeed = 0
-            print("// DEBUG: No seed locked or random => finalSeed is nil.")
-        }
-        
-        DispatchQueue.global(qos: .userInitiated).async {
-            guard let total = inputManager.getParsedIterations(), total > 0 else {
-                print("// DEBUG: No valid iteration => bailing out.")
-                DispatchQueue.main.async {
-                    isLoading = false
-                }
-                return
-            }
-            DispatchQueue.main.async {
-                totalIterations = total
-            }
-            
-            let userInputCAGR = inputManager.getParsedAnnualCAGR() / 100.0
-            let userInputVolatility = (Double(inputManager.annualVolatility) ?? 1.0) / 100.0
-            let userWeeks = simSettings.userWeeks
-            let userPriceUSD = simSettings.initialBTCPriceUSD
-            
-            print("// DEBUG: runMonteCarloSimulationsWithProgress(...)")
-            let (medianRun, allIterations) = runMonteCarloSimulationsWithProgress(
-                settings: simSettings,
-                annualCAGR: userInputCAGR,
-                annualVolatility: userInputVolatility,
-                correlationWithSP500: 0.0,
-                exchangeRateEURUSD: 1.06,
-                userWeeks: userWeeks,
-                iterations: total,
-                initialBTCPriceUSD: userPriceUSD,
-                isCancelled: { self.isCancelled },
-                progressCallback: { completed in
-                    if !self.isCancelled {
-                        DispatchQueue.main.async {
-                            self.completedIterations = completed
-                        }
-                    }
-                },
-                seed: finalSeed
-            )
-            
-            if self.isCancelled {
-                print("// DEBUG: user cancelled => stopping.")
-                DispatchQueue.main.async { isLoading = false }
-                return
-            }
-            
-            // Sort final runs by last week's BTC price
-            let finalRuns = allIterations.map { ($0.last?.btcPriceUSD ?? 0.0, $0) }
-            let sortedRuns = finalRuns.sorted { $0.0 < $1.0 }
-            
-            if !sortedRuns.isEmpty {
-                let tenthIndex = max(0, Int(Double(sortedRuns.count - 1) * 0.10))
-                let medianIndex = sortedRuns.count / 2
-                let ninetiethIndex = min(sortedRuns.count - 1, Int(Double(sortedRuns.count - 1) * 0.90))
-                
-                let tenthRun = sortedRuns[tenthIndex].1
-                let singleMedianRun = sortedRuns[medianIndex].1
-                let ninetiethRun = sortedRuns[ninetiethIndex].1
-                let medianLineData = computeMedianSimulationData(allIterations: allIterations)
-                
-                DispatchQueue.main.async {
-                    // Simulation done => turn off isLoading
-                    isLoading = false
-                    // Start building chart
-                    isChartBuilding = true
-                    print("// DEBUG: Simulation finished => isChartBuilding=true now.")
-                    
-                    // Assign results
-                    self.tenthPercentileResults = tenthRun
-                    self.medianResults = singleMedianRun
-                    self.ninetiethPercentileResults = ninetiethRun
-                    self.monteCarloResults = medianLineData
-                    self.selectedPercentile = .median
-                    self.medianResults = medianLineData
-                    self.allSimData = allIterations
-                    
-                    let allSimsAsWeekPoints = self.convertAllSimsToWeekPoints()
-                    
-                    // Clear old snapshot
-                    if chartDataCache.chartSnapshot != nil {
-                        print("// DEBUG: clearing old chartSnapshot.")
-                    }
-                    chartDataCache.chartSnapshot = nil
-                    chartDataCache.allRuns = allSimsAsWeekPoints
-                    chartDataCache.storedInputsHash = newHash
-                    self.medianSimData = medianLineData
-                    
-                    // First small async call (just building the view, letting SwiftUI measure):
-                    DispatchQueue.main.async {
-                        if self.isCancelled {
-                            isChartBuilding = false
-                            return
-                        }
-                        print("// DEBUG: building chartView off-thread #1 for layout pass.")
-                        
-                        let chartView = MonteCarloResultsView(simulations: allSimsAsWeekPoints)
-                            .environmentObject(self.chartDataCache)
-                            .environmentObject(self.simSettings)
-                        
-                        // Second async call: do the actual snapshot.
-                        DispatchQueue.main.async {
-                            if self.isCancelled {
-                                isChartBuilding = false
-                                return
-                            }
-                            print("// DEBUG: now taking snapshot of chartView => spinner should keep spinning.")
-                            
-                            let snapshot = chartView.snapshot()
-                            print("// DEBUG: snapshot built => setting chartDataCache.chartSnapshot.")
-                            chartDataCache.chartSnapshot = snapshot
-                            
-                            // Done building => user can see results
-                            isChartBuilding = false
-                            isSimulationRun = true
-                        }
-                    }
-                }
-            } else {
-                print("// DEBUG: No runs => done.")
-                DispatchQueue.main.async {
-                    self.isLoading = false
-                }
-            }
-            
-            DispatchQueue.global(qos: .background).async {
-                self.processAllResults(allIterations)
-            }
-        }
-    }
-    
     // MARK: - Invalidate chart if inputs change
     private func invalidateChartIfInputChanged() {
         print("DEBUG: invalidateChartIfInputChanged() => clearing chartDataCache.")
-        chartDataCache.allRuns = nil
-        chartDataCache.storedInputsHash = nil
-    }
-    
-    private func computeInputsHash() -> Int {
-        let combinedString = """
-        \(inputManager.iterations)_\(inputManager.annualCAGR)_\(inputManager.annualVolatility)_\
-        \(simSettings.userWeeks)_\(simSettings.initialBTCPriceUSD)
-        """
-        return combinedString.hashValue
+        coordinator.chartDataCache.allRuns = nil
+        coordinator.chartDataCache.storedInputsHash = nil
     }
     
     // MARK: - UI
     @ViewBuilder
     private var bottomIcons: some View {
-        if !isLoading && !isChartBuilding {
+        if !coordinator.isLoading && !coordinator.isChartBuilding {
             VStack {
                 Spacer()
                 HStack {
@@ -786,14 +553,12 @@ struct ContentView: View {
                 .padding(.bottom, 30)
             }
         } else {
-            // When isLoading == true or isChartBuilding == true, show nothing.
             EmptyView()
         }
     }
     
     private var parametersScreen: some View {
         ZStack {
-            // Black/gradient background, like before:
             LinearGradient(
                 gradient: Gradient(colors: [Color.black, Color(white: 0.15), Color.black]),
                 startPoint: .topLeading,
@@ -880,10 +645,17 @@ struct ContentView: View {
                 .padding(.horizontal, 30)
                 
                 // Run Simulation Button
-                if !isLoading && !isChartBuilding {
+                if !coordinator.isLoading && !coordinator.isChartBuilding {
                     Button {
                         activeField = nil
-                        runSimulation()
+                        // 1) Immediately set isLoading so spinner can appear
+                        coordinator.isLoading = true
+                        coordinator.isChartBuilding = false
+                        
+                        // 2) Wait a tiny bit so SwiftUI can update the UI
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                            coordinator.runSimulation()
+                        }
                     } label: {
                         Text("RUN SIMULATION")
                             .font(.headline)
@@ -900,7 +672,7 @@ struct ContentView: View {
                 Spacer()
             }
         }
-        // Dismiss the keyboard when tapping outside the fields
+        // Dismiss the keyboard when tapping outside
         .onTapGesture {
             activeField = nil
         }
@@ -909,21 +681,18 @@ struct ContentView: View {
     private var simulationResultsView: some View {
         ScrollViewReader { scrollProxy in
             ZStack {
-                // Remove extra white space at bottom:
-                // edgesIgnoringSafeArea if needed:
                 Color(white: 0.12)
                     .edgesIgnoringSafeArea(.bottom)
                 
                 VStack(spacing: 0) {
                     // Top bar
                     HStack {
-                        // Chevron-only back button in white
                         Button(action: {
                             print("// DEBUG: Back button tapped in simulationResultsView.")
                             UserDefaults.standard.set(lastViewedWeek, forKey: "lastViewedWeek")
                             UserDefaults.standard.set(currentPage, forKey: "lastViewedPage")
                             lastViewedPage = currentPage
-                            isSimulationRun = false
+                            coordinator.isSimulationRun = false
                         }) {
                             Image(systemName: "chevron.left")
                                 .foregroundColor(.white)
@@ -932,17 +701,18 @@ struct ContentView: View {
                         
                         Spacer()
                         
-                        // The chart button
                         Button(action: {
                             print("// DEBUG: Chart button pressed.")
-                            print("// DEBUG: chartDataCache.chartSnapshot == \(chartDataCache.chartSnapshot == nil ? "nil" : "non-nil")")
-                            if let allRuns = chartDataCache.allRuns {
+                            print("// DEBUG: chartDataCache.chartSnapshot == \(coordinator.chartDataCache.chartSnapshot == nil ? "nil" : "non-nil")")
+                            
+                            if let allRuns = coordinator.chartDataCache.allRuns {
                                 print("// DEBUG: chartDataCache.allRuns has \(allRuns.count) runs.")
                             } else {
                                 print("// DEBUG: chartDataCache.allRuns is nil.")
                             }
                             
-                            if let snapshot = chartDataCache.chartSnapshot {
+                            // Actually navigate:
+                            if coordinator.chartDataCache.chartSnapshot != nil {
                                 showSnapshotView = true
                             }
                         }) {
@@ -951,7 +721,7 @@ struct ContentView: View {
                                 .imageScale(.large)
                         }
                         .navigationDestination(isPresented: $showSnapshotView) {
-                            if let snapshot = chartDataCache.chartSnapshot {
+                            if let snapshot = coordinator.chartDataCache.chartSnapshot {
                                 ChartSnapshotView(snapshot: snapshot)
                             } else {
                                 Text("No snapshot available")
@@ -1022,8 +792,8 @@ struct ContentView: View {
                     ScrollView(.vertical, showsIndicators: !hideScrollIndicators) {
                         HStack(spacing: 0) {
                             VStack(spacing: 0) {
-                                ForEach(monteCarloResults.indices, id: \.self) { index in
-                                    let result = monteCarloResults[index]
+                                ForEach(coordinator.monteCarloResults.indices, id: \.self) { index in
+                                    let result = coordinator.monteCarloResults[index]
                                     let rowBackground = index.isMultiple(of: 2)
                                         ? Color(white: 0.10)
                                         : Color(white: 0.14)
@@ -1044,8 +814,8 @@ struct ContentView: View {
                                 ForEach(0..<columns.count, id: \.self) { index in
                                     ZStack {
                                         VStack(spacing: 0) {
-                                            ForEach(monteCarloResults.indices, id: \.self) { rowIndex in
-                                                let rowResult = monteCarloResults[rowIndex]
+                                            ForEach(coordinator.monteCarloResults.indices, id: \.self) { rowIndex in
+                                                let rowResult = coordinator.monteCarloResults[rowIndex]
                                                 let rowBackground = rowIndex.isMultiple(of: 2)
                                                     ? Color(white: 0.10)
                                                     : Color(white: 0.14)
@@ -1096,7 +866,6 @@ struct ContentView: View {
                                     .tag(index)
                                 }
                             }
-                            // This helps remove any extra space:
                             .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
                             .frame(width: UIScreen.main.bounds.width - 60)
                         }
@@ -1110,7 +879,7 @@ struct ContentView: View {
                             }
                         }
                         .onChange(of: scrollToBottom) { value in
-                            if value, let lastResult = monteCarloResults.last {
+                            if value, let lastResult = coordinator.monteCarloResults.last {
                                 withAnimation {
                                     scrollProxy.scrollTo("week-\(lastResult.week)", anchor: .bottom)
                                 }
@@ -1183,7 +952,7 @@ struct ContentView: View {
                 Spacer()
                 Button(action: {
                     print("// DEBUG: transitionToResultsButton tapped => showing simulation screen.")
-                    isSimulationRun = true
+                    coordinator.isSimulationRun = true
                     currentPage = lastViewedPage
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                         if let scrollProxy = contentScrollProxy {
@@ -1191,7 +960,7 @@ struct ContentView: View {
                             if savedWeek != 0 {
                                 lastViewedWeek = savedWeek
                             }
-                            if let target = monteCarloResults.first(where: { $0.week == lastViewedWeek }) {
+                            if let target = coordinator.monteCarloResults.first(where: { $0.week == lastViewedWeek }) {
                                 withAnimation {
                                     scrollProxy.scrollTo("week-\(target.week)", anchor: .top)
                                 }
@@ -1208,8 +977,6 @@ struct ContentView: View {
             Spacer()
         }
     }
-    
-    // (Removed old loadingOverlay and chartLoadingOverlay, replaced with loadingOverlayCombined.)
     
     // MARK: - Tip cycle
     private func startTipCycle() {
@@ -1241,10 +1008,6 @@ struct ContentView: View {
         tipTimer?.invalidate()
         tipTimer = nil
         showTip = false
-    }
-    
-    private func processAllResults(_ allResults: [[SimulationData]]) {
-        // ...
     }
     
     private func getValue(_ item: SimulationData, _ keyPath: PartialKeyPath<SimulationData>) -> String {

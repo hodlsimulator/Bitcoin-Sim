@@ -351,17 +351,26 @@ func runMonteCarloSimulationsWithProgress(
     progressCallback: @escaping (Int) -> Void,
     seed: UInt64? = nil
 ) -> ([SimulationData], [[SimulationData]]) {
-
-    // Lock or unlock seed
+    
+    // Lock or unlock the random seed
     setRandomSeed(seed)
-
+    
     var allRuns = [[SimulationData]]()
+    
+    print("// DEBUG: runMonteCarloSimulationsWithProgress => Starting loop. iterations=\(iterations)")
     
     for i in 0..<iterations {
         if isCancelled() {
+            print("// DEBUG: CANCELLED at iteration \(i). Breaking out.")
             break
         }
-
+        
+        print("// DEBUG: Starting iteration \(i+1) / \(iterations)")
+        
+        // Slow down to see progress visually
+        Thread.sleep(forTimeInterval: 0.01)  // e.g. 0.01s per iteration => ~1s per 100 iterations
+        
+        // For demonstration, create dummy data:
         let simRun = runOneFullSimulation(
             settings: settings,
             annualCAGR: annualCAGR,
@@ -371,23 +380,30 @@ func runMonteCarloSimulationsWithProgress(
             initialBTCPriceUSD: initialBTCPriceUSD
         )
         allRuns.append(simRun)
-
+        
         if isCancelled() {
+            print("// DEBUG: CANCELLED after building iteration \(i+1). Breaking out.")
             break
         }
+        
+        // Fire the progress callback on the main thread
         progressCallback(i + 1)
+        print("// DEBUG: Completed iteration \(i+1). progressCallback => \(i+1).")
     }
-
+    
     if allRuns.isEmpty {
+        print("// DEBUG: allRuns is empty => returning ([], [])")
         return ([], [])
     }
-
+    
     // Sort final runs by last week's portfolio value
     var finalValues = allRuns.map { ($0.last?.portfolioValueEUR ?? 0.0, $0) }
     finalValues.sort { $0.0 < $1.0 }
 
-    // median run
+    // Median run
     let medianRun = finalValues[finalValues.count / 2].1
+    
+    print("// DEBUG: loop ended => built \(allRuns.count) runs. Returning median & allRuns.")
     return (medianRun, allRuns)
 }
 
