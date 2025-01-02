@@ -507,18 +507,15 @@ struct ContentView: View {
             Color.black.opacity(0.6).ignoresSafeArea()
             VStack(spacing: 0) {
                 Spacer().frame(height: 250)
-                
-                // The top-right X button
+
                 HStack {
                     Spacer()
                     Button(action: {
                         print("// DEBUG: Cancel button tapped in combined overlay.")
                         isCancelled = true
-                        // If they cancel at chart building stage, just hide overlay.
                         if isChartBuilding {
                             isChartBuilding = false
                         }
-                        // If they cancel at simulation stage:
                         if isLoading {
                             isLoading = false
                         }
@@ -530,37 +527,39 @@ struct ContentView: View {
                     .padding(.trailing, 20)
                 }
                 .offset(y: 220)
-                
-                // The spinner
+
                 InteractiveBitcoinSymbol3DSpinner()
                     .padding(.bottom, 30)
-                
-                // The text / progress area
+
                 VStack(spacing: 17) {
                     if isLoading {
-                        // Simulation is running
                         Text("Simulating: \(completedIterations) / \(totalIterations)")
                             .font(.body.monospacedDigit())
                             .foregroundColor(.white)
                         
+                        // Custom accent for simulation progress bar
                         ProgressView(value: Double(completedIterations), total: Double(totalIterations))
-                            .tint(.blue)
+                            .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
                             .scaleEffect(x: 1, y: 2, anchor: .center)
                             .frame(width: 200)
                     }
                     else if isChartBuilding {
-                        // Chart building is happening
                         Text("Generating Chart…")
                             .font(.headline)
                             .foregroundColor(.white)
+                        
+                        // Custom accent for chart spinner
                         ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: .orange))
+                            .progressViewStyle(
+                                CircularProgressViewStyle(
+                                    tint: Color(red: 189/255, green: 213/255, blue: 234/255)
+                                )
+                            )
                             .scaleEffect(2.0)
                     }
                 }
                 .padding(.bottom, 20)
-                
-                // Same tips logic
+
                 if showTip {
                     Text(currentTip)
                         .foregroundColor(.white)
@@ -570,7 +569,7 @@ struct ContentView: View {
                         .transition(.opacity)
                         .padding(.bottom, 30)
                 }
-                
+
                 Spacer()
             }
         }
@@ -683,6 +682,7 @@ struct ContentView: View {
                     self.selectedPercentile = .median
                     self.medianResults = medianLineData
                     self.allSimData = allIterations
+                    
                     let allSimsAsWeekPoints = self.convertAllSimsToWeekPoints()
                     
                     // Clear old snapshot
@@ -694,29 +694,40 @@ struct ContentView: View {
                     chartDataCache.storedInputsHash = newHash
                     self.medianSimData = medianLineData
                     
-                    // Build the snapshot after a short delay
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    // First small async call (just building the view, letting SwiftUI measure):
+                    DispatchQueue.main.async {
                         if self.isCancelled {
                             isChartBuilding = false
                             return
                         }
+                        print("// DEBUG: building chartView off-thread #1 for layout pass.")
+                        
                         let chartView = MonteCarloResultsView(simulations: allSimsAsWeekPoints)
                             .environmentObject(self.chartDataCache)
                             .environmentObject(self.simSettings)
                         
-                        let snapshot = chartView.snapshot()
-                        print("// DEBUG: snapshot built => setting chartDataCache.chartSnapshot.")
-                        chartDataCache.chartSnapshot = snapshot
-                        
-                        // Done building => user can see results
-                        isChartBuilding = false
-                        isSimulationRun = true
+                        // Second async call: do the actual snapshot.
+                        DispatchQueue.main.async {
+                            if self.isCancelled {
+                                isChartBuilding = false
+                                return
+                            }
+                            print("// DEBUG: now taking snapshot of chartView => spinner should keep spinning.")
+                            
+                            let snapshot = chartView.snapshot()
+                            print("// DEBUG: snapshot built => setting chartDataCache.chartSnapshot.")
+                            chartDataCache.chartSnapshot = snapshot
+                            
+                            // Done building => user can see results
+                            isChartBuilding = false
+                            isSimulationRun = true
+                        }
                     }
                 }
             } else {
                 print("// DEBUG: No runs => done.")
                 DispatchQueue.main.async {
-                    isLoading = false
+                    self.isLoading = false
                 }
             }
             
