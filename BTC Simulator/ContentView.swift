@@ -272,7 +272,7 @@ fileprivate enum ChartLoadingState {
 
 // MARK: - ChartDataCache
 class ChartDataCache: ObservableObject {
-    let id = UUID()  // <-- Add this line to track the identity
+    let id = UUID()  // Track the identity
     
     @Published var allRuns: [SimulationRun]? = nil
     @Published var storedInputsHash: Int? = nil
@@ -283,6 +283,10 @@ class ChartDataCache: ObservableObject {
 
 // MARK: - ContentView
 struct ContentView: View {
+    
+    // We keep your existing isLoading, but let's add a second flag
+    // to differentiate the "building chart" phase from "running simulation".
+    @State private var isChartBuilding: Bool = false
     
     // State variables
     @State private var monteCarloResults: [SimulationData] = []
@@ -430,32 +434,18 @@ struct ContentView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                if isSimulationRun {
-                    Color(white: 0.14).ignoresSafeArea()
-                } else {
-                    LinearGradient(
-                        gradient: Gradient(colors: [Color.black, Color(white: 0.15), Color.black]),
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                    .ignoresSafeArea()
-                }
-                
-                Color.clear
-                    .contentShape(Rectangle())
-                    .highPriorityGesture(
-                        TapGesture()
-                            .onEnded {
-                                activeField = nil
-                            }
-                    )
+                // If the user hasn't pressed "Run Simulation" or it's done,
+                // we show the main content. If it's running or building the chart,
+                // we display the overlay.
                 
                 if !isSimulationRun {
+                    // If user hasn't run the sim yet, show param screen + icons
                     parametersScreen
                     if !isLoading && activeField == nil {
                         bottomIcons
                     }
                 } else {
+                    // Show the table
                     simulationResultsView
                 }
                 
@@ -464,14 +454,12 @@ struct ContentView: View {
                     transitionToResultsButton
                 }
                 
-                if isLoading {
-                    loadingOverlay
-                }
-                
-                if chartLoadingState == .loading {
-                    chartLoadingOverlay
+                // The combined overlay for both "Running simulation" and "Building chart"
+                if isLoading || isChartBuilding {
+                    loadingOverlayCombined
                 }
             }
+            // Keep your existing destinations
             .navigationDestination(isPresented: $showSettings) {
                 SettingsView()
                     .environmentObject(simSettings)
@@ -481,16 +469,13 @@ struct ContentView: View {
             }
             .navigationDestination(isPresented: $showHistograms) {
                 if let snapshot = chartDataCache.chartSnapshot {
-                    // If we have a cached snapshot, show that ONLY
                     ChartSnapshotView(snapshot: snapshot)
                         .environmentObject(chartDataCache)
                 } else if let existingChartData = chartDataCache.allRuns {
-                    // Otherwise, if we have data but no snapshot, build the live chart
                     MonteCarloResultsView(simulations: existingChartData)
                         .environmentObject(chartDataCache)
                         .environmentObject(simSettings)
                 } else {
-                    // Fallback if we have no data at all
                     Text("Loading chart…")
                         .foregroundColor(.white)
                 }
@@ -514,21 +499,83 @@ struct ContentView: View {
         }
     }
     
-    // MARK: - Invalidate chart if inputs change
-    private func invalidateChartIfInputChanged() {
-        print("DEBUG: invalidateChartIfInputChanged() called => clearing chartDataCache. (Backtrace: \(Thread.callStackSymbols))")
-        chartDataCache.allRuns = nil
-        chartDataCache.storedInputsHash = nil
-        // chartDataCache.chartSnapshot = nil  // Comment out or remove this if you don't want to reset the snapshot
-    }
-    
-    // MARK: - Compute inputs hash
-    private func computeInputsHash() -> Int {
-        let combinedString = """
-        \(inputManager.iterations)_\(inputManager.annualCAGR)_\(inputManager.annualVolatility)_\
-        \(simSettings.userWeeks)_\(simSettings.initialBTCPriceUSD)
-        """
-        return combinedString.hashValue
+    // MARK: - Overlay that shows both states
+    private var loadingOverlayCombined: some View {
+        // Same style as your loadingOverlay, but show different text
+        // depending on whether isLoading or isChartBuilding is true.
+        ZStack {
+            Color.black.opacity(0.6).ignoresSafeArea()
+            VStack(spacing: 0) {
+                Spacer().frame(height: 250)
+                
+                // The top-right X button
+                HStack {
+                    Spacer()
+                    Button(action: {
+                        print("// DEBUG: Cancel button tapped in combined overlay.")
+                        isCancelled = true
+                        // If they cancel at chart building stage, just hide overlay.
+                        if isChartBuilding {
+                            isChartBuilding = false
+                        }
+                        // If they cancel at simulation stage:
+                        if isLoading {
+                            isLoading = false
+                        }
+                    }) {
+                        Image(systemName: "xmark")
+                            .foregroundColor(.white)
+                            .padding()
+                    }
+                    .padding(.trailing, 20)
+                }
+                .offset(y: 220)
+                
+                // The spinner
+                InteractiveBitcoinSymbol3DSpinner()
+                    .padding(.bottom, 30)
+                
+                // The text / progress area
+                VStack(spacing: 17) {
+                    if isLoading {
+                        // Simulation is running
+                        Text("Simulating: \(completedIterations) / \(totalIterations)")
+                            .font(.body.monospacedDigit())
+                            .foregroundColor(.white)
+                        
+                        ProgressView(value: Double(completedIterations), total: Double(totalIterations))
+                            .tint(.blue)
+                            .scaleEffect(x: 1, y: 2, anchor: .center)
+                            .frame(width: 200)
+                    }
+                    else if isChartBuilding {
+                        // Chart building is happening
+                        Text("Generating Chart…")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .orange))
+                            .scaleEffect(2.0)
+                    }
+                }
+                .padding(.bottom, 20)
+                
+                // Same tips logic
+                if showTip {
+                    Text(currentTip)
+                        .foregroundColor(.white)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: 300)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .transition(.opacity)
+                        .padding(.bottom, 30)
+                }
+                
+                Spacer()
+            }
+        }
+        .onAppear { startTipCycle() }
+        .onDisappear { stopTipCycle() }
     }
     
     // MARK: - Run Simulation
@@ -536,13 +583,14 @@ struct ContentView: View {
         let newHash = computeInputsHash()
         print("// DEBUG: runSimulation() => newHash = \(newHash), storedInputsHash = \(String(describing: chartDataCache.storedInputsHash))")
         
-        // Pretend to load CSV
+        // CSV loads
         historicalBTCWeeklyReturns = loadBTCWeeklyReturns()
         sp500WeeklyReturns = loadSP500WeeklyReturns()
         
-        print("// DEBUG: Setting up for new simulation run. Clearing existing results & marking isLoading=true.")
+        print("// DEBUG: Setting up for new simulation run. isLoading=true.")
         isCancelled = false
         isLoading = true
+        isChartBuilding = false
         monteCarloResults = []
         completedIterations = 0
         
@@ -564,23 +612,22 @@ struct ContentView: View {
         
         DispatchQueue.global(qos: .userInitiated).async {
             guard let total = inputManager.getParsedIterations(), total > 0 else {
-                print("// DEBUG: No valid iteration count => bailing out.")
-                DispatchQueue.main.async { isLoading = false }
+                print("// DEBUG: No valid iteration => bailing out.")
+                DispatchQueue.main.async {
+                    isLoading = false
+                }
                 return
             }
             DispatchQueue.main.async {
                 totalIterations = total
-                print("// DEBUG: totalIterations set to: \(total)")
             }
             
             let userInputCAGR = inputManager.getParsedAnnualCAGR() / 100.0
             let userInputVolatility = (Double(inputManager.annualVolatility) ?? 1.0) / 100.0
-            
             let userWeeks = simSettings.userWeeks
             let userPriceUSD = simSettings.initialBTCPriceUSD
             
-            print("// DEBUG: Starting runMonteCarloSimulationsWithProgress (CAGR=\(userInputCAGR), volatility=\(userInputVolatility), weeks=\(userWeeks), initialPrice=\(userPriceUSD)).")
-            
+            print("// DEBUG: runMonteCarloSimulationsWithProgress(...)")
             let (medianRun, allIterations) = runMonteCarloSimulationsWithProgress(
                 settings: simSettings,
                 annualCAGR: userInputCAGR,
@@ -601,12 +648,9 @@ struct ContentView: View {
                 seed: finalSeed
             )
             
-            // Check if user cancelled
             if self.isCancelled {
-                print("// DEBUG: isCancelled == true => stopping simulation run.")
-                DispatchQueue.main.async {
-                    self.isLoading = false
-                }
+                print("// DEBUG: user cancelled => stopping.")
+                DispatchQueue.main.async { isLoading = false }
                 return
             }
             
@@ -622,11 +666,16 @@ struct ContentView: View {
                 let tenthRun = sortedRuns[tenthIndex].1
                 let singleMedianRun = sortedRuns[medianIndex].1
                 let ninetiethRun = sortedRuns[ninetiethIndex].1
-                
                 let medianLineData = computeMedianSimulationData(allIterations: allIterations)
                 
                 DispatchQueue.main.async {
-                    print("// DEBUG: Assigning results to UI state. tenthIndex=\(tenthIndex), medianIndex=\(medianIndex), ninetiethIndex=\(ninetiethIndex)")
+                    // Simulation done => turn off isLoading
+                    isLoading = false
+                    // Start building chart
+                    isChartBuilding = true
+                    print("// DEBUG: Simulation finished => isChartBuilding=true now.")
+                    
+                    // Assign results
                     self.tenthPercentileResults = tenthRun
                     self.medianResults = singleMedianRun
                     self.ninetiethPercentileResults = ninetiethRun
@@ -636,49 +685,38 @@ struct ContentView: View {
                     self.allSimData = allIterations
                     let allSimsAsWeekPoints = self.convertAllSimsToWeekPoints()
                     
-                    self.chartDataCache.allRuns = allSimsAsWeekPoints
-                    self.chartDataCache.storedInputsHash = newHash
-                    
-                    // Invalidate any old snapshot
-                    if self.chartDataCache.chartSnapshot != nil {
-                        print("// DEBUG: Clearing old chartSnapshot to force fresh one.")
+                    // Clear old snapshot
+                    if chartDataCache.chartSnapshot != nil {
+                        print("// DEBUG: clearing old chartSnapshot.")
                     }
-                    self.chartDataCache.chartSnapshot = nil
-                    
-                    self.isSimulationRun = true
-                    self.isLoading = false
+                    chartDataCache.chartSnapshot = nil
+                    chartDataCache.allRuns = allSimsAsWeekPoints
+                    chartDataCache.storedInputsHash = newHash
                     self.medianSimData = medianLineData
                     
-                    // --- CREATE SNAPSHOT IMMEDIATELY AFTER SIMULATION ---
-                    DispatchQueue.main.async {
-                        print("// DEBUG: Preparing to build off-screen MonteCarloResultsView for snapshot.")
-
-                        // Give SwiftUI a short delay to settle the layout
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                            print("// DEBUG: Building off-screen MonteCarloResultsView for snapshot.")
-                            let chartView = MonteCarloResultsView(simulations: allSimsAsWeekPoints)
-                                .environmentObject(self.chartDataCache)
-                                .environmentObject(self.simSettings)
-                            
-                            // Option 1: Use your existing .snapshot() extension
-                            let snapshot = chartView.snapshot()
-                            print("// DEBUG: Snapshot generated. size: \(snapshot.size) => setting chartDataCache.chartSnapshot.")
-                            self.chartDataCache.chartSnapshot = snapshot
-                            
-                            // Option 2: Force layout if needed:
-                            /*
-                            // If you have a custom layout approach:
-                            let forcedSizedImage = chartView.snapshotWithForcedLayout(CGSize(width: 400, height: 600))
-                            print("// DEBUG: Forced layout snapshot size: \(forcedSizedImage.size)")
-                            self.chartDataCache.chartSnapshot = forcedSizedImage
-                            */
+                    // Build the snapshot after a short delay
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        if self.isCancelled {
+                            isChartBuilding = false
+                            return
                         }
+                        let chartView = MonteCarloResultsView(simulations: allSimsAsWeekPoints)
+                            .environmentObject(self.chartDataCache)
+                            .environmentObject(self.simSettings)
+                        
+                        let snapshot = chartView.snapshot()
+                        print("// DEBUG: snapshot built => setting chartDataCache.chartSnapshot.")
+                        chartDataCache.chartSnapshot = snapshot
+                        
+                        // Done building => user can see results
+                        isChartBuilding = false
+                        isSimulationRun = true
                     }
                 }
             } else {
-                print("// DEBUG: sortedRuns is empty => no results => setting isLoading=false.")
+                print("// DEBUG: No runs => done.")
                 DispatchQueue.main.async {
-                    self.isLoading = false
+                    isLoading = false
                 }
             }
             
@@ -686,6 +724,21 @@ struct ContentView: View {
                 self.processAllResults(allIterations)
             }
         }
+    }
+    
+    // MARK: - Invalidate chart if inputs change
+    private func invalidateChartIfInputChanged() {
+        print("DEBUG: invalidateChartIfInputChanged() => clearing chartDataCache.")
+        chartDataCache.allRuns = nil
+        chartDataCache.storedInputsHash = nil
+    }
+    
+    private func computeInputsHash() -> Int {
+        let combinedString = """
+        \(inputManager.iterations)_\(inputManager.annualCAGR)_\(inputManager.annualVolatility)_\
+        \(simSettings.userWeeks)_\(simSettings.initialBTCPriceUSD)
+        """
+        return combinedString.hashValue
     }
     
     // MARK: - UI
@@ -716,118 +769,128 @@ struct ContentView: View {
     }
     
     private var parametersScreen: some View {
-        VStack(spacing: 30) {
-            Spacer().frame(height: 60)
-            
-            Text("HODL Simulator")
-                .font(.system(size: 34, weight: .bold))
-                .foregroundColor(.white)
-                .padding(.top, 10)
-            
-            Text("Set your simulation parameters")
-                .font(.callout)
-                .foregroundColor(.gray)
-            
-            VStack(alignment: .leading, spacing: 16) {
-                
-                // Iterations Field
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Iterations")
-                        .foregroundColor(.white)
-                    TextField("e.g. 1000", text: $inputManager.iterations)
-                        .keyboardType(.numberPad)
-                        .padding(8)
-                        .background(Color.white)
-                        .cornerRadius(6)
-                        .foregroundColor(.black)
-                        .focused($activeField, equals: .iterations)
-                        .onChange(of: inputManager.iterations) { newValue in
-                            print("DEBUG: Iterations changed from \(oldIterationsValue) to \(newValue)")
-                            if newValue != oldIterationsValue {
-                                oldIterationsValue = newValue
-                                invalidateChartIfInputChanged()
-                            }
-                        }
-                }
-                
-                // Annual CAGR Field
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Annual CAGR (%)")
-                        .foregroundColor(.white)
-                    TextField("e.g. 40.0", text: $inputManager.annualCAGR)
-                        .keyboardType(.decimalPad)
-                        .padding(8)
-                        .background(Color.white)
-                        .cornerRadius(6)
-                        .foregroundColor(.black)
-                        .focused($activeField, equals: .annualCAGR)
-                        .onChange(of: inputManager.annualCAGR) { newValue in
-                            print("DEBUG: annualCAGR changed from \(oldAnnualCAGRValue) to \(newValue)")
-                            if newValue != oldAnnualCAGRValue {
-                                oldAnnualCAGRValue = newValue
-                                invalidateChartIfInputChanged()
-                            }
-                        }
-                }
-                
-                // Annual Volatility Field
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Annual Volatility (%)")
-                        .foregroundColor(.white)
-                    TextField("e.g. 80.0", text: $inputManager.annualVolatility)
-                        .keyboardType(.decimalPad)
-                        .padding(8)
-                        .background(Color.white)
-                        .cornerRadius(6)
-                        .foregroundColor(.black)
-                        .focused($activeField, equals: .annualVolatility)
-                        .onChange(of: inputManager.annualVolatility) { newValue in
-                            print("DEBUG: annualVolatility changed from \(oldAnnualVolatilityValue) to \(newValue)")
-                            if newValue != oldAnnualVolatilityValue {
-                                oldAnnualVolatilityValue = newValue
-                                invalidateChartIfInputChanged()
-                            }
-                        }
-                }
-            }
-            .padding(20)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(white: 0.1).opacity(0.8))
+        ZStack {
+            // Black/gradient background, like before:
+            LinearGradient(
+                gradient: Gradient(colors: [Color.black, Color(white: 0.15), Color.black]),
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
             )
-            .padding(.horizontal, 30)
+            .ignoresSafeArea()
             
-            if !isLoading {
-                Button {
-                    print("// DEBUG: Run Simulation button tapped in parametersScreen.")
-                    activeField = nil
-                    runSimulation()
-                } label: {
-                    Text("RUN SIMULATION")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 32)
-                        .padding(.vertical, 14)
-                        .background(Color.orange)
-                        .cornerRadius(8)
-                        .shadow(color: .black.opacity(0.3), radius: 4, x: 2, y: 2)
+            VStack(spacing: 30) {
+                Spacer().frame(height: 60)
+                
+                Text("HODL Simulator")
+                    .font(.system(size: 34, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(.top, 10)
+                
+                Text("Set your simulation parameters")
+                    .font(.callout)
+                    .foregroundColor(.gray)
+                
+                VStack(alignment: .leading, spacing: 16) {
+                    
+                    // Iterations Field
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Iterations")
+                            .foregroundColor(.white)
+                        TextField("e.g. 1000", text: $inputManager.iterations)
+                            .keyboardType(.numberPad)
+                            .padding(8)
+                            .background(Color.white)
+                            .cornerRadius(6)
+                            .foregroundColor(.black)
+                            .focused($activeField, equals: .iterations)
+                            .onChange(of: inputManager.iterations) { newValue in
+                                if newValue != oldIterationsValue {
+                                    oldIterationsValue = newValue
+                                    invalidateChartIfInputChanged()
+                                }
+                            }
+                    }
+                    
+                    // Annual CAGR Field
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Annual CAGR (%)")
+                            .foregroundColor(.white)
+                        TextField("e.g. 40.0", text: $inputManager.annualCAGR)
+                            .keyboardType(.decimalPad)
+                            .padding(8)
+                            .background(Color.white)
+                            .cornerRadius(6)
+                            .foregroundColor(.black)
+                            .focused($activeField, equals: .annualCAGR)
+                            .onChange(of: inputManager.annualCAGR) { newValue in
+                                if newValue != oldAnnualCAGRValue {
+                                    oldAnnualCAGRValue = newValue
+                                    invalidateChartIfInputChanged()
+                                }
+                            }
+                    }
+                    
+                    // Annual Volatility Field
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Annual Volatility (%)")
+                            .foregroundColor(.white)
+                        TextField("e.g. 80.0", text: $inputManager.annualVolatility)
+                            .keyboardType(.decimalPad)
+                            .padding(8)
+                            .background(Color.white)
+                            .cornerRadius(6)
+                            .foregroundColor(.black)
+                            .focused($activeField, equals: .annualVolatility)
+                            .onChange(of: inputManager.annualVolatility) { newValue in
+                                if newValue != oldAnnualVolatilityValue {
+                                    oldAnnualVolatilityValue = newValue
+                                    invalidateChartIfInputChanged()
+                                }
+                            }
+                    }
                 }
-                .padding(.top, 6)
+                .padding(20)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color(white: 0.1).opacity(0.8))
+                )
+                .padding(.horizontal, 30)
+                
+                // Run Simulation Button
+                if !isLoading && !isChartBuilding {
+                    Button {
+                        activeField = nil
+                        runSimulation()
+                    } label: {
+                        Text("RUN SIMULATION")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 32)
+                            .padding(.vertical, 14)
+                            .background(Color.orange)
+                            .cornerRadius(8)
+                            .shadow(color: .black.opacity(0.3), radius: 4, x: 2, y: 2)
+                    }
+                    .padding(.top, 6)
+                }
+                
+                Spacer()
             }
-            
-            Spacer()
         }
     }
     
     private var simulationResultsView: some View {
         ScrollViewReader { scrollProxy in
             ZStack {
+                // Remove extra white space at bottom:
+                // edgesIgnoringSafeArea if needed:
                 Color(white: 0.12)
-                    .edgesIgnoringSafeArea(.top)
+                    .edgesIgnoringSafeArea(.bottom)
                 
                 VStack(spacing: 0) {
                     // Top bar
                     HStack {
+                        // Chevron-only back button in white
                         Button(action: {
                             print("// DEBUG: Back button tapped in simulationResultsView.")
                             UserDefaults.standard.set(lastViewedWeek, forKey: "lastViewedWeek")
@@ -844,8 +907,6 @@ struct ContentView: View {
                         
                         // The chart button
                         Button(action: {
-                            // Log each time the chart button is pressed.
-                            // Also log whether we have a snapshot, how many runs exist, etc.
                             print("// DEBUG: Chart button pressed.")
                             print("// DEBUG: chartDataCache.chartSnapshot == \(chartDataCache.chartSnapshot == nil ? "nil" : "non-nil")")
                             if let allRuns = chartDataCache.allRuns {
@@ -854,18 +915,8 @@ struct ContentView: View {
                                 print("// DEBUG: chartDataCache.allRuns is nil.")
                             }
                             
-                            // If you added a UUID in ChartDataCache, log that as well:
-                            // print("// DEBUG: chartDataCache.id = \(chartDataCache.id)")
-                            
                             if let snapshot = chartDataCache.chartSnapshot {
-                                // We already have the snapshot => go straight to ChartSnapshotView
                                 showSnapshotView = true
-                            } else if let existingRuns = chartDataCache.allRuns {
-                                // There's data but no snapshot => build the chart or create a snapshot
-                                // showHistograms = true // If that navigates to a live chart
-                                // or generate the snapshot here if you'd like
-                            } else {
-                                // No snapshot, no data, fallback or show an alert
                             }
                         }) {
                             Image(systemName: "chart.line.uptrend.xyaxis")
@@ -1018,6 +1069,7 @@ struct ContentView: View {
                                     .tag(index)
                                 }
                             }
+                            // This helps remove any extra space:
                             .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
                             .frame(width: UIScreen.main.bounds.width - 60)
                         }
@@ -1130,84 +1182,7 @@ struct ContentView: View {
         }
     }
     
-    private var loadingOverlay: some View {
-        ZStack {
-            Color.black.opacity(0.6).ignoresSafeArea()
-            VStack(spacing: 0) {
-                Spacer().frame(height: 250)
-                HStack {
-                    Spacer()
-                    Button(action: {
-                        print("// DEBUG: Cancel button tapped in loadingOverlay.")
-                        isCancelled = true
-                        isLoading = false
-                    }) {
-                        Image(systemName: "xmark")
-                            .foregroundColor(.white)
-                            .padding()
-                    }
-                    .padding(.trailing, 20)
-                }
-                .offset(y: 220)
-                
-                InteractiveBitcoinSymbol3DSpinner()
-                    .padding(.bottom, 30)
-                
-                VStack(spacing: 17) {
-                    Text("Simulating: \(completedIterations) / \(totalIterations)")
-                        .font(.body.monospacedDigit())
-                        .foregroundColor(.white)
-                    
-                    ProgressView(value: Double(completedIterations), total: Double(totalIterations))
-                        .tint(.blue)
-                        .scaleEffect(x: 1, y: 2, anchor: .center)
-                        .frame(width: 200)
-                }
-                .padding(.bottom, 20)
-                
-                if showTip {
-                    Text(currentTip)
-                        .foregroundColor(.white)
-                        .multilineTextAlignment(.center)
-                        .frame(maxWidth: 300)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .transition(.opacity)
-                        .padding(.bottom, 30)
-                }
-                
-                Spacer()
-            }
-        }
-        .onAppear { startTipCycle() }
-        .onDisappear { stopTipCycle() }
-    }
-    
-    private var chartLoadingOverlay: some View {
-        ZStack {
-            Color.black.opacity(0.6).ignoresSafeArea()
-            VStack(spacing: 20) {
-                Spacer()
-                ProgressView("Loading chart...")
-                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                    .scaleEffect(2.0)
-                
-                Button(action: {
-                    print("// DEBUG: Cancel button tapped in chartLoadingOverlay.")
-                    chartLoadingState = .cancelled
-                    chartLoadingState = .none
-                }) {
-                    Text("Cancel")
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 24)
-                        .padding(.vertical, 10)
-                        .background(Color.red)
-                        .cornerRadius(8)
-                }
-                
-                Spacer()
-            }
-        }
-    }
+    // (Removed old loadingOverlay and chartLoadingOverlay, replaced with loadingOverlayCombined.)
     
     // MARK: - Tip cycle
     private func startTipCycle() {
