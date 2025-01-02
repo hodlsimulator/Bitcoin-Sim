@@ -900,6 +900,10 @@ struct ContentView: View {
                 Spacer()
             }
         }
+        // Dismiss the keyboard when tapping outside the fields
+        .onTapGesture {
+            activeField = nil
+        }
     }
     
     private var simulationResultsView: some View {
