@@ -8,7 +8,7 @@
 import Foundation
 import SwiftUI
 
-// MARK: - Factor windows (adjust or remove if you wish)
+// MARK: - Factor windows
 private let halvingWeeks    = [210, 420, 630, 840]
 private let blackSwanWeeks  = [150, 500]
 
@@ -17,29 +17,42 @@ private let useWeightedSampling = false
 private var useSeededRandom = false
 private var seededGen: SeededGenerator?
 
+/// A simple seeded RNG
 private struct SeededGenerator: RandomNumberGenerator {
     private var state: UInt64
     init(seed: UInt64) { self.state = seed }
+    
     mutating func next() -> UInt64 {
-        // A simple LCG-like progression
+        // A simple LCG progression
         state = 2862933555777941757 &* state &+ 3037000493
         return state
     }
 }
 
+/// Lock or unlock the seed.
 private func setRandomSeed(_ seed: UInt64?) {
     if let s = seed {
-        print("[SEED] setRandomSeed called with \(s) – locking seed.")
         useSeededRandom = true
         seededGen = SeededGenerator(seed: s)
     } else {
-        print("[SEED] setRandomSeed called with nil – using default random.")
         useSeededRandom = false
         seededGen = nil
     }
 }
 
-/// A gentle dampening function so extreme outliers are softened
+/// If you want a seeded normal distribution, define it here:
+fileprivate func seededRandomNormal<G: RandomNumberGenerator>(
+    mean: Double,
+    stdDev: Double,
+    rng: inout G
+) -> Double {
+    let u1 = Double(rng.next()) / Double(UInt64.max)
+    let u2 = Double(rng.next()) / Double(UInt64.max)
+    let z0 = sqrt(-2.0 * log(u1)) * cos(2.0 * .pi * u2)
+    return z0 * stdDev + mean
+}
+
+/// A gentle dampening function to soften extreme outliers
 func dampenArctan(_ rawReturn: Double) -> Double {
     let factor = 5.5
     let scaled = rawReturn * factor
@@ -48,7 +61,7 @@ func dampenArctan(_ rawReturn: Double) -> Double {
 }
 
 // MARK: - Historical Arrays
-// These will presumably be populated from CSVs or data files:
+// If you load from CSV or so, just populate these before running:
 var historicalBTCWeeklyReturns: [Double] = []
 var sp500WeeklyReturns: [Double] = []
 var weightedBTCWeeklyReturns: [Double] = []
@@ -56,18 +69,22 @@ var weightedBTCWeeklyReturns: [Double] = []
 // MARK: - pickRandomReturn
 /// Helper function for random pick with optional seeding
 private func pickRandomReturn(from arr: [Double]) -> Double {
-    guard !arr.isEmpty else { return 0.0 }
+    guard !arr.isEmpty else {
+        return 0.0
+    }
+    
     if useSeededRandom, var rng = seededGen {
         let val = arr.randomElement(using: &rng) ?? 0.0
         seededGen = rng
         return val
     } else {
-        return arr.randomElement() ?? 0.0
+        let val = arr.randomElement() ?? 0.0
+        return val
     }
 }
 
 // MARK: - runOneFullSimulation
-/// Single-run simulation that references your “userWeeks”, “initialBTCPriceUSD”, etc.
+/// Single-run simulation referencing your “userWeeks”, “initialBTCPriceUSD”, etc.
 func runOneFullSimulation(
     settings: SimulationSettings,
     annualCAGR: Double,
@@ -78,12 +95,12 @@ func runOneFullSimulation(
     seed: UInt64? = nil
 ) -> [SimulationData] {
     
-    // A nested struct to hold a static flag
+    /*
+    // A nested struct so we only print factor settings once
     struct PrintOnce {
         static var didPrintFactorSettings: Bool = false
     }
     
-    // Print toggles ONLY on the first call
     if !PrintOnce.didPrintFactorSettings {
         print("=== FACTOR SETTINGS (once only) ===")
         print("useHalving: \(settings.useHalving), halvingBump: \(settings.halvingBump)")
@@ -112,34 +129,35 @@ func runOneFullSimulation(
         print("====================================")
         
         PrintOnce.didPrintFactorSettings = true
-    }
+    } */
 
-    // We no longer reset the seed here; we rely on the caller (if at all)
-    // setRandomSeed(seed)
+    // We typically rely on runMonteCarloSimulationsWithProgress to call `setRandomSeed(...)`
+    // If you want to forcibly set it here, you could do:
+    //   setRandomSeed(seed)
 
-    // 1) Figure out the initial BTC price in EUR
+    // 1) Initial BTC price in EUR
     let firstEURPrice = initialBTCPriceUSD / exchangeRateEURUSD
     
     // 2) Convert user’s typed startingBalance (EUR) into BTC
     let userStartingBalanceEUR = settings.startingBalance
     let userStartingBalanceBTC = userStartingBalanceEUR / firstEURPrice
 
-    // Instead of 0.0, we begin from the user’s typed BTC equivalent
+    // Track last week's data
     var previousBTCHoldings = userStartingBalanceBTC
     var previousBTCPriceUSD = initialBTCPriceUSD
 
-    // Convert annual CAGR to a weekly portion
+    // Annual CAGR => weekly portion
     let baseWeeklyGrowth = pow(1.0 + annualCAGR, 1.0 / 52.0) - 1.0
     let weeklyVol = annualVolatility / sqrt(52.0)
 
     var results: [SimulationData] = []
 
-    // 3) Append an initial record for week 1 that reflects the user’s starting BTC
+    // 3) Record for week 1
     let initialPortfolioValueEUR = userStartingBalanceBTC * firstEURPrice
     results.append(
         SimulationData(
             week: 1,
-            startingBTC: 0.0, // or userStartingBalanceBTC if you prefer
+            startingBTC: 0.0,
             netBTCHoldings: userStartingBalanceBTC,
             btcPriceUSD: initialBTCPriceUSD,
             btcPriceEUR: firstEURPrice,
@@ -151,20 +169,30 @@ func runOneFullSimulation(
         )
     )
 
-    // Main loop from week 2 to userWeeks
+    // 4) Main loop from week=2 to userWeeks
     for week in 2...userWeeks {
         
-        // 1) Pick a random historical weekly return
+        // Pick a random historical return
         let btcArr = useWeightedSampling ? weightedBTCWeeklyReturns : historicalBTCWeeklyReturns
         let histReturn = pickRandomReturn(from: btcArr)
         
-        // 2) Dampen extremes
+        // Dampen extremes
         let dampenedReturn = dampenArctan(histReturn)
         
-        // 3) Combine with base CAGR
+        // Combine with base CAGR
         var combinedWeeklyReturn = dampenedReturn + baseWeeklyGrowth
         
-        // 4) Example toggles (halving, adoption factor, etc.)
+        // Insert an annualVolatility "shock", seeded if locked
+        if useSeededRandom, var localRNG = seededGen {
+            let shock = seededRandomNormal(mean: 0, stdDev: weeklyVol, rng: &localRNG)
+            seededGen = localRNG
+            combinedWeeklyReturn += shock
+        } else {
+            let shock = randomNormal(mean: 0, standardDeviation: weeklyVol)
+            combinedWeeklyReturn += shock
+        }
+        
+        // Example toggles (halving, etc.)
         if settings.useHalving, halvingWeeks.contains(week) {
             combinedWeeklyReturn += settings.halvingBump
         }
@@ -173,79 +201,93 @@ func runOneFullSimulation(
             combinedWeeklyReturn += adoptionFactor
         }
         
-        // 4a) Additional bullish toggles
+        // *** Additional bullish toggles (all default RNG calls) ***
         if settings.useInstitutionalDemand {
-            combinedWeeklyReturn += Double.random(in: 0 ... settings.maxDemandBoost)
+            let randBoost = Double.random(in: 0 ... settings.maxDemandBoost)
+            combinedWeeklyReturn += randBoost
         }
         if settings.useCountryAdoption {
-            combinedWeeklyReturn += Double.random(in: 0 ... settings.maxCountryAdBoost)
+            let randBoost = Double.random(in: 0 ... settings.maxCountryAdBoost)
+            combinedWeeklyReturn += randBoost
         }
         if settings.useRegulatoryClarity {
-            combinedWeeklyReturn += Double.random(in: 0 ... settings.maxClarityBoost)
+            let randBoost = Double.random(in: 0 ... settings.maxClarityBoost)
+            combinedWeeklyReturn += randBoost
         }
         if settings.useEtfApproval {
-            combinedWeeklyReturn += Double.random(in: 0 ... settings.maxEtfBoost)
+            let randBoost = Double.random(in: 0 ... settings.maxEtfBoost)
+            combinedWeeklyReturn += randBoost
         }
         if settings.useTechBreakthrough {
-            combinedWeeklyReturn += Double.random(in: 0 ... settings.maxTechBoost)
+            let randBoost = Double.random(in: 0 ... settings.maxTechBoost)
+            combinedWeeklyReturn += randBoost
         }
         if settings.useScarcityEvents {
-            combinedWeeklyReturn += Double.random(in: 0 ... settings.maxScarcityBoost)
+            let randBoost = Double.random(in: 0 ... settings.maxScarcityBoost)
+            combinedWeeklyReturn += randBoost
         }
         if settings.useGlobalMacroHedge {
-            combinedWeeklyReturn += Double.random(in: 0 ... settings.maxMacroBoost)
+            let randBoost = Double.random(in: 0 ... settings.maxMacroBoost)
+            combinedWeeklyReturn += randBoost
         }
         if settings.useStablecoinShift {
-            combinedWeeklyReturn += Double.random(in: 0 ... settings.maxStablecoinBoost)
+            let randBoost = Double.random(in: 0 ... settings.maxStablecoinBoost)
+            combinedWeeklyReturn += randBoost
         }
         if settings.useDemographicAdoption {
-            combinedWeeklyReturn += Double.random(in: 0 ... settings.maxDemoBoost)
+            let randBoost = Double.random(in: 0 ... settings.maxDemoBoost)
+            combinedWeeklyReturn += randBoost
         }
         if settings.useAltcoinFlight {
-            combinedWeeklyReturn += Double.random(in: 0 ... settings.maxAltcoinBoost)
+            let randBoost = Double.random(in: 0 ... settings.maxAltcoinBoost)
+            combinedWeeklyReturn += randBoost
         }
 
-        // 4b) Additional bearish toggles
+        // *** Additional bearish toggles (default RNG except for steady drift) ***
         if settings.useBearMarket {
-            // Maybe apply a steady bear drift each week
             combinedWeeklyReturn += settings.bearWeeklyDrift
         }
         if settings.useRegClampdown {
-            // Negative random effect
-            combinedWeeklyReturn += Double.random(in: settings.maxClampDown ... 0)
+            let randDrop = Double.random(in: settings.maxClampDown ... 0)
+            combinedWeeklyReturn += randDrop
         }
         if settings.useCompetitorCoin {
-            combinedWeeklyReturn += Double.random(in: settings.maxCompetitorBoost ... 0)
+            let randDrop = Double.random(in: settings.maxCompetitorBoost ... 0)
+            combinedWeeklyReturn += randDrop
         }
         if settings.useSecurityBreach {
-            // Could do a 1% chance each week to apply the full breach
-            if Double.random(in: 0...1) < 0.01 {
+            let breachCheck = Double.random(in: 0...1)
+            if breachCheck < 0.01 {
                 combinedWeeklyReturn += settings.breachImpact
             }
         }
         if settings.useBubblePop {
-            combinedWeeklyReturn += Double.random(in: settings.maxPopDrop ... 0)
+            let randDrop = Double.random(in: settings.maxPopDrop ... 0)
+            combinedWeeklyReturn += randDrop
         }
         if settings.useStablecoinMeltdown {
-            combinedWeeklyReturn += Double.random(in: settings.maxMeltdownDrop ... 0)
+            let randDrop = Double.random(in: settings.maxMeltdownDrop ... 0)
+            combinedWeeklyReturn += randDrop
         }
         if settings.useBlackSwan {
-            // Could do a 0.5% chance
-            if Double.random(in: 0...1) < 0.005 {
-                let drop = Double.random(in: settings.blackSwanDrop ... 0) // e.g. -0.60 to 0
+            let blackSwanRoll = Double.random(in: 0...1)
+            if blackSwanRoll < 0.005 {
+                let drop = Double.random(in: settings.blackSwanDrop ... 0)
                 combinedWeeklyReturn += drop
             }
         }
         if settings.useMaturingMarket {
-            combinedWeeklyReturn += Double.random(in: settings.maxMaturingDrop ... 0)
+            let randDrop = Double.random(in: settings.maxMaturingDrop ... 0)
+            combinedWeeklyReturn += randDrop
         }
         if settings.useRecession {
-            combinedWeeklyReturn += Double.random(in: settings.maxRecessionDrop ... 0)
+            let randDrop = Double.random(in: settings.maxRecessionDrop ... 0)
+            combinedWeeklyReturn += randDrop
         }
 
         // 5) Price update
         var btcPriceUSD = previousBTCPriceUSD * (1.0 + combinedWeeklyReturn)
-        btcPriceUSD = max(btcPriceUSD, 1.0)   // clamp to min 1.0
+        btcPriceUSD = max(btcPriceUSD, 1.0)  // clamp to min 1.0
         let btcPriceEUR = btcPriceUSD / exchangeRateEURUSD
         
         // 6) Contribution logic
@@ -253,7 +295,7 @@ func runOneFullSimulation(
         let fee = contributionEUR * 0.0035
         let netBTC = (contributionEUR - fee) / btcPriceEUR
         
-        // Hypothetical holdings before withdrawal
+        // Hypothetical holdings
         let hypotheticalHoldings = previousBTCHoldings + netBTC
         let hypotheticalValueEUR = hypotheticalHoldings * btcPriceEUR
         
@@ -314,10 +356,9 @@ func runMonteCarloSimulationsWithProgress(
     setRandomSeed(seed)
 
     var allRuns = [[SimulationData]]()
-
+    
     for i in 0..<iterations {
         if isCancelled() {
-            print("[CANCEL] Stopping early at \(i) / \(iterations).")
             break
         }
 
@@ -332,7 +373,6 @@ func runMonteCarloSimulationsWithProgress(
         allRuns.append(simRun)
 
         if isCancelled() {
-            print("[CANCEL] Stopping early at \(i) / \(iterations).")
             break
         }
         progressCallback(i + 1)
@@ -351,8 +391,8 @@ func runMonteCarloSimulationsWithProgress(
     return (medianRun, allRuns)
 }
 
-// MARK: - Optional normal distribution usage
-/// Not used by default, but you could incorporate it.
+// MARK: - randomNormal (fallback if not seeded)
+/// Default normal distribution if no locked seed
 private func randomNormal(mean: Double, standardDeviation: Double) -> Double {
     let u1 = Double.random(in: 0..<1)
     let u2 = Double.random(in: 0..<1)
