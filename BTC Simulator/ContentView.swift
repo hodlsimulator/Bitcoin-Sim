@@ -499,56 +499,58 @@ struct ContentView: View {
         }
     }
     
-    // MARK: - Overlay that shows both states
+    // MARK: - Overlay that shows simulation + chart generation phases
     private var loadingOverlayCombined: some View {
-        // Same style as your loadingOverlay, but show different text
-        // depending on whether isLoading or isChartBuilding is true.
         ZStack {
             Color.black.opacity(0.6).ignoresSafeArea()
             VStack(spacing: 0) {
+                // Keep this top spacer to position everything where it was
                 Spacer().frame(height: 250)
-
+                
                 HStack {
                     Spacer()
-                    Button(action: {
-                        print("// DEBUG: Cancel button tapped in combined overlay.")
-                        isCancelled = true
-                        if isChartBuilding {
-                            isChartBuilding = false
-                        }
-                        if isLoading {
+                    
+                    // Show the cancel (X) button only if still loading simulation,
+                    // and not when the chart is building.
+                    if isLoading && !isChartBuilding {
+                        Button(action: {
+                            print("// DEBUG: Cancel button tapped in combined overlay.")
+                            isCancelled = true
                             isLoading = false
+                        }) {
+                            Image(systemName: "xmark")
+                                .foregroundColor(.white)
+                                .padding()
                         }
-                    }) {
-                        Image(systemName: "xmark")
-                            .foregroundColor(.white)
-                            .padding()
+                        .padding(.trailing, 20)
                     }
-                    .padding(.trailing, 20)
                 }
                 .offset(y: 220)
 
-                InteractiveBitcoinSymbol3DSpinner()
-                    .padding(.bottom, 30)
-
-                VStack(spacing: 17) {
-                    if isLoading {
+                if isLoading {
+                    // Original simulation spinner logic
+                    InteractiveBitcoinSymbol3DSpinner()
+                        .padding(.bottom, 30)
+                    
+                    VStack(spacing: 17) {
                         Text("Simulating: \(completedIterations) / \(totalIterations)")
                             .font(.body.monospacedDigit())
                             .foregroundColor(.white)
                         
-                        // Custom accent for simulation progress bar
                         ProgressView(value: Double(completedIterations), total: Double(totalIterations))
                             .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
                             .scaleEffect(x: 1, y: 2, anchor: .center)
                             .frame(width: 200)
                     }
-                    else if isChartBuilding {
+                    .padding(.bottom, 20)
+                    
+                } else if isChartBuilding {
+                    VStack(spacing: 12) {
                         Text("Generating Chart…")
                             .font(.headline)
                             .foregroundColor(.white)
-                        
-                        // Custom accent for chart spinner
+                            .padding(.bottom, 20)  // <-- Increase gap beneath the text
+
                         ProgressView()
                             .progressViewStyle(
                                 CircularProgressViewStyle(
@@ -557,10 +559,14 @@ struct ContentView: View {
                             )
                             .scaleEffect(2.0)
                     }
-                }
-                .padding(.bottom, 20)
+                    .offset(y: 270)
 
-                if showTip {
+                    // Optionally add a tiny spacer if you want
+                    Spacer().frame(height: 30)
+                }
+                
+                // Show tips only while simulation is loading
+                if showTip && isLoading {
                     Text(currentTip)
                         .foregroundColor(.white)
                         .multilineTextAlignment(.center)
@@ -569,7 +575,7 @@ struct ContentView: View {
                         .transition(.opacity)
                         .padding(.bottom, 30)
                 }
-
+                
                 Spacer()
             }
         }
@@ -753,29 +759,35 @@ struct ContentView: View {
     }
     
     // MARK: - UI
+    @ViewBuilder
     private var bottomIcons: some View {
-        VStack {
-            Spacer()
-            HStack {
-                Button(action: { showAbout = true }) {
-                    Image(systemName: "info.circle")
-                        .font(.system(size: 28))
-                        .foregroundColor(.white)
-                        .padding()
-                }
-                .padding(.leading, 15)
-                
+        if !isLoading && !isChartBuilding {
+            VStack {
                 Spacer()
-                
-                Button(action: { showSettings = true }) {
-                    Image(systemName: "gearshape")
-                        .font(.system(size: 28))
-                        .foregroundColor(.white)
-                        .padding()
+                HStack {
+                    Button(action: { showAbout = true }) {
+                        Image(systemName: "info.circle")
+                            .font(.system(size: 28))
+                            .foregroundColor(.white)
+                            .padding()
+                    }
+                    .padding(.leading, 15)
+                    
+                    Spacer()
+                    
+                    Button(action: { showSettings = true }) {
+                        Image(systemName: "gearshape")
+                            .font(.system(size: 28))
+                            .foregroundColor(.white)
+                            .padding()
+                    }
+                    .padding(.trailing, 15)
                 }
-                .padding(.trailing, 15)
+                .padding(.bottom, 30)
             }
-            .padding(.bottom, 30)
+        } else {
+            // When isLoading == true or isChartBuilding == true, show nothing.
+            EmptyView()
         }
     }
     
