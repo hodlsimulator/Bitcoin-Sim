@@ -13,9 +13,6 @@ enum PercentileChoice {
 }
 
 class SimulationCoordinator: ObservableObject {
-    // We store references to other needed objects, e.g. chartDataCache
-    // and whatever else you used in ContentView (like simSettings).
-    
     @Published var isLoading: Bool = false
     @Published var isChartBuilding: Bool = false
     @Published var isSimulationRun: Bool = false
@@ -31,14 +28,12 @@ class SimulationCoordinator: ObservableObject {
     @Published var selectedPercentile: PercentileChoice = .median
     
     @Published var allSimData: [[SimulationData]] = []
-    @State private var medianSimData: [SimulationData] = []
     
-    // References to your environment objects or input managers:
+    // References to other needed objects:
     var chartDataCache: ChartDataCache
     private var simSettings: SimulationSettings
     private var inputManager: PersistentInputManager
     
-    // A typical init injecting these dependencies
     init(chartDataCache: ChartDataCache,
          simSettings: SimulationSettings,
          inputManager: PersistentInputManager)
@@ -53,7 +48,7 @@ class SimulationCoordinator: ObservableObject {
         let newHash = computeInputsHash()
         print("// DEBUG: runSimulation() => newHash = \(newHash), storedInputsHash = \(String(describing: chartDataCache.storedInputsHash))")
         
-        // CSV loads
+        // CSV loads (example placeholders)
         historicalBTCWeeklyReturns = loadBTCWeeklyReturns()
         sp500WeeklyReturns = loadSP500WeeklyReturns()
         
@@ -90,7 +85,6 @@ class SimulationCoordinator: ObservableObject {
                 return
             }
             
-            // Let the UI know how many total iterations we’ll run
             DispatchQueue.main.async {
                 self.totalIterations = total
             }
@@ -112,8 +106,6 @@ class SimulationCoordinator: ObservableObject {
                 iterations: total,
                 initialBTCPriceUSD: userPriceUSD,
                 isCancelled: { self.isCancelled },
-                // Here's the key: each iteration calls progressCallback.
-                // We dispatch to main so SwiftUI sees completedIterations change.
                 progressCallback: { completed in
                     if !self.isCancelled {
                         DispatchQueue.main.async {
@@ -131,7 +123,6 @@ class SimulationCoordinator: ObservableObject {
                 return
             }
             
-            // Sort final runs by last week's BTC price
             let finalRuns = allIterations.map { ($0.last?.btcPriceUSD ?? 0.0, $0) }
             let sortedRuns = finalRuns.sorted { $0.0 < $1.0 }
             
@@ -146,16 +137,12 @@ class SimulationCoordinator: ObservableObject {
                 let medianLineData = self.computeMedianSimulationData(allIterations: allIterations)
                 
                 DispatchQueue.main.async {
-                    // Simulation done => turn off isLoading
                     self.isLoading = false
-
-                    // Start building chart
                     self.isChartBuilding = true
                     print("// DEBUG: Simulation finished => isChartBuilding=true now.")
 
-                    // *** NEW PRINT STATEMENT ***
                     print("// DEBUG: Now assigning final results and preparing portrait snapshot…")
-
+                    
                     // Assign results
                     self.tenthPercentileResults = tenthRun
                     self.medianResults = singleMedianRun
@@ -175,7 +162,6 @@ class SimulationCoordinator: ObservableObject {
                     self.chartDataCache.chartSnapshotLandscape = nil
                     self.chartDataCache.allRuns = allSimsAsWeekPoints
                     self.chartDataCache.storedInputsHash = newHash
-                    self.medianSimData = medianLineData
                     
                     // 1) Build portrait chart & snapshot
                     DispatchQueue.main.async {
@@ -219,7 +205,6 @@ class SimulationCoordinator: ObservableObject {
                             }
                             self.chartDataCache.chartSnapshotLandscape = wideSnapshot
                             
-                            // Done building => user can see results
                             self.isChartBuilding = false
                             self.isSimulationRun = true
                         }
@@ -232,7 +217,7 @@ class SimulationCoordinator: ObservableObject {
                 }
             }
             
-            // Process all results on a background thread
+            // (Optional) process all results on a background thread
             DispatchQueue.global(qos: .background).async {
                 self.processAllResults(allIterations)
             }
@@ -251,9 +236,9 @@ class SimulationCoordinator: ObservableObject {
     
     private func computeInputsHash() -> Int {
         let combinedString = """
-    \(inputManager.iterations)_\(inputManager.annualCAGR)_\(inputManager.annualVolatility)_\
-    \(simSettings.userWeeks)_\(simSettings.initialBTCPriceUSD)
-    """
+        \(inputManager.iterations)_\(inputManager.annualCAGR)_\(inputManager.annualVolatility)_\
+        \(simSettings.userWeeks)_\(simSettings.initialBTCPriceUSD)
+        """
         return combinedString.hashValue
     }
     
@@ -309,6 +294,6 @@ class SimulationCoordinator: ObservableObject {
     }
     
     private func processAllResults(_ allResults: [[SimulationData]]) {
-            // ...
-        }
+        // ... any post-processing you want
+    }
 }

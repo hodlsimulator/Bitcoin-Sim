@@ -273,26 +273,45 @@ class ChartDataCache: ObservableObject {
     
     // For iOS, store a snapshot as UIImage
     @Published var chartSnapshot: UIImage? = nil
-    
     @Published var chartSnapshotLandscape: UIImage? = nil
 }
 
 // MARK: - ContentView
 struct ContentView: View {
-    
-    @StateObject private var coordinator: SimulationCoordinator
-    
+
+    @StateObject var inputManager: PersistentInputManager
+        @StateObject var simSettings: SimulationSettings
+        @StateObject var chartDataCache: ChartDataCache
+        @StateObject var coordinator: SimulationCoordinator
+
+        init() {
+            let manager = PersistentInputManager()
+            let settings = SimulationSettings()
+            let cache = ChartDataCache()
+            
+            // Now pass those same instances to the coordinator
+            let simCoord = SimulationCoordinator(
+                chartDataCache: cache,
+                simSettings: settings,
+                inputManager: manager
+            )
+            
+            // Wrap them all in @StateObject
+            _inputManager = StateObject(wrappedValue: manager)
+            _simSettings = StateObject(wrappedValue: settings)
+            _chartDataCache = StateObject(wrappedValue: cache)
+            _coordinator = StateObject(wrappedValue: simCoord)
+        }
+
     // Various states
     @FocusState private var activeField: ActiveField?
-    @StateObject var inputManager = PersistentInputManager()
-    @State private var isCancelled = false
-    
-    @State private var scrollToBottom: Bool = false
     @State private var isAtBottom: Bool = false
     @State private var lastViewedWeek: Int = 0
     
+    @State private var scrollToBottom: Bool = false
+    @State private var lastScrollTime = Date()
     @State private var contentScrollProxy: ScrollViewProxy?
-    
+
     @State private var currentPage: Int = 0
     @State private var lastViewedPage: Int = 0
     
@@ -301,7 +320,6 @@ struct ContentView: View {
     @State private var tipTimer: Timer? = nil
     
     @State private var hideScrollIndicators = true
-    @State private var lastScrollTime = Date()
     
     @State private var loadingTips: [String] = [
         "Gathering historical data from CSV files...",
@@ -324,8 +342,6 @@ struct ContentView: View {
         ("Withdrawal EUR", \SimulationData.withdrawalEUR)
     ]
     
-    @EnvironmentObject var simSettings: SimulationSettings
-    
     @State private var showSettings = false
     @State private var showAbout = false
     @State private var showHistograms = false
@@ -336,7 +352,6 @@ struct ContentView: View {
     @State private var ninetiethPercentileResults: [SimulationData] = []
     @State private var selectedPercentile: PercentileChoice = .median
     
-    @State private var medianSimData: [SimulationData] = []
     @State private var allSimData: [[SimulationData]] = []
     
     @State private var chartLoadingState: ChartLoadingState = .none
@@ -346,29 +361,10 @@ struct ContentView: View {
     @State private var oldAnnualVolatilityValue: String = ""
     
     @State private var showSnapshotView = false
-    
-    // We initialize the coordinator by injecting references:
-    init() {
-        let temporaryInputManager = PersistentInputManager()
-        let simSettings = SimulationSettings()
-        let chartDataCache = ChartDataCache()
-        
-        _coordinator = StateObject(
-            wrappedValue: SimulationCoordinator(
-                chartDataCache: chartDataCache,
-                simSettings: simSettings,
-                inputManager: temporaryInputManager
-            )
-        )
-    }
-    
-    // MARK: - Convert single run to [WeekPoint]
-    func convertOriginalToWeekPoints() -> [WeekPoint] {
-        medianSimData.map { row in
-            WeekPoint(week: row.week, value: row.portfolioValueEUR)
-        }
-    }
-    
+
+    // This was removed to prevent capturing 'self' before initialisation
+    // (No custom init() here – the @StateObjects are created above)
+
     // MARK: - Body
     var body: some View {
         NavigationStack {
@@ -452,7 +448,7 @@ struct ContentView: View {
                     if coordinator.isLoading && !coordinator.isChartBuilding {
                         Button(action: {
                             print("// DEBUG: Cancel button tapped in combined overlay.")
-                            isCancelled = true
+                            coordinator.isCancelled = true
                             coordinator.isLoading = false
                         }) {
                             Image(systemName: "xmark")
@@ -648,14 +644,10 @@ struct ContentView: View {
                 if !coordinator.isLoading && !coordinator.isChartBuilding {
                     Button {
                         activeField = nil
-                        // 1) Immediately set isLoading so spinner can appear
+                        // Directly call runSimulation() so we don’t capture self too early
                         coordinator.isLoading = true
                         coordinator.isChartBuilding = false
-                        
-                        // 2) Wait a tiny bit so SwiftUI can update the UI
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                            coordinator.runSimulation()
-                        }
+                        coordinator.runSimulation()
                     } label: {
                         Text("RUN SIMULATION")
                             .font(.headline)
