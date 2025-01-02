@@ -344,7 +344,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var adoptionBaseFactor: Double = 1.2e-06 {  // new default
+    @Published var adoptionBaseFactor: Double = 1.2e-06 {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(adoptionBaseFactor, forKey: "adoptionBaseFactor")
@@ -524,6 +524,18 @@ class SimulationSettings: ObservableObject {
         useRecession
     }
     
+    // -----------------------------
+    // MARK: - NEW TOGGLE: LOCK HISTORICAL SAMPLING
+    // -----------------------------
+    @Published var lockHistoricalSampling: Bool = false {   // <-- NEW
+        didSet {
+            if isInitialized {
+                UserDefaults.standard.set(lockHistoricalSampling, forKey: "lockHistoricalSampling")
+            }
+        }
+    }
+    // -----------------------------
+
     // MARK: - Init
     init() {
         let defaults = UserDefaults.standard
@@ -699,6 +711,11 @@ class SimulationSettings: ObservableObject {
             self.maxRecessionDrop = defaults.double(forKey: "maxRecessionDrop")
         }
         
+        // Load our NEW lockHistoricalSampling toggle from defaults // <-- NEW
+        if let savedLockSampling = defaults.object(forKey: "lockHistoricalSampling") as? Bool {
+            self.lockHistoricalSampling = savedLockSampling
+        }
+        
         isInitialized = true
         syncToggleAllState()
     }
@@ -761,6 +778,9 @@ class SimulationSettings: ObservableObject {
         defaults.removeObject(forKey: "useRecession")
         defaults.removeObject(forKey: "maxRecessionDrop")
         
+        // Optionally also remove lockHistoricalSampling if you want to revert that to false // <-- NEW
+        defaults.removeObject(forKey: "lockHistoricalSampling")  // optional line
+
         // Reassign them to the new midpoints
         useHalving = true
         halvingBump = 0.13333331346511842
@@ -827,5 +847,8 @@ class SimulationSettings: ObservableObject {
 
         // Enable everything
         toggleAll = true
+        
+        // Optionally reset lockHistoricalSampling to false // <-- NEW
+        lockHistoricalSampling = false
     }
 }

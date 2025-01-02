@@ -496,6 +496,17 @@ struct SettingsView: View {
             .listRowBackground(Color(white: 0.15))
 
             //====================================
+            // NEW: LOCK HISTORICAL SAMPLING
+            //====================================
+            Section("Historical Sampling") {   // <-- NEW
+                Toggle("Lock Historical Sampling", isOn: $simSettings.lockHistoricalSampling)
+                    .tint(.orange)
+                    .foregroundColor(.white)
+            }
+            .listRowBackground(Color(white: 0.15))
+            // <-- END NEW
+
+            //====================================
             // RESTORE DEFAULTS
             //====================================
             Section {
