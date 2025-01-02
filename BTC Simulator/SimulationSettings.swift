@@ -10,10 +10,8 @@ import SwiftUI
 /// A class for storing user toggles and results
 class SimulationSettings: ObservableObject {
     
-    // If you use this InputManager, you can set it up
     var inputManager: PersistentInputManager? = nil
     
-    // Basic fields
     @Published var userWeeks: Int = 52
     @Published var initialBTCPriceUSD: Double = 58000.0
     
@@ -21,18 +19,15 @@ class SimulationSettings: ObservableObject {
     @Published var startingBalance: Double = 0.0
     @Published var averageCostBasis: Double = 25000.0
     
-    // Just store results here
+    // Results
     @Published var lastRunResults: [SimulationData] = []
     @Published var allRuns: [[SimulationData]] = []
     
-    // This flag prevents `didSet` from calling `syncToggleAllState()` during init
     private var isInitialized = false
 
-    // Toggle for enabling all factors
     @Published var toggleAll = false {
         didSet {
             if isInitialized {
-                // Only run this if fully initialised
                 if isUpdating { return }
                 isUpdating = true
                 if toggleAll {
@@ -120,7 +115,7 @@ class SimulationSettings: ObservableObject {
         }
     }
     
-    // MARK: - Random Seed Logic
+    // Random Seed
     @Published var lockedRandomSeed: Bool = false {
         didSet {
             if isInitialized {
@@ -153,6 +148,7 @@ class SimulationSettings: ObservableObject {
     // MARK: - BULLISH FACTORS
     // -----------------------------
     
+    // Halving
     @Published var useHalving: Bool = true {
         didSet {
             if isInitialized {
@@ -161,7 +157,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var halvingBump: Double = 0.06666665673255921 {
+    @Published var halvingBump: Double = 0.13333331346511842 {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(halvingBump, forKey: "halvingBump")
@@ -169,6 +165,7 @@ class SimulationSettings: ObservableObject {
         }
     }
     
+    // Institutional Demand
     @Published var useInstitutionalDemand: Bool = true {
         didSet {
             if isInitialized {
@@ -177,7 +174,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxDemandBoost: Double = 0.0012041112184524537 {
+    @Published var maxDemandBoost: Double = 0.0024082224369049074 {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxDemandBoost, forKey: "maxDemandBoost")
@@ -185,6 +182,7 @@ class SimulationSettings: ObservableObject {
         }
     }
     
+    // Country Adoption
     @Published var useCountryAdoption: Bool = true {
         didSet {
             if isInitialized {
@@ -193,7 +191,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxCountryAdBoost: Double = 0.0026894273459911345 {
+    @Published var maxCountryAdBoost: Double = 0.005378854691982269 {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxCountryAdBoost, forKey: "maxCountryAdBoost")
@@ -201,6 +199,7 @@ class SimulationSettings: ObservableObject {
         }
     }
     
+    // Regulatory Clarity
     @Published var useRegulatoryClarity: Bool = true {
         didSet {
             if isInitialized {
@@ -209,7 +208,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxClarityBoost: Double = 0.0005488986611366271 {
+    @Published var maxClarityBoost: Double = 0.0010977973222732543 {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxClarityBoost, forKey: "maxClarityBoost")
@@ -217,6 +216,7 @@ class SimulationSettings: ObservableObject {
         }
     }
     
+    // ETF Approval
     @Published var useEtfApproval: Bool = true {
         didSet {
             if isInitialized {
@@ -225,7 +225,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxEtfBoost: Double = 0.0008 {
+    @Published var maxEtfBoost: Double = 0.0016 {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxEtfBoost, forKey: "maxEtfBoost")
@@ -233,6 +233,7 @@ class SimulationSettings: ObservableObject {
         }
     }
     
+    // Tech Breakthrough
     @Published var useTechBreakthrough: Bool = true {
         didSet {
             if isInitialized {
@@ -241,7 +242,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxTechBoost: Double = 0.0007312775254249572 {
+    @Published var maxTechBoost: Double = 0.0014625550508499145 {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxTechBoost, forKey: "maxTechBoost")
@@ -249,6 +250,7 @@ class SimulationSettings: ObservableObject {
         }
     }
     
+    // Scarcity Events
     @Published var useScarcityEvents: Bool = true {
         didSet {
             if isInitialized {
@@ -257,7 +259,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxScarcityBoost: Double = 0.0016519824042916299 {
+    @Published var maxScarcityBoost: Double = 0.0033039648085832598 {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxScarcityBoost, forKey: "maxScarcityBoost")
@@ -265,6 +267,7 @@ class SimulationSettings: ObservableObject {
         }
     }
     
+    // Global Macro Hedge
     @Published var useGlobalMacroHedge: Bool = true {
         didSet {
             if isInitialized {
@@ -273,7 +276,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxMacroBoost: Double = 0.0015 {
+    @Published var maxMacroBoost: Double = 0.003 {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxMacroBoost, forKey: "maxMacroBoost")
@@ -281,6 +284,7 @@ class SimulationSettings: ObservableObject {
         }
     }
     
+    // Stablecoin Shift
     @Published var useStablecoinShift: Bool = true {
         didSet {
             if isInitialized {
@@ -289,7 +293,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxStablecoinBoost: Double = 0.00043788542747497556 {
+    @Published var maxStablecoinBoost: Double = 0.0008757708549499511 {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxStablecoinBoost, forKey: "maxStablecoinBoost")
@@ -297,6 +301,7 @@ class SimulationSettings: ObservableObject {
         }
     }
     
+    // Demographic Adoption
     @Published var useDemographicAdoption: Bool = true {
         didSet {
             if isInitialized {
@@ -305,7 +310,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxDemoBoost: Double = 0.001 {
+    @Published var maxDemoBoost: Double = 0.002 {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxDemoBoost, forKey: "maxDemoBoost")
@@ -313,6 +318,7 @@ class SimulationSettings: ObservableObject {
         }
     }
     
+    // Altcoin Flight
     @Published var useAltcoinFlight: Bool = true {
         didSet {
             if isInitialized {
@@ -321,7 +327,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxAltcoinBoost: Double = 0.00044493392109870914 {
+    @Published var maxAltcoinBoost: Double = 0.0008898678421974183 {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxAltcoinBoost, forKey: "maxAltcoinBoost")
@@ -329,6 +335,7 @@ class SimulationSettings: ObservableObject {
         }
     }
     
+    // Adoption Factor
     @Published var useAdoptionFactor: Bool = true {
         didSet {
             if isInitialized {
@@ -337,7 +344,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var adoptionBaseFactor: Double = 6e-07 {
+    @Published var adoptionBaseFactor: Double = 1.2e-06 {  // new default
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(adoptionBaseFactor, forKey: "adoptionBaseFactor")
@@ -692,10 +699,7 @@ class SimulationSettings: ObservableObject {
             self.maxRecessionDrop = defaults.double(forKey: "maxRecessionDrop")
         }
         
-        // Mark as initialized so didSet logic triggers hereafter
         isInitialized = true
-        
-        // Finally, sync toggles if needed
         syncToggleAllState()
     }
     
@@ -709,55 +713,90 @@ class SimulationSettings: ObservableObject {
         // ...
     }
     
-    // Example “Restore Defaults” that only resets factor keys
+    // MARK: - Restore Defaults
     func restoreDefaults() {
-        // Remove factor keys so next time we load,
-        // it falls back to code defaults in init() if you'd prefer that approach.
         let defaults = UserDefaults.standard
         
-        // We do *not* remove onboarding or seeds here, only the factor toggles:
+        // Remove factor keys
         defaults.removeObject(forKey: "useHalving")
         defaults.removeObject(forKey: "halvingBump")
         defaults.removeObject(forKey: "useInstitutionalDemand")
         defaults.removeObject(forKey: "maxDemandBoost")
-        // ...and so on for all your factor keys...
+        defaults.removeObject(forKey: "useCountryAdoption")
+        defaults.removeObject(forKey: "maxCountryAdBoost")
+        defaults.removeObject(forKey: "useRegulatoryClarity")
+        defaults.removeObject(forKey: "maxClarityBoost")
+        defaults.removeObject(forKey: "useEtfApproval")
+        defaults.removeObject(forKey: "maxEtfBoost")
+        defaults.removeObject(forKey: "useTechBreakthrough")
+        defaults.removeObject(forKey: "maxTechBoost")
+        defaults.removeObject(forKey: "useScarcityEvents")
+        defaults.removeObject(forKey: "maxScarcityBoost")
+        defaults.removeObject(forKey: "useGlobalMacroHedge")
+        defaults.removeObject(forKey: "maxMacroBoost")
+        defaults.removeObject(forKey: "useStablecoinShift")
+        defaults.removeObject(forKey: "maxStablecoinBoost")
+        defaults.removeObject(forKey: "useDemographicAdoption")
+        defaults.removeObject(forKey: "maxDemoBoost")
+        defaults.removeObject(forKey: "useAltcoinFlight")
+        defaults.removeObject(forKey: "maxAltcoinBoost")
+        defaults.removeObject(forKey: "useAdoptionFactor")
+        defaults.removeObject(forKey: "adoptionBaseFactor")
+        defaults.removeObject(forKey: "useRegClampdown")
+        defaults.removeObject(forKey: "maxClampDown")
+        defaults.removeObject(forKey: "useCompetitorCoin")
+        defaults.removeObject(forKey: "maxCompetitorBoost")
+        defaults.removeObject(forKey: "useSecurityBreach")
+        defaults.removeObject(forKey: "breachImpact")
+        defaults.removeObject(forKey: "useBubblePop")
+        defaults.removeObject(forKey: "maxPopDrop")
+        defaults.removeObject(forKey: "useStablecoinMeltdown")
+        defaults.removeObject(forKey: "maxMeltdownDrop")
+        defaults.removeObject(forKey: "useBlackSwan")
+        defaults.removeObject(forKey: "blackSwanDrop")
+        defaults.removeObject(forKey: "useBearMarket")
+        defaults.removeObject(forKey: "bearWeeklyDrift")
+        defaults.removeObject(forKey: "useMaturingMarket")
+        defaults.removeObject(forKey: "maxMaturingDrop")
+        defaults.removeObject(forKey: "useRecession")
+        defaults.removeObject(forKey: "maxRecessionDrop")
         
-        // Immediately set them in memory so UI updates
+        // Reassign them to the new midpoints
         useHalving = true
-        halvingBump = 0.06666665673255921
+        halvingBump = 0.13333331346511842
 
         useInstitutionalDemand = true
-        maxDemandBoost = 0.0012041112184524537
+        maxDemandBoost = 0.0024082224369049074
 
         useCountryAdoption = true
-        maxCountryAdBoost = 0.0026894273459911345
+        maxCountryAdBoost = 0.005378854691982269
 
         useRegulatoryClarity = true
-        maxClarityBoost = 0.0005488986611366271
+        maxClarityBoost = 0.0010977973222732543
 
         useEtfApproval = true
-        maxEtfBoost = 0.0008
+        maxEtfBoost = 0.0016
 
         useTechBreakthrough = true
-        maxTechBoost = 0.0007312775254249572
+        maxTechBoost = 0.0014625550508499145
 
         useScarcityEvents = true
-        maxScarcityBoost = 0.0016519824042916299
+        maxScarcityBoost = 0.0033039648085832598
 
         useGlobalMacroHedge = true
-        maxMacroBoost = 0.0015
+        maxMacroBoost = 0.003
 
         useStablecoinShift = true
-        maxStablecoinBoost = 0.00043788542747497556
+        maxStablecoinBoost = 0.0008757708549499511
 
         useDemographicAdoption = true
-        maxDemoBoost = 0.001
+        maxDemoBoost = 0.002
 
         useAltcoinFlight = true
-        maxAltcoinBoost = 0.00044493392109870914
+        maxAltcoinBoost = 0.0008898678421974183
 
         useAdoptionFactor = true
-        adoptionBaseFactor = 6e-07
+        adoptionBaseFactor = 1.2e-06
 
         useRegClampdown = true
         maxClampDown = -0.0004
@@ -786,8 +825,7 @@ class SimulationSettings: ObservableObject {
         useRecession = true
         maxRecessionDrop = -0.0014508080482482913
 
-        // Finally, toggleAll = true (or false) if you want everything on by default
+        // Enable everything
         toggleAll = true
-
     }
 }

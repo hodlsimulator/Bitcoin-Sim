@@ -95,7 +95,7 @@ func runOneFullSimulation(
     seed: UInt64? = nil
 ) -> [SimulationData] {
     
-    /*
+    
     // A nested struct so we only print factor settings once
     struct PrintOnce {
         static var didPrintFactorSettings: Bool = false
@@ -129,7 +129,7 @@ func runOneFullSimulation(
         print("====================================")
         
         PrintOnce.didPrintFactorSettings = true
-    } */
+    } 
 
     // We typically rely on runMonteCarloSimulationsWithProgress to call `setRandomSeed(...)`
     // If you want to forcibly set it here, you could do:
