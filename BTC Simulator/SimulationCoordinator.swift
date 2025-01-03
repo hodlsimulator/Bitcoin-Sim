@@ -7,10 +7,21 @@
 
 import SwiftUI
 
-// MARK: - PercentileChoice
 enum PercentileChoice {
     case tenth, median, ninetieth
 }
+
+// You can comment out or remove this if unused:
+// class ForceLandscapeHostingController<Content: View>: UIHostingController<Content> {
+//     override var traitCollection: UITraitCollection {
+//         UITraitCollection(traitsFrom: [
+//             super.traitCollection,
+//             UITraitCollection(horizontalSizeClass: .regular),
+//             UITraitCollection(verticalSizeClass: .compact),
+//             UITraitCollection(userInterfaceIdiom: .phone)
+//         ])
+//     }
+// }
 
 class SimulationCoordinator: ObservableObject {
     @Published var isLoading: Bool = false
@@ -29,7 +40,6 @@ class SimulationCoordinator: ObservableObject {
     
     @Published var allSimData: [[SimulationData]] = []
     
-    // References to other needed objects:
     var chartDataCache: ChartDataCache
     private var simSettings: SimulationSettings
     private var inputManager: PersistentInputManager
@@ -43,12 +53,11 @@ class SimulationCoordinator: ObservableObject {
         self.inputManager = inputManager
     }
     
-    // MARK: - Run Simulation
     func runSimulation() {
         let newHash = computeInputsHash()
         print("// DEBUG: runSimulation() => newHash = \(newHash), storedInputsHash = \(String(describing: chartDataCache.storedInputsHash))")
         
-        // CSV loads (example placeholders)
+        // CSV loads (placeholders)
         historicalBTCWeeklyReturns = loadBTCWeeklyReturns()
         sp500WeeklyReturns = loadSP500WeeklyReturns()
         
@@ -59,6 +68,7 @@ class SimulationCoordinator: ObservableObject {
         monteCarloResults = []
         completedIterations = 0
         
+        // Handle seeds
         let finalSeed: UInt64?
         if simSettings.lockedRandomSeed {
             finalSeed = simSettings.seedValue
@@ -75,8 +85,8 @@ class SimulationCoordinator: ObservableObject {
             print("// DEBUG: No seed locked or random => finalSeed is nil.")
         }
         
-        // Do the heavy simulation on a background thread:
         DispatchQueue.global(qos: .userInitiated).async {
+            // Check iteration
             guard let total = self.inputManager.getParsedIterations(), total > 0 else {
                 print("// DEBUG: No valid iteration => bailing out.")
                 DispatchQueue.main.async {
@@ -94,8 +104,7 @@ class SimulationCoordinator: ObservableObject {
             let userWeeks = self.simSettings.userWeeks
             let userPriceUSD = self.simSettings.initialBTCPriceUSD
             
-            print("// DEBUG: Iterations from inputManager => \(self.inputManager.iterations)")
-            print("// DEBUG: runMonteCarloSimulationsWithProgress(...)")
+            // The core Monte Carlo call
             let (medianRun, allIterations) = runMonteCarloSimulationsWithProgress(
                 settings: self.simSettings,
                 annualCAGR: userInputCAGR,
@@ -110,7 +119,6 @@ class SimulationCoordinator: ObservableObject {
                     if !self.isCancelled {
                         DispatchQueue.main.async {
                             self.completedIterations = completed
-                            print("// DEBUG: progress = \(completed)")
                         }
                     }
                 },
@@ -123,27 +131,26 @@ class SimulationCoordinator: ObservableObject {
                 return
             }
             
+            // Sort runs
             let finalRuns = allIterations.map { ($0.last?.btcPriceUSD ?? 0.0, $0) }
             let sortedRuns = finalRuns.sorted { $0.0 < $1.0 }
             
             if !sortedRuns.isEmpty {
-                let tenthIndex = max(0, Int(Double(sortedRuns.count - 1) * 0.10))
-                let medianIndex = sortedRuns.count / 2
-                let ninetiethIndex = min(sortedRuns.count - 1, Int(Double(sortedRuns.count - 1) * 0.90))
-                
-                let tenthRun = sortedRuns[tenthIndex].1
-                let singleMedianRun = sortedRuns[medianIndex].1
-                let ninetiethRun = sortedRuns[ninetiethIndex].1
-                let medianLineData = self.computeMedianSimulationData(allIterations: allIterations)
-                
                 DispatchQueue.main.async {
                     self.isLoading = false
                     self.isChartBuilding = true
                     print("// DEBUG: Simulation finished => isChartBuilding=true now.")
-
-                    print("// DEBUG: Now assigning final results and preparing portrait snapshot…")
                     
-                    // Assign results
+                    // Indices
+                    let tenthIndex     = max(0, Int(Double(sortedRuns.count - 1) * 0.10))
+                    let medianIndex    = sortedRuns.count / 2
+                    let ninetiethIndex = min(sortedRuns.count - 1, Int(Double(sortedRuns.count - 1) * 0.90))
+                    
+                    let tenthRun        = sortedRuns[tenthIndex].1
+                    let singleMedianRun = sortedRuns[medianIndex].1
+                    let ninetiethRun    = sortedRuns[ninetiethIndex].1
+                    let medianLineData  = self.computeMedianSimulationData(allIterations: allIterations)
+                    
                     self.tenthPercentileResults = tenthRun
                     self.medianResults = singleMedianRun
                     self.ninetiethPercentileResults = ninetiethRun
@@ -152,9 +159,10 @@ class SimulationCoordinator: ObservableObject {
                     self.medianResults = medianLineData
                     self.allSimData = allIterations
                     
+                    // Convert to [SimulationRun]
                     let allSimsAsWeekPoints = self.convertAllSimsToWeekPoints()
                     
-                    // Clear old snapshot
+                    // Clear old snapshots
                     if self.chartDataCache.chartSnapshot != nil {
                         print("// DEBUG: clearing old chartSnapshot.")
                     }
@@ -163,7 +171,7 @@ class SimulationCoordinator: ObservableObject {
                     self.chartDataCache.allRuns = allSimsAsWeekPoints
                     self.chartDataCache.storedInputsHash = newHash
                     
-                    // 1) Build portrait chart & snapshot
+                    // Build only the portrait snapshot
                     DispatchQueue.main.async {
                         if self.isCancelled {
                             self.isChartBuilding = false
@@ -174,6 +182,7 @@ class SimulationCoordinator: ObservableObject {
                         let chartView = MonteCarloResultsView(simulations: allSimsAsWeekPoints)
                             .environmentObject(self.chartDataCache)
                             .environmentObject(self.simSettings)
+                            // .environmentObject(appViewModel)  // REMOVED: no longer needed
                         
                         DispatchQueue.main.async {
                             if self.isCancelled {
@@ -183,27 +192,10 @@ class SimulationCoordinator: ObservableObject {
                             print("// DEBUG: now taking portrait snapshot of chartView.")
                             
                             let snapshot = chartView.snapshot()
-                            print("// DEBUG: portrait snapshot built => setting chartDataCache.chartSnapshot.")
+                            print("// DEBUG: portrait snapshot => setting chartDataCache.chartSnapshot.")
                             self.chartDataCache.chartSnapshot = snapshot
                             
-                            // 2) Build landscape chart & snapshot
-                            print("// DEBUG: building wide chart for layout pass.")
-                            
-                            let landscapeChart = MonteCarloResultsView(simulations: allSimsAsWeekPoints)
-                                .environmentObject(self.chartDataCache)
-                                .environmentObject(self.simSettings)
-                                .frame(width: 800, height: 400)
-                            
-                            let hostingControllerWide = UIHostingController(rootView: landscapeChart)
-                            hostingControllerWide.view.frame = CGRect(x: 0, y: 0, width: 800, height: 400)
-                            hostingControllerWide.view.layoutIfNeeded()
-                            
-                            print("// DEBUG: taking 'truly wide' landscape snapshot.")
-                            let rendererWide = UIGraphicsImageRenderer(size: CGSize(width: 800, height: 400))
-                            let wideSnapshot = rendererWide.image { ctx in
-                                hostingControllerWide.view.layer.render(in: ctx.cgContext)
-                            }
-                            self.chartDataCache.chartSnapshotLandscape = wideSnapshot
+                            // We'll squish in geometry approach as needed
                             
                             self.isChartBuilding = false
                             self.isSimulationRun = true
@@ -217,14 +209,13 @@ class SimulationCoordinator: ObservableObject {
                 }
             }
             
-            // (Optional) process all results on a background thread
+            // Possibly do background tasks
             DispatchQueue.global(qos: .background).async {
                 self.processAllResults(allIterations)
             }
         }
     }
     
-    // MARK: - Convert all runs to [SimulationRun]
     func convertAllSimsToWeekPoints() -> [SimulationRun] {
         allSimData.map { singleRun -> SimulationRun in
             let wpoints = singleRun.map { row in
@@ -242,7 +233,6 @@ class SimulationCoordinator: ObservableObject {
         return combinedString.hashValue
     }
     
-    // MARK: - Median logic
     private func computeMedianSimulationData(allIterations: [[SimulationData]]) -> [SimulationData] {
         guard let firstRun = allIterations.first else { return [] }
         let totalWeeks = firstRun.count
@@ -256,15 +246,8 @@ class SimulationCoordinator: ObservableObject {
             }
             if allAtWeek.isEmpty { continue }
             
-            let sortedStartingBTC = allAtWeek.map { $0.startingBTC }.sorted()
-            let sortedNetBTCHoldings = allAtWeek.map { $0.netBTCHoldings }.sorted()
-            let sortedBtcPriceUSD = allAtWeek.map { $0.btcPriceUSD }.sorted()
-            let sortedBtcPriceEUR = allAtWeek.map { $0.btcPriceEUR }.sorted()
-            let sortedPortfolioValueEUR = allAtWeek.map { $0.portfolioValueEUR }.sorted()
-            let sortedContributionEUR = allAtWeek.map { $0.contributionEUR }.sorted()
-            let sortedFeeEUR = allAtWeek.map { $0.transactionFeeEUR }.sorted()
-            let sortedNetContribBTC = allAtWeek.map { $0.netContributionBTC }.sorted()
-            let sortedWithdrawalEUR = allAtWeek.map { $0.withdrawalEUR }.sorted()
+            let sortedBTCUSD = allAtWeek.map { $0.btcPriceUSD }.sorted()
+            // etc... for other properties, then find median.
             
             func medianOfSorted(_ arr: [Double]) -> Double {
                 if arr.isEmpty { return 0.0 }
@@ -278,15 +261,15 @@ class SimulationCoordinator: ObservableObject {
             
             let medianSimData = SimulationData(
                 week: allAtWeek[0].week,
-                startingBTC: medianOfSorted(sortedStartingBTC),
-                netBTCHoldings: medianOfSorted(sortedNetBTCHoldings),
-                btcPriceUSD: medianOfSorted(sortedBtcPriceUSD),
-                btcPriceEUR: medianOfSorted(sortedBtcPriceEUR),
-                portfolioValueEUR: medianOfSorted(sortedPortfolioValueEUR),
-                contributionEUR: medianOfSorted(sortedContributionEUR),
-                transactionFeeEUR: medianOfSorted(sortedFeeEUR),
-                netContributionBTC: medianOfSorted(sortedNetContribBTC),
-                withdrawalEUR: medianOfSorted(sortedWithdrawalEUR)
+                startingBTC: medianOfSorted(allAtWeek.map { $0.startingBTC }.sorted()),
+                netBTCHoldings: medianOfSorted(allAtWeek.map { $0.netBTCHoldings }.sorted()),
+                btcPriceUSD: medianOfSorted(sortedBTCUSD),
+                btcPriceEUR: medianOfSorted(allAtWeek.map { $0.btcPriceEUR }.sorted()),
+                portfolioValueEUR: medianOfSorted(allAtWeek.map { $0.portfolioValueEUR }.sorted()),
+                contributionEUR: medianOfSorted(allAtWeek.map { $0.contributionEUR }.sorted()),
+                transactionFeeEUR: medianOfSorted(allAtWeek.map { $0.transactionFeeEUR }.sorted()),
+                netContributionBTC: medianOfSorted(allAtWeek.map { $0.netContributionBTC }.sorted()),
+                withdrawalEUR: medianOfSorted(allAtWeek.map { $0.withdrawalEUR }.sorted())
             )
             medianResult.append(medianSimData)
         }
@@ -294,6 +277,6 @@ class SimulationCoordinator: ObservableObject {
     }
     
     private func processAllResults(_ allResults: [[SimulationData]]) {
-        // ... any post-processing you want
+        // Any post-processing you want
     }
 }

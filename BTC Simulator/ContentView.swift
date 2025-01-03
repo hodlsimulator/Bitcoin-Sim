@@ -11,6 +11,7 @@ import UniformTypeIdentifiers
 import PocketSVG
 import UIKit
 
+// MARK: - Snapshot Debugging Extension
 extension View {
     func snapshot() -> UIImage {
         let controller = UIHostingController(rootView: self)
@@ -24,9 +25,14 @@ extension View {
         
         // Render into UIImage
         let renderer = UIGraphicsImageRenderer(size: targetSize)
-        return renderer.image { _ in
+        let image = renderer.image { _ in
             controller.view.drawHierarchy(in: controller.view.bounds, afterScreenUpdates: true)
         }
+        
+        // Debug print: log the snapshot size
+        print("// DEBUG: snapshot() -> image size = \(image.size)")
+        
+        return image
     }
 }
 
@@ -272,36 +278,34 @@ class ChartDataCache: ObservableObject {
     @Published var storedInputsHash: Int? = nil
     
     // For iOS, store a snapshot as UIImage
-    @Published var chartSnapshot: UIImage? = nil
-    @Published var chartSnapshotLandscape: UIImage? = nil
+    @Published var chartSnapshot: UIImage?
+    @Published var chartSnapshotLandscape: UIImage?
 }
 
 // MARK: - ContentView
 struct ContentView: View {
 
     @StateObject var inputManager: PersistentInputManager
-        @StateObject var simSettings: SimulationSettings
-        @StateObject var chartDataCache: ChartDataCache
-        @StateObject var coordinator: SimulationCoordinator
+    @StateObject var simSettings: SimulationSettings
+    @StateObject var chartDataCache: ChartDataCache
+    @StateObject var coordinator: SimulationCoordinator
 
-        init() {
-            let manager = PersistentInputManager()
-            let settings = SimulationSettings()
-            let cache = ChartDataCache()
-            
-            // Now pass those same instances to the coordinator
-            let simCoord = SimulationCoordinator(
-                chartDataCache: cache,
-                simSettings: settings,
-                inputManager: manager
-            )
-            
-            // Wrap them all in @StateObject
-            _inputManager = StateObject(wrappedValue: manager)
-            _simSettings = StateObject(wrappedValue: settings)
-            _chartDataCache = StateObject(wrappedValue: cache)
-            _coordinator = StateObject(wrappedValue: simCoord)
-        }
+    init() {
+        let manager = PersistentInputManager()
+        let settings = SimulationSettings()
+        let cache = ChartDataCache()
+        
+        let simCoord = SimulationCoordinator(
+            chartDataCache: cache,
+            simSettings: settings,
+            inputManager: manager
+        )
+        
+        _inputManager = StateObject(wrappedValue: manager)
+        _simSettings = StateObject(wrappedValue: settings)
+        _chartDataCache = StateObject(wrappedValue: cache)
+        _coordinator = StateObject(wrappedValue: simCoord)
+    }
 
     // Various states
     @FocusState private var activeField: ActiveField?
@@ -344,7 +348,7 @@ struct ContentView: View {
     
     @State private var showSettings = false
     @State private var showAbout = false
-    @State private var showHistograms = false
+    @State private var showHistograms = false  // We'll present a .sheet now.
     @State private var showGraphics = false
     
     @State private var tenthPercentileResults: [SimulationData] = []
@@ -361,36 +365,29 @@ struct ContentView: View {
     @State private var oldAnnualVolatilityValue: String = ""
     
     @State private var showSnapshotView = false
-
-    // This was removed to prevent capturing 'self' before initialisation
-    // (No custom init() here – the @StateObjects are created above)
-
-    // MARK: - Body
+    @State private var showSnapshotsDebug = false
+    
     var body: some View {
         NavigationStack {
             ZStack {
                 if !coordinator.isSimulationRun {
-                    // If user hasn't run the sim yet, show param screen + icons
                     parametersScreen
                     if !coordinator.isLoading && activeField == nil {
                         bottomIcons
                     }
                 } else {
-                    // Show the table
                     simulationResultsView
                 }
                 
-                // If we already have results from a previous run:
                 if !coordinator.isSimulationRun && !coordinator.monteCarloResults.isEmpty {
                     transitionToResultsButton
                 }
                 
-                // The combined overlay for both "Running simulation" and "Building chart"
                 if coordinator.isLoading || coordinator.isChartBuilding {
                     loadingOverlayCombined
                 }
             }
-            // Destinations
+            // Keep these two navigation destinations if you like:
             .navigationDestination(isPresented: $showSettings) {
                 SettingsView()
                     .environmentObject(simSettings)
@@ -398,6 +395,8 @@ struct ContentView: View {
             .navigationDestination(isPresented: $showAbout) {
                 AboutView()
             }
+            // REMOVE the old navigationDestination for showHistograms:
+            /*
             .navigationDestination(isPresented: $showHistograms) {
                 if let snapshot = coordinator.chartDataCache.chartSnapshot {
                     ChartSnapshotView(snapshot: snapshot)
@@ -412,6 +411,12 @@ struct ContentView: View {
                     Text("Loading chart…")
                         .foregroundColor(.white)
                 }
+            }
+            */
+            // Keep the debug navigation if needed:
+            .navigationDestination(isPresented: $showSnapshotsDebug) {
+                SnapshotsDebugView()
+                    .environmentObject(coordinator.chartDataCache)
             }
             .onAppear {
                 print("// DEBUG: ContentView onAppear called.")
@@ -431,6 +436,17 @@ struct ContentView: View {
                 }
             }
         }
+        // 2) Present the chart as a .sheet to remove extra navigation layering:
+        .sheet(isPresented: $showHistograms) {
+            if let existingChartData = coordinator.chartDataCache.allRuns {
+                MonteCarloResultsView(simulations: existingChartData)
+                    .environmentObject(coordinator.chartDataCache)
+                    .environmentObject(simSettings)
+            } else {
+                Text("Loading chart…")
+                    .foregroundColor(.white)
+            }
+        }
     }
     
     // MARK: - Overlay that shows simulation + chart generation phases
@@ -443,8 +459,6 @@ struct ContentView: View {
                 HStack {
                     Spacer()
                     
-                    // Show the cancel (X) button only if still loading simulation,
-                    // and not when the chart is building.
                     if coordinator.isLoading && !coordinator.isChartBuilding {
                         Button(action: {
                             print("// DEBUG: Cancel button tapped in combined overlay.")
@@ -514,7 +528,6 @@ struct ContentView: View {
         .onDisappear { stopTipCycle() }
     }
     
-    // MARK: - Invalidate chart if inputs change
     private func invalidateChartIfInputChanged() {
         print("DEBUG: invalidateChartIfInputChanged() => clearing chartDataCache.")
         coordinator.chartDataCache.allRuns = nil
@@ -537,6 +550,17 @@ struct ContentView: View {
                     .padding(.leading, 15)
                     
                     Spacer()
+                    
+                    // Example: Only show the debug button if snapshots exist
+                    if coordinator.chartDataCache.chartSnapshot != nil ||
+                       coordinator.chartDataCache.chartSnapshotLandscape != nil
+                    {
+                        Button("Show Snapshot Debug") {
+                            showSnapshotsDebug.toggle()
+                        }
+                        .padding()
+                        .foregroundColor(.white)
+                    }
                     
                     Button(action: { showSettings = true }) {
                         Image(systemName: "gearshape")
@@ -640,11 +664,9 @@ struct ContentView: View {
                 )
                 .padding(.horizontal, 30)
                 
-                // Run Simulation Button
                 if !coordinator.isLoading && !coordinator.isChartBuilding {
                     Button {
                         activeField = nil
-                        // Directly call runSimulation() so we don’t capture self too early
                         coordinator.isLoading = true
                         coordinator.isChartBuilding = false
                         coordinator.runSimulation()
@@ -664,7 +686,6 @@ struct ContentView: View {
                 Spacer()
             }
         }
-        // Dismiss the keyboard when tapping outside
         .onTapGesture {
             activeField = nil
         }
@@ -677,7 +698,6 @@ struct ContentView: View {
                     .edgesIgnoringSafeArea(.bottom)
                 
                 VStack(spacing: 0) {
-                    // Top bar
                     HStack {
                         Button(action: {
                             print("// DEBUG: Back button tapped in simulationResultsView.")
@@ -703,29 +723,18 @@ struct ContentView: View {
                                 print("// DEBUG: chartDataCache.allRuns is nil.")
                             }
                             
-                            // Actually navigate:
-                            if coordinator.chartDataCache.chartSnapshot != nil {
-                                showSnapshotView = true
-                            }
+                            // Instead of a navigation, show the sheet
+                            showHistograms = true
                         }) {
                             Image(systemName: "chart.line.uptrend.xyaxis")
                                 .foregroundColor(.white)
                                 .imageScale(.large)
-                        }
-                        .navigationDestination(isPresented: $showSnapshotView) {
-                            if let snapshot = coordinator.chartDataCache.chartSnapshot {
-                                ChartSnapshotView(snapshot: snapshot)
-                            } else {
-                                Text("No snapshot available")
-                                    .foregroundColor(.white)
-                            }
                         }
                     }
                     .padding(.horizontal, 55)
                     .padding(.vertical, 10)
                     .background(Color(white: 0.12))
                     
-                    // Column headers
                     HStack(spacing: 0) {
                         Text("Week")
                             .frame(width: 60, alignment: .leading)
@@ -780,7 +789,6 @@ struct ContentView: View {
                     }
                     .background(Color.black)
                     
-                    // Main table
                     ScrollView(.vertical, showsIndicators: !hideScrollIndicators) {
                         HStack(spacing: 0) {
                             VStack(spacing: 0) {
@@ -917,7 +925,6 @@ struct ContentView: View {
                     UserDefaults.standard.set(currentPage, forKey: "lastViewedPage")
                 }
                 
-                // Scroll-to-bottom button
                 if !isAtBottom {
                     VStack {
                         Spacer()

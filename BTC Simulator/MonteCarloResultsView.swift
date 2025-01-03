@@ -33,7 +33,7 @@ class ChartViewModel: ObservableObject {
         self.simulations = simulations
     }
     
-    // Compute Median once, from the same data
+    // Example of a median line, used by medianLines(...)
     var medianLine: [WeekPoint] {
         guard let firstRun = simulations.first else {
             print("// DEBUG: medianLine -> No simulations present.")
@@ -63,24 +63,24 @@ class ChartViewModel: ObservableObject {
 // MARK: - Number Formatting
 
 func formatSuffix(_ value: Double) -> String {
-    if value >= 1_000_000_000_000_000 { return "\(Int(value / 1_000_000_000_000_000))Q" }         // Quadrillion etc.
-    if value >= 1_000_000_000_000 { return "\(Int(value / 1_000_000_000_000))T" }                 // Trillion
-    if value >= 1_000_000_000 { return "\(Int(value / 1_000_000_000))B" }                         // Billion
-    if value >= 1_000_000 { return "\(Int(value / 1_000_000))M" }                                 // Million
-    if value >= 1_000 { return "\(Int(value / 1_000))k" }                                         // Thousand
+    if value >= 1_000_000_000_000_000 { return "\(Int(value / 1_000_000_000_000_000))Q" }  // Quadrillion
+    if value >= 1_000_000_000_000 { return "\(Int(value / 1_000_000_000_000))T" }         // Trillion
+    if value >= 1_000_000_000 { return "\(Int(value / 1_000_000_000))B" }                 // Billion
+    if value >= 1_000_000 { return "\(Int(value / 1_000_000))M" }                         // Million
+    if value >= 1_000 { return "\(Int(value / 1_000))k" }                                 // Thousand
     return String(Int(value))
 }
 
-// MARK: - Convert Weeks to Years
-
+// Convert weeks to approximate years
 fileprivate func weeksToYears(_ weeks: Int) -> Double {
     Double(weeks) / 52.0
 }
 
-// MARK: - Chart Content Builders
+// MARK: - Chart Content Builders (rainbow logic)
 
 @ChartContentBuilder
 func simulationLines(simulations: [SimulationRun]) -> some ChartContent {
+    // Your existing rainbow palette
     let customPalette: [Color] = [
         // Reds / Oranges / Yellows
         Color(hue: 0.0,  saturation: 1.0, brightness: 0.8),
@@ -114,9 +114,13 @@ func simulationLines(simulations: [SimulationRun]) -> some ChartContent {
             )
             .foregroundStyle(colour.opacity(0.3))
             .foregroundStyle(by: .value("SeriesIndex", index))
-            .lineStyle(StrokeStyle(lineWidth: 0.5,
-                                   lineCap: .round,
-                                   lineJoin: .round))
+            .lineStyle(
+                StrokeStyle(
+                    lineWidth: 0.5,
+                    lineCap: .round,
+                    lineJoin: .round
+                )
+            )
         }
     }
 }
@@ -148,20 +152,20 @@ struct MonteCarloChartView: View {
     @ObservedObject var viewModel: ChartViewModel
     
     var body: some View {
-        // Safe to log outside the ViewBuilder:
-        print("// DEBUG: MonteCarloChartView -> Checking isLoading: \(viewModel.isLoading)")
+        let _ = print("// DEBUG: MonteCarloChartView -> Checking isLoading: \(viewModel.isLoading)")
         
         return Group {
             if viewModel.isLoading {
+                // If we were loading
                 ProgressView("Loading…")
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(Color.black.ignoresSafeArea())
             } else {
+                // Show the actual chart
                 Chart {
                     simulationLines(simulations: viewModel.simulations)
-                    medianLines(simulations: viewModel.simulations,
-                                medianLine: viewModel.medianLine)
+                    medianLines(simulations: viewModel.simulations, medianLine: viewModel.medianLine)
                 }
                 .chartLegend(.hidden)
                 .chartXScale(domain: 0.0...20.0, type: .linear)
@@ -207,79 +211,142 @@ struct MonteCarloChartView: View {
     }
 }
 
-// MARK: - Main View
+// MARK: - Snapshot & Squish
 
-struct MonteCarloResultsView: View {
-    @StateObject private var viewModel: ChartViewModel
-    @EnvironmentObject var chartDataCache: ChartDataCache
-    
-    // This is an init, so `print` is fine (it doesn't live in a builder).
-    init(simulations: [SimulationRun]) {
-        print("// DEBUG: MonteCarloResultsView -> init with \(simulations.count) sims.")
-        _viewModel = StateObject(wrappedValue: ChartViewModel(simulations: simulations))
-    }
+struct SquishedLandscapePlaceholderView: View {
+    let image: UIImage
     
     var body: some View {
-        NavigationStack {
-            ZStack {
-                Color.black.ignoresSafeArea()
-                
-                // if/else must only produce Views - so no direct prints in here:
-                if let snapshotImage = chartDataCache.chartSnapshot {
-                    SnapshotView(snapshot: snapshotImage)
-                        .onAppear {
-                            // Debug logging is safe inside onAppear
-                            print("// DEBUG: We have a cached snapshot -> SnapshotView.")
-                        }
-                } else {
-                    VStack(spacing: 0) {
-                        MonteCarloChartView(viewModel: viewModel)
-                    }
-                    .background(Color.black.ignoresSafeArea())
-                    .onAppear {
-                        print("// DEBUG: No snapshot -> showing live chart.")
-                    }
-                }
-                
-                // The loading overlay condition:
-                if viewModel.isLoading {
-                    Color.black.opacity(0.6).ignoresSafeArea()
-                    ProgressView("Loading…")
-                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                        .scaleEffect(2.0)
-                        .onAppear {
-                            print("// DEBUG: viewModel.isLoading is true -> overlay.")
-                        }
-                }
-            }
-            .navigationTitle("Monte Carlo – BTC Price (USD)")
-            .navigationBarTitleDisplayMode(.inline)
-            // Safe area for logging in onAppear:
-            .onAppear {
-                print("// DEBUG: MonteCarloResultsView onAppear -> checking chartSnapshot.")
-            }
+        GeometryReader { geo in
+            Image(uiImage: image)
+                .resizable()
+                // Shift/scale to emulate a wide view
+                .frame(width: geo.size.width * 1.25,
+                       height: geo.size.height * 1.15)
+                .offset(x: -(geo.size.width * 0.12),
+                        y: geo.size.height * 0.05)
         }
+        .ignoresSafeArea()
     }
 }
-
-// MARK: - SnapshotView
 
 struct SnapshotView: View {
     let snapshot: UIImage
     
     var body: some View {
-        // Logging in onAppear instead of inline:
         Image(uiImage: snapshot)
             .resizable()
             .scaledToFill()
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .clipped()
-            .padding(.bottom, 90) // Adjust as needed
+            .padding(.bottom, 90)
             .ignoresSafeArea(edges: .top)
             .transition(.move(edge: .bottom))
             .animation(.easeInOut(duration: 0.5), value: snapshot)
-            .onAppear {
-                print("// DEBUG: SnapshotView -> displaying snapshot.")
+    }
+}
+
+/// Squish the portrait snapshot into a pseudo-landscape image
+func squishPortraitImage(_ portraitImage: UIImage) -> UIImage {
+    let targetSize = CGSize(width: 800, height: 400)
+    let renderer = UIGraphicsImageRenderer(size: targetSize)
+    
+    return renderer.image { _ in
+        // e.g. shift left ~12%, scale 1.25x
+        portraitImage.draw(
+            in: CGRect(x: -(targetSize.width * 0.12),
+                       y: 0,
+                       width: targetSize.width * 1.25,
+                       height: targetSize.height * 1.25)
+        )
+    }
+}
+
+// MARK: - Main Results View (Geometry-based approach, NO inner NavigationStack)
+
+struct MonteCarloResultsView: View {
+    @StateObject private var viewModel: ChartViewModel
+    @EnvironmentObject var chartDataCache: ChartDataCache
+    
+    // We'll store a "squished" version if we detect landscape
+    @State private var squishedLandscape: UIImage? = nil
+    
+    // Force re‐layout by changing this ID on rotation
+    @State private var viewID = UUID()
+    
+    @StateObject private var orientationObserver = OrientationObserver()
+
+    init(simulations: [SimulationRun]) {
+        print("// DEBUG: MonteCarloResultsView -> init with \(simulations.count) sims.")
+        _viewModel = StateObject(wrappedValue: ChartViewModel(simulations: simulations))
+    }
+
+    var body: some View {
+        GeometryReader { geo in
+            let width = geo.size.width
+            let height = geo.size.height
+            let isLandscape = orientationObserver.isLandscape
+
+            ZStack {
+                Color.black.ignoresSafeArea()
+
+                if isLandscape {
+                    if let squished = squishedLandscape {
+                        Image(uiImage: squished)
+                            .resizable()
+                            .scaledToFit()
+                            .ignoresSafeArea()
+                    } else if let portraitSnapshot = chartDataCache.chartSnapshot {
+                        // If we haven't created a squished image yet, show a placeholder
+                        SquishedLandscapePlaceholderView(image: portraitSnapshot)
+                    } else {
+                        MonteCarloChartView(viewModel: viewModel)
+                    }
+                } else {
+                    if let portraitSnapshot = chartDataCache.chartSnapshot {
+                        SnapshotView(snapshot: portraitSnapshot)
+                    } else {
+                        MonteCarloChartView(viewModel: viewModel)
+                    }
+                }
+
+                if viewModel.isLoading {
+                    Color.black.opacity(0.6).ignoresSafeArea()
+                    ProgressView("Loading…")
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        .scaleEffect(2.0)
+                }
             }
+            .onChange(of: isLandscape) { newLandscape in
+                print("// DEBUG: geometry => isLandscape changed => \(newLandscape)")
+                
+                // Regenerate viewID so SwiftUI re‐lays out
+                viewID = UUID()
+                
+                if newLandscape, let portrait = chartDataCache.chartSnapshot {
+                    print("// DEBUG: geometry => building squished from portrait.")
+                    squishedLandscape = squishPortraitImage(portrait)
+                } else {
+                    // Clear the squished image if returning to portrait
+                    squishedLandscape = nil
+                }
+            }
+        }
+        .id(viewID)  // <-- Key line to force new layout
+        // If the user leaves, then rotates, then comes back, we do one last orientation check in onAppear
+        .onAppear {
+            let deviceWidth  = UIScreen.main.bounds.width
+            let deviceHeight = UIScreen.main.bounds.height
+            let isLandscape  = (deviceWidth > deviceHeight)
+
+            if isLandscape, let portrait = chartDataCache.chartSnapshot {
+                print("// DEBUG: onAppear => building squished from portrait, because device says landscape.")
+                squishedLandscape = squishPortraitImage(portrait)
+            } else {
+                squishedLandscape = nil
+            }
+        }
+        .navigationTitle("Monte Carlo – BTC Price (USD)")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }

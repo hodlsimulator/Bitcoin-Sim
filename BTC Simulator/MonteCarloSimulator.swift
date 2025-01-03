@@ -365,8 +365,6 @@ func runMonteCarloSimulationsWithProgress(
             break
         }
         
-        print("// DEBUG: Starting iteration \(i+1) / \(iterations)")
-        
         // Slow down to see progress visually
         Thread.sleep(forTimeInterval: 0.01)  // e.g. 0.01s per iteration => ~1s per 100 iterations
         
@@ -388,7 +386,6 @@ func runMonteCarloSimulationsWithProgress(
         
         // Fire the progress callback on the main thread
         progressCallback(i + 1)
-        print("// DEBUG: Completed iteration \(i+1). progressCallback => \(i+1).")
     }
     
     if allRuns.isEmpty {
