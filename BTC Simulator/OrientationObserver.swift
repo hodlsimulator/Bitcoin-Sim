@@ -10,25 +10,24 @@ import SwiftUI
 
 class OrientationObserver: ObservableObject {
     @Published var isLandscape: Bool = false
-    
+
     init() {
+        handleOrientationChange()
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleOrientationChange),
             name: UIDevice.orientationDidChangeNotification,
             object: nil
         )
-        handleOrientationChange() // Initial check
     }
-    
-    @objc func handleOrientationChange() {
+
+    @objc private func handleOrientationChange() {
         let orientation = UIDevice.current.orientation
-        // Only treat .landscapeLeft / .landscapeRight as landscape:
+        // Only treat left/right as landscape
         if orientation == .landscapeLeft || orientation == .landscapeRight {
             isLandscape = true
-        } else if orientation == .portrait || orientation == .portraitUpsideDown {
+        } else {
             isLandscape = false
         }
     }
 }
-
