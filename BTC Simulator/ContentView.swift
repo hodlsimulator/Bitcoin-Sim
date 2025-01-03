@@ -436,15 +436,17 @@ struct ContentView: View {
                 }
             }
         }
-        // 2) Present the chart as a .sheet to remove extra navigation layering:
-        .sheet(isPresented: $showHistograms) {
-            if let existingChartData = coordinator.chartDataCache.allRuns {
-                MonteCarloResultsView(simulations: existingChartData)
-                    .environmentObject(coordinator.chartDataCache)
-                    .environmentObject(simSettings)
-            } else {
-                Text("Loading chart…")
-                    .foregroundColor(.white)
+        // 2) Present the chart as a navigation destination using ForceReflowView:
+        .navigationDestination(isPresented: $showHistograms) {
+            ForceReflowView {
+                if let existingChartData = coordinator.chartDataCache.allRuns {
+                    MonteCarloResultsView(simulations: existingChartData)
+                        .environmentObject(coordinator.chartDataCache)
+                        .environmentObject(simSettings)
+                } else {
+                    Text("Loading chart…")
+                        .foregroundColor(.white)
+                }
             }
         }
     }

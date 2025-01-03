@@ -350,3 +350,22 @@ struct MonteCarloResultsView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 }
+
+struct ForceReflowView<Content: View>: View {
+    let content: Content
+    
+    // This custom init captures your closure as a stored View.
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+    
+    @State private var orientationID = UUID()
+
+    var body: some View {
+        content
+            .id(orientationID)
+            .onReceive(NotificationCenter.default.publisher(for: UIDevice.orientationDidChangeNotification)) { _ in
+                orientationID = UUID()
+            }
+    }
+}
