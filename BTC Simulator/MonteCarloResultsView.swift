@@ -62,44 +62,43 @@ class ChartViewModel: ObservableObject {
 
 // MARK: - Number Formatting
 
-func formatSuffix(_ value: Double) -> String {
-    // Septillion (1e24)
-    if value >= 1_000_000_000_000_000_000_000_000 {
-        return "\(Int(value / 1_000_000_000_000_000_000_000_000))S"
-    }
-    // Sextillion (1e21)
-    if value >= 1_000_000_000_000_000_000_000 {
-        return "\(Int(value / 1_000_000_000_000_000_000_000))Se"
-    }
-    // Quintillion (1e18)
-    if value >= 1_000_000_000_000_000_000 {
-        return "\(Int(value / 1_000_000_000_000_000_000))Qn"
-    }
-    // Quadrillion (1e15)
-    if value >= 1_000_000_000_000_000 {
-        return "\(Int(value / 1_000_000_000_000_000))Q"
-    }
-    // Trillion (1e12)
-    if value >= 1_000_000_000_000 {
-        return "\(Int(value / 1_000_000_000_000))T"
-    }
-    // Billion (1e9)
-    if value >= 1_000_000_000 {
-        return "\(Int(value / 1_000_000_000))B"
-    }
-    // Million (1e6)
-    if value >= 1_000_000 {
-        return "\(Int(value / 1_000_000))M"
-    }
-    // Thousand (1e3)
-    if value >= 1_000 {
-        return "\(Int(value / 1_000))k"
-    }
+// Pre-calculate thresholds to avoid compile warnings on large integer literals.
+private let oneThousand     = pow(10.0, 3.0)
+private let oneMillion      = pow(10.0, 6.0)
+private let oneBillion      = pow(10.0, 9.0)
+private let oneTrillion     = pow(10.0, 12.0)
+private let oneQuadrillion  = pow(10.0, 15.0)
+private let oneQuintillion  = pow(10.0, 18.0)
+private let oneSextillion   = pow(10.0, 21.0)
+private let oneSeptillion   = pow(10.0, 24.0)
 
-    // Below thousand
+func formatSuffix(_ value: Double) -> String {
+    if value >= oneSeptillion {
+        return "\(Int(value / oneSeptillion))S"
+    }
+    if value >= oneSextillion {
+        return "\(Int(value / oneSextillion))Se"
+    }
+    if value >= oneQuintillion {
+        return "\(Int(value / oneQuintillion))Qn"
+    }
+    if value >= oneQuadrillion {
+        return "\(Int(value / oneQuadrillion))Q"
+    }
+    if value >= oneTrillion {
+        return "\(Int(value / oneTrillion))T"
+    }
+    if value >= oneBillion {
+        return "\(Int(value / oneBillion))B"
+    }
+    if value >= oneMillion {
+        return "\(Int(value / oneMillion))M"
+    }
+    if value >= oneThousand {
+        return "\(Int(value / oneThousand))k"
+    }
     return String(Int(value))
 }
-
 
 // Convert weeks to approximate years
 fileprivate func weeksToYears(_ weeks: Int) -> Double {
