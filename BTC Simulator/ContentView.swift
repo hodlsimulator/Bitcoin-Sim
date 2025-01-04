@@ -379,7 +379,10 @@ struct ContentView: View {
                     simulationResultsView
                 }
                 
-                if !coordinator.isSimulationRun && !coordinator.monteCarloResults.isEmpty {
+                // Hide forward button if chart is building
+                if !coordinator.isSimulationRun &&
+                    !coordinator.monteCarloResults.isEmpty &&
+                    !coordinator.isChartBuilding {
                     transitionToResultsButton
                 }
                 
@@ -395,24 +398,6 @@ struct ContentView: View {
             .navigationDestination(isPresented: $showAbout) {
                 AboutView()
             }
-            // REMOVE the old navigationDestination for showHistograms:
-            /*
-            .navigationDestination(isPresented: $showHistograms) {
-                if let snapshot = coordinator.chartDataCache.chartSnapshot {
-                    ChartSnapshotView(snapshot: snapshot)
-                        .environmentObject(coordinator.chartDataCache)
-                }
-                else if let existingChartData = coordinator.chartDataCache.allRuns {
-                    MonteCarloResultsView(simulations: existingChartData)
-                        .environmentObject(coordinator.chartDataCache)
-                        .environmentObject(simSettings)
-                }
-                else {
-                    Text("Loading chart…")
-                        .foregroundColor(.white)
-                }
-            }
-            */
             // Keep the debug navigation if needed:
             .navigationDestination(isPresented: $showSnapshotsDebug) {
                 SnapshotsDebugView()
@@ -552,17 +537,6 @@ struct ContentView: View {
                     .padding(.leading, 15)
                     
                     Spacer()
-                    
-                    // Example: Only show the debug button if snapshots exist
-                    if coordinator.chartDataCache.chartSnapshot != nil ||
-                       coordinator.chartDataCache.chartSnapshotLandscape != nil
-                    {
-                        Button("Show Snapshot Debug") {
-                            showSnapshotsDebug.toggle()
-                        }
-                        .padding()
-                        .foregroundColor(.white)
-                    }
                     
                     Button(action: { showSettings = true }) {
                         Image(systemName: "gearshape")
@@ -947,6 +921,7 @@ struct ContentView: View {
         }
     }
     
+    // MARK: - Forward (transitionToResultsButton)
     private var transitionToResultsButton: some View {
         VStack {
             HStack {
