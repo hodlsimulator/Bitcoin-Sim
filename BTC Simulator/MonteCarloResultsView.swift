@@ -189,16 +189,22 @@ func medianLines(simulations: [SimulationRun], medianLine: [WeekPoint]) -> some 
     let fractionDecimal = max(Decimal(0), min(Decimal(1), (numerator / denominator)))
     let fraction = NSDecimalNumber(decimal: fractionDecimal).doubleValue
     
+    // Darken the orange
     let brightness = 1.0 - 0.6 * fraction
     let darkeningOrange = Color(hue: 0.08, saturation: 1.0, brightness: brightness)
     
+    // Thicken the line progressively
+    let baseLineWidth = 1.5
+    let maxExtraThickness = 1.5 // Adjust as you like
+    let dynamicLineWidth = baseLineWidth + maxExtraThickness * fraction
+
     ForEach(medianLine) { pt in
         LineMark(
             x: .value("Year", weeksToYears(pt.week)),
             y: .value("BTC Price (USD)", NSDecimalNumber(decimal: pt.value).doubleValue)
         )
         .foregroundStyle(darkeningOrange)
-        .lineStyle(StrokeStyle(lineWidth: 1.5))
+        .lineStyle(StrokeStyle(lineWidth: dynamicLineWidth))
         .interpolationMethod(.monotone)
     }
 }
