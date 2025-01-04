@@ -147,110 +147,125 @@ struct MonteCarloChartView: View {
     @EnvironmentObject var orientationObserver: OrientationObserver
 
     var body: some View {
+        let isLandscape = orientationObserver.isLandscape
+
         Group {
             if viewModel.isLoading {
+                
+                // Loading Spinner
                 ProgressView("Loading…")
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(Color.black.ignoresSafeArea())
+                
             } else {
-                if orientationObserver.isLandscape {
-                    // Fullscreen in landscape with scaleEffect to avoid clipping
-                    GeometryReader { geo in
-                        ZStack {
-                            Color.black.ignoresSafeArea()
+                
+                GeometryReader { geo in
+                    ZStack {
+                        Color.black.ignoresSafeArea()
+                        
+                        if isLandscape {
+                            // --- LANDSCAPE LAYOUT ---
+                            ZStack {
+                                Chart {
+                                    simulationLines(simulations: viewModel.simulations)
+                                    medianLines(simulations: viewModel.simulations,
+                                                medianLine: viewModel.medianLine)
+                                }
+                                .chartLegend(.hidden)
+                                .chartXScale(domain: 0.0...20.0, type: .linear)
+                                .chartYScale(domain: .automatic(includesZero: false), type: .log)
+                                .chartXAxis {
+                                    let yearMarkers = [5.0, 10.0, 15.0, 20.0]
+                                    AxisMarks(values: yearMarkers) { axisValue in
+                                        AxisGridLine(centered: false)
+                                            .foregroundStyle(.white.opacity(0.3))
+                                        AxisTick(centered: false)
+                                            .foregroundStyle(.white.opacity(0.3))
+                                        AxisValueLabel(centered: false) {
+                                            if let yearVal = axisValue.as(Double.self) {
+                                                Text("\(Int(yearVal))")
+                                                    .foregroundColor(.white)
+                                            }
+                                        }
+                                    }
+                                }
+                                .chartYAxis {
+                                    AxisMarks(position: .leading) { axisValue in
+                                        AxisGridLine()
+                                            .foregroundStyle(.white.opacity(0.3))
+                                        AxisTick()
+                                            .foregroundStyle(.white.opacity(0.3))
+                                        AxisValueLabel {
+                                            if let val = axisValue.as(Double.self) {
+                                                Text(formatSuffix(val))
+                                                    .foregroundColor(.white)
+                                            }
+                                        }
+                                    }
+                                }
+                                // Make the chart 10% wider; anchor to the right side
+                                .frame(width: geo.size.width * 1.1, height: geo.size.height)
+                                .offset(x: -(geo.size.width * 0.04))
+                                .scaleEffect(x: 1.0, y: 0.98, anchor: .bottom)
+                            }
                             
-                            Chart {
-                                simulationLines(simulations: viewModel.simulations)
-                                medianLines(simulations: viewModel.simulations, medianLine: viewModel.medianLine)
-                            }
-                            .chartLegend(.hidden)
-                            .chartXScale(domain: 0.0...20.0, type: .linear)
-                            .chartYScale(domain: .automatic(includesZero: false), type: .log)
-                            .chartXAxis {
-                                let yearMarkers = [5.0, 10.0, 15.0, 20.0]
-                                AxisMarks(values: yearMarkers) { axisValue in
-                                    AxisGridLine(centered: false)
-                                        .foregroundStyle(.white.opacity(0.3))
-                                    AxisTick(centered: false)
-                                        .foregroundStyle(.white.opacity(0.3))
-                                    AxisValueLabel(centered: false) {
-                                        if let yearVal = axisValue.as(Double.self) {
-                                            Text("\(Int(yearVal))")
-                                                .foregroundColor(.white)
+                        } else {
+                            // --- PORTRAIT LAYOUT ---
+                            VStack {
+                                Spacer().frame(height: 30)  // Some top gap
+                                
+                                // The chart takes ~94% of the screen height.
+                                Chart {
+                                    simulationLines(simulations: viewModel.simulations)
+                                    medianLines(simulations: viewModel.simulations,
+                                                medianLine: viewModel.medianLine)
+                                }
+                                .chartLegend(.hidden)
+                                .chartXScale(domain: 0.0...20.0, type: .linear)
+                                .chartYScale(domain: .automatic(includesZero: false), type: .log)
+                                .chartXAxis {
+                                    let yearMarkers = [5.0, 10.0, 15.0, 20.0]
+                                    AxisMarks(values: yearMarkers) { axisValue in
+                                        AxisGridLine(centered: false)
+                                            .foregroundStyle(.white.opacity(0.3))
+                                        AxisTick(centered: false)
+                                            .foregroundStyle(.white.opacity(0.3))
+                                        AxisValueLabel(centered: false) {
+                                            if let yearVal = axisValue.as(Double.self) {
+                                                Text("\(Int(yearVal))")
+                                                    .foregroundColor(.white)
+                                            }
                                         }
                                     }
                                 }
-                            }
-                            .chartYAxis {
-                                AxisMarks(position: .leading) { axisValue in
-                                    AxisGridLine()
-                                        .foregroundStyle(.white.opacity(0.3))
-                                    AxisTick()
-                                        .foregroundStyle(.white.opacity(0.3))
-                                    AxisValueLabel {
-                                        if let val = axisValue.as(Double.self) {
-                                            Text(formatSuffix(val))
-                                                .foregroundColor(.white)
+                                .chartYAxis {
+                                    AxisMarks(position: .leading) { axisValue in
+                                        AxisGridLine()
+                                            .foregroundStyle(.white.opacity(0.3))
+                                        AxisTick()
+                                            .foregroundStyle(.white.opacity(0.3))
+                                        AxisValueLabel {
+                                            if let val = axisValue.as(Double.self) {
+                                                Text(formatSuffix(val))
+                                                    .foregroundColor(.white)
+                                            }
                                         }
                                     }
                                 }
-                            }
-                            // Make the chart 10% wider; anchor right side
-                            .frame(width: geo.size.width * 1.1, height: geo.size.height, alignment: .trailing)
-                            .offset(x: -(geo.size.width * 0.04))   // Shift left by 4% of width
-                            .scaleEffect(x: 1.0, y: 0.98, anchor: .bottom)
-                            // Removed .clipped() so it won't cut off the wider chart
-                        }
-                    }
-                    .navigationBarHidden(true)
-                } else {
-                    // Portrait layout
-                    Chart {
-                        simulationLines(simulations: viewModel.simulations)
-                        medianLines(simulations: viewModel.simulations, medianLine: viewModel.medianLine)
-                    }
-                    .chartLegend(.hidden)
-                    .chartXScale(domain: 0.0...20.0, type: .linear)
-                    .chartYScale(domain: .automatic(includesZero: false), type: .log)
-                    .chartXAxis {
-                        let yearMarkers = [5.0, 10.0, 15.0, 20.0]
-                        AxisMarks(values: yearMarkers) { axisValue in
-                            AxisGridLine(centered: false)
-                                .foregroundStyle(.white.opacity(0.3))
-                            AxisTick(centered: false)
-                                .foregroundStyle(.white.opacity(0.3))
-                            AxisValueLabel(centered: false) {
-                                if let yearVal = axisValue.as(Double.self) {
-                                    Text("\(Int(yearVal))")
-                                        .foregroundColor(.white)
-                                }
+                                // Slight vertical squish, pinned at bottom
+                                .scaleEffect(x: 1.0, y: 0.95, anchor: .bottom)
+                                .frame(width: geo.size.width, height: geo.size.height * 0.94)
+                                
+                                Spacer().frame(height: 10)
                             }
                         }
                     }
-                    .chartYAxis {
-                        AxisMarks(position: .leading) { axisValue in
-                            AxisGridLine()
-                                .foregroundStyle(.white.opacity(0.3))
-                            AxisTick()
-                                .foregroundStyle(.white.opacity(0.3))
-                            AxisValueLabel {
-                                if let val = axisValue.as(Double.self) {
-                                    Text(formatSuffix(val))
-                                        .foregroundColor(.white)
-                                }
-                            }
-                        }
-                    }
-                    .padding(.vertical, 16)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.black.opacity(0.2))
-                    )
-                    .navigationBarHidden(false)
                 }
             }
         }
+        // Always show the nav bar (avoid toggling)
+        .navigationBarHidden(false)
     }
 }
 
@@ -261,13 +276,24 @@ struct SquishedLandscapePlaceholderView: View {
     
     var body: some View {
         GeometryReader { geo in
+            // Adjust these to taste
+            let scaleX: CGFloat = 1.25
+            let scaleY: CGFloat = 1.10  // slightly smaller vertical scale
+            
+            // Calculate new dimensions
+            let newWidth = geo.size.width * scaleX
+            let newHeight = geo.size.height * scaleY
+            
+            // Centre horizontally
+            let xOffset = (geo.size.width - newWidth) / 2
+            
+            // Keep top anchored at y=0
             Image(uiImage: image)
                 .resizable()
-                // Shift/scale to emulate a wide view
-                .frame(width: geo.size.width * 1.25,
-                       height: geo.size.height * 1.15)
-                .offset(x: -(geo.size.width * 0.12),
-                        y: geo.size.height * 0.05)
+                .frame(width: newWidth,
+                       height: newHeight,
+                       alignment: .top) // ensures the top is pinned
+                .offset(x: xOffset, y: 0)
         }
         .ignoresSafeArea()
     }
@@ -289,18 +315,29 @@ struct SnapshotView: View {
     }
 }
 
-/// Squish the portrait snapshot into a pseudo-landscape image
+/// Squish the portrait snapshot into a pseudo-landscape image while keeping the top fixed
 func squishPortraitImage(_ portraitImage: UIImage) -> UIImage {
     let targetSize = CGSize(width: 800, height: 400)
-    let renderer = UIGraphicsImageRenderer(size: targetSize)
+    let scaleFactorX: CGFloat = 1.25
+    let scaleFactorY: CGFloat = 1.05 // tweak as needed
     
+    // Calculate scaled width/height
+    let scaledWidth = targetSize.width * scaleFactorX
+    let scaledHeight = targetSize.height * scaleFactorY
+    
+    // Centre horizontally, keep top at y=0
+    let xOffset = (targetSize.width - scaledWidth) / 2
+    let yOffset: CGFloat = 0
+    
+    let renderer = UIGraphicsImageRenderer(size: targetSize)
     return renderer.image { _ in
-        // e.g. shift left ~12%, scale 1.25x
         portraitImage.draw(
-            in: CGRect(x: -(targetSize.width * 0.12),
-                       y: 0,
-                       width: targetSize.width * 1.25,
-                       height: targetSize.height * 1.25)
+            in: CGRect(
+                x: xOffset,
+                y: yOffset,
+                width: scaledWidth,
+                height: scaledHeight
+            )
         )
     }
 }
