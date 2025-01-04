@@ -11,18 +11,6 @@ enum PercentileChoice {
     case tenth, median, ninetieth
 }
 
-// You can comment out or remove this if unused:
-// class ForceLandscapeHostingController<Content: View>: UIHostingController<Content> {
-//     override var traitCollection: UITraitCollection {
-//         UITraitCollection(traitsFrom: [
-//             super.traitCollection,
-//             UITraitCollection(horizontalSizeClass: .regular),
-//             UITraitCollection(verticalSizeClass: .compact),
-//             UITraitCollection(userInterfaceIdiom: .phone)
-//         ])
-//     }
-// }
-
 class SimulationCoordinator: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var isChartBuilding: Bool = false
@@ -86,7 +74,6 @@ class SimulationCoordinator: ObservableObject {
         }
         
         DispatchQueue.global(qos: .userInitiated).async {
-            // Check iteration
             guard let total = self.inputManager.getParsedIterations(), total > 0 else {
                 print("// DEBUG: No valid iteration => bailing out.")
                 DispatchQueue.main.async {
@@ -99,12 +86,17 @@ class SimulationCoordinator: ObservableObject {
                 self.totalIterations = total
             }
             
+            // The user’s CAGR & Volatility as Doubles
             let userInputCAGR = self.inputManager.getParsedAnnualCAGR() / 100.0
             let userInputVolatility = (Double(self.inputManager.annualVolatility) ?? 1.0) / 100.0
             let userWeeks = self.simSettings.userWeeks
-            let userPriceUSD = self.simSettings.initialBTCPriceUSD
             
-            // The core Monte Carlo call
+            // If initialBTCPriceUSD is a Double, convert to Decimal:
+            let userPriceUSDAsDecimal = Decimal(self.simSettings.initialBTCPriceUSD)
+            
+            // Convert your Decimal to Double right before calling:
+            let userPriceUSDAsDouble = NSDecimalNumber(decimal: userPriceUSDAsDecimal).doubleValue
+
             let (medianRun, allIterations) = runMonteCarloSimulationsWithProgress(
                 settings: self.simSettings,
                 annualCAGR: userInputCAGR,
@@ -113,7 +105,7 @@ class SimulationCoordinator: ObservableObject {
                 exchangeRateEURUSD: 1.06,
                 userWeeks: userWeeks,
                 iterations: total,
-                initialBTCPriceUSD: userPriceUSD,
+                initialBTCPriceUSD: userPriceUSDAsDouble, // pass Double here
                 isCancelled: { self.isCancelled },
                 progressCallback: { completed in
                     if !self.isCancelled {
@@ -131,8 +123,8 @@ class SimulationCoordinator: ObservableObject {
                 return
             }
             
-            // Sort runs
-            let finalRuns = allIterations.map { ($0.last?.btcPriceUSD ?? 0.0, $0) }
+            // Sort runs based on final BTC price
+            let finalRuns = allIterations.map { ($0.last?.btcPriceUSD ?? Decimal.zero, $0) }
             let sortedRuns = finalRuns.sorted { $0.0 < $1.0 }
             
             if !sortedRuns.isEmpty {
@@ -159,7 +151,7 @@ class SimulationCoordinator: ObservableObject {
                     self.medianResults = medianLineData
                     self.allSimData = allIterations
                     
-                    // Convert to [SimulationRun]
+                    // Convert all runs to [SimulationRun] (each with [WeekPoint(week, Decimal)])
                     let allSimsAsWeekPoints = self.convertAllSimsToWeekPoints()
                     
                     // Clear old snapshots
@@ -182,7 +174,6 @@ class SimulationCoordinator: ObservableObject {
                         let chartView = MonteCarloResultsView(simulations: allSimsAsWeekPoints)
                             .environmentObject(self.chartDataCache)
                             .environmentObject(self.simSettings)
-                            // .environmentObject(appViewModel)  // REMOVED: no longer needed
                         
                         DispatchQueue.main.async {
                             if self.isCancelled {
@@ -194,8 +185,6 @@ class SimulationCoordinator: ObservableObject {
                             let snapshot = chartView.snapshot()
                             print("// DEBUG: portrait snapshot => setting chartDataCache.chartSnapshot.")
                             self.chartDataCache.chartSnapshot = snapshot
-                            
-                            // We'll squish in geometry approach as needed
                             
                             self.isChartBuilding = false
                             self.isSimulationRun = true
@@ -216,9 +205,11 @@ class SimulationCoordinator: ObservableObject {
         }
     }
     
+    /// Convert `[[SimulationData]]` to `[SimulationRun]` with Decimal values
     func convertAllSimsToWeekPoints() -> [SimulationRun] {
         allSimData.map { singleRun -> SimulationRun in
             let wpoints = singleRun.map { row in
+                // row.btcPriceUSD should be Decimal; if still Double, do Decimal(row.btcPriceUSD)
                 WeekPoint(week: row.week, value: row.btcPriceUSD)
             }
             return SimulationRun(points: wpoints)
@@ -233,6 +224,7 @@ class SimulationCoordinator: ObservableObject {
         return combinedString.hashValue
     }
     
+    /// Computes median SimulationData across all runs at each week index
     private func computeMedianSimulationData(allIterations: [[SimulationData]]) -> [SimulationData] {
         guard let firstRun = allIterations.first else { return [] }
         let totalWeeks = firstRun.count
@@ -240,43 +232,92 @@ class SimulationCoordinator: ObservableObject {
         var medianResult: [SimulationData] = []
         
         for w in 0..<totalWeeks {
+            // Collect all SimulationData objects at this week
             let allAtWeek = allIterations.compactMap { run -> SimulationData? in
                 guard w < run.count else { return nil }
                 return run[w]
             }
+            
+            // If nothing is present, skip
             if allAtWeek.isEmpty { continue }
             
-            let sortedBTCUSD = allAtWeek.map { $0.btcPriceUSD }.sorted()
-            // etc... for other properties, then find median.
+            // 1) Extract Decimal fields
+            let allBTCPriceUSD = allAtWeek.map { $0.btcPriceUSD }
+            let allBTCPriceEUR = allAtWeek.map { $0.btcPriceEUR }
+            let allPortfolioValueEUR = allAtWeek.map { $0.portfolioValueEUR }
             
-            func medianOfSorted(_ arr: [Double]) -> Double {
-                if arr.isEmpty { return 0.0 }
-                let mid = arr.count / 2
-                if arr.count.isMultiple(of: 2) {
-                    return (arr[mid] + arr[mid - 1]) / 2.0
-                } else {
-                    return arr[mid]
-                }
-            }
+            // 2) Extract Double fields
+            let allStartingBTC = allAtWeek.map { $0.startingBTC }
+            let allNetBTCHoldings = allAtWeek.map { $0.netBTCHoldings }
+            let allContribEUR = allAtWeek.map { $0.contributionEUR }
+            let allFeeEUR = allAtWeek.map { $0.transactionFeeEUR }
+            let allNetContribBTC = allAtWeek.map { $0.netContributionBTC }
+            let allWithdrawalEUR = allAtWeek.map { $0.withdrawalEUR }
             
+            // 3) Compute medians separately
+            let medianBTCPriceUSD = medianOfDecimalArray(allBTCPriceUSD)
+            let medianBTCPriceEUR = medianOfDecimalArray(allBTCPriceEUR)
+            let medianPortfolioValueEUR = medianOfDecimalArray(allPortfolioValueEUR)
+            
+            let medianStartingBTC = medianOfDoubleArray(allStartingBTC)
+            let medianNetBTCHoldings = medianOfDoubleArray(allNetBTCHoldings)
+            let medianContributionEUR = medianOfDoubleArray(allContribEUR)
+            let medianFeeEUR = medianOfDoubleArray(allFeeEUR)
+            let medianNetContributionBTC = medianOfDoubleArray(allNetContribBTC)
+            let medianWithdrawalEUR = medianOfDoubleArray(allWithdrawalEUR)
+
+            // 4) Build the new median row
             let medianSimData = SimulationData(
                 week: allAtWeek[0].week,
-                startingBTC: medianOfSorted(allAtWeek.map { $0.startingBTC }.sorted()),
-                netBTCHoldings: medianOfSorted(allAtWeek.map { $0.netBTCHoldings }.sorted()),
-                btcPriceUSD: medianOfSorted(sortedBTCUSD),
-                btcPriceEUR: medianOfSorted(allAtWeek.map { $0.btcPriceEUR }.sorted()),
-                portfolioValueEUR: medianOfSorted(allAtWeek.map { $0.portfolioValueEUR }.sorted()),
-                contributionEUR: medianOfSorted(allAtWeek.map { $0.contributionEUR }.sorted()),
-                transactionFeeEUR: medianOfSorted(allAtWeek.map { $0.transactionFeeEUR }.sorted()),
-                netContributionBTC: medianOfSorted(allAtWeek.map { $0.netContributionBTC }.sorted()),
-                withdrawalEUR: medianOfSorted(allAtWeek.map { $0.withdrawalEUR }.sorted())
+                
+                // Double fields
+                startingBTC: medianStartingBTC,
+                netBTCHoldings: medianNetBTCHoldings,
+                
+                // Decimal fields
+                btcPriceUSD: medianBTCPriceUSD,
+                btcPriceEUR: medianBTCPriceEUR,
+                portfolioValueEUR: medianPortfolioValueEUR,
+                
+                // Double fields
+                contributionEUR: medianContributionEUR,
+                transactionFeeEUR: medianFeeEUR,
+                netContributionBTC: medianNetContributionBTC,
+                withdrawalEUR: medianWithdrawalEUR
             )
+            
             medianResult.append(medianSimData)
         }
+        
         return medianResult
     }
     
     private func processAllResults(_ allResults: [[SimulationData]]) {
         // Any post-processing you want
+    }
+}
+
+/// For Decimal arrays
+func medianOfDecimalArray(_ arr: [Decimal]) -> Decimal {
+    if arr.isEmpty { return .zero }
+    let sortedArr = arr.sorted(by: <)
+    let mid = sortedArr.count / 2
+    if sortedArr.count.isMultiple(of: 2) {
+        let sum = sortedArr[mid] + sortedArr[mid - 1]
+        return sum / Decimal(2)
+    } else {
+        return sortedArr[mid]
+    }
+}
+
+/// For Double arrays
+func medianOfDoubleArray(_ arr: [Double]) -> Double {
+    if arr.isEmpty { return 0.0 }
+    let sortedArr = arr.sorted()
+    let mid = sortedArr.count / 2
+    if sortedArr.count.isMultiple(of: 2) {
+        return (sortedArr[mid] + sortedArr[mid - 1]) / 2.0
+    } else {
+        return sortedArr[mid]
     }
 }

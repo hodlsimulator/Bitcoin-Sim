@@ -1048,24 +1048,35 @@ struct ContentView: View {
     }
     
     private func getValue(_ item: SimulationData, _ keyPath: PartialKeyPath<SimulationData>) -> String {
-        if let value = item[keyPath: keyPath] as? Double {
+        // 1) If the field is a Decimal:
+        if let decimalVal = item[keyPath: keyPath] as? Decimal {
+            // Convert Decimal → Double to reuse your existing currency format
+            let doubleValue = NSDecimalNumber(decimal: decimalVal).doubleValue
+            return doubleValue.formattedCurrency()
+            
+        // 2) If the field is a Double:
+        } else if let doubleVal = item[keyPath: keyPath] as? Double {
             switch keyPath {
             case \SimulationData.startingBTC,
                  \SimulationData.netBTCHoldings,
                  \SimulationData.netContributionBTC:
-                return value.formattedBTC()
+                return doubleVal.formattedBTC()
             case \SimulationData.btcPriceUSD,
                  \SimulationData.btcPriceEUR,
                  \SimulationData.portfolioValueEUR,
                  \SimulationData.contributionEUR,
                  \SimulationData.transactionFeeEUR,
                  \SimulationData.withdrawalEUR:
-                return value.formattedCurrency()
+                return doubleVal.formattedCurrency()
             default:
-                return String(format: "%.2f", value)
+                return String(format: "%.2f", doubleVal)
             }
-        } else if let value = item[keyPath: keyPath] as? Int {
-            return "\(value)"
+            
+        // 3) If the field is an Int:
+        } else if let intVal = item[keyPath: keyPath] as? Int {
+            return "\(intVal)"
+            
+        // 4) Otherwise (e.g. a String?), return empty or handle differently:
         } else {
             return ""
         }

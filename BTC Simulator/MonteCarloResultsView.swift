@@ -8,13 +8,14 @@
 import SwiftUI
 import Charts
 import Combine
+import Foundation
 
 // MARK: - Data Models
 
 struct WeekPoint: Identifiable {
     let id = UUID()
     let week: Int
-    let value: Double // We'll treat 'value' as BTC price in USD
+    let value: Decimal // We'll treat 'value' as BTC price in USD
 }
 
 struct SimulationRun: Identifiable {
@@ -43,13 +44,19 @@ class ChartViewModel: ObservableObject {
         var medianPoints: [WeekPoint] = []
         
         for index in 0..<countPerRun {
+            // Grab the "week" from the first run
             let week = firstRun.points[index].week
-            let allValues = simulations.map { $0.points[index].value }.sorted()
             
+            // Collect all decimal values at this index
+            let allValues = simulations.map { $0.points[index].value }.sorted(by: <)
+            
+            // Calculate median of decimals
             let middle = allValues.count / 2
-            let median: Double
+            let median: Decimal
             if allValues.count.isMultiple(of: 2) {
-                median = (allValues[middle] + allValues[middle - 1]) / 2
+                // average of the two middle values
+                let sum = allValues[middle] + allValues[middle - 1]
+                median = sum / Decimal(2)
             } else {
                 median = allValues[middle]
             }
@@ -60,44 +67,52 @@ class ChartViewModel: ObservableObject {
     }
 }
 
-// MARK: - Number Formatting
+// MARK: - Number Formatting (Decimal)
 
-// Pre-calculate thresholds to avoid compile warnings on large integer literals.
-private let oneThousand     = pow(10.0, 3.0)
-private let oneMillion      = pow(10.0, 6.0)
-private let oneBillion      = pow(10.0, 9.0)
-private let oneTrillion     = pow(10.0, 12.0)
-private let oneQuadrillion  = pow(10.0, 15.0)
-private let oneQuintillion  = pow(10.0, 18.0)
-private let oneSextillion   = pow(10.0, 21.0)
-private let oneSeptillion   = pow(10.0, 24.0)
+// 1e3 ... 1e33
+private let thousand     = Decimal(string: "1e3")!
+private let million      = Decimal(string: "1e6")!
+private let billion      = Decimal(string: "1e9")!
+private let trillion     = Decimal(string: "1e12")!
+private let quadrillion  = Decimal(string: "1e15")!
+private let quintillion  = Decimal(string: "1e18")!
+private let sextillion   = Decimal(string: "1e21")!
+private let septillion   = Decimal(string: "1e24")!
+private let octillion    = Decimal(string: "1e27")!
+private let nonillion    = Decimal(string: "1e30")!
+private let decillion    = Decimal(string: "1e33")!
 
-func formatSuffix(_ value: Double) -> String {
-    if value >= oneSeptillion {
-        return "\(Int(value / oneSeptillion))S"
+func formatSuffix(_ value: Decimal) -> String {
+    func wholeNumber(_ x: Decimal) -> Int {
+        let rounded = NSDecimalNumber(decimal: x).rounding(accordingToBehavior: nil)
+        return rounded.intValue
     }
-    if value >= oneSextillion {
-        return "\(Int(value / oneSextillion))Se"
+    
+    if value >= decillion {
+        return "\(wholeNumber(value / decillion))D"
+    } else if value >= nonillion {
+        return "\(wholeNumber(value / nonillion))N"
+    } else if value >= octillion {
+        return "\(wholeNumber(value / octillion))O"
+    } else if value >= septillion {
+        return "\(wholeNumber(value / septillion))S"
+    } else if value >= sextillion {
+        return "\(wholeNumber(value / sextillion))Se"
+    } else if value >= quintillion {
+        return "\(wholeNumber(value / quintillion))Qn"
+    } else if value >= quadrillion {
+        return "\(wholeNumber(value / quadrillion))Q"
+    } else if value >= trillion {
+        return "\(wholeNumber(value / trillion))T"
+    } else if value >= billion {
+        return "\(wholeNumber(value / billion))B"
+    } else if value >= million {
+        return "\(wholeNumber(value / million))M"
+    } else if value >= thousand {
+        return "\(wholeNumber(value / thousand))k"
+    } else {
+        return "\(wholeNumber(value))"
     }
-    if value >= oneQuintillion {
-        return "\(Int(value / oneQuintillion))Qn"
-    }
-    if value >= oneQuadrillion {
-        return "\(Int(value / oneQuadrillion))Q"
-    }
-    if value >= oneTrillion {
-        return "\(Int(value / oneTrillion))T"
-    }
-    if value >= oneBillion {
-        return "\(Int(value / oneBillion))B"
-    }
-    if value >= oneMillion {
-        return "\(Int(value / oneMillion))M"
-    }
-    if value >= oneThousand {
-        return "\(Int(value / oneThousand))k"
-    }
-    return String(Int(value))
 }
 
 // Convert weeks to approximate years
@@ -131,9 +146,10 @@ func simulationLines(simulations: [SimulationRun]) -> some ChartContent {
         let colour = customPalette[index % customPalette.count]
         
         ForEach(sim.points) { pt in
+            // Convert Decimal to Double for charting
             LineMark(
                 x: .value("Year", weeksToYears(pt.week)),
-                y: .value("BTC Price (USD)", pt.value)
+                y: .value("BTC Price (USD)", NSDecimalNumber(decimal: pt.value).doubleValue)
             )
             .foregroundStyle(colour.opacity(0.3))
             .foregroundStyle(by: .value("SeriesIndex", index))
@@ -150,18 +166,23 @@ func simulationLines(simulations: [SimulationRun]) -> some ChartContent {
 
 @ChartContentBuilder
 func medianLines(simulations: [SimulationRun], medianLine: [WeekPoint]) -> some ChartContent {
-    let iterationCount = Double(simulations.count)
-    let startDarkeningAt = 70.0
-    let maxDarkeningAt   = 1000.0
+    let iterationCount = Decimal(simulations.count)
+    let startDarkeningAt = Decimal(70)
+    let maxDarkeningAt   = Decimal(1000)
     
-    let fraction = max(0, min(1, (iterationCount - startDarkeningAt) / (maxDarkeningAt - startDarkeningAt)))
+    // fraction = clamp( (iterationCount - 70) / (1000 - 70), between 0 and 1 )
+    let numerator = (iterationCount - startDarkeningAt)
+    let denominator = (maxDarkeningAt - startDarkeningAt)
+    let fractionDecimal = max(Decimal(0), min(Decimal(1), (numerator / denominator)))
+    let fraction = NSDecimalNumber(decimal: fractionDecimal).doubleValue
+    
     let brightness = 1.0 - 0.6 * fraction
     let darkeningOrange = Color(hue: 0.08, saturation: 1.0, brightness: brightness)
     
     ForEach(medianLine) { pt in
         LineMark(
             x: .value("Year", weeksToYears(pt.week)),
-            y: .value("BTC Price (USD)", pt.value)
+            y: .value("BTC Price (USD)", NSDecimalNumber(decimal: pt.value).doubleValue)
         )
         .foregroundStyle(darkeningOrange)
         .lineStyle(StrokeStyle(lineWidth: 1.5))
@@ -226,8 +247,9 @@ struct MonteCarloChartView: View {
                                         AxisTick()
                                             .foregroundStyle(.white.opacity(0.3))
                                         AxisValueLabel {
-                                            if let val = axisValue.as(Double.self) {
-                                                Text(formatSuffix(val))
+                                            if let doubleVal = axisValue.as(Double.self) {
+                                                let decimalVal = Decimal(doubleVal)
+                                                Text(formatSuffix(decimalVal))
                                                     .foregroundColor(.white)
                                             }
                                         }
@@ -244,7 +266,6 @@ struct MonteCarloChartView: View {
                             VStack {
                                 Spacer().frame(height: 30)  // Some top gap
                                 
-                                // The chart takes ~94% of the screen height.
                                 Chart {
                                     simulationLines(simulations: viewModel.simulations)
                                     medianLines(simulations: viewModel.simulations,
@@ -275,8 +296,9 @@ struct MonteCarloChartView: View {
                                         AxisTick()
                                             .foregroundStyle(.white.opacity(0.3))
                                         AxisValueLabel {
-                                            if let val = axisValue.as(Double.self) {
-                                                Text(formatSuffix(val))
+                                            if let doubleVal = axisValue.as(Double.self) {
+                                                let decimalVal = Decimal(doubleVal)
+                                                Text(formatSuffix(decimalVal))
                                                     .foregroundColor(.white)
                                             }
                                         }
@@ -350,11 +372,9 @@ func squishPortraitImage(_ portraitImage: UIImage) -> UIImage {
     let scaleFactorX: CGFloat = 1.25
     let scaleFactorY: CGFloat = 1.05 // tweak as needed
     
-    // Calculate scaled width/height
     let scaledWidth = targetSize.width * scaleFactorX
     let scaledHeight = targetSize.height * scaleFactorY
     
-    // Centre horizontally, keep top at y=0
     let xOffset = (targetSize.width - scaledWidth) / 2
     let yOffset: CGFloat = 0
     

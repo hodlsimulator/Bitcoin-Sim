@@ -7,17 +7,18 @@
 import Foundation
 
 struct SimulationData: Identifiable {
-    // Use `week` as the unique ID rather than `UUID()`
-    var id: Int {
-        week
-    }
+    var id: Int { week }
 
     let week: Int
     let startingBTC: Double
     let netBTCHoldings: Double
-    let btcPriceUSD: Double
-    let btcPriceEUR: Double
-    let portfolioValueEUR: Double
+
+    // The following are Decimals:
+    let btcPriceUSD: Decimal
+    let btcPriceEUR: Decimal
+    let portfolioValueEUR: Decimal
+
+    // The following remain Doubles:
     let contributionEUR: Double
     let transactionFeeEUR: Double
     let netContributionBTC: Double
@@ -27,9 +28,9 @@ struct SimulationData: Identifiable {
         week: 0,
         startingBTC: 0.0,
         netBTCHoldings: 0.0,
-        btcPriceUSD: 0.0,
-        btcPriceEUR: 0.0,
-        portfolioValueEUR: 0.0,
+        btcPriceUSD: .zero,
+        btcPriceEUR: .zero,
+        portfolioValueEUR: .zero,
         contributionEUR: 0.0,
         transactionFeeEUR: 0.0,
         netContributionBTC: 0.0,
@@ -40,9 +41,9 @@ struct SimulationData: Identifiable {
         week: Int,
         startingBTC: Double,
         netBTCHoldings: Double,
-        btcPriceUSD: Double,
-        btcPriceEUR: Double,
-        portfolioValueEUR: Double,
+        btcPriceUSD: Decimal,
+        btcPriceEUR: Decimal,
+        portfolioValueEUR: Decimal,
         contributionEUR: Double,
         transactionFeeEUR: Double,
         netContributionBTC: Double,

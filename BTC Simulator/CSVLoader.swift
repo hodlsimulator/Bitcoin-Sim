@@ -15,39 +15,45 @@ func loadCSV() -> [SimulationData] {
 
     do {
         let content = try String(contentsOfFile: filePath, encoding: .utf8)
-        let rows = content.components(separatedBy: "\n").filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        let rows = content.components(separatedBy: "\n")
+            .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
 
         var result: [SimulationData] = []
 
         for (index, row) in rows.enumerated() {
-            if index == 0 { continue } // Skip header row
+            // Skip the header row
+            if index == 0 { continue }
 
             let columns = parseCSVRow(row)
             if columns.count < 13 { continue }
 
             let week = Int(columns[0]) ?? 0
             let startingBTC = Double(columns[2]) ?? 0.0
-            var btcPriceUSD = Double(columns[5].replacingOccurrences(of: ",", with: "")) ?? 0.0
-            var portfolioValueEUR = Double(columns[7]) ?? 0.0
+            var btcPriceUSDAsDouble = Double(columns[5].replacingOccurrences(of: ",", with: "")) ?? 0.0
+            var portfolioValueEURAsDouble = Double(columns[7]) ?? 0.0
 
             // Hardcode specific values for the first two weeks
             if week == 1 {
-                btcPriceUSD = 76532.03
-                portfolioValueEUR = 333.83
+                btcPriceUSDAsDouble = 76532.03
+                portfolioValueEURAsDouble = 333.83
             } else if week == 2 {
-                btcPriceUSD = 93600.91
-                portfolioValueEUR = 475.67
+                btcPriceUSDAsDouble = 93600.91
+                portfolioValueEURAsDouble = 475.67
             }
 
             let data = SimulationData(
                 week: week,
                 startingBTC: startingBTC,
                 netBTCHoldings: Double(columns[4]) ?? 0.0,
-                btcPriceUSD: btcPriceUSD,
-                btcPriceEUR: Double(columns[6].replacingOccurrences(of: ",", with: "")) ?? 0.0,
-                portfolioValueEUR: portfolioValueEUR,
+
+                // Convert `Double` → `Decimal` for these three
+                btcPriceUSD: Decimal(btcPriceUSDAsDouble),
+                btcPriceEUR: Decimal(Double(columns[6].replacingOccurrences(of: ",", with: "")) ?? 0.0),
+                portfolioValueEUR: Decimal(portfolioValueEURAsDouble),
+
+                // The rest remain `Double`
                 contributionEUR: Double(columns[8]) ?? 0.0,
-                transactionFeeEUR: Double(columns[9]) ?? 0.0, // Renamed here too
+                transactionFeeEUR: Double(columns[9]) ?? 0.0,
                 netContributionBTC: Double(columns[10]) ?? 0.0,
                 withdrawalEUR: Double(columns[11]) ?? 0.0
             )
@@ -84,6 +90,7 @@ func parseCSVRow(_ row: String) -> [String] {
         columns.append(current.trimmingCharacters(in: .whitespacesAndNewlines))
     }
 
+    // Ensure at least 13 columns exist
     while columns.count < 13 {
         columns.append("")
     }

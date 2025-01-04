@@ -95,8 +95,6 @@ func runOneFullSimulation(
     seed: UInt64? = nil
 ) -> [SimulationData] {
     
-    
-    // A nested struct so we only print factor settings once
     struct PrintOnce {
         static var didPrintFactorSettings: Bool = false
     }
@@ -129,11 +127,7 @@ func runOneFullSimulation(
         print("====================================")
         
         PrintOnce.didPrintFactorSettings = true
-    } 
-
-    // We typically rely on runMonteCarloSimulationsWithProgress to call `setRandomSeed(...)`
-    // If you want to forcibly set it here, you could do:
-    //   setRandomSeed(seed)
+    }
 
     // 1) Initial BTC price in EUR
     let firstEURPrice = initialBTCPriceUSD / exchangeRateEURUSD
@@ -159,9 +153,10 @@ func runOneFullSimulation(
             week: 1,
             startingBTC: 0.0,
             netBTCHoldings: userStartingBalanceBTC,
-            btcPriceUSD: initialBTCPriceUSD,
-            btcPriceEUR: firstEURPrice,
-            portfolioValueEUR: initialPortfolioValueEUR,
+            // Convert these three to Decimal
+            btcPriceUSD: Decimal(initialBTCPriceUSD),
+            btcPriceEUR: Decimal(firstEURPrice),
+            portfolioValueEUR: Decimal(initialPortfolioValueEUR),
             contributionEUR: 0.0,
             transactionFeeEUR: 0.0,
             netContributionBTC: 0.0,
@@ -182,7 +177,7 @@ func runOneFullSimulation(
         // Combine with base CAGR
         var combinedWeeklyReturn = dampenedReturn + baseWeeklyGrowth
         
-        // Insert an annualVolatility "shock", seeded if locked
+        // Insert an annualVolatility "shock"
         if useSeededRandom, var localRNG = seededGen {
             let shock = seededRandomNormal(mean: 0, stdDev: weeklyVol, rng: &localRNG)
             seededGen = localRNG
@@ -201,7 +196,7 @@ func runOneFullSimulation(
             combinedWeeklyReturn += adoptionFactor
         }
         
-        // *** Additional bullish toggles (all default RNG calls) ***
+        // *** Additional bullish toggles
         if settings.useInstitutionalDemand {
             let randBoost = Double.random(in: 0 ... settings.maxDemandBoost)
             combinedWeeklyReturn += randBoost
@@ -243,7 +238,7 @@ func runOneFullSimulation(
             combinedWeeklyReturn += randBoost
         }
 
-        // *** Additional bearish toggles (default RNG except for steady drift) ***
+        // *** Additional bearish toggles
         if settings.useBearMarket {
             combinedWeeklyReturn += settings.bearWeeklyDrift
         }
@@ -312,15 +307,15 @@ func runOneFullSimulation(
         let finalHoldings = max(0.0, hypotheticalHoldings - withdrawalBTC)
         let portfolioValEUR = finalHoldings * btcPriceEUR
 
-        // 8) Append results
+        // 8) Append results (convert relevant fields to Decimal)
         results.append(
             SimulationData(
                 week: week,
                 startingBTC: previousBTCHoldings,
                 netBTCHoldings: finalHoldings,
-                btcPriceUSD: btcPriceUSD,
-                btcPriceEUR: btcPriceEUR,
-                portfolioValueEUR: portfolioValEUR,
+                btcPriceUSD: Decimal(btcPriceUSD),
+                btcPriceEUR: Decimal(btcPriceEUR),
+                portfolioValueEUR: Decimal(portfolioValEUR),
                 contributionEUR: contributionEUR,
                 transactionFeeEUR: fee,
                 netContributionBTC: netBTC,
@@ -365,10 +360,9 @@ func runMonteCarloSimulationsWithProgress(
             break
         }
         
-        // Slow down to see progress visually
-        Thread.sleep(forTimeInterval: 0.01)  // e.g. 0.01s per iteration => ~1s per 100 iterations
+        // Slow down to see progress visually (not required)
+        Thread.sleep(forTimeInterval: 0.01)
         
-        // For demonstration, create dummy data:
         let simRun = runOneFullSimulation(
             settings: settings,
             annualCAGR: annualCAGR,
@@ -394,7 +388,7 @@ func runMonteCarloSimulationsWithProgress(
     }
     
     // Sort final runs by last week's portfolio value
-    var finalValues = allRuns.map { ($0.last?.portfolioValueEUR ?? 0.0, $0) }
+    var finalValues = allRuns.map { ($0.last?.portfolioValueEUR ?? Decimal.zero, $0) }
     finalValues.sort { $0.0 < $1.0 }
 
     // Median run
@@ -405,7 +399,6 @@ func runMonteCarloSimulationsWithProgress(
 }
 
 // MARK: - randomNormal (fallback if not seeded)
-/// Default normal distribution if no locked seed
 private func randomNormal(mean: Double, standardDeviation: Double) -> Double {
     let u1 = Double.random(in: 0..<1)
     let u2 = Double.random(in: 0..<1)
