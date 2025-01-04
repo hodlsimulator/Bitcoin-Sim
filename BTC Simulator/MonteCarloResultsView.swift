@@ -63,13 +63,43 @@ class ChartViewModel: ObservableObject {
 // MARK: - Number Formatting
 
 func formatSuffix(_ value: Double) -> String {
-    if value >= 1_000_000_000_000_000 { return "\(Int(value / 1_000_000_000_000_000))Q" }  // Quadrillion
-    if value >= 1_000_000_000_000 { return "\(Int(value / 1_000_000_000_000))T" }         // Trillion
-    if value >= 1_000_000_000 { return "\(Int(value / 1_000_000_000))B" }                 // Billion
-    if value >= 1_000_000 { return "\(Int(value / 1_000_000))M" }                         // Million
-    if value >= 1_000 { return "\(Int(value / 1_000))k" }                                 // Thousand
+    // Septillion (1e24)
+    if value >= 1_000_000_000_000_000_000_000_000 {
+        return "\(Int(value / 1_000_000_000_000_000_000_000_000))S"
+    }
+    // Sextillion (1e21)
+    if value >= 1_000_000_000_000_000_000_000 {
+        return "\(Int(value / 1_000_000_000_000_000_000_000))Se"
+    }
+    // Quintillion (1e18)
+    if value >= 1_000_000_000_000_000_000 {
+        return "\(Int(value / 1_000_000_000_000_000_000))Qn"
+    }
+    // Quadrillion (1e15)
+    if value >= 1_000_000_000_000_000 {
+        return "\(Int(value / 1_000_000_000_000_000))Q"
+    }
+    // Trillion (1e12)
+    if value >= 1_000_000_000_000 {
+        return "\(Int(value / 1_000_000_000_000))T"
+    }
+    // Billion (1e9)
+    if value >= 1_000_000_000 {
+        return "\(Int(value / 1_000_000_000))B"
+    }
+    // Million (1e6)
+    if value >= 1_000_000 {
+        return "\(Int(value / 1_000_000))M"
+    }
+    // Thousand (1e3)
+    if value >= 1_000 {
+        return "\(Int(value / 1_000))k"
+    }
+
+    // Below thousand
     return String(Int(value))
 }
+
 
 // Convert weeks to approximate years
 fileprivate func weeksToYears(_ weeks: Int) -> Double {
