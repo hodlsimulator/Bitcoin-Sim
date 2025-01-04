@@ -196,10 +196,11 @@ struct MonteCarloChartView: View {
                                     }
                                 }
                             }
-                            // Scale it a bit so the top doesn't get cut off
-                            .frame(width: geo.size.width, height: geo.size.height)
-                            .scaleEffect(x: 1.0, y: 0.95, anchor: .bottom)
-                            .clipped()
+                            // Make the chart 10% wider; anchor right side
+                            .frame(width: geo.size.width * 1.1, height: geo.size.height, alignment: .trailing)
+                            .offset(x: -(geo.size.width * 0.04))   // Shift left by 4% of width
+                            .scaleEffect(x: 1.0, y: 0.98, anchor: .bottom)
+                            // Removed .clipped() so it won't cut off the wider chart
                         }
                     }
                     .navigationBarHidden(true)
@@ -328,7 +329,7 @@ struct MonteCarloResultsView: View {
             
             // 1) Landscape logic
             if isLandscape {
-                VStack(spacing: 0) { // Nudges the chart down 20px for landscape
+                VStack(spacing: 0) {
                     Spacer().frame(height: 20)
                     
                     if let freshLandscape = brandNewLandscapeSnapshot {
@@ -370,8 +371,6 @@ struct MonteCarloResultsView: View {
                 }
             }
         }
-        // Removed the .offset call
-        // Show/hide nav bar and title
         .navigationTitle(isLandscape ? "" : "Monte Carlo – BTC Price (USD)")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarHidden(isLandscape)
