@@ -69,7 +69,6 @@ class ChartViewModel: ObservableObject {
 
 // MARK: - Number Formatting (Decimal)
 
-// 1e3 ... 1e45
 private let thousand          = Decimal(string: "1e3")!
 private let million           = Decimal(string: "1e6")!
 private let billion           = Decimal(string: "1e9")!
@@ -95,37 +94,36 @@ func formatSuffix(_ value: Decimal) -> String {
     
     // Compare in descending order (largest first)
     if value >= quattuordecillion {
-        return "\(wholeNumber(value / quattuordecillion))Qd"    // 1e45
+        return "\(wholeNumber(value / quattuordecillion))Qd"
     } else if value >= tredecillion {
-        return "\(wholeNumber(value / tredecillion))Td"         // 1e42
+        return "\(wholeNumber(value / tredecillion))Td"
     } else if value >= duodecillion {
-        return "\(wholeNumber(value / duodecillion))Do"         // 1e39
+        return "\(wholeNumber(value / duodecillion))Do"
     } else if value >= undecillion {
-        return "\(wholeNumber(value / undecillion))U"           // 1e36
+        return "\(wholeNumber(value / undecillion))U"
     } else if value >= decillion {
-        return "\(wholeNumber(value / decillion))D"             // 1e33
+        return "\(wholeNumber(value / decillion))D"
     } else if value >= nonillion {
-        return "\(wholeNumber(value / nonillion))N"             // 1e30
+        return "\(wholeNumber(value / nonillion))N"
     } else if value >= octillion {
-        return "\(wholeNumber(value / octillion))O"             // 1e27
+        return "\(wholeNumber(value / octillion))O"
     } else if value >= septillion {
-        return "\(wholeNumber(value / septillion))S"            // 1e24
+        return "\(wholeNumber(value / septillion))S"
     } else if value >= sextillion {
-        return "\(wholeNumber(value / sextillion))Se"           // 1e21
+        return "\(wholeNumber(value / sextillion))Se"
     } else if value >= quintillion {
-        return "\(wholeNumber(value / quintillion))Qn"          // 1e18
+        return "\(wholeNumber(value / quintillion))Qn"
     } else if value >= quadrillion {
-        return "\(wholeNumber(value / quadrillion))Q"           // 1e15
+        return "\(wholeNumber(value / quadrillion))Q"
     } else if value >= trillion {
-        return "\(wholeNumber(value / trillion))T"              // 1e12
+        return "\(wholeNumber(value / trillion))T"
     } else if value >= billion {
-        return "\(wholeNumber(value / billion))B"               // 1e9
+        return "\(wholeNumber(value / billion))B"
     } else if value >= million {
-        return "\(wholeNumber(value / million))M"               // 1e6
+        return "\(wholeNumber(value / million))M"
     } else if value >= thousand {
-        return "\(wholeNumber(value / thousand))k"              // 1e3
+        return "\(wholeNumber(value / thousand))k"
     } else {
-        // Below thousand
         return "\(wholeNumber(value))"
     }
 }
@@ -418,6 +416,14 @@ struct MonteCarloResultsView: View {
     @State private var brandNewLandscapeSnapshot: UIImage? = nil
     @State private var isGeneratingLandscape = false
     
+    // PORTRAIT MENU CHANGES START
+    @State private var showChartMenu = false
+    enum ChartType {
+        case btcPrice, cumulativePortfolio
+    }
+    @State private var selectedChart: ChartType = .btcPrice
+    // PORTRAIT MENU CHANGES END
+    
     init(simulations: [SimulationRun]) {
         _viewModel = StateObject(wrappedValue: ChartViewModel(simulations: simulations))
     }
@@ -428,7 +434,7 @@ struct MonteCarloResultsView: View {
         ZStack {
             Color.black.ignoresSafeArea()
             
-            // 1) Landscape logic
+            // 1) Landscape logic (unchanged)
             if isLandscape {
                 VStack(spacing: 0) {
                     Spacer().frame(height: 20)
@@ -459,6 +465,45 @@ struct MonteCarloResultsView: View {
                     MonteCarloChartView(viewModel: viewModel)
                         .environmentObject(orientationObserver)
                 }
+                
+                // PORTRAIT MENU CHANGES START
+                // Show a small drop-down if the user toggles the arrow.
+                if showChartMenu {
+                    VStack(spacing: 0) {
+                        // Increase from 90 to, say, 130
+                        Spacer().frame(height: 130)
+                        
+                        VStack(spacing: 0) {
+                            Button {
+                                selectedChart = .btcPrice
+                                showChartMenu = false
+                            } label: {
+                                Text("BTC Price Chart")
+                                    .foregroundColor(.white)
+                                    .padding()
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            .background(Color.black)
+                            
+                            Button {
+                                selectedChart = .cumulativePortfolio
+                                showChartMenu = false
+                            } label: {
+                                Text("Cumulative Portfolio")
+                                    .foregroundColor(.white)
+                                    .padding()
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            .background(Color.black)
+                        }
+                        .frame(maxWidth: 240)
+                        
+                        Spacer()
+                    }
+                    .transition(.opacity)
+                    .zIndex(3)
+                }
+                // PORTRAIT MENU CHANGES END
             }
             
             // Spinner if generating
@@ -472,9 +517,32 @@ struct MonteCarloResultsView: View {
                 }
             }
         }
-        .navigationTitle(isLandscape ? "" : "Monte Carlo – BTC Price (USD)")
+        .navigationTitle(
+            isLandscape
+            ? ""
+            : (selectedChart == .btcPrice
+               ? "Monte Carlo – BTC Price (USD)"
+               : "Cumulative Portfolio Returns")
+        )
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarHidden(isLandscape)
+        // PORTRAIT MENU CHANGES START
+        .toolbar {
+            // Show arrow only in portrait
+            if !isLandscape {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        withAnimation {
+                            showChartMenu.toggle()
+                        }
+                    } label: {
+                        Image(systemName: showChartMenu ? "chevron.up" : "chevron.down")
+                            .foregroundColor(.white)
+                    }
+                }
+            }
+        }
+        // PORTRAIT MENU CHANGES END
         .onAppear {
             // If we start in landscape
             if isLandscape {
