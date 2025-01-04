@@ -9,6 +9,9 @@ import SwiftUI
 import PDFKit
 import UniformTypeIdentifiers
 
+import Foundation
+import SwiftUI
+
 class PersistentInputManager: ObservableObject {
     // Existing fields
     @Published var iterations: String = "1000"
@@ -63,7 +66,6 @@ class PersistentInputManager: ObservableObject {
 
     /// Resets all text-based inputs to default values.
     func resetAllInputs() {
-        // Reset the @Published properties
         iterations = "1000"
         annualCAGR = "40.0"
         annualVolatility = "80.0"
@@ -103,14 +105,19 @@ class PersistentInputManager: ObservableObject {
         return Int(iterations.replacingOccurrences(of: ",", with: ""))
     }
 
+    /// Clamp the user’s typed Annual CAGR at 1000.
     func getParsedAnnualCAGR() -> Double {
         let rawValue = annualCAGR.replacingOccurrences(of: ",", with: "")
         print("Debug: Raw Annual CAGR String = \(rawValue)") // Debug log
+        
         guard let parsedValue = Double(rawValue) else {
             print("Debug: Parsing failed, returning default value.")
-            return 40.0 // Default to 40% if parsing fails
+            return 40.0
         }
-        return parsedValue // Don't divide by 100 here; handle that in the calculation
+        
+        // Enforce a maximum of 1000
+        let clampedValue = min(parsedValue, 1000.0)
+        return clampedValue
     }
 }
 

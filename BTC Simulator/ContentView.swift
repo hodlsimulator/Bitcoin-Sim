@@ -159,7 +159,7 @@ class PersistentInputManager: ObservableObject {
         UserDefaults.standard.set(btcHoldingsMinInput, forKey: "btcHoldingsMinInput")
         UserDefaults.standard.set(btcHoldingsMaxInput, forKey: "btcHoldingsMaxInput")
         UserDefaults.standard.set(btcGrowthRate, forKey: "btcGrowthRate")
-        
+
         UserDefaults.standard.set(threshold1, forKey: "threshold1")
         UserDefaults.standard.set(withdrawAmount1, forKey: "withdrawAmount1")
         UserDefaults.standard.set(threshold2, forKey: "threshold2")
@@ -178,12 +178,13 @@ class PersistentInputManager: ObservableObject {
         Int(iterations.replacingOccurrences(of: ",", with: ""))
     }
 
+    /// Clamps annualCAGR to 1000 if user typed something above that.
     func getParsedAnnualCAGR() -> Double {
         let rawValue = annualCAGR.replacingOccurrences(of: ",", with: "")
         guard let parsedValue = Double(rawValue) else {
             return 40.0
         }
-        return parsedValue
+        return min(parsedValue, 1000.0) // clamp at 1000
     }
 }
 

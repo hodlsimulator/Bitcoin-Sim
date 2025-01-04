@@ -44,6 +44,14 @@ HODL Simulator is a forward-looking modelling tool for anyone seeking to underst
    After all runs complete, the app computes a *median line*—a realistic midpoint at each week. On the chart, it’s rendered in orange, so you can see how the “middle ground” compares to the many individual paths.
 """)
 
+                // EXTREME PRICE SCENARIOS
+                Text("Extreme Price Scenarios")
+                    .font(.title2)
+                    .bold()
+                Text("""
+Because some factors can be dialled up quite high, HODL Simulator supports extraordinarily large BTC prices (up to decillions!). Behind the scenes, we store these prices using Decimal to avoid precision loss, and the y-axis now includes expanded suffixes like “N” (nonillion) and “D” (decillion). So, if you push every bullish factor to the max, rest assured the simulator can handle any moonshot scenario you throw at it!
+""")
+
                 // THE CHART
                 Text("Visualising the Future")
                     .font(.title2)

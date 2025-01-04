@@ -87,6 +87,7 @@ class SimulationCoordinator: ObservableObject {
             }
             
             // The user’s CAGR & Volatility as Doubles
+            // We now call getParsedAnnualCAGR() to clamp it to max 1000.
             let userInputCAGR = self.inputManager.getParsedAnnualCAGR() / 100.0
             let userInputVolatility = (Double(self.inputManager.annualVolatility) ?? 1.0) / 100.0
             let userWeeks = self.simSettings.userWeeks
@@ -99,7 +100,7 @@ class SimulationCoordinator: ObservableObject {
 
             let (medianRun, allIterations) = runMonteCarloSimulationsWithProgress(
                 settings: self.simSettings,
-                annualCAGR: userInputCAGR,
+                annualCAGR: userInputCAGR,      // <= clamped from above
                 annualVolatility: userInputVolatility,
                 correlationWithSP500: 0.0,
                 exchangeRateEURUSD: 1.06,
@@ -209,7 +210,6 @@ class SimulationCoordinator: ObservableObject {
     func convertAllSimsToWeekPoints() -> [SimulationRun] {
         allSimData.map { singleRun -> SimulationRun in
             let wpoints = singleRun.map { row in
-                // row.btcPriceUSD should be Decimal; if still Double, do Decimal(row.btcPriceUSD)
                 WeekPoint(week: row.week, value: row.btcPriceUSD)
             }
             return SimulationRun(points: wpoints)
@@ -293,7 +293,7 @@ class SimulationCoordinator: ObservableObject {
     }
     
     private func processAllResults(_ allResults: [[SimulationData]]) {
-        // Any post-processing you want
+        // Any post-processing you might need
     }
 }
 

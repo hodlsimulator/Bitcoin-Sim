@@ -69,48 +69,63 @@ class ChartViewModel: ObservableObject {
 
 // MARK: - Number Formatting (Decimal)
 
-// 1e3 ... 1e33
-private let thousand     = Decimal(string: "1e3")!
-private let million      = Decimal(string: "1e6")!
-private let billion      = Decimal(string: "1e9")!
-private let trillion     = Decimal(string: "1e12")!
-private let quadrillion  = Decimal(string: "1e15")!
-private let quintillion  = Decimal(string: "1e18")!
-private let sextillion   = Decimal(string: "1e21")!
-private let septillion   = Decimal(string: "1e24")!
-private let octillion    = Decimal(string: "1e27")!
-private let nonillion    = Decimal(string: "1e30")!
-private let decillion    = Decimal(string: "1e33")!
+// 1e3 ... 1e45
+private let thousand          = Decimal(string: "1e3")!
+private let million           = Decimal(string: "1e6")!
+private let billion           = Decimal(string: "1e9")!
+private let trillion          = Decimal(string: "1e12")!
+private let quadrillion       = Decimal(string: "1e15")!
+private let quintillion       = Decimal(string: "1e18")!
+private let sextillion        = Decimal(string: "1e21")!
+private let septillion        = Decimal(string: "1e24")!
+private let octillion         = Decimal(string: "1e27")!
+private let nonillion         = Decimal(string: "1e30")!
+private let decillion         = Decimal(string: "1e33")!
+private let undecillion       = Decimal(string: "1e36")!
+private let duodecillion      = Decimal(string: "1e39")!
+private let tredecillion      = Decimal(string: "1e42")!
+private let quattuordecillion = Decimal(string: "1e45")!
 
 func formatSuffix(_ value: Decimal) -> String {
     func wholeNumber(_ x: Decimal) -> Int {
+        // Convert Decimal → Int (rounded)
         let rounded = NSDecimalNumber(decimal: x).rounding(accordingToBehavior: nil)
         return rounded.intValue
     }
     
-    if value >= decillion {
-        return "\(wholeNumber(value / decillion))D"
+    // Compare in descending order (largest first)
+    if value >= quattuordecillion {
+        return "\(wholeNumber(value / quattuordecillion))Qd"    // 1e45
+    } else if value >= tredecillion {
+        return "\(wholeNumber(value / tredecillion))Td"         // 1e42
+    } else if value >= duodecillion {
+        return "\(wholeNumber(value / duodecillion))Do"         // 1e39
+    } else if value >= undecillion {
+        return "\(wholeNumber(value / undecillion))U"           // 1e36
+    } else if value >= decillion {
+        return "\(wholeNumber(value / decillion))D"             // 1e33
     } else if value >= nonillion {
-        return "\(wholeNumber(value / nonillion))N"
+        return "\(wholeNumber(value / nonillion))N"             // 1e30
     } else if value >= octillion {
-        return "\(wholeNumber(value / octillion))O"
+        return "\(wholeNumber(value / octillion))O"             // 1e27
     } else if value >= septillion {
-        return "\(wholeNumber(value / septillion))S"
+        return "\(wholeNumber(value / septillion))S"            // 1e24
     } else if value >= sextillion {
-        return "\(wholeNumber(value / sextillion))Se"
+        return "\(wholeNumber(value / sextillion))Se"           // 1e21
     } else if value >= quintillion {
-        return "\(wholeNumber(value / quintillion))Qn"
+        return "\(wholeNumber(value / quintillion))Qn"          // 1e18
     } else if value >= quadrillion {
-        return "\(wholeNumber(value / quadrillion))Q"
+        return "\(wholeNumber(value / quadrillion))Q"           // 1e15
     } else if value >= trillion {
-        return "\(wholeNumber(value / trillion))T"
+        return "\(wholeNumber(value / trillion))T"              // 1e12
     } else if value >= billion {
-        return "\(wholeNumber(value / billion))B"
+        return "\(wholeNumber(value / billion))B"               // 1e9
     } else if value >= million {
-        return "\(wholeNumber(value / million))M"
+        return "\(wholeNumber(value / million))M"               // 1e6
     } else if value >= thousand {
-        return "\(wholeNumber(value / thousand))k"
+        return "\(wholeNumber(value / thousand))k"              // 1e3
     } else {
+        // Below thousand
         return "\(wholeNumber(value))"
     }
 }
