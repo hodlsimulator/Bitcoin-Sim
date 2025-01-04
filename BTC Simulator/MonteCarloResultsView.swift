@@ -80,23 +80,17 @@ fileprivate func weeksToYears(_ weeks: Int) -> Double {
 
 @ChartContentBuilder
 func simulationLines(simulations: [SimulationRun]) -> some ChartContent {
-    // Your existing rainbow palette
     let customPalette: [Color] = [
-        // Reds / Oranges / Yellows
         Color(hue: 0.0,  saturation: 1.0, brightness: 0.8),
         Color(hue: 0.0,  saturation: 0.3, brightness: 1.0),
         Color(hue: 0.08, saturation: 1.0, brightness: 1.0),
         Color(hue: 0.08, saturation: 0.3, brightness: 1.0),
         Color(hue: 0.13, saturation: 1.0, brightness: 1.0),
         Color(hue: 0.13, saturation: 0.3, brightness: 1.0),
-        
-        // Some blues/purples
         Color(hue: 0.55, saturation: 1.0, brightness: 0.9),
         Color(hue: 0.55, saturation: 0.3, brightness: 0.9),
         Color(hue: 0.7,  saturation: 0.6, brightness: 0.8),
         Color(hue: 0.7,  saturation: 0.3, brightness: 0.9),
-        
-        // Greens / cyans but muted
         Color(hue: 0.28, saturation: 0.7, brightness: 0.8),
         Color(hue: 0.28, saturation: 0.3, brightness: 0.9),
         Color(hue: 0.47, saturation: 0.7, brightness: 0.8),
@@ -150,62 +144,110 @@ func medianLines(simulations: [SimulationRun], medianLine: [WeekPoint]) -> some 
 
 struct MonteCarloChartView: View {
     @ObservedObject var viewModel: ChartViewModel
-    
+    @EnvironmentObject var orientationObserver: OrientationObserver
+
     var body: some View {
-        let _ = print("// DEBUG: MonteCarloChartView -> Checking isLoading: \(viewModel.isLoading)")
-        
-        return Group {
+        Group {
             if viewModel.isLoading {
-                // If we were loading
                 ProgressView("Loading…")
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(Color.black.ignoresSafeArea())
             } else {
-                // Show the actual chart
-                Chart {
-                    simulationLines(simulations: viewModel.simulations)
-                    medianLines(simulations: viewModel.simulations, medianLine: viewModel.medianLine)
-                }
-                .chartLegend(.hidden)
-                .chartXScale(domain: 0.0...20.0, type: .linear)
-                .chartYScale(domain: .automatic(includesZero: false), type: .log)
-                .chartXAxis {
-                    let yearMarkers = [5.0, 10.0, 15.0, 20.0]
-                    AxisMarks(values: yearMarkers) { axisValue in
-                        AxisGridLine(centered: false)
-                            .foregroundStyle(.white.opacity(0.3))
-                        AxisTick(centered: false)
-                            .foregroundStyle(.white.opacity(0.3))
-                        AxisValueLabel(centered: false) {
-                            if let yearVal = axisValue.as(Double.self) {
-                                Text("\(Int(yearVal))")
-                                    .font(.system(size: 14))
-                                    .foregroundColor(.white)
+                if orientationObserver.isLandscape {
+                    // Fullscreen in landscape with scaleEffect to avoid clipping
+                    GeometryReader { geo in
+                        ZStack {
+                            Color.black.ignoresSafeArea()
+                            
+                            Chart {
+                                simulationLines(simulations: viewModel.simulations)
+                                medianLines(simulations: viewModel.simulations, medianLine: viewModel.medianLine)
+                            }
+                            .chartLegend(.hidden)
+                            .chartXScale(domain: 0.0...20.0, type: .linear)
+                            .chartYScale(domain: .automatic(includesZero: false), type: .log)
+                            .chartXAxis {
+                                let yearMarkers = [5.0, 10.0, 15.0, 20.0]
+                                AxisMarks(values: yearMarkers) { axisValue in
+                                    AxisGridLine(centered: false)
+                                        .foregroundStyle(.white.opacity(0.3))
+                                    AxisTick(centered: false)
+                                        .foregroundStyle(.white.opacity(0.3))
+                                    AxisValueLabel(centered: false) {
+                                        if let yearVal = axisValue.as(Double.self) {
+                                            Text("\(Int(yearVal))")
+                                                .foregroundColor(.white)
+                                        }
+                                    }
+                                }
+                            }
+                            .chartYAxis {
+                                AxisMarks(position: .leading) { axisValue in
+                                    AxisGridLine()
+                                        .foregroundStyle(.white.opacity(0.3))
+                                    AxisTick()
+                                        .foregroundStyle(.white.opacity(0.3))
+                                    AxisValueLabel {
+                                        if let val = axisValue.as(Double.self) {
+                                            Text(formatSuffix(val))
+                                                .foregroundColor(.white)
+                                        }
+                                    }
+                                }
+                            }
+                            // Scale it a bit so the top doesn't get cut off
+                            .frame(width: geo.size.width, height: geo.size.height)
+                            .scaleEffect(x: 1.0, y: 0.95, anchor: .bottom)
+                            .clipped()
+                        }
+                    }
+                    .navigationBarHidden(true)
+                } else {
+                    // Portrait layout
+                    Chart {
+                        simulationLines(simulations: viewModel.simulations)
+                        medianLines(simulations: viewModel.simulations, medianLine: viewModel.medianLine)
+                    }
+                    .chartLegend(.hidden)
+                    .chartXScale(domain: 0.0...20.0, type: .linear)
+                    .chartYScale(domain: .automatic(includesZero: false), type: .log)
+                    .chartXAxis {
+                        let yearMarkers = [5.0, 10.0, 15.0, 20.0]
+                        AxisMarks(values: yearMarkers) { axisValue in
+                            AxisGridLine(centered: false)
+                                .foregroundStyle(.white.opacity(0.3))
+                            AxisTick(centered: false)
+                                .foregroundStyle(.white.opacity(0.3))
+                            AxisValueLabel(centered: false) {
+                                if let yearVal = axisValue.as(Double.self) {
+                                    Text("\(Int(yearVal))")
+                                        .foregroundColor(.white)
+                                }
                             }
                         }
                     }
-                }
-                .chartYAxis {
-                    AxisMarks(position: .leading) { axisValue in
-                        AxisGridLine()
-                            .foregroundStyle(.white.opacity(0.3))
-                        AxisTick()
-                            .foregroundStyle(.white.opacity(0.3))
-                        AxisValueLabel {
-                            if let val = axisValue.as(Double.self) {
-                                Text(formatSuffix(val))
-                                    .font(.system(size: 14))
-                                    .foregroundColor(.white)
+                    .chartYAxis {
+                        AxisMarks(position: .leading) { axisValue in
+                            AxisGridLine()
+                                .foregroundStyle(.white.opacity(0.3))
+                            AxisTick()
+                                .foregroundStyle(.white.opacity(0.3))
+                            AxisValueLabel {
+                                if let val = axisValue.as(Double.self) {
+                                    Text(formatSuffix(val))
+                                        .foregroundColor(.white)
+                                }
                             }
                         }
                     }
+                    .padding(.vertical, 16)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.black.opacity(0.2))
+                    )
+                    .navigationBarHidden(false)
                 }
-                .padding(.vertical, 16)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.black.opacity(0.2))
-                )
             }
         }
     }
@@ -263,25 +305,21 @@ func squishPortraitImage(_ portraitImage: UIImage) -> UIImage {
 }
 
 // MARK: - Main Results View
+
 struct MonteCarloResultsView: View {
     @StateObject private var viewModel: ChartViewModel
     @EnvironmentObject var chartDataCache: ChartDataCache
-
+    
     @StateObject private var orientationObserver = OrientationObserver()
-
-    // Immediate squished version
+    
     @State private var squishedLandscape: UIImage? = nil
-
-    // True freshly generated landscape chart
     @State private var brandNewLandscapeSnapshot: UIImage? = nil
-
-    // Show/hide spinner
     @State private var isGeneratingLandscape = false
-
+    
     init(simulations: [SimulationRun]) {
         _viewModel = StateObject(wrappedValue: ChartViewModel(simulations: simulations))
     }
-
+    
     var body: some View {
         let isLandscape = orientationObserver.isLandscape
         
@@ -290,23 +328,25 @@ struct MonteCarloResultsView: View {
             
             // 1) Landscape logic
             if isLandscape {
-                // If we have a brand new snapshot, show it
-                if let freshLandscape = brandNewLandscapeSnapshot {
-                    Image(uiImage: freshLandscape)
-                        .resizable()
-                        .scaledToFit()
-                }
-                // Otherwise show the squished portrait
-                else if let squished = squishedLandscape {
-                    Image(uiImage: squished)
-                        .resizable()
-                        .scaledToFit()
-                }
-                // Fallback if we don’t have either yet
-                else if let portrait = chartDataCache.chartSnapshot {
-                    SquishedLandscapePlaceholderView(image: portrait)
-                } else {
-                    MonteCarloChartView(viewModel: viewModel)
+                VStack(spacing: 0) { // Nudges the chart down 20px for landscape
+                    Spacer().frame(height: 20)
+                    
+                    if let freshLandscape = brandNewLandscapeSnapshot {
+                        Image(uiImage: freshLandscape)
+                            .resizable()
+                            .scaledToFit()
+                    }
+                    else if let squished = squishedLandscape {
+                        Image(uiImage: squished)
+                            .resizable()
+                            .scaledToFit()
+                    }
+                    else if let portrait = chartDataCache.chartSnapshot {
+                        SquishedLandscapePlaceholderView(image: portrait)
+                    } else {
+                        MonteCarloChartView(viewModel: viewModel)
+                            .environmentObject(orientationObserver)
+                    }
                 }
             }
             // 2) Portrait logic
@@ -315,9 +355,10 @@ struct MonteCarloResultsView: View {
                     SnapshotView(snapshot: portrait)
                 } else {
                     MonteCarloChartView(viewModel: viewModel)
+                        .environmentObject(orientationObserver)
                 }
             }
-
+            
             // Spinner if generating
             if isGeneratingLandscape {
                 Color.black.opacity(0.6).ignoresSafeArea()
@@ -329,68 +370,64 @@ struct MonteCarloResultsView: View {
                 }
             }
         }
+        // Removed the .offset call
+        // Show/hide nav bar and title
+        .navigationTitle(isLandscape ? "" : "Monte Carlo – BTC Price (USD)")
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarHidden(isLandscape)
+        .onAppear {
+            // If we start in landscape
+            if isLandscape {
+                if let portrait = chartDataCache.chartSnapshot {
+                    squishedLandscape = squishPortraitImage(portrait)
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    isGeneratingLandscape = true
+                    buildTrueLandscapeSnapshot { newSnapshot in
+                        brandNewLandscapeSnapshot = newSnapshot
+                        isGeneratingLandscape = false
+                    }
+                }
+            }
+        }
         .onChange(of: isLandscape) { newVal in
             if newVal {
-                // 1) Immediately do the squish
                 if let portrait = chartDataCache.chartSnapshot {
-                    // Put this in a minimal async to ensure it happens on the main loop
                     DispatchQueue.main.async {
                         squishedLandscape = squishPortraitImage(portrait)
                     }
                 }
-
-                // 2) Then wait ~0.2s so SwiftUI can render the squished image
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                    // Now show spinner
                     isGeneratingLandscape = true
-
-                    // Build fresh chart
                     buildTrueLandscapeSnapshot { newSnapshot in
                         brandNewLandscapeSnapshot = newSnapshot
                         isGeneratingLandscape = false
                     }
                 }
             } else {
-                // Clear everything on returning to portrait
                 squishedLandscape = nil
                 brandNewLandscapeSnapshot = nil
                 isGeneratingLandscape = false
             }
         }
-        .onAppear {
-            // If we start in landscape
-            if orientationObserver.isLandscape {
-                // Show the squish first
-                if let portrait = chartDataCache.chartSnapshot {
-                    squishedLandscape = squishPortraitImage(portrait)
-                }
-                // Then short delay
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                    isGeneratingLandscape = true
-                    buildTrueLandscapeSnapshot { newSnapshot in
-                        brandNewLandscapeSnapshot = newSnapshot
-                        isGeneratingLandscape = false
-                    }
-                }
-            }
-        }
-        .navigationTitle("Monte Carlo – BTC Price (USD)")
-        .navigationBarTitleDisplayMode(.inline)
     }
-
-    // Your “true” snapshot builder
+    
+    // Build the “true” snapshot in a wide frame
     private func buildTrueLandscapeSnapshot(completion: @escaping (UIImage) -> Void) {
         let wideChart = MonteCarloChartView(viewModel: viewModel)
+            .environmentObject(orientationObserver)
             .frame(width: 800, height: 400)
             .background(Color.black)
+        
         completion(wideChart.snapshot())
     }
 }
 
+// MARK: - ForceReflowView
+
 struct ForceReflowView<Content: View>: View {
     let content: Content
     
-    // This custom init captures your closure as a stored View.
     init(@ViewBuilder content: () -> Content) {
         self.content = content()
     }
