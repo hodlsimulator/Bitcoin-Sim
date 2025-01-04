@@ -17,6 +17,7 @@ struct BTCMonteCarloApp: App {
 
     init() {
         // Force dark navigation so it doesn't momentarily flash white.
+        // Also forced the keyboard to a dark theme:
         let appearance = UINavigationBarAppearance()
         appearance.configureWithOpaqueBackground()
         appearance.backgroundColor = UIColor.black
@@ -55,8 +56,7 @@ struct BTCMonteCarloApp: App {
                             .environmentObject(chartDataCache)
                             .environmentObject(appViewModel)
                     }
-                    // .preferredColorScheme(.dark) also helps maintain a dark style
-                    .preferredColorScheme(.dark)
+                    .preferredColorScheme(.dark)  // maintain a dark style
                 } else {
                     NavigationStack {
                         OnboardingView(didFinishOnboarding: $didFinishOnboarding)
