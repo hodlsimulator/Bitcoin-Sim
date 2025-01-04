@@ -12,17 +12,30 @@ struct BTCMonteCarloApp: App {
     @AppStorage("hasOnboarded") private var didFinishOnboarding = false
 
     @StateObject private var simSettings = SimulationSettings()
-    @StateObject private var chartDataCache = ChartDataCache() // Keep chart data & input hash
-    @StateObject private var appViewModel = AppViewModel()      // Observe and publish window size changes
+    @StateObject private var chartDataCache = ChartDataCache()
+    @StateObject private var appViewModel = AppViewModel()
 
     init() {
-        print("// DEBUG: BTCMonteCarloApp init - chartDataCache created!")
+        // Force dark navigation so it doesn't momentarily flash white.
+        let appearance = UINavigationBarAppearance()
+        appearance.configureWithOpaqueBackground()
+        appearance.backgroundColor = UIColor.black
+        appearance.titleTextAttributes = [.foregroundColor: UIColor.white]
+        
+        UINavigationBar.appearance().standardAppearance = appearance
+        UINavigationBar.appearance().scrollEdgeAppearance = appearance
+        UINavigationBar.appearance().compactAppearance = appearance
+        UINavigationBar.appearance().isTranslucent = false
+        UINavigationBar.appearance().tintColor = .white
     }
 
     var body: some Scene {
         WindowGroup {
             ZStack {
-                // A clear GeometryReader to detect window size changes.
+                // Force a dark background behind everything to kill white flashes on rotation.
+                Color.black.ignoresSafeArea()
+
+                // Track window size changes.
                 GeometryReader { geo in
                     Color.clear
                         .onAppear {
@@ -34,7 +47,7 @@ struct BTCMonteCarloApp: App {
                         }
                 }
 
-                // Normal app flow.
+                // Normal app flow
                 if didFinishOnboarding {
                     NavigationStack {
                         ContentView()
@@ -42,6 +55,8 @@ struct BTCMonteCarloApp: App {
                             .environmentObject(chartDataCache)
                             .environmentObject(appViewModel)
                     }
+                    // .preferredColorScheme(.dark) also helps maintain a dark style
+                    .preferredColorScheme(.dark)
                 } else {
                     NavigationStack {
                         OnboardingView(didFinishOnboarding: $didFinishOnboarding)
@@ -49,13 +64,13 @@ struct BTCMonteCarloApp: App {
                             .environmentObject(chartDataCache)
                             .environmentObject(appViewModel)
                     }
+                    .preferredColorScheme(.dark)
                 }
             }
         }
     }
 }
 
-// NEW: Simple ObservableObject to store and publish the window size.
 @MainActor
 class AppViewModel: ObservableObject {
     @Published var windowSize: CGSize = .zero

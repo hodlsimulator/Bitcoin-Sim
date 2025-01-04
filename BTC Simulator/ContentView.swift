@@ -16,6 +16,10 @@ extension View {
     func snapshot() -> UIImage {
         let controller = UIHostingController(rootView: self)
         
+        // Force a dark (or clear) background to avoid white flashes
+        controller.view.backgroundColor = UIColor.black
+        controller.view.isOpaque = true
+        
         // Force layout so SwiftUI knows its size
         controller.view.layoutIfNeeded()
         
