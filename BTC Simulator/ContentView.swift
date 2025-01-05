@@ -33,7 +33,7 @@ extension View {
             controller.view.drawHierarchy(in: controller.view.bounds, afterScreenUpdates: true)
         }
         
-        // Debug print: log the snapshot size
+        // ADDED:
         print("// DEBUG: snapshot() -> image size = \(image.size)")
         
         return image
@@ -285,6 +285,10 @@ class ChartDataCache: ObservableObject {
     // For iOS, store a snapshot as UIImage
     @Published var chartSnapshot: UIImage?
     @Published var chartSnapshotLandscape: UIImage?
+    
+    @Published var portfolioChartSnapshot: UIImage?
+    @Published var portfolioChartSnapshotLandscape: UIImage?
+    @Published var portfolioRuns: [SimulationRun]?
 }
 
 // MARK: - ContentView
@@ -414,7 +418,7 @@ struct ContentView: View {
     
     @State private var showSettings = false
     @State private var showAbout = false
-    @State private var showHistograms = false  // We'll present a .sheet now.
+    @State private var showHistograms = false
     @State private var showGraphics = false
     
     @State private var tenthPercentileResults: [SimulationData] = []
@@ -432,7 +436,7 @@ struct ContentView: View {
     
     @State private var showSnapshotView = false
     @State private var showSnapshotsDebug = false
-    
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -456,7 +460,6 @@ struct ContentView: View {
                     loadingOverlayCombined
                 }
             }
-            // Keep these two navigation destinations if you like:
             .navigationDestination(isPresented: $showSettings) {
                 SettingsView()
                     .environmentObject(simSettings)
@@ -464,14 +467,11 @@ struct ContentView: View {
             .navigationDestination(isPresented: $showAbout) {
                 AboutView()
             }
-            // Keep the debug navigation if needed:
             .navigationDestination(isPresented: $showSnapshotsDebug) {
                 SnapshotsDebugView()
                     .environmentObject(coordinator.chartDataCache)
             }
             .onAppear {
-                print("// DEBUG: ContentView onAppear called.")
-                
                 let savedWeek = UserDefaults.standard.integer(forKey: "lastViewedWeek")
                 if savedWeek != 0 {
                     lastViewedWeek = savedWeek
@@ -487,7 +487,6 @@ struct ContentView: View {
                 }
             }
         }
-        // 2) Present the chart as a navigation destination using ForceReflowView:
         .navigationDestination(isPresented: $showHistograms) {
             ForceReflowView {
                 if let existingChartData = coordinator.chartDataCache.allRuns {
@@ -514,6 +513,7 @@ struct ContentView: View {
                     
                     if coordinator.isLoading && !coordinator.isChartBuilding {
                         Button(action: {
+                            // ADDED:
                             print("// DEBUG: Cancel button tapped in combined overlay.")
                             coordinator.isCancelled = true
                             coordinator.isLoading = false
@@ -558,6 +558,11 @@ struct ContentView: View {
                                 )
                             )
                             .scaleEffect(2.0)
+                        
+                        // ADDED:
+                        Text("// DEBUG: Currently building chart…")
+                            .foregroundColor(.white)
+                            .font(.footnote)
                     }
                     .offset(y: 270)
 
@@ -582,6 +587,7 @@ struct ContentView: View {
     }
     
     private func invalidateChartIfInputChanged() {
+        // ADDED:
         print("DEBUG: invalidateChartIfInputChanged() => clearing chartDataCache.")
         coordinator.chartDataCache.allRuns = nil
         coordinator.chartDataCache.storedInputsHash = nil
@@ -641,7 +647,6 @@ struct ContentView: View {
                     .foregroundColor(.gray)
                 
                 VStack(alignment: .leading, spacing: 16) {
-                    
                     // Iterations Field
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Iterations")
@@ -711,6 +716,10 @@ struct ContentView: View {
                         activeField = nil
                         coordinator.isLoading = true
                         coordinator.isChartBuilding = false
+                        
+                        // ADDED:
+                        print("// DEBUG: RUN SIMULATION tapped with \(inputManager.iterations) iterations.")
+                        
                         coordinator.runSimulation()
                     } label: {
                         Text("RUN SIMULATION")
@@ -742,6 +751,7 @@ struct ContentView: View {
                 VStack(spacing: 0) {
                     HStack {
                         Button(action: {
+                            // ADDED:
                             print("// DEBUG: Back button tapped in simulationResultsView.")
                             UserDefaults.standard.set(lastViewedWeek, forKey: "lastViewedWeek")
                             UserDefaults.standard.set(currentPage, forKey: "lastViewedPage")
@@ -756,6 +766,7 @@ struct ContentView: View {
                         Spacer()
                         
                         Button(action: {
+                            // ADDED:
                             print("// DEBUG: Chart button pressed.")
                             print("// DEBUG: chartDataCache.chartSnapshot == \(coordinator.chartDataCache.chartSnapshot == nil ? "nil" : "non-nil")")
                             
@@ -765,7 +776,6 @@ struct ContentView: View {
                                 print("// DEBUG: chartDataCache.allRuns is nil.")
                             }
                             
-                            // Instead of a navigation, show the sheet
                             showHistograms = true
                         }) {
                             Image(systemName: "chart.line.uptrend.xyaxis")
@@ -962,7 +972,8 @@ struct ContentView: View {
                     contentScrollProxy = scrollProxy
                 }
                 .onDisappear {
-                    print("// DEBUG: simulationResultsView onDisappear => saving lastViewedWeek, lastViewedPage.")
+                    // ADDED:
+                    print("// DEBUG: simulationResultsView onDisappear => saving lastViewedWeek=\(lastViewedWeek), lastViewedPage=\(currentPage).")
                     UserDefaults.standard.set(lastViewedWeek, forKey: "lastViewedWeek")
                     UserDefaults.standard.set(currentPage, forKey: "lastViewedPage")
                 }
@@ -993,7 +1004,9 @@ struct ContentView: View {
             HStack {
                 Spacer()
                 Button(action: {
+                    // ADDED:
                     print("// DEBUG: transitionToResultsButton tapped => showing simulation screen.")
+                    
                     coordinator.isSimulationRun = true
                     currentPage = lastViewedPage
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -1055,7 +1068,6 @@ struct ContentView: View {
     private func getValue(_ item: SimulationData, _ keyPath: PartialKeyPath<SimulationData>) -> String {
         // 1) If the field is a Decimal:
         if let decimalVal = item[keyPath: keyPath] as? Decimal {
-            // Convert Decimal → Double to reuse your existing currency format
             let doubleValue = NSDecimalNumber(decimal: decimalVal).doubleValue
             return doubleValue.formattedCurrency()
             
@@ -1080,9 +1092,8 @@ struct ContentView: View {
         // 3) If the field is an Int:
         } else if let intVal = item[keyPath: keyPath] as? Int {
             return "\(intVal)"
-            
-        // 4) Otherwise (e.g. a String?), return empty or handle differently:
         } else {
+            // 4) Otherwise (e.g. a String?), return empty or handle differently:
             return ""
         }
     }

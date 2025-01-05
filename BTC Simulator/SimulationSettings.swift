@@ -718,6 +718,9 @@ class SimulationSettings: ObservableObject {
         
         isInitialized = true
         syncToggleAllState()
+        
+        // ADDED: Print all the settings once we've loaded them
+        printAllSettings()
     }
     
     // MARK: - Run Simulation
@@ -778,7 +781,7 @@ class SimulationSettings: ObservableObject {
         defaults.removeObject(forKey: "useRecession")
         defaults.removeObject(forKey: "maxRecessionDrop")
         
-        // Optionally also remove lockHistoricalSampling if you want to revert that to false // <-- NEW
+        // Optionally also remove lockHistoricalSampling
         defaults.removeObject(forKey: "lockHistoricalSampling")  // optional line
 
         // Reassign them to the new midpoints
@@ -848,7 +851,44 @@ class SimulationSettings: ObservableObject {
         // Enable everything
         toggleAll = true
         
-        // Optionally reset lockHistoricalSampling to false // <-- NEW
+        // Optionally reset lockHistoricalSampling to false
         lockHistoricalSampling = false
+    }
+    
+    // ADDED: This helper prints out relevant toggles & settings
+    private func printAllSettings() {
+        print("// DEBUG: SimulationSettings init => userWeeks=\(userWeeks), initialBTCPriceUSD=\(initialBTCPriceUSD)")
+        print("// DEBUG:   startingBalance=\(startingBalance), averageCostBasis=\(averageCostBasis)")
+        print("// DEBUG:   lockedRandomSeed=\(lockedRandomSeed), seedValue=\(seedValue), useRandomSeed=\(useRandomSeed)")
+        
+        // BULLISH
+        print("// DEBUG: BULLISH FACTORS =>")
+        print("// DEBUG:   useHalving=\(useHalving), halvingBump=\(halvingBump)")
+        print("// DEBUG:   useInstitutionalDemand=\(useInstitutionalDemand), maxDemandBoost=\(maxDemandBoost)")
+        print("// DEBUG:   useCountryAdoption=\(useCountryAdoption), maxCountryAdBoost=\(maxCountryAdBoost)")
+        print("// DEBUG:   useRegulatoryClarity=\(useRegulatoryClarity), maxClarityBoost=\(maxClarityBoost)")
+        print("// DEBUG:   useEtfApproval=\(useEtfApproval), maxEtfBoost=\(maxEtfBoost)")
+        print("// DEBUG:   useTechBreakthrough=\(useTechBreakthrough), maxTechBoost=\(maxTechBoost)")
+        print("// DEBUG:   useScarcityEvents=\(useScarcityEvents), maxScarcityBoost=\(maxScarcityBoost)")
+        print("// DEBUG:   useGlobalMacroHedge=\(useGlobalMacroHedge), maxMacroBoost=\(maxMacroBoost)")
+        print("// DEBUG:   useStablecoinShift=\(useStablecoinShift), maxStablecoinBoost=\(maxStablecoinBoost)")
+        print("// DEBUG:   useDemographicAdoption=\(useDemographicAdoption), maxDemoBoost=\(maxDemoBoost)")
+        print("// DEBUG:   useAltcoinFlight=\(useAltcoinFlight), maxAltcoinBoost=\(maxAltcoinBoost)")
+        print("// DEBUG:   useAdoptionFactor=\(useAdoptionFactor), adoptionBaseFactor=\(adoptionBaseFactor)")
+        
+        // BEARISH
+        print("// DEBUG: BEARISH FACTORS =>")
+        print("// DEBUG:   useRegClampdown=\(useRegClampdown), maxClampDown=\(maxClampDown)")
+        print("// DEBUG:   useCompetitorCoin=\(useCompetitorCoin), maxCompetitorBoost=\(maxCompetitorBoost)")
+        print("// DEBUG:   useSecurityBreach=\(useSecurityBreach), breachImpact=\(breachImpact)")
+        print("// DEBUG:   useBubblePop=\(useBubblePop), maxPopDrop=\(maxPopDrop)")
+        print("// DEBUG:   useStablecoinMeltdown=\(useStablecoinMeltdown), maxMeltdownDrop=\(maxMeltdownDrop)")
+        print("// DEBUG:   useBlackSwan=\(useBlackSwan), blackSwanDrop=\(blackSwanDrop)")
+        print("// DEBUG:   useBearMarket=\(useBearMarket), bearWeeklyDrift=\(bearWeeklyDrift)")
+        print("// DEBUG:   useMaturingMarket=\(useMaturingMarket), maxMaturingDrop=\(maxMaturingDrop)")
+        print("// DEBUG:   useRecession=\(useRecession), maxRecessionDrop=\(maxRecessionDrop)")
+        
+        print("// DEBUG: lockHistoricalSampling=\(lockHistoricalSampling)")
+        print("// DEBUG: toggleAll=\(toggleAll), areAllFactorsEnabled=\(areAllFactorsEnabled)")
     }
 }

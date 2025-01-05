@@ -87,26 +87,28 @@ class SimulationCoordinator: ObservableObject {
             }
             
             // The user’s CAGR & Volatility as Doubles
-            // We now call getParsedAnnualCAGR() to clamp it to max 1000.
             let userInputCAGR = self.inputManager.getParsedAnnualCAGR() / 100.0
             let userInputVolatility = (Double(self.inputManager.annualVolatility) ?? 1.0) / 100.0
             let userWeeks = self.simSettings.userWeeks
+
+            // ADDED:
+            print("// DEBUG: userInputCAGR => \(userInputCAGR * 100)%")
+            print("// DEBUG: userInputVolatility => \(userInputVolatility * 100)%")
             
             // If initialBTCPriceUSD is a Double, convert to Decimal:
             let userPriceUSDAsDecimal = Decimal(self.simSettings.initialBTCPriceUSD)
-            
             // Convert your Decimal to Double right before calling:
             let userPriceUSDAsDouble = NSDecimalNumber(decimal: userPriceUSDAsDecimal).doubleValue
 
             let (medianRun, allIterations) = runMonteCarloSimulationsWithProgress(
                 settings: self.simSettings,
-                annualCAGR: userInputCAGR,      // <= clamped from above
+                annualCAGR: userInputCAGR,
                 annualVolatility: userInputVolatility,
                 correlationWithSP500: 0.0,
                 exchangeRateEURUSD: 1.06,
                 userWeeks: userWeeks,
                 iterations: total,
-                initialBTCPriceUSD: userPriceUSDAsDouble, // pass Double here
+                initialBTCPriceUSD: userPriceUSDAsDouble,
                 isCancelled: { self.isCancelled },
                 progressCallback: { completed in
                     if !self.isCancelled {
@@ -128,13 +130,15 @@ class SimulationCoordinator: ObservableObject {
             let finalRuns = allIterations.map { ($0.last?.btcPriceUSD ?? Decimal.zero, $0) }
             let sortedRuns = finalRuns.sorted { $0.0 < $1.0 }
             
+            // ADDED: Log sortedRuns count & sample final prices
+            print("// DEBUG: sortedRuns => \(sortedRuns.count) runs. Sample final price range => first: \(sortedRuns.first?.0 ?? 0) ... last: \(sortedRuns.last?.0 ?? 0)")
+            
             if !sortedRuns.isEmpty {
                 DispatchQueue.main.async {
                     self.isLoading = false
                     self.isChartBuilding = true
                     print("// DEBUG: Simulation finished => isChartBuilding=true now.")
                     
-                    // Indices
                     let tenthIndex     = max(0, Int(Double(sortedRuns.count - 1) * 0.10))
                     let medianIndex    = sortedRuns.count / 2
                     let ninetiethIndex = min(sortedRuns.count - 1, Int(Double(sortedRuns.count - 1) * 0.90))
@@ -143,6 +147,14 @@ class SimulationCoordinator: ObservableObject {
                     let singleMedianRun = sortedRuns[medianIndex].1
                     let ninetiethRun    = sortedRuns[ninetiethIndex].1
                     let medianLineData  = self.computeMedianSimulationData(allIterations: allIterations)
+                    
+                    // ADDED: log final prices in each percentile run
+                    print("// DEBUG: Tenth final BTC price => \(tenthRun.last?.btcPriceUSD ?? 0)")
+                    print("// DEBUG: Median final BTC price => \(singleMedianRun.last?.btcPriceUSD ?? 0)")
+                    print("// DEBUG: Ninetieth final BTC price => \(ninetiethRun.last?.btcPriceUSD ?? 0)")
+                    
+                    // ADDED: log medianLineData info
+                    print("// DEBUG: medianLineData => \(medianLineData.count) weeks. First price => \(medianLineData.first?.btcPriceUSD ?? 0), last => \(medianLineData.last?.btcPriceUSD ?? 0)")
                     
                     self.tenthPercentileResults = tenthRun
                     self.medianResults = singleMedianRun
@@ -163,6 +175,9 @@ class SimulationCoordinator: ObservableObject {
                     self.chartDataCache.chartSnapshotLandscape = nil
                     self.chartDataCache.allRuns = allSimsAsWeekPoints
                     self.chartDataCache.storedInputsHash = newHash
+                    
+                    // ADDED: log new chartDataCache status
+                    print("// DEBUG: chartDataCache => storedInputsHash=\(newHash), allRuns.count=\(allSimsAsWeekPoints.count)")
                     
                     // Build only the portrait snapshot
                     DispatchQueue.main.async {
@@ -293,7 +308,9 @@ class SimulationCoordinator: ObservableObject {
     }
     
     private func processAllResults(_ allResults: [[SimulationData]]) {
-        // Any post-processing you might need
+        // ADDED: Put any extra background post-processing or logs here if needed.
+        // For example:
+        print("// DEBUG: processAllResults() => got \(allResults.count) runs to do further analysis on (if desired).")
     }
 }
 
