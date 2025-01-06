@@ -152,63 +152,119 @@ fileprivate func weeksToYears(_ weeks: Int) -> Double {
 
 @ChartContentBuilder
 func simulationLines(simulations: [SimulationRun]) -> some ChartContent {
-    // We allow the full hue range: 0.0 (red) → 1.0 (red again).
-    let allowedRanges: [(Double, Double)] = [
-        (0.0, 1.0)
+    let customPalette: [Color] = [
+        // Near-white
+        Color(hue: 0.00, saturation: 0.00, brightness: 1.0), // Pure white
+        Color(hue: 0.10, saturation: 0.05, brightness: 1.0), // Warm off-white
+        Color(hue: 0.33, saturation: 0.05, brightness: 1.0), // Slight greenish-white
+        Color(hue: 0.66, saturation: 0.05, brightness: 1.0), // Slight bluish-white
+        Color(hue: 0.83, saturation: 0.05, brightness: 1.0), // Slight purplish-white
+
+        // More near-white
+        Color(hue: 0.00, saturation: 0.00, brightness: 1.0), // Pure white
+        Color(hue: 0.10, saturation: 0.05, brightness: 1.0), // Warm off-white
+
+        // Extra near-white
+        Color(hue: 0.00, saturation: 0.00, brightness: 1.0), // Pure white
+        Color(hue: 0.10, saturation: 0.05, brightness: 1.0), // Warm off-white
+        
+        // Extra near-white
+        Color(hue: 0.00, saturation: 0.00, brightness: 1.0), // Pure white
+        Color(hue: 0.10, saturation: 0.05, brightness: 1.0), // Warm off-white
+        
+        // Extra near-white
+        Color(hue: 0.00, saturation: 0.00, brightness: 1.0), // Pure white
+        Color(hue: 0.10, saturation: 0.05, brightness: 1.0), // Warm off-white
+        
+        // Extra near-white
+        Color(hue: 0.00, saturation: 0.00, brightness: 1.0), // Pure white
+        Color(hue: 0.10, saturation: 0.05, brightness: 1.0), // Warm off-white
+
+        // Strong reds/oranges
+        Color(hue: 0.0000, saturation: 0.8, brightness: 1.0), // Red
+        Color(hue: 0.0167, saturation: 0.8, brightness: 1.0), // Reddish-Orange
+        Color(hue: 0.0333, saturation: 0.8, brightness: 1.0), // Orange
+        Color(hue: 0.0500, saturation: 0.8, brightness: 1.0), // Soft Orange
+        Color(hue: 0.0667, saturation: 0.8, brightness: 1.0), // Golden Yellow
+        Color(hue: 0.0833, saturation: 0.8, brightness: 1.0), // Yellow-Gold
+        Color(hue: 0.1000, saturation: 0.8, brightness: 1.0), // Light Yellow
+        Color(hue: 0.1167, saturation: 0.6, brightness: 1.0), // Pale Yellow
+        Color(hue: 0.1333, saturation: 0.4, brightness: 1.0), // Lime Yellow
+        Color(hue: 0.1500, saturation: 0.8, brightness: 1.0), // Warm Yellow
+        Color(hue: 0.1667, saturation: 0.8, brightness: 1.0), // Pure Yellow
+        Color(hue: 0.1833, saturation: 0.8, brightness: 1.0), // Yellow-Green
+        Color(hue: 0.2000, saturation: 0.6, brightness: 1.0), // Light Yellow-Green
+        Color(hue: 0.2167, saturation: 0.8, brightness: 1.0), // Pastel Green
+        Color(hue: 0.2333, saturation: 0.6, brightness: 1.0), // Soft Green
+        Color(hue: 0.2500, saturation: 0.6, brightness: 1.0), // Spring Green
+
+        // Commented-out greens/cyans
+        // Color(hue: 0.2667, saturation: 0.6, brightness: 1.0), // Green
+        // Color(hue: 0.2833, saturation: 0.6, brightness: 1.0), // Sea Green
+        // Color(hue: 0.3000, saturation: 0.6, brightness: 1.0), // Greenish-Cyan
+        // Color(hue: 0.3167, saturation: 0.6, brightness: 1.0), // Cyan-Green
+        // Color(hue: 0.3333, saturation: 0.6, brightness: 1.0), // Cyanish-Green
+        // Color(hue: 0.3500, saturation: 0.6, brightness: 1.0), // Soft Turquoise
+
+        Color(hue: 0.3667, saturation: 0.6, brightness: 1.0), // Turquoise
+        Color(hue: 0.3833, saturation: 0.6, brightness: 1.0), // Teal
+        Color(hue: 0.4000, saturation: 0.6, brightness: 1.0), // Blue-Teal
+        Color(hue: 0.4167, saturation: 0.6, brightness: 1.0), // Light Aqua
+        Color(hue: 0.4333, saturation: 0.6, brightness: 1.0), // Aqua
+
+        // Commented-out aquas/blues
+        // Color(hue: 0.4500, saturation: 0.6, brightness: 1.0), // Soft Aqua
+        // Color(hue: 0.4667, saturation: 0.6, brightness: 1.0), // Pale Aqua
+        // Color(hue: 0.4833, saturation: 0.6, brightness: 1.0), // Greenish-Blue
+
+        Color(hue: 0.5000, saturation: 0.8, brightness: 1.0), // Cyan
+        Color(hue: 0.5167, saturation: 0.8, brightness: 1.0), // Soft Cyan
+        Color(hue: 0.5333, saturation: 0.8, brightness: 1.0), // Light Teal
+        Color(hue: 0.5500, saturation: 0.6, brightness: 1.0), // Pale Turquoise
+        Color(hue: 0.5667, saturation: 0.6, brightness: 1.0), // Bluish-Turquoise
+        Color(hue: 0.5833, saturation: 0.8, brightness: 1.0), // Light Blue
+        Color(hue: 0.6000, saturation: 0.8, brightness: 1.0), // Sky Blue
+        Color(hue: 0.6167, saturation: 0.8, brightness: 1.0), // Soft Sky Blue
+        Color(hue: 0.6333, saturation: 0.8, brightness: 1.0), // Medium Blue
+        Color(hue: 0.6500, saturation: 0.8, brightness: 1.0), // Blue
+        Color(hue: 0.6667, saturation: 0.8, brightness: 1.0), // True Blue
+        Color(hue: 0.6833, saturation: 0.6, brightness: 1.0), // Indigo-Blue
+
+        // Commented-out purples/indigos
+        // Color(hue: 0.7000, saturation: 0.6, brightness: 1.0), // Indigo
+        // Color(hue: 0.7167, saturation: 0.6, brightness: 1.0), // Soft Indigo
+        // Color(hue: 0.7333, saturation: 0.6, brightness: 1.0), // Periwinkle
+        // Color(hue: 0.7500, saturation: 0.6, brightness: 1.0), // Purple
+        // Color(hue: 0.7667, saturation: 0.6, brightness: 1.0), // Violet
+        // Color(hue: 0.7833, saturation: 0.6, brightness: 1.0), // Lavender
+        // Color(hue: 0.8000, saturation: 0.6, brightness: 1.0), // Light Purple
+        // Color(hue: 0.8167, saturation: 0.6, brightness: 1.0), // Soft Magenta
+        // Color(hue: 0.8333, saturation: 0.6, brightness: 1.0), // Magenta
+        // Color(hue: 0.8500, saturation: 0.6, brightness: 1.0), // Pinkish-Magenta
+
+        // Pinks/reds
+        Color(hue: 0.8667, saturation: 0.8, brightness: 1.0), // Pink
+        Color(hue: 0.8833, saturation: 0.6, brightness: 1.0), // Soft Pink
+        Color(hue: 0.9000, saturation: 0.6, brightness: 1.0), // Light Pink
+        Color(hue: 0.9167, saturation: 0.6, brightness: 1.0), // Pinkish-Red
+        Color(hue: 0.9333, saturation: 0.8, brightness: 1.0), // Light Red
+        Color(hue: 0.9500, saturation: 0.8, brightness: 1.0), // Pale Red
+        Color(hue: 0.9667, saturation: 0.8, brightness: 1.0), // Reddish-Pink
+        Color(hue: 0.9833, saturation: 0.8, brightness: 1.0)  // Very Pale Red
     ]
     
-    // Number of distinct colours to generate.
-    let colourPoolSize = 30
-    
-    // The total span across 0.0 → 1.0 is obviously 1.0.
-    let totalSpan = allowedRanges.reduce(0.0) { $0 + ($1.1 - $1.0) }
-    
-    // Build an array of colours by evenly stepping from 0.0 to 1.0 in hue.
-    let safeColours: [Color] = (0..<colourPoolSize).map { i in
-        // fraction: how far along the hue spectrum (0.0–1.0).
-        let fraction = Double(i) / Double(colourPoolSize - 1)
-        let target = fraction * totalSpan
-        
-        // Find which segment this fraction belongs to (only one here).
-        var cumulative = 0.0
-        for (lowerHue, upperHue) in allowedRanges {
-            let segmentSpan = upperHue - lowerHue
-            if cumulative + segmentSpan >= target {
-                // offset is how far into this segment.
-                let offset = target - cumulative
-                let hue = lowerHue + offset
-                // saturation = 0.8 → fairly vivid, brightness = 0.9 → fairly light
-                return Color(hue: hue, saturation: 0.8, brightness: 0.9)
-            }
-            cumulative += segmentSpan
-        }
-        
-        // Fallback if something goes awry, just return red.
-        return Color.red
-    }
-    
-    // Plot a line for each simulation using our colour pool.
     ForEach(simulations.indices, id: \.self) { index in
         let sim = simulations[index]
-        
-        // Use modulo in case simulations exceed 120.
-        let colour = safeColours[index % safeColours.count]
+        // Use modulo so we can safely index into the palette no matter how many simulations
+        let colour = customPalette[index % customPalette.count]
         
         ForEach(sim.points) { pt in
             LineMark(
-                // x-axis: year (converted from weeks).
                 x: .value("Year", weeksToYears(pt.week)),
-                
-                // y-axis: the numeric value.
                 y: .value("Value", NSDecimalNumber(decimal: pt.value).doubleValue)
             )
-            // Make lines semi-transparent.
             .foregroundStyle(colour.opacity(0.3))
-            
-            // Keep each simulation in its own “legend group.”
             .foregroundStyle(by: .value("SeriesIndex", index))
-            
-            // Control line width and shape.
             .lineStyle(
                 StrokeStyle(
                     lineWidth: 0.5,
