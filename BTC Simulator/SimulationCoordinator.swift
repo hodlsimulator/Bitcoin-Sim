@@ -44,18 +44,18 @@ class SimulationCoordinator: ObservableObject {
     func runSimulation() {
         let newHash = computeInputsHash()
         print("// DEBUG: runSimulation() => newHash = \(newHash), storedInputsHash = \(String(describing: chartDataCache.storedInputsHash))")
-        
+
         // CSV loads (placeholders)
         historicalBTCWeeklyReturns = loadBTCWeeklyReturns()
         sp500WeeklyReturns = loadSP500WeeklyReturns()
-        
+
         print("// DEBUG: Setting up for new simulation run. isLoading=true.")
         isCancelled = false
         isLoading = true
         isChartBuilding = false
         monteCarloResults = []
         completedIterations = 0
-        
+
         // Handle seeds
         let finalSeed: UInt64?
         if simSettings.lockedRandomSeed {
@@ -72,7 +72,16 @@ class SimulationCoordinator: ObservableObject {
             simSettings.lastUsedSeed = 0
             print("// DEBUG: No seed locked or random => finalSeed is nil.")
         }
-        
+
+        // -- NEW LOGS: show what's in inputManager before we simulate
+        if let mgr = simSettings.inputManager {
+            print("// DEBUG: runSimulation => firstYearContribution=\(mgr.firstYearContribution), subsequentContribution=\(mgr.subsequentContribution)")
+            print("// DEBUG: runSimulation => threshold1=\(mgr.threshold1), withdraw1=\(mgr.withdrawAmount1)")
+            print("// DEBUG: runSimulation => threshold2=\(mgr.threshold2), withdraw2=\(mgr.withdrawAmount2)")
+        } else {
+            print("// DEBUG: runSimulation => simSettings.inputManager is nil.")
+        }
+
         DispatchQueue.global(qos: .userInitiated).async {
             guard let total = self.inputManager.getParsedIterations(), total > 0 else {
                 print("// DEBUG: No valid iteration => bailing out.")
@@ -91,13 +100,10 @@ class SimulationCoordinator: ObservableObject {
             let userInputVolatility = (Double(self.inputManager.annualVolatility) ?? 1.0) / 100.0
             let userWeeks = self.simSettings.userWeeks
 
-            // ADDED:
             print("// DEBUG: userInputCAGR => \(userInputCAGR * 100)%")
             print("// DEBUG: userInputVolatility => \(userInputVolatility * 100)%")
             
-            // If initialBTCPriceUSD is a Double, convert to Decimal:
             let userPriceUSDAsDecimal = Decimal(self.simSettings.initialBTCPriceUSD)
-            // Convert your Decimal to Double right before calling:
             let userPriceUSDAsDouble = NSDecimalNumber(decimal: userPriceUSDAsDecimal).doubleValue
 
             let (medianRun, allIterations) = runMonteCarloSimulationsWithProgress(
@@ -126,13 +132,18 @@ class SimulationCoordinator: ObservableObject {
                 return
             }
             
-            // Sort runs based on final BTC price
             let finalRuns = allIterations.map { ($0.last?.btcPriceUSD ?? Decimal.zero, $0) }
             let sortedRuns = finalRuns.sorted { $0.0 < $1.0 }
             
-            // ADDED: Log sortedRuns count & sample final prices
             print("// DEBUG: sortedRuns => \(sortedRuns.count) runs. Sample final price range => first: \(sortedRuns.first?.0 ?? 0) ... last: \(sortedRuns.last?.0 ?? 0)")
             
+            // Optional partial-sample debug
+            if let firstRun = allIterations.first {
+                let midIndex = firstRun.count / 2
+                print("// DEBUG: partial sample from first run => week1 => BTC=\(firstRun[0].btcPriceUSD), portfolio=\(firstRun[0].portfolioValueEUR)")
+                print("                         => week\(midIndex) => BTC=\(firstRun[midIndex].btcPriceUSD), portfolio=\(firstRun[midIndex].portfolioValueEUR)")
+            }
+
             if !sortedRuns.isEmpty {
                 DispatchQueue.main.async {
                     self.isLoading = false
@@ -148,12 +159,10 @@ class SimulationCoordinator: ObservableObject {
                     let ninetiethRun    = sortedRuns[ninetiethIndex].1
                     let medianLineData  = self.computeMedianSimulationData(allIterations: allIterations)
                     
-                    // ADDED: log final prices in each percentile run
                     print("// DEBUG: Tenth final BTC price => \(tenthRun.last?.btcPriceUSD ?? 0)")
                     print("// DEBUG: Median final BTC price => \(singleMedianRun.last?.btcPriceUSD ?? 0)")
                     print("// DEBUG: Ninetieth final BTC price => \(ninetiethRun.last?.btcPriceUSD ?? 0)")
                     
-                    // ADDED: log medianLineData info
                     print("// DEBUG: medianLineData => \(medianLineData.count) weeks. First price => \(medianLineData.first?.btcPriceUSD ?? 0), last => \(medianLineData.last?.btcPriceUSD ?? 0)")
                     
                     self.tenthPercentileResults = tenthRun
@@ -164,30 +173,38 @@ class SimulationCoordinator: ObservableObject {
                     self.medianResults = medianLineData
                     self.allSimData = allIterations
                     
-                    // Convert all runs to [SimulationRun] (each with [WeekPoint(week, Decimal)])
+                    // Convert runs for BTC chart and Portfolio
                     let allSimsAsWeekPoints = self.convertAllSimsToWeekPoints()
+                    let allSimsAsPortfolioPoints = self.convertAllSimsToPortfolioWeekPoints()
                     
                     // Clear old snapshots
                     if self.chartDataCache.chartSnapshot != nil {
-                        print("// DEBUG: clearing old chartSnapshot.")
+                        print("// DEBUG: clearing old BTC chartSnapshot.")
+                    }
+                    if self.chartDataCache.chartSnapshotPortfolio != nil {
+                        print("// DEBUG: clearing old Portfolio chartSnapshot.")
                     }
                     self.chartDataCache.chartSnapshot = nil
                     self.chartDataCache.chartSnapshotLandscape = nil
+                    self.chartDataCache.chartSnapshotPortfolio = nil
+                    self.chartDataCache.chartSnapshotPortfolioLandscape = nil
+                    
+                    // Store runs
                     self.chartDataCache.allRuns = allSimsAsWeekPoints
+                    self.chartDataCache.portfolioRuns = allSimsAsPortfolioPoints
                     self.chartDataCache.storedInputsHash = newHash
                     
-                    // ADDED: log new chartDataCache status
-                    print("// DEBUG: chartDataCache => storedInputsHash=\(newHash), allRuns.count=\(allSimsAsWeekPoints.count)")
+                    print("// DEBUG: chartDataCache => storedInputsHash=\(newHash), allRuns.count=\(allSimsAsWeekPoints.count), portfolioRuns.count=\(allSimsAsPortfolioPoints.count)")
                     
-                    // Build only the portrait snapshot
+                    // Build only the portrait snapshot for BTC
                     DispatchQueue.main.async {
                         if self.isCancelled {
                             self.isChartBuilding = false
                             return
                         }
-                        print("// DEBUG: building chartView (portrait) for layout pass.")
+                        print("// DEBUG: building chartView (BTC portrait) for layout pass.")
                         
-                        let chartView = MonteCarloResultsView(simulations: allSimsAsWeekPoints)
+                        let btcChartView = MonteCarloResultsView(selectedChart: .btcPrice)
                             .environmentObject(self.chartDataCache)
                             .environmentObject(self.simSettings)
                         
@@ -196,14 +213,33 @@ class SimulationCoordinator: ObservableObject {
                                 self.isChartBuilding = false
                                 return
                             }
-                            print("// DEBUG: now taking portrait snapshot of chartView.")
+                            print("// DEBUG: now taking portrait snapshot of BTC chartView.")
                             
-                            let snapshot = chartView.snapshot()
-                            print("// DEBUG: portrait snapshot => setting chartDataCache.chartSnapshot.")
-                            self.chartDataCache.chartSnapshot = snapshot
+                            let btcSnapshot = btcChartView.snapshot()
+                            print("// DEBUG: BTC portrait snapshot => setting chartDataCache.chartSnapshot.")
+                            self.chartDataCache.chartSnapshot = btcSnapshot
                             
-                            self.isChartBuilding = false
-                            self.isSimulationRun = true
+                            // Next, the portfolio snapshot
+                            print("// DEBUG: building chartView (Portfolio portrait) for layout pass.")
+                            
+                            let portfolioChartView = MonteCarloResultsView(selectedChart: .cumulativePortfolio)
+                                .environmentObject(self.chartDataCache)
+                                .environmentObject(self.simSettings)
+                            
+                            DispatchQueue.main.async {
+                                if self.isCancelled {
+                                    self.isChartBuilding = false
+                                    return
+                                }
+                                print("// DEBUG: now taking portrait snapshot of Portfolio chartView.")
+                                
+                                let portfolioSnapshot = portfolioChartView.snapshot()
+                                print("// DEBUG: [Portfolio] portrait snapshot => setting chartDataCache.chartSnapshotPortfolio.")
+                                self.chartDataCache.chartSnapshotPortfolio = portfolioSnapshot
+                                
+                                self.isChartBuilding = false
+                                self.isSimulationRun = true
+                            }
                         }
                     }
                 }
@@ -221,11 +257,21 @@ class SimulationCoordinator: ObservableObject {
         }
     }
     
-    /// Convert `[[SimulationData]]` to `[SimulationRun]` with Decimal values
+    /// Convert `[[SimulationData]]` to `[SimulationRun]` with BTC decimal values
     func convertAllSimsToWeekPoints() -> [SimulationRun] {
         allSimData.map { singleRun -> SimulationRun in
             let wpoints = singleRun.map { row in
                 WeekPoint(week: row.week, value: row.btcPriceUSD)
+            }
+            return SimulationRun(points: wpoints)
+        }
+    }
+    
+    /// Convert `[[SimulationData]]` to `[SimulationRun]` but use portfolioValueEUR
+    func convertAllSimsToPortfolioWeekPoints() -> [SimulationRun] {
+        allSimData.map { singleRun -> SimulationRun in
+            let wpoints = singleRun.map { row in
+                WeekPoint(week: row.week, value: row.portfolioValueEUR)
             }
             return SimulationRun(points: wpoints)
         }
@@ -247,21 +293,16 @@ class SimulationCoordinator: ObservableObject {
         var medianResult: [SimulationData] = []
         
         for w in 0..<totalWeeks {
-            // Collect all SimulationData objects at this week
             let allAtWeek = allIterations.compactMap { run -> SimulationData? in
                 guard w < run.count else { return nil }
                 return run[w]
             }
-            
-            // If nothing is present, skip
             if allAtWeek.isEmpty { continue }
             
-            // 1) Extract Decimal fields
             let allBTCPriceUSD = allAtWeek.map { $0.btcPriceUSD }
             let allBTCPriceEUR = allAtWeek.map { $0.btcPriceEUR }
             let allPortfolioValueEUR = allAtWeek.map { $0.portfolioValueEUR }
             
-            // 2) Extract Double fields
             let allStartingBTC = allAtWeek.map { $0.startingBTC }
             let allNetBTCHoldings = allAtWeek.map { $0.netBTCHoldings }
             let allContribEUR = allAtWeek.map { $0.contributionEUR }
@@ -269,7 +310,6 @@ class SimulationCoordinator: ObservableObject {
             let allNetContribBTC = allAtWeek.map { $0.netContributionBTC }
             let allWithdrawalEUR = allAtWeek.map { $0.withdrawalEUR }
             
-            // 3) Compute medians separately
             let medianBTCPriceUSD = medianOfDecimalArray(allBTCPriceUSD)
             let medianBTCPriceEUR = medianOfDecimalArray(allBTCPriceEUR)
             let medianPortfolioValueEUR = medianOfDecimalArray(allPortfolioValueEUR)
@@ -281,20 +321,13 @@ class SimulationCoordinator: ObservableObject {
             let medianNetContributionBTC = medianOfDoubleArray(allNetContribBTC)
             let medianWithdrawalEUR = medianOfDoubleArray(allWithdrawalEUR)
 
-            // 4) Build the new median row
             let medianSimData = SimulationData(
                 week: allAtWeek[0].week,
-                
-                // Double fields
                 startingBTC: medianStartingBTC,
                 netBTCHoldings: medianNetBTCHoldings,
-                
-                // Decimal fields
                 btcPriceUSD: medianBTCPriceUSD,
                 btcPriceEUR: medianBTCPriceEUR,
                 portfolioValueEUR: medianPortfolioValueEUR,
-                
-                // Double fields
                 contributionEUR: medianContributionEUR,
                 transactionFeeEUR: medianFeeEUR,
                 netContributionBTC: medianNetContributionBTC,
@@ -308,8 +341,6 @@ class SimulationCoordinator: ObservableObject {
     }
     
     private func processAllResults(_ allResults: [[SimulationData]]) {
-        // ADDED: Put any extra background post-processing or logs here if needed.
-        // For example:
         print("// DEBUG: processAllResults() => got \(allResults.count) runs to do further analysis on (if desired).")
     }
 }

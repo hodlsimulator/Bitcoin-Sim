@@ -6,7 +6,7 @@
 //
 
 import Foundation
-
+/*
 func loadCSV() -> [SimulationData] {
     guard let filePath = Bundle.main.path(forResource: "BTC20YearProjection", ofType: "csv") else {
         print("Error: CSV file not found in app bundle.")
@@ -97,3 +97,4 @@ func parseCSVRow(_ row: String) -> [String] {
 
     return columns
 }
+*/

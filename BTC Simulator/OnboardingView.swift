@@ -60,9 +60,6 @@ struct OnboardingView: View {
     
     var body: some View {
         ZStack {
-            // ----------------------------------------------------------
-            // 1) BACKGROUND GRADIENT
-            // ----------------------------------------------------------
             LinearGradient(
                 gradient: Gradient(colors: [Color.black, Color(white: 0.15), Color.black]),
                 startPoint: .topLeading,
@@ -70,32 +67,24 @@ struct OnboardingView: View {
             )
             .ignoresSafeArea()
             
-            // ----------------------------------------------------------
-            // 2) SCROLLVIEW FOR STEP CONTENT
-            // ----------------------------------------------------------
             ScrollView {
                 VStack(spacing: 20) {
                     
-                    // A bit of space under the status bar/notch
                     Spacer().frame(height: 40)
                     
-                    // BITCOIN LOGO
                     OfficialBitcoinLogo()
                         .frame(width: 80, height: 80)
                     
-                    // TITLE
                     Text(titleForStep(currentStep))
                         .font(.title)
                         .foregroundColor(.white)
                         .padding(.top, 30)
                     
-                    // SUBTITLE
                     Text(subtitleForStep(currentStep))
                         .foregroundColor(.gray)
                         .font(.callout)
                         .padding(.top, 4)
                     
-                    // STEP-SPECIFIC CONTENT
                     switch currentStep {
                     case 0:
                         step0_PeriodFrequency()
@@ -125,7 +114,6 @@ struct OnboardingView: View {
                 }
             }
         }
-        // BACK CHEVRON (only if beyond the first step)
         .overlay(
             Group {
                 if currentStep > 0 {
@@ -144,7 +132,6 @@ struct OnboardingView: View {
             },
             alignment: .topLeading
         )
-        // NEXT / FINISH BUTTON (STATIC AT BOTTOM)
         .overlay(
             Button(currentStep == 8 ? "Finish" : "Next") {
                 onNextTapped()
@@ -155,13 +142,10 @@ struct OnboardingView: View {
             .background(Color.orange)
             .cornerRadius(6)
             .shadow(color: .black.opacity(0.3), radius: 4, x: 2, y: 2)
-            // Different padding for final step if you like
             .padding(.bottom, currentStep == 8 ? 170 : 270),
             alignment: .bottom
         )
-        // Prevent iOS from auto-pushing content up on keyboard show
         .ignoresSafeArea(.keyboard, edges: .bottom)
-        // Async fetch BTC price
         .task {
             await fetchBTCPriceFromAPI()
         }
@@ -384,7 +368,6 @@ struct OnboardingView: View {
     
     // MARK: - onNextTapped
     private func onNextTapped() {
-        // If we’re on the last step (8), finalise
         if currentStep == 8 {
             applySettingsToSim()
             didFinishOnboarding = true
@@ -398,47 +381,43 @@ struct OnboardingView: View {
     // MARK: - Apply settings
     private func applySettingsToSim() {
         // Convert user’s chosen period unit to total weeks
-        let finalWeeks = (chosenPeriodUnit == .weeks)
-            ? totalPeriods
-            : totalPeriods * 4
+        let finalWeeks = (chosenPeriodUnit == .weeks) ? totalPeriods : totalPeriods * 4
         simSettings.userWeeks = finalWeeks
         
         // Decide on final BTC price
         simSettings.initialBTCPriceUSD = finalBTCPrice
         
-        // If you store currency preference:
-        // simSettings.preferredCurrency = currencyPreference.rawValue
-        
-        // Set the user’s typed starting balance & average cost basis
+        // Store your typed starting balance & average cost basis
         simSettings.startingBalance = startingBalance
         simSettings.averageCostBasis = averageCostBasis
         
-        // Persist them to UserDefaults so they’re remembered on app relaunch
+        // Persist to UserDefaults (optional)
         UserDefaults.standard.set(startingBalance, forKey: "savedStartingBalance")
         UserDefaults.standard.set(averageCostBasis, forKey: "savedAverageCostBasis")
         UserDefaults.standard.set(finalWeeks, forKey: "savedUserWeeks")
         UserDefaults.standard.set(finalBTCPrice, forKey: "savedInitialBTCPriceUSD")
         
-        // If you have inputManager or your simSettings handle contributions/withdrawals:
+        // Update the shared inputManager to ensure your simulation sees these contributions
         simSettings.inputManager?.firstYearContribution = String(firstYearContribution)
         simSettings.inputManager?.subsequentContribution = String(subsequentContribution)
         simSettings.inputManager?.threshold1 = threshold1
         simSettings.inputManager?.withdrawAmount1 = withdraw1
         simSettings.inputManager?.threshold2 = threshold2
         simSettings.inputManager?.withdrawAmount2 = withdraw2
+        
+        // Debug logs to confirm
+        print("// DEBUG: applySettingsToSim => firstYearContribution=\(firstYearContribution), subsequent=\(subsequentContribution)")
+        print("// DEBUG: simSettings.inputManager?.firstYearContribution => \(simSettings.inputManager?.firstYearContribution ?? "nil")")
     }
     
     // MARK: - finalBTCPrice
     private var finalBTCPrice: Double {
-        // 1. If user typed a valid price, use it
         if let typedVal = Double(userBTCPrice), typedVal > 0 {
             return typedVal
         }
-        // 2. If we fetched a valid price, use it
         if let fetchedVal = Double(fetchedBTCPrice), fetchedVal > 0 {
             return fetchedVal
         }
-        // 3. Fallback if neither is valid
         return 58000
     }
     

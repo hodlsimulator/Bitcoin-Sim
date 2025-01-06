@@ -289,19 +289,26 @@ class ChartDataCache: ObservableObject {
     @Published var portfolioChartSnapshot: UIImage?
     @Published var portfolioChartSnapshotLandscape: UIImage?
     @Published var portfolioRuns: [SimulationRun]?
+    
+    // Add these two for portfolio:
+    @Published var chartSnapshotPortfolio: UIImage? = nil
+    @Published var chartSnapshotPortfolioLandscape: UIImage? = nil
 }
 
 // MARK: - ContentView
 struct ContentView: View {
 
+    // SINGLETON OBJECTS (only one instance each):
     @StateObject var inputManager: PersistentInputManager
     @StateObject var simSettings: SimulationSettings
     @StateObject var chartDataCache: ChartDataCache
     @StateObject var coordinator: SimulationCoordinator
 
     init() {
+        // Create one manager, one settings, one cache, then link them all:
         let manager = PersistentInputManager()
         let settings = SimulationSettings()
+        settings.inputManager = manager  // <--- Make sure the settings uses that same manager
         let cache = ChartDataCache()
         
         let simCoord = SimulationCoordinator(
@@ -490,7 +497,7 @@ struct ContentView: View {
         .navigationDestination(isPresented: $showHistograms) {
             ForceReflowView {
                 if let existingChartData = coordinator.chartDataCache.allRuns {
-                    MonteCarloResultsView(simulations: existingChartData)
+                    MonteCarloResultsView()
                         .environmentObject(coordinator.chartDataCache)
                         .environmentObject(simSettings)
                 } else {

@@ -85,6 +85,7 @@ private func pickRandomReturn(from arr: [Double]) -> Double {
 
 // MARK: - runOneFullSimulation
 /// Single-run simulation referencing your “userWeeks”, “initialBTCPriceUSD”, etc.
+/// Key change: removed all fallback defaults (60.0, 100.0, etc.) so it only uses inputManager data.
 func runOneFullSimulation(
     settings: SimulationSettings,
     annualCAGR: Double,
@@ -99,6 +100,7 @@ func runOneFullSimulation(
         static var didPrintFactorSettings: Bool = false
     }
     
+    // Print the factor toggles only once
     if !PrintOnce.didPrintFactorSettings {
         print("=== FACTOR SETTINGS (once only) ===")
         print("useHalving: \(settings.useHalving), halvingBump: \(settings.halvingBump)")
@@ -129,7 +131,7 @@ func runOneFullSimulation(
         PrintOnce.didPrintFactorSettings = true
     }
 
-    // 1) Initial BTC price in EUR
+    // 1) Convert USD → EUR for the initial price
     let firstEURPrice = initialBTCPriceUSD / exchangeRateEURUSD
     
     // 2) Convert user’s typed startingBalance (EUR) into BTC
@@ -153,7 +155,6 @@ func runOneFullSimulation(
             week: 1,
             startingBTC: 0.0,
             netBTCHoldings: userStartingBalanceBTC,
-            // Convert these three to Decimal
             btcPriceUSD: Decimal(initialBTCPriceUSD),
             btcPriceEUR: Decimal(firstEURPrice),
             portfolioValueEUR: Decimal(initialPortfolioValueEUR),
@@ -164,10 +165,29 @@ func runOneFullSimulation(
         )
     )
 
+    // Attempt to read user’s chosen contributions and thresholds from inputManager
+    let firstYearContribString  = settings.inputManager?.firstYearContribution
+    let subsequentContribString = settings.inputManager?.subsequentContribution
+    let threshold1              = settings.inputManager?.threshold1
+    let withdraw1               = settings.inputManager?.withdrawAmount1
+    let threshold2              = settings.inputManager?.threshold2
+    let withdraw2               = settings.inputManager?.withdrawAmount2
+    
+    // Parse them as Double or fallback to 0.0 if user typed nothing
+    let firstYearContrib   = Double(firstYearContribString ?? "") ?? 0.0
+    let subsequentContrib  = Double(subsequentContribString ?? "") ?? 0.0
+    let finalThreshold1    = threshold1 ?? 0.0
+    let finalWithdraw1     = withdraw1  ?? 0.0
+    let finalThreshold2    = threshold2 ?? 0.0
+    let finalWithdraw2     = withdraw2  ?? 0.0
+    
+    // Hard-coded fee % (change or read from user input if you want)
+    let transactionFeePct  = 0.0035
+    
     // 4) Main loop from week=2 to userWeeks
     for week in 2...userWeeks {
         
-        // Pick a random historical return
+        // Grab a random historical return from your array
         let btcArr = useWeightedSampling ? weightedBTCWeeklyReturns : historicalBTCWeeklyReturns
         let histReturn = pickRandomReturn(from: btcArr)
         
@@ -187,7 +207,7 @@ func runOneFullSimulation(
             combinedWeeklyReturn += shock
         }
         
-        // Example toggles (halving, etc.)
+        // 5) Factor toggles (halving, adoptionFactor, bullish/bearish)
         if settings.useHalving, halvingWeeks.contains(week) {
             combinedWeeklyReturn += settings.halvingBump
         }
@@ -196,7 +216,7 @@ func runOneFullSimulation(
             combinedWeeklyReturn += adoptionFactor
         }
         
-        // *** Additional bullish toggles
+        // Additional bullish toggles
         if settings.useInstitutionalDemand {
             let randBoost = Double.random(in: 0 ... settings.maxDemandBoost)
             combinedWeeklyReturn += randBoost
@@ -238,7 +258,7 @@ func runOneFullSimulation(
             combinedWeeklyReturn += randBoost
         }
 
-        // *** Additional bearish toggles
+        // Additional bearish toggles
         if settings.useBearMarket {
             combinedWeeklyReturn += settings.bearWeeklyDrift
         }
@@ -280,34 +300,35 @@ func runOneFullSimulation(
             combinedWeeklyReturn += randDrop
         }
 
-        // 5) Price update
+        // 6) BTC price update
         var btcPriceUSD = previousBTCPriceUSD * (1.0 + combinedWeeklyReturn)
         btcPriceUSD = max(btcPriceUSD, 1.0)  // clamp to min 1.0
         let btcPriceEUR = btcPriceUSD / exchangeRateEURUSD
         
-        // 6) Contribution logic
-        let contributionEUR = (week <= 52) ? 60.0 : 100.0
-        let fee = contributionEUR * 0.0035
-        let netBTC = (contributionEUR - fee) / btcPriceEUR
+        // 7) Use the user’s chosen contributions
+        let isFirstYear = (week <= 52)
+        let usedContrib = isFirstYear ? firstYearContrib : subsequentContrib
+        
+        let fee = usedContrib * transactionFeePct
+        let netBTC = (usedContrib - fee) / btcPriceEUR
         
         // Hypothetical holdings
         let hypotheticalHoldings = previousBTCHoldings + netBTC
         let hypotheticalValueEUR = hypotheticalHoldings * btcPriceEUR
         
-        // 7) Withdrawal logic
+        // 8) user’s chosen thresholds => withdrawals
         var withdrawalEUR = 0.0
-        if hypotheticalValueEUR > 60_000 {
-            withdrawalEUR = 200.0
-        } else if hypotheticalValueEUR > 30_000 {
-            withdrawalEUR = 100.0
+        if hypotheticalValueEUR > finalThreshold2 {
+            withdrawalEUR = finalWithdraw2
+        } else if hypotheticalValueEUR > finalThreshold1 {
+            withdrawalEUR = finalWithdraw1
         }
-        let withdrawalBTC = withdrawalEUR / btcPriceEUR
         
-        // Final holdings
+        let withdrawalBTC = withdrawalEUR / btcPriceEUR
         let finalHoldings = max(0.0, hypotheticalHoldings - withdrawalBTC)
         let portfolioValEUR = finalHoldings * btcPriceEUR
 
-        // 8) Append results (convert relevant fields to Decimal)
+        // 9) Append results
         results.append(
             SimulationData(
                 week: week,
@@ -316,14 +337,14 @@ func runOneFullSimulation(
                 btcPriceUSD: Decimal(btcPriceUSD),
                 btcPriceEUR: Decimal(btcPriceEUR),
                 portfolioValueEUR: Decimal(portfolioValEUR),
-                contributionEUR: contributionEUR,
+                contributionEUR: usedContrib,
                 transactionFeeEUR: fee,
                 netContributionBTC: netBTC,
                 withdrawalEUR: withdrawalEUR
             )
         )
 
-        // Update for next iteration
+        // 10) Update for next iteration
         previousBTCHoldings = finalHoldings
         previousBTCPriceUSD = btcPriceUSD
     }
@@ -360,7 +381,7 @@ func runMonteCarloSimulationsWithProgress(
             break
         }
         
-        // Slow down to see progress visually (not required)
+        // Optional tiny delay so we can see progress visually:
         Thread.sleep(forTimeInterval: 0.01)
         
         let simRun = runOneFullSimulation(
