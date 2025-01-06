@@ -298,7 +298,6 @@ class ChartDataCache: ObservableObject {
 // MARK: - ContentView
 struct ContentView: View {
 
-    // SINGLETON OBJECTS (only one instance each):
     @StateObject var inputManager: PersistentInputManager
     @StateObject var simSettings: SimulationSettings
     @StateObject var chartDataCache: ChartDataCache
@@ -308,7 +307,7 @@ struct ContentView: View {
         // Create one manager, one settings, one cache, then link them all:
         let manager = PersistentInputManager()
         let settings = SimulationSettings()
-        settings.inputManager = manager  // <--- Make sure the settings uses that same manager
+        settings.inputManager = manager
         let cache = ChartDataCache()
         
         let simCoord = SimulationCoordinator(

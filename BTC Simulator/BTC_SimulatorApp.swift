@@ -11,6 +11,8 @@ import SwiftUI
 struct BTCMonteCarloApp: App {
     @AppStorage("hasOnboarded") private var didFinishOnboarding = false
 
+    // Add this so it's in scope:
+    @StateObject private var inputManager = PersistentInputManager()
     @StateObject private var simSettings = SimulationSettings()
     @StateObject private var chartDataCache = ChartDataCache()
     @StateObject private var appViewModel = AppViewModel()
@@ -52,14 +54,18 @@ struct BTCMonteCarloApp: App {
                 if didFinishOnboarding {
                     NavigationStack {
                         ContentView()
+                            // Provide the same environment objects here:
+                            .environmentObject(inputManager)
                             .environmentObject(simSettings)
                             .environmentObject(chartDataCache)
                             .environmentObject(appViewModel)
                     }
-                    .preferredColorScheme(.dark)  // maintain a dark style
+                    .preferredColorScheme(.dark)
                 } else {
                     NavigationStack {
                         OnboardingView(didFinishOnboarding: $didFinishOnboarding)
+                            // Now inputManager is in scope:
+                            .environmentObject(inputManager)
                             .environmentObject(simSettings)
                             .environmentObject(chartDataCache)
                             .environmentObject(appViewModel)

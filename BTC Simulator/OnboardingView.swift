@@ -21,7 +21,14 @@ enum PreferredCurrency: String, CaseIterable, Identifiable {
 }
 
 struct OnboardingView: View {
+    // Pull in the same SimulationSettings your app uses:
     @EnvironmentObject var simSettings: SimulationSettings
+    
+    // Optionally also reference `inputManager` directly:
+    // (Not strictly required if you do `simSettings.inputManager` throughout,
+    //  but it's often simpler to read/write a local var.)
+    @EnvironmentObject var inputManager: PersistentInputManager
+    
     @Binding var didFinishOnboarding: Bool
     
     // MARK: - Steps from 0..8
@@ -46,17 +53,15 @@ struct OnboardingView: View {
     @State private var fetchedBTCPrice: String = "N/A"
     @State private var userBTCPrice: String = ""
     
-    // Step 6: Contributions
-    @State private var firstYearContribution: Double = 60.0
-    @State private var subsequentContribution: Double = 100.0
+    // Step 6: Contributions — changed defaults to 0, so we'll load them on .onAppear
+    @State private var firstYearContribution: Double = 0.0
+    @State private var subsequentContribution: Double = 0.0
     
-    // Step 7: Withdrawals
-    @State private var threshold1: Double = 30000.0
-    @State private var withdraw1: Double = 100.0
-    @State private var threshold2: Double = 60000.0
-    @State private var withdraw2: Double = 200.0
-    
-    // Step 8: Final Review
+    // Step 7: Withdrawals — same approach
+    @State private var threshold1: Double = 0.0
+    @State private var withdraw1: Double = 0.0
+    @State private var threshold2: Double = 0.0
+    @State private var withdraw2: Double = 0.0
     
     var body: some View {
         ZStack {
@@ -146,8 +151,31 @@ struct OnboardingView: View {
             alignment: .bottom
         )
         .ignoresSafeArea(.keyboard, edges: .bottom)
+        // Load from API
         .task {
             await fetchBTCPriceFromAPI()
+        }
+        // Load any existing settings from inputManager when we appear:
+        .onAppear {
+            // If you already typed something previously, show it here:
+            if firstYearContribution == 0.0 {
+                firstYearContribution = Double(inputManager.firstYearContribution) ?? 60.0
+            }
+            if subsequentContribution == 0.0 {
+                subsequentContribution = Double(inputManager.subsequentContribution) ?? 100.0
+            }
+            if threshold1 == 0.0 {
+                threshold1 = inputManager.threshold1
+            }
+            if withdraw1 == 0.0 {
+                withdraw1 = inputManager.withdrawAmount1
+            }
+            if threshold2 == 0.0 {
+                threshold2 = inputManager.threshold2
+            }
+            if withdraw2 == 0.0 {
+                withdraw2 = inputManager.withdrawAmount2
+            }
         }
     }
     
@@ -397,17 +425,17 @@ struct OnboardingView: View {
         UserDefaults.standard.set(finalWeeks, forKey: "savedUserWeeks")
         UserDefaults.standard.set(finalBTCPrice, forKey: "savedInitialBTCPriceUSD")
         
-        // Update the shared inputManager to ensure your simulation sees these contributions
-        simSettings.inputManager?.firstYearContribution = String(firstYearContribution)
-        simSettings.inputManager?.subsequentContribution = String(subsequentContribution)
-        simSettings.inputManager?.threshold1 = threshold1
-        simSettings.inputManager?.withdrawAmount1 = withdraw1
-        simSettings.inputManager?.threshold2 = threshold2
-        simSettings.inputManager?.withdrawAmount2 = withdraw2
+        // Here’s the crucial part: write your local states to the shared inputManager
+        inputManager.firstYearContribution = String(firstYearContribution)
+        inputManager.subsequentContribution = String(subsequentContribution)
+        inputManager.threshold1 = threshold1
+        inputManager.withdrawAmount1 = withdraw1
+        inputManager.threshold2 = threshold2
+        inputManager.withdrawAmount2 = withdraw2
         
         // Debug logs to confirm
         print("// DEBUG: applySettingsToSim => firstYearContribution=\(firstYearContribution), subsequent=\(subsequentContribution)")
-        print("// DEBUG: simSettings.inputManager?.firstYearContribution => \(simSettings.inputManager?.firstYearContribution ?? "nil")")
+        print("// DEBUG: inputManager.firstYearContribution => \(inputManager.firstYearContribution)")
     }
     
     // MARK: - finalBTCPrice
