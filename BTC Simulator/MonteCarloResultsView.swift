@@ -155,7 +155,7 @@ func simulationLines(simulations: [SimulationRun]) -> some ChartContent {
     let customPalette: [Color] = [
         .red, .orange, .yellow, .green, .blue, .purple,
         Color(hue: 0.55, saturation: 1.0, brightness: 0.9),
-        // etc. – feel free to expand
+        // etc.
     ]
     
     ForEach(simulations.indices, id: \.self) { index in
@@ -240,12 +240,10 @@ struct MonteCarloChartView: View {
         // We'll read from chartDataCache.allRuns
         let simulations = chartDataCache.allRuns ?? []
         
-        // Use _ = print(...) so SwiftUI doesn't think we're returning a View
-        _ = print("// DEBUG: ADDED PRINT => MonteCarloChartView loading. BTC simulations count = \(simulations.count)")
         if !simulations.isEmpty {
             let firstRun = simulations[0].points
             if !firstRun.isEmpty {
-                _ = print("// DEBUG: ADDED PRINT => first BTC run sample => week=\(firstRun[0].week), val=\(firstRun[0].value)")
+                print("// DEBUG: ADDED PRINT => first BTC run sample => week=\(firstRun[0].week), val=\(firstRun[0].value)")
             }
         }
         
@@ -254,6 +252,7 @@ struct MonteCarloChartView: View {
                 Color.black.ignoresSafeArea()
                 
                 if isLandscape {
+                    // LANDSCAPE layout
                     ZStack {
                         Chart {
                             simulationLines(simulations: simulations)
@@ -262,6 +261,8 @@ struct MonteCarloChartView: View {
                         .chartLegend(.hidden)
                         .chartXScale(domain: 0.0...20.0, type: .linear)
                         .chartYScale(domain: .automatic(includesZero: false), type: .log)
+                        
+                        // X-axis
                         .chartXAxis {
                             let yearMarkers = [5.0, 10.0, 15.0, 20.0]
                             AxisMarks(values: yearMarkers) { axisValue in
@@ -277,6 +278,7 @@ struct MonteCarloChartView: View {
                                 }
                             }
                         }
+                        // Y-axis on the left with abbreviations
                         .chartYAxis {
                             AxisMarks(position: .leading) { axisValue in
                                 AxisGridLine()
@@ -298,6 +300,7 @@ struct MonteCarloChartView: View {
                         .scaleEffect(x: 1.0, y: 0.98, anchor: .bottom)
                     }
                 } else {
+                    // PORTRAIT layout
                     VStack {
                         Spacer().frame(height: 30)
                         
@@ -308,6 +311,7 @@ struct MonteCarloChartView: View {
                         .chartLegend(.hidden)
                         .chartXScale(domain: 0.0...20.0, type: .linear)
                         .chartYScale(domain: .automatic(includesZero: false), type: .log)
+                        
                         .chartXAxis {
                             let yearMarkers = [5.0, 10.0, 15.0, 20.0]
                             AxisMarks(values: yearMarkers) { axisValue in
@@ -323,6 +327,7 @@ struct MonteCarloChartView: View {
                                 }
                             }
                         }
+                        // Again, Y-axis on the left
                         .chartYAxis {
                             AxisMarks(position: .leading) { axisValue in
                                 AxisGridLine()
@@ -353,6 +358,7 @@ struct MonteCarloChartView: View {
 // MARK: - Main Results View
 
 struct MonteCarloResultsView: View {
+    @EnvironmentObject var chartSelection: ChartSelection
     @EnvironmentObject var chartDataCache: ChartDataCache
     @StateObject private var orientationObserver = OrientationObserver()
     
@@ -362,32 +368,26 @@ struct MonteCarloResultsView: View {
     
     @State private var showChartMenu = false
 
-    // 1) Define your chart types
+    // Define your chart types
     enum ChartType {
         case btcPrice
         case cumulativePortfolio
     }
 
-    // 2) @State for the currently selected chart
-    @State private var selectedChart: ChartType
-    
-    init(selectedChart: ChartType = .btcPrice) {
-        _selectedChart = State(initialValue: selectedChart)
-    }
-
     // Computed property for portrait snapshot
-    private var portraitSnapshot: UIImage? {
-        switch selectedChart {
-        case .btcPrice:
-            return chartDataCache.chartSnapshot
-        case .cumulativePortfolio:
-            return chartDataCache.chartSnapshotPortfolio
+    // private var portraitSnapshot: UIImage? becomes:
+        private var portraitSnapshot: UIImage? {
+            switch chartSelection.selectedChart {
+            case .btcPrice:
+                return chartDataCache.chartSnapshot
+            case .cumulativePortfolio:
+                return chartDataCache.chartSnapshotPortfolio
+            }
         }
-    }
     
     // Computed property for fresh landscape snapshot
     private var freshLandscapeSnapshot: UIImage? {
-        switch selectedChart {
+        switch chartSelection.selectedChart {
         case .btcPrice:
             return chartDataCache.chartSnapshotLandscape
         case .cumulativePortfolio:
@@ -400,7 +400,12 @@ struct MonteCarloResultsView: View {
     }
     
     var body: some View {
-        ZStack {
+        // NEW DEBUG PRINT: Snapshots at the start of body
+        let _ = print("// NEW DEBUG PRINT => selectedChart: \(chartSelection.selectedChart == .btcPrice ? "BTC" : "Portfolio"), isLandscape=\(isLandscape)")
+        let _ = print("// NEW DEBUG PRINT => portrait BTC != nil? \(chartDataCache.chartSnapshot != nil), portfolio != nil? \(chartDataCache.chartSnapshotPortfolio != nil)")
+        let _ = print("// NEW DEBUG PRINT => landscape BTC != nil? \(chartDataCache.chartSnapshotLandscape != nil), portfolio != nil? \(chartDataCache.chartSnapshotPortfolioLandscape != nil)")
+        
+        return ZStack {
             Color.black.ignoresSafeArea()
             
             if isLandscape {
@@ -410,44 +415,44 @@ struct MonteCarloResultsView: View {
                     
                     if let freshLandscape = freshLandscapeSnapshot {
                         let _ = print("// DEBUG: LANDSCAPE => using new snapshot => "
-                                      + (selectedChart == .btcPrice ? "BTC" : "Portfolio"))
+                                      + (chartSelection.selectedChart == .btcPrice ? "BTC" : "Portfolio"))
                         
                         Image(uiImage: freshLandscape)
                             .resizable()
                             .scaledToFit()
                         
                         Text("// DEBUG: Using new LANDSCAPE snapshot => "
-                             + (selectedChart == .btcPrice ? "BTC" : "Portfolio"))
+                             + (chartSelection.selectedChart == .btcPrice ? "BTC" : "Portfolio"))
                             .foregroundColor(.white)
                         
                     } else if let squished = squishedLandscape {
                         let _ = print("// DEBUG: LANDSCAPE => using squished portrait => "
-                                      + (selectedChart == .btcPrice ? "BTC" : "Portfolio"))
+                                      + (chartSelection.selectedChart == .btcPrice ? "BTC" : "Portfolio"))
                         
                         Image(uiImage: squished)
                             .resizable()
                             .scaledToFit()
                         
                         Text("// DEBUG: Using SQUISHED portrait => "
-                             + (selectedChart == .btcPrice ? "BTC" : "Portfolio"))
+                             + (chartSelection.selectedChart == .btcPrice ? "BTC" : "Portfolio"))
                             .foregroundColor(.white)
                         
                     } else if let portrait = portraitSnapshot {
                         let _ = print("// DEBUG: LANDSCAPE => using placeholder portrait => "
-                                      + (selectedChart == .btcPrice ? "BTC" : "Portfolio"))
+                                      + (chartSelection.selectedChart == .btcPrice ? "BTC" : "Portfolio"))
                         
                         SquishedLandscapePlaceholderView(image: portrait)
                         
                         Text("// DEBUG: Using placeholder => "
-                             + (selectedChart == .btcPrice ? "BTC" : "Portfolio"))
+                             + (chartSelection.selectedChart == .btcPrice ? "BTC" : "Portfolio"))
                             .foregroundColor(.white)
                         
                     } else {
                         let _ = print("// DEBUG: LANDSCAPE => no snapshot => showing Swift Charts => "
-                                      + (selectedChart == .btcPrice ? "BTC" : "Portfolio"))
+                                      + (chartSelection.selectedChart == .btcPrice ? "BTC" : "Portfolio"))
                         
                         // No snapshots -> show the actual Swift Charts
-                        if selectedChart == .btcPrice {
+                        if chartSelection.selectedChart == .btcPrice {
                             MonteCarloChartView()
                                 .environmentObject(orientationObserver)
                                 .environmentObject(chartDataCache)
@@ -461,7 +466,7 @@ struct MonteCarloResultsView: View {
                 
             } else {
                 // PORTRAIT
-                if selectedChart == .btcPrice {
+                if chartSelection.selectedChart == .btcPrice {
                     if let btcSnapshot = chartDataCache.chartSnapshot {
                         let _ = print("// DEBUG: PORTRAIT => using snapshot => BTC")
                         
@@ -498,7 +503,8 @@ struct MonteCarloResultsView: View {
                         
                         VStack(spacing: 0) {
                             Button {
-                                selectedChart = .btcPrice
+                                print("// DEBUG: User selected BTC price chart from chart menu.")
+                                chartSelection.selectedChart = .btcPrice
                                 showChartMenu = false
                             } label: {
                                 Text("BTC Price Chart")
@@ -509,7 +515,8 @@ struct MonteCarloResultsView: View {
                             .background(Color.black)
                             
                             Button {
-                                selectedChart = .cumulativePortfolio
+                                print("// DEBUG: User selected Portfolio chart from chart menu.")
+                                chartSelection.selectedChart = .cumulativePortfolio
                                 showChartMenu = false
                             } label: {
                                 Text("Cumulative Portfolio")
@@ -542,7 +549,7 @@ struct MonteCarloResultsView: View {
         .navigationTitle(
             isLandscape
             ? ""
-            : (selectedChart == .btcPrice
+            : (chartSelection.selectedChart == .btcPrice
                ? "Monte Carlo – BTC Price (USD)"
                : "Cumulative Portfolio Returns")
         )
@@ -566,12 +573,13 @@ struct MonteCarloResultsView: View {
             let _ = print("// DEBUG: BTC runs => \(chartDataCache.allRuns?.count ?? 0)")
             let _ = print("// DEBUG: Portfolio runs => \(chartDataCache.portfolioRuns?.count ?? 0)")
             
+            // If we’re already in landscape, immediately produce a "squished" version
             if isLandscape, let portrait = portraitSnapshot {
                 squishedLandscape = squishPortraitImage(portrait)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                     isGeneratingLandscape = true
                     buildTrueLandscapeSnapshot { newSnapshot in
-                        switch selectedChart {
+                        switch chartSelection.selectedChart {
                         case .btcPrice:
                             chartDataCache.chartSnapshotLandscape = newSnapshot
                         case .cumulativePortfolio:
@@ -584,6 +592,9 @@ struct MonteCarloResultsView: View {
             }
         }
         .onChange(of: isLandscape) { newVal in
+            // NEW DEBUG PRINT
+            print("// NEW DEBUG PRINT => orientation changed => newVal=\(newVal), selectedChart=\(chartSelection.selectedChart == .btcPrice ? "BTC" : "Portfolio")")
+            
             if newVal {
                 // Just switched to landscape
                 if let portrait = portraitSnapshot {
@@ -594,7 +605,7 @@ struct MonteCarloResultsView: View {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                     isGeneratingLandscape = true
                     buildTrueLandscapeSnapshot { newSnapshot in
-                        switch selectedChart {
+                        switch chartSelection.selectedChart {
                         case .btcPrice:
                             chartDataCache.chartSnapshotLandscape = newSnapshot
                         case .cumulativePortfolio:
@@ -615,7 +626,7 @@ struct MonteCarloResultsView: View {
     
     private func buildTrueLandscapeSnapshot(completion: @escaping (UIImage) -> Void) {
         let wideChart: AnyView
-        switch selectedChart {
+        switch chartSelection.selectedChart {
         case .btcPrice:
             wideChart = AnyView(
                 MonteCarloChartView()

@@ -313,17 +313,26 @@ struct ContentView: View {
         let settings = SimulationSettings()
         settings.inputManager = manager
         let cache = ChartDataCache()
-        
+
+        // NEW: Create a ChartSelection instance so we can pass it to the coordinator
+        let chartSel = ChartSelection()
+
+        // Pass chartSel to SimulationCoordinator
         let simCoord = SimulationCoordinator(
             chartDataCache: cache,
             simSettings: settings,
-            inputManager: manager
+            inputManager: manager,
+            chartSelection: chartSel
         )
-        
+
         _inputManager = StateObject(wrappedValue: manager)
         _simSettings = StateObject(wrappedValue: settings)
         _chartDataCache = StateObject(wrappedValue: cache)
         _coordinator = StateObject(wrappedValue: simCoord)
+        
+        // Because we declared `@StateObject var chartSelection = ChartSelection()`,
+        // we don't have to do _chartSelection = StateObject(...) here.
+        // (We used the inline property approach above.)
     }
 
     // Various states
@@ -503,6 +512,7 @@ struct ContentView: View {
                     MonteCarloResultsView()
                         .environmentObject(coordinator.chartDataCache)
                         .environmentObject(simSettings)
+                        .environmentObject(coordinator.chartSelection) // <-- Use coordinator's chartSelection
                 } else {
                     Text("Loading chart…")
                         .foregroundColor(.white)

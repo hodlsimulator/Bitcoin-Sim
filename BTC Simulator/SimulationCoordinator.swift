@@ -31,14 +31,20 @@ class SimulationCoordinator: ObservableObject {
     var chartDataCache: ChartDataCache
     private var simSettings: SimulationSettings
     private var inputManager: PersistentInputManager
-    
+        
+    // 1) Store a reference to ChartSelection
+    @Published var chartSelection: ChartSelection
+
+    // 2) Updated init to accept chartSelection:
     init(chartDataCache: ChartDataCache,
          simSettings: SimulationSettings,
-         inputManager: PersistentInputManager)
+         inputManager: PersistentInputManager,
+         chartSelection: ChartSelection)
     {
         self.chartDataCache = chartDataCache
         self.simSettings = simSettings
         self.inputManager = inputManager
+        self.chartSelection = chartSelection
     }
     
     func runSimulation() {
@@ -194,13 +200,11 @@ class SimulationCoordinator: ObservableObject {
                     self.chartDataCache.portfolioRuns = allSimsAsPortfolioPoints
                     self.chartDataCache.storedInputsHash = newHash
                     
-                    // DEBUG: ADDED PRINT
                     print("// DEBUG: ADDED PRINT => just assigned chartDataCache.allRuns with \(allSimsAsWeekPoints.count) BTC runs.")
                     if let first = allSimsAsWeekPoints.first?.points, !first.isEmpty {
                         print("// DEBUG: ADDED PRINT => first BTC run has \(first.count) weeks, e.g. week=\(first[0].week), val=\(first[0].value)")
                     }
                     
-                    // DEBUG: ADDED PRINT
                     print("// DEBUG: ADDED PRINT => just assigned chartDataCache.portfolioRuns with \(allSimsAsPortfolioPoints.count) portfolio runs.")
                     if let firstPort = allSimsAsPortfolioPoints.first?.points, !firstPort.isEmpty {
                         print("// DEBUG: ADDED PRINT => first portfolio run has \(firstPort.count) weeks, e.g. week=\(firstPort[0].week), val=\(firstPort[0].value)")
@@ -208,17 +212,23 @@ class SimulationCoordinator: ObservableObject {
                     
                     print("// DEBUG: chartDataCache => storedInputsHash=\(newHash), allRuns.count=\(allSimsAsWeekPoints.count), portfolioRuns.count=\(allSimsAsPortfolioPoints.count)")
                     
-                    // Build only the portrait snapshot for BTC
+                    // CHANGED: Keep track of whatever the user was last viewing.
+                    let oldSelection = self.chartSelection.selectedChart
+                    print("// CHANGED: oldSelection => \(oldSelection)")
+
                     DispatchQueue.main.async {
                         if self.isCancelled {
                             self.isChartBuilding = false
                             return
                         }
+                        // Temporarily force BTC chart, then build
+                        self.chartSelection.selectedChart = .btcPrice
                         print("// DEBUG: building chartView (BTC portrait) for layout pass.")
                         
-                        let btcChartView = MonteCarloResultsView(selectedChart: .btcPrice)
+                        let btcChartView = MonteCarloResultsView()
                             .environmentObject(self.chartDataCache)
                             .environmentObject(self.simSettings)
+                            .environmentObject(self.chartSelection)
                         
                         DispatchQueue.main.async {
                             if self.isCancelled {
@@ -231,12 +241,14 @@ class SimulationCoordinator: ObservableObject {
                             print("// DEBUG: BTC portrait snapshot => setting chartDataCache.chartSnapshot.")
                             self.chartDataCache.chartSnapshot = btcSnapshot
                             
-                            // Next, the portfolio snapshot
+                            // Now do the same for Portfolio
                             print("// DEBUG: building chartView (Portfolio portrait) for layout pass.")
+                            self.chartSelection.selectedChart = .cumulativePortfolio
                             
-                            let portfolioChartView = MonteCarloResultsView(selectedChart: .cumulativePortfolio)
+                            let portfolioChartView = MonteCarloResultsView()
                                 .environmentObject(self.chartDataCache)
                                 .environmentObject(self.simSettings)
+                                .environmentObject(self.chartSelection)
                             
                             DispatchQueue.main.async {
                                 if self.isCancelled {
@@ -249,6 +261,10 @@ class SimulationCoordinator: ObservableObject {
                                 print("// DEBUG: [Portfolio] portrait snapshot => setting chartDataCache.chartSnapshotPortfolio.")
                                 self.chartDataCache.chartSnapshotPortfolio = portfolioSnapshot
                                 
+                                // CHANGED: Finally restore the user’s old selection.
+                                self.chartSelection.selectedChart = oldSelection
+                                print("// CHANGED: restored oldSelection => \(oldSelection)")
+
                                 self.isChartBuilding = false
                                 self.isSimulationRun = true
                             }

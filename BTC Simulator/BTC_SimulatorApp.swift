@@ -7,24 +7,28 @@
 
 import SwiftUI
 
+class ChartSelection: ObservableObject {
+    @Published var selectedChart: MonteCarloResultsView.ChartType = .btcPrice
+}
+
 @main
 struct BTCMonteCarloApp: App {
     @AppStorage("hasOnboarded") private var didFinishOnboarding = false
 
-    // Add this so it's in scope:
     @StateObject private var inputManager = PersistentInputManager()
     @StateObject private var simSettings = SimulationSettings()
     @StateObject private var chartDataCache = ChartDataCache()
     @StateObject private var appViewModel = AppViewModel()
 
+    // NEW: This holds the currently selected chart
+    @StateObject private var chartSelection = ChartSelection()
+
     init() {
-        // Force dark navigation so it doesn't momentarily flash white.
-        // Also forced the keyboard to a dark theme:
         let appearance = UINavigationBarAppearance()
         appearance.configureWithOpaqueBackground()
         appearance.backgroundColor = UIColor.black
         appearance.titleTextAttributes = [.foregroundColor: UIColor.white]
-        
+
         UINavigationBar.appearance().standardAppearance = appearance
         UINavigationBar.appearance().scrollEdgeAppearance = appearance
         UINavigationBar.appearance().compactAppearance = appearance
@@ -35,10 +39,8 @@ struct BTCMonteCarloApp: App {
     var body: some Scene {
         WindowGroup {
             ZStack {
-                // Force a dark background behind everything to kill white flashes on rotation.
                 Color.black.ignoresSafeArea()
 
-                // Track window size changes.
                 GeometryReader { geo in
                     Color.clear
                         .onAppear {
@@ -50,25 +52,25 @@ struct BTCMonteCarloApp: App {
                         }
                 }
 
-                // Normal app flow
                 if didFinishOnboarding {
                     NavigationStack {
                         ContentView()
-                            // Provide the same environment objects here:
                             .environmentObject(inputManager)
                             .environmentObject(simSettings)
                             .environmentObject(chartDataCache)
                             .environmentObject(appViewModel)
+                            // Provide the chartSelection environment object here:
+                            .environmentObject(chartSelection)
                     }
                     .preferredColorScheme(.dark)
                 } else {
                     NavigationStack {
                         OnboardingView(didFinishOnboarding: $didFinishOnboarding)
-                            // Now inputManager is in scope:
                             .environmentObject(inputManager)
                             .environmentObject(simSettings)
                             .environmentObject(chartDataCache)
                             .environmentObject(appViewModel)
+                            .environmentObject(chartSelection)
                     }
                     .preferredColorScheme(.dark)
                 }
