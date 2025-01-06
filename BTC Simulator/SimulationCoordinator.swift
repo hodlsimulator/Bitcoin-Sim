@@ -79,7 +79,7 @@ class SimulationCoordinator: ObservableObject {
             print("// DEBUG: No seed locked or random => finalSeed is nil.")
         }
 
-        // -- NEW LOGS: show what's in inputManager before we simulate
+        // Show inputManager contents
         if let mgr = simSettings.inputManager {
             print("// DEBUG: runSimulation => firstYearContribution=\(mgr.firstYearContribution), subsequentContribution=\(mgr.subsequentContribution)")
             print("// DEBUG: runSimulation => threshold1=\(mgr.threshold1), withdraw1=\(mgr.withdrawAmount1)")
@@ -112,7 +112,8 @@ class SimulationCoordinator: ObservableObject {
             let userPriceUSDAsDecimal = Decimal(self.simSettings.initialBTCPriceUSD)
             let userPriceUSDAsDouble = NSDecimalNumber(decimal: userPriceUSDAsDecimal).doubleValue
 
-            let (medianRun, allIterations) = runMonteCarloSimulationsWithProgress(
+            // Run the simulations (don’t rely on the built-in median from the function):
+            let (_, allIterations) = runMonteCarloSimulationsWithProgress(
                 settings: self.simSettings,
                 annualCAGR: userInputCAGR,
                 annualVolatility: userInputVolatility,
@@ -138,12 +139,13 @@ class SimulationCoordinator: ObservableObject {
                 return
             }
             
-            let finalRuns = allIterations.map { ($0.last?.btcPriceUSD ?? Decimal.zero, $0) }
+            // Sort runs by final portfolio (just for logs)
+            let finalRuns = allIterations.map { ($0.last?.portfolioValueEUR ?? Decimal.zero, $0) }
             let sortedRuns = finalRuns.sorted { $0.0 < $1.0 }
             
-            print("// DEBUG: sortedRuns => \(sortedRuns.count) runs. Sample final price range => first: \(sortedRuns.first?.0 ?? 0) ... last: \(sortedRuns.last?.0 ?? 0)")
+            print("// DEBUG: sortedRuns => \(sortedRuns.count) runs. Sample final portfolio range => first: \(sortedRuns.first?.0 ?? 0) ... last: \(sortedRuns.last?.0 ?? 0)")
             
-            // Optional partial-sample debug
+            // Optional partial sample
             if let firstRun = allIterations.first {
                 let midIndex = firstRun.count / 2
                 print("// DEBUG: partial sample from first run => week1 => BTC=\(firstRun[0].btcPriceUSD), portfolio=\(firstRun[0].portfolioValueEUR)")
@@ -156,27 +158,32 @@ class SimulationCoordinator: ObservableObject {
                     self.isChartBuilding = true
                     print("// DEBUG: Simulation finished => isChartBuilding=true now.")
                     
+                    // Grabbing just for 10th/median/90th percentile reference
                     let tenthIndex     = max(0, Int(Double(sortedRuns.count - 1) * 0.10))
                     let medianIndex    = sortedRuns.count / 2
                     let ninetiethIndex = min(sortedRuns.count - 1, Int(Double(sortedRuns.count - 1) * 0.90))
                     
-                    let tenthRun        = sortedRuns[tenthIndex].1
-                    let singleMedianRun = sortedRuns[medianIndex].1
-                    let ninetiethRun    = sortedRuns[ninetiethIndex].1
-                    let medianLineData  = self.computeMedianSimulationData(allIterations: allIterations)
+                    let tenthRun     = sortedRuns[tenthIndex].1
+                    let medianRun    = sortedRuns[medianIndex].1
+                    let ninetiethRun = sortedRuns[ninetiethIndex].1
                     
-                    print("// DEBUG: Tenth final BTC price => \(tenthRun.last?.btcPriceUSD ?? 0)")
-                    print("// DEBUG: Median final BTC price => \(singleMedianRun.last?.btcPriceUSD ?? 0)")
-                    print("// DEBUG: Ninetieth final BTC price => \(ninetiethRun.last?.btcPriceUSD ?? 0)")
+                    // The composite line used by the UI
+                    let medianLineData = self.computeMedianSimulationData(allIterations: allIterations)
                     
-                    print("// DEBUG: medianLineData => \(medianLineData.count) weeks. First price => \(medianLineData.first?.btcPriceUSD ?? 0), last => \(medianLineData.last?.btcPriceUSD ?? 0)")
+                    // Print the final from that composite line => matches the chart
+                    let medianBTCFinal = medianLineData.last?.btcPriceUSD ?? 0
+                    let medianPortfolioFinal = medianLineData.last?.portfolioValueEUR ?? 0
                     
+                    print("// DEBUG: Tenth final portfolio => \(tenthRun.last?.portfolioValueEUR ?? 0)")
+                    print("// DEBUG: Ninetieth final portfolio => \(ninetiethRun.last?.portfolioValueEUR ?? 0)")
+                    print("// DEBUG: medianLineData => \(medianLineData.count) weeks. Final BTC => \(medianBTCFinal), final portfolio => \(medianPortfolioFinal)")
+                    
+                    // Store or display that composite line in the UI:
                     self.tenthPercentileResults = tenthRun
-                    self.medianResults = singleMedianRun
+                    self.medianResults = medianLineData
                     self.ninetiethPercentileResults = ninetiethRun
                     self.monteCarloResults = medianLineData
                     self.selectedPercentile = .median
-                    self.medianResults = medianLineData
                     self.allSimData = allIterations
                     
                     // Convert runs for BTC chart and Portfolio
@@ -212,7 +219,6 @@ class SimulationCoordinator: ObservableObject {
                     
                     print("// DEBUG: chartDataCache => storedInputsHash=\(newHash), allRuns.count=\(allSimsAsWeekPoints.count), portfolioRuns.count=\(allSimsAsPortfolioPoints.count)")
                     
-                    // CHANGED: Keep track of whatever the user was last viewing.
                     let oldSelection = self.chartSelection.selectedChart
                     print("// CHANGED: oldSelection => \(oldSelection)")
 
@@ -261,7 +267,7 @@ class SimulationCoordinator: ObservableObject {
                                 print("// DEBUG: [Portfolio] portrait snapshot => setting chartDataCache.chartSnapshotPortfolio.")
                                 self.chartDataCache.chartSnapshotPortfolio = portfolioSnapshot
                                 
-                                // CHANGED: Finally restore the user’s old selection.
+                                // Restore old selection
                                 self.chartSelection.selectedChart = oldSelection
                                 print("// CHANGED: restored oldSelection => \(oldSelection)")
 

@@ -263,7 +263,7 @@ func simulationLines(simulations: [SimulationRun]) -> some ChartContent {
                 x: .value("Year", weeksToYears(pt.week)),
                 y: .value("Value", NSDecimalNumber(decimal: pt.value).doubleValue)
             )
-            .foregroundStyle(colour.opacity(0.3))
+            .foregroundStyle(colour.opacity(0.2))
             .foregroundStyle(by: .value("SeriesIndex", index))
             .lineStyle(
                 StrokeStyle(
