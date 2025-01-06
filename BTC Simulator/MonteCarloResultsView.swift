@@ -152,23 +152,63 @@ fileprivate func weeksToYears(_ weeks: Int) -> Double {
 
 @ChartContentBuilder
 func simulationLines(simulations: [SimulationRun]) -> some ChartContent {
-    let customPalette: [Color] = [
-        .red, .orange, .yellow, .green, .blue, .purple,
-        Color(hue: 0.55, saturation: 1.0, brightness: 0.9),
-        // etc.
+    // We allow the full hue range: 0.0 (red) → 1.0 (red again).
+    let allowedRanges: [(Double, Double)] = [
+        (0.0, 1.0)
     ]
     
+    // Number of distinct colours to generate.
+    let colourPoolSize = 30
+    
+    // The total span across 0.0 → 1.0 is obviously 1.0.
+    let totalSpan = allowedRanges.reduce(0.0) { $0 + ($1.1 - $1.0) }
+    
+    // Build an array of colours by evenly stepping from 0.0 to 1.0 in hue.
+    let safeColours: [Color] = (0..<colourPoolSize).map { i in
+        // fraction: how far along the hue spectrum (0.0–1.0).
+        let fraction = Double(i) / Double(colourPoolSize - 1)
+        let target = fraction * totalSpan
+        
+        // Find which segment this fraction belongs to (only one here).
+        var cumulative = 0.0
+        for (lowerHue, upperHue) in allowedRanges {
+            let segmentSpan = upperHue - lowerHue
+            if cumulative + segmentSpan >= target {
+                // offset is how far into this segment.
+                let offset = target - cumulative
+                let hue = lowerHue + offset
+                // saturation = 0.8 → fairly vivid, brightness = 0.9 → fairly light
+                return Color(hue: hue, saturation: 0.8, brightness: 0.9)
+            }
+            cumulative += segmentSpan
+        }
+        
+        // Fallback if something goes awry, just return red.
+        return Color.red
+    }
+    
+    // Plot a line for each simulation using our colour pool.
     ForEach(simulations.indices, id: \.self) { index in
         let sim = simulations[index]
-        let colour = customPalette[index % customPalette.count]
+        
+        // Use modulo in case simulations exceed 120.
+        let colour = safeColours[index % safeColours.count]
         
         ForEach(sim.points) { pt in
             LineMark(
+                // x-axis: year (converted from weeks).
                 x: .value("Year", weeksToYears(pt.week)),
+                
+                // y-axis: the numeric value.
                 y: .value("Value", NSDecimalNumber(decimal: pt.value).doubleValue)
             )
+            // Make lines semi-transparent.
             .foregroundStyle(colour.opacity(0.3))
+            
+            // Keep each simulation in its own “legend group.”
             .foregroundStyle(by: .value("SeriesIndex", index))
+            
+            // Control line width and shape.
             .lineStyle(
                 StrokeStyle(
                     lineWidth: 0.5,
@@ -177,6 +217,49 @@ func simulationLines(simulations: [SimulationRun]) -> some ChartContent {
                 )
             )
         }
+    }
+}
+
+@ChartContentBuilder
+func medianLines(simulations: [SimulationRun]) -> some ChartContent {
+    let medianLine = computeMedianLine(simulations)
+    
+    // 1) Figure out how many total runs we have (70..1000).
+    let iterationCount = simulations.count
+    let clamped = max(70, min(iterationCount, 1000))
+    
+    // 2) fraction goes from 0.0 (at 70) up to 1.0 (at 1000).
+    let fraction = Double(clamped - 70) / Double(1000 - 70)
+    
+    // 3) Keep the orange line at full opacity (1.0),
+    //    but reduce brightness from 1.0 down to 0.6
+    let minBrightness: CGFloat = 1.0
+    let maxDarkBrightness: CGFloat = 0.6
+    let dynamicBrightness = minBrightness - fraction * (minBrightness - maxDarkBrightness)
+    
+    // 4) Also thicken line from 1.5 up to 3.0
+    let minWidth: CGFloat = 1.5
+    let maxWidth: CGFloat = 3.0
+    let lineWidth = minWidth + fraction * (maxWidth - minWidth)
+    
+    // 5) Build the median line with dynamic brightness & thickness
+    ForEach(medianLine) { pt in
+        LineMark(
+            x: .value("Year", weeksToYears(pt.week)),
+            y: .value("Value", NSDecimalNumber(decimal: pt.value).doubleValue)
+        )
+        .foregroundStyle(
+            // Hue ~0.08 is an orange-ish hue, saturate around 0.9
+            Color(hue: 0.08, saturation: 0.9, brightness: dynamicBrightness)
+        )
+        .interpolationMethod(.monotone)
+        .lineStyle(
+            StrokeStyle(
+                lineWidth: lineWidth,
+                lineCap: .round,
+                lineJoin: .round
+            )
+        )
     }
 }
 
@@ -207,25 +290,6 @@ func computeMedianLine(_ simulations: [SimulationRun]) -> [WeekPoint] {
         medianPoints.append(WeekPoint(week: week, value: median))
     }
     return medianPoints
-}
-
-@ChartContentBuilder
-func medianLines(simulations: [SimulationRun]) -> some ChartContent {
-    let medianLine = computeMedianLine(simulations)
-    
-    LineMark(
-        x: .value("Year", weeksToYears(medianLine.first?.week ?? 0)),
-        y: .value("Value", NSDecimalNumber(decimal: medianLine.first?.value ?? 0).doubleValue)
-    )
-    ForEach(medianLine) { pt in
-        LineMark(
-            x: .value("Year", weeksToYears(pt.week)),
-            y: .value("Value", NSDecimalNumber(decimal: pt.value).doubleValue)
-        )
-        .foregroundStyle(.white)
-        .interpolationMethod(.monotone)
-        .lineStyle(StrokeStyle(lineWidth: 2.0))
-    }
 }
 
 // MARK: - BTC Chart Subview
@@ -400,229 +464,182 @@ struct MonteCarloResultsView: View {
     }
     
     var body: some View {
-        // NEW DEBUG PRINT: Snapshots at the start of body
-        let _ = print("// NEW DEBUG PRINT => selectedChart: \(chartSelection.selectedChart == .btcPrice ? "BTC" : "Portfolio"), isLandscape=\(isLandscape)")
-        let _ = print("// NEW DEBUG PRINT => portrait BTC != nil? \(chartDataCache.chartSnapshot != nil), portfolio != nil? \(chartDataCache.chartSnapshotPortfolio != nil)")
-        let _ = print("// NEW DEBUG PRINT => landscape BTC != nil? \(chartDataCache.chartSnapshotLandscape != nil), portfolio != nil? \(chartDataCache.chartSnapshotPortfolioLandscape != nil)")
-        
-        return ZStack {
-            Color.black.ignoresSafeArea()
-            
-            if isLandscape {
-                // LANDSCAPE
-                VStack(spacing: 0) {
-                    Spacer().frame(height: 20)
+            ZStack {
+                Color.black.ignoresSafeArea()
+                
+                if isLandscape {
+                    // LANDSCAPE
+                    VStack(spacing: 0) {
+                        Spacer().frame(height: 20)
+                        
+                        if let freshLandscape = freshLandscapeSnapshot {
+                            Image(uiImage: freshLandscape)
+                                .resizable()
+                                .scaledToFit()
+                            
+                        } else if let squished = squishedLandscape {
+                            Image(uiImage: squished)
+                                .resizable()
+                                .scaledToFit()
+                            
+                        } else if let portrait = portraitSnapshot {
+                            SquishedLandscapePlaceholderView(image: portrait)
+                            
+                        } else {
+                            // No snapshots -> show the actual Swift Charts
+                            if chartSelection.selectedChart == .btcPrice {
+                                MonteCarloChartView()
+                                    .environmentObject(orientationObserver)
+                                    .environmentObject(chartDataCache)
+                            } else {
+                                PortfolioChartView()
+                                    .environmentObject(orientationObserver)
+                                    .environmentObject(chartDataCache)
+                            }
+                        }
+                    }
                     
-                    if let freshLandscape = freshLandscapeSnapshot {
-                        let _ = print("// DEBUG: LANDSCAPE => using new snapshot => "
-                                      + (chartSelection.selectedChart == .btcPrice ? "BTC" : "Portfolio"))
-                        
-                        Image(uiImage: freshLandscape)
-                            .resizable()
-                            .scaledToFit()
-                        
-                        Text("// DEBUG: Using new LANDSCAPE snapshot => "
-                             + (chartSelection.selectedChart == .btcPrice ? "BTC" : "Portfolio"))
-                            .foregroundColor(.white)
-                        
-                    } else if let squished = squishedLandscape {
-                        let _ = print("// DEBUG: LANDSCAPE => using squished portrait => "
-                                      + (chartSelection.selectedChart == .btcPrice ? "BTC" : "Portfolio"))
-                        
-                        Image(uiImage: squished)
-                            .resizable()
-                            .scaledToFit()
-                        
-                        Text("// DEBUG: Using SQUISHED portrait => "
-                             + (chartSelection.selectedChart == .btcPrice ? "BTC" : "Portfolio"))
-                            .foregroundColor(.white)
-                        
-                    } else if let portrait = portraitSnapshot {
-                        let _ = print("// DEBUG: LANDSCAPE => using placeholder portrait => "
-                                      + (chartSelection.selectedChart == .btcPrice ? "BTC" : "Portfolio"))
-                        
-                        SquishedLandscapePlaceholderView(image: portrait)
-                        
-                        Text("// DEBUG: Using placeholder => "
-                             + (chartSelection.selectedChart == .btcPrice ? "BTC" : "Portfolio"))
-                            .foregroundColor(.white)
-                        
-                    } else {
-                        let _ = print("// DEBUG: LANDSCAPE => no snapshot => showing Swift Charts => "
-                                      + (chartSelection.selectedChart == .btcPrice ? "BTC" : "Portfolio"))
-                        
-                        // No snapshots -> show the actual Swift Charts
-                        if chartSelection.selectedChart == .btcPrice {
+                } else {
+                    // PORTRAIT
+                    if chartSelection.selectedChart == .btcPrice {
+                        if let btcSnapshot = chartDataCache.chartSnapshot {
+                            SnapshotView(snapshot: btcSnapshot)
+                        } else {
                             MonteCarloChartView()
                                 .environmentObject(orientationObserver)
                                 .environmentObject(chartDataCache)
+                        }
+                    } else {
+                        if let portfolioSnapshot = chartDataCache.chartSnapshotPortfolio {
+                            SnapshotView(snapshot: portfolioSnapshot)
                         } else {
                             PortfolioChartView()
                                 .environmentObject(orientationObserver)
                                 .environmentObject(chartDataCache)
                         }
                     }
+                    
+                    // Show chart menu in portrait
+                    if showChartMenu {
+                        VStack(spacing: 0) {
+                            Spacer().frame(height: 130)
+                            
+                            VStack(spacing: 0) {
+                                Button {
+                                    print("// DEBUG: User selected BTC price chart from chart menu.")
+                                    chartSelection.selectedChart = .btcPrice
+                                    showChartMenu = false
+                                } label: {
+                                    Text("BTC Price Chart")
+                                        .foregroundColor(.white)
+                                        .padding()
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                .background(Color.black)
+                                
+                                Button {
+                                    print("// DEBUG: User selected Portfolio chart from chart menu.")
+                                    chartSelection.selectedChart = .cumulativePortfolio
+                                    showChartMenu = false
+                                } label: {
+                                    Text("Cumulative Portfolio")
+                                        .foregroundColor(.white)
+                                        .padding()
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                .background(Color.black)
+                            }
+                            .frame(maxWidth: 240)
+                            
+                            Spacer()
+                        }
+                        .transition(.opacity)
+                        .zIndex(3)
+                    }
                 }
                 
-            } else {
-                // PORTRAIT
-                if chartSelection.selectedChart == .btcPrice {
-                    if let btcSnapshot = chartDataCache.chartSnapshot {
-                        let _ = print("// DEBUG: PORTRAIT => using snapshot => BTC")
-                        
-                        SnapshotView(snapshot: btcSnapshot)
-                        Text("// DEBUG: Using PORTRAIT snapshot => BTC")
+                // Spinner if generating
+                if isGeneratingLandscape {
+                    Color.black.opacity(0.6).ignoresSafeArea()
+                    VStack(spacing: 20) {
+                        ProgressView("Generating Landscape…")
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            .scaleEffect(2.0)
                             .foregroundColor(.white)
-                    } else {
-                        let _ = print("// DEBUG: PORTRAIT => no snapshot => showing Swift Charts => BTC")
-                        
-                        MonteCarloChartView()
-                            .environmentObject(orientationObserver)
-                            .environmentObject(chartDataCache)
+                    }
+                }
+            }
+            .navigationTitle(
+                isLandscape
+                ? ""
+                : (chartSelection.selectedChart == .btcPrice
+                   ? "Monte Carlo – BTC Price (USD)"
+                   : "Cumulative Portfolio Returns")
+            )
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarHidden(isLandscape)
+            .toolbar {
+                if !isLandscape {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button {
+                            withAnimation {
+                                showChartMenu.toggle()
+                            }
+                        } label: {
+                            Image(systemName: showChartMenu ? "chevron.up" : "chevron.down")
+                                .foregroundColor(.white)
+                        }
+                    }
+                }
+            }
+            .onAppear {
+                // If we’re already in landscape, immediately produce a "squished" version
+                if isLandscape, let portrait = portraitSnapshot {
+                    squishedLandscape = squishPortraitImage(portrait)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                        isGeneratingLandscape = true
+                        buildTrueLandscapeSnapshot { newSnapshot in
+                            switch chartSelection.selectedChart {
+                            case .btcPrice:
+                                chartDataCache.chartSnapshotLandscape = newSnapshot
+                            case .cumulativePortfolio:
+                                chartDataCache.chartSnapshotPortfolioLandscape = newSnapshot
+                            }
+                            brandNewLandscapeSnapshot = newSnapshot
+                            isGeneratingLandscape = false
+                        }
+                    }
+                }
+            }
+            .onChange(of: isLandscape) { newVal in
+                if newVal {
+                    // Just switched to landscape
+                    if let portrait = portraitSnapshot {
+                        DispatchQueue.main.async {
+                            squishedLandscape = squishPortraitImage(portrait)
+                        }
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                        isGeneratingLandscape = true
+                        buildTrueLandscapeSnapshot { newSnapshot in
+                            switch chartSelection.selectedChart {
+                            case .btcPrice:
+                                chartDataCache.chartSnapshotLandscape = newSnapshot
+                            case .cumulativePortfolio:
+                                chartDataCache.chartSnapshotPortfolioLandscape = newSnapshot
+                            }
+                            brandNewLandscapeSnapshot = newSnapshot
+                            isGeneratingLandscape = false
+                        }
                     }
                 } else {
-                    if let portfolioSnapshot = chartDataCache.chartSnapshotPortfolio {
-                        let _ = print("// DEBUG: PORTRAIT => using snapshot => Portfolio")
-                        
-                        SnapshotView(snapshot: portfolioSnapshot)
-                        Text("// DEBUG: Using PORTRAIT snapshot => Portfolio")
-                            .foregroundColor(.white)
-                    } else {
-                        let _ = print("// DEBUG: PORTRAIT => no snapshot => showing Swift Charts => Portfolio")
-                        
-                        PortfolioChartView()
-                            .environmentObject(orientationObserver)
-                            .environmentObject(chartDataCache)
-                    }
-                }
-                
-                // Show chart menu in portrait
-                if showChartMenu {
-                    VStack(spacing: 0) {
-                        Spacer().frame(height: 130)
-                        
-                        VStack(spacing: 0) {
-                            Button {
-                                print("// DEBUG: User selected BTC price chart from chart menu.")
-                                chartSelection.selectedChart = .btcPrice
-                                showChartMenu = false
-                            } label: {
-                                Text("BTC Price Chart")
-                                    .foregroundColor(.white)
-                                    .padding()
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                            }
-                            .background(Color.black)
-                            
-                            Button {
-                                print("// DEBUG: User selected Portfolio chart from chart menu.")
-                                chartSelection.selectedChart = .cumulativePortfolio
-                                showChartMenu = false
-                            } label: {
-                                Text("Cumulative Portfolio")
-                                    .foregroundColor(.white)
-                                    .padding()
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                            }
-                            .background(Color.black)
-                        }
-                        .frame(maxWidth: 240)
-                        
-                        Spacer()
-                    }
-                    .transition(.opacity)
-                    .zIndex(3)
-                }
-            }
-            
-            // Spinner if generating
-            if isGeneratingLandscape {
-                Color.black.opacity(0.6).ignoresSafeArea()
-                VStack(spacing: 20) {
-                    ProgressView("Generating Landscape…")
-                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                        .scaleEffect(2.0)
-                        .foregroundColor(.white)
+                    // Just switched back to portrait
+                    squishedLandscape = nil
+                    brandNewLandscapeSnapshot = nil
+                    isGeneratingLandscape = false
                 }
             }
         }
-        .navigationTitle(
-            isLandscape
-            ? ""
-            : (chartSelection.selectedChart == .btcPrice
-               ? "Monte Carlo – BTC Price (USD)"
-               : "Cumulative Portfolio Returns")
-        )
-        .navigationBarTitleDisplayMode(.inline)
-        .navigationBarHidden(isLandscape)
-        .toolbar {
-            if !isLandscape {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        withAnimation {
-                            showChartMenu.toggle()
-                        }
-                    } label: {
-                        Image(systemName: showChartMenu ? "chevron.up" : "chevron.down")
-                            .foregroundColor(.white)
-                    }
-                }
-            }
-        }
-        .onAppear {
-            let _ = print("// DEBUG: BTC runs => \(chartDataCache.allRuns?.count ?? 0)")
-            let _ = print("// DEBUG: Portfolio runs => \(chartDataCache.portfolioRuns?.count ?? 0)")
-            
-            // If we’re already in landscape, immediately produce a "squished" version
-            if isLandscape, let portrait = portraitSnapshot {
-                squishedLandscape = squishPortraitImage(portrait)
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                    isGeneratingLandscape = true
-                    buildTrueLandscapeSnapshot { newSnapshot in
-                        switch chartSelection.selectedChart {
-                        case .btcPrice:
-                            chartDataCache.chartSnapshotLandscape = newSnapshot
-                        case .cumulativePortfolio:
-                            chartDataCache.chartSnapshotPortfolioLandscape = newSnapshot
-                        }
-                        brandNewLandscapeSnapshot = newSnapshot
-                        isGeneratingLandscape = false
-                    }
-                }
-            }
-        }
-        .onChange(of: isLandscape) { newVal in
-            // NEW DEBUG PRINT
-            print("// NEW DEBUG PRINT => orientation changed => newVal=\(newVal), selectedChart=\(chartSelection.selectedChart == .btcPrice ? "BTC" : "Portfolio")")
-            
-            if newVal {
-                // Just switched to landscape
-                if let portrait = portraitSnapshot {
-                    DispatchQueue.main.async {
-                        squishedLandscape = squishPortraitImage(portrait)
-                    }
-                }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                    isGeneratingLandscape = true
-                    buildTrueLandscapeSnapshot { newSnapshot in
-                        switch chartSelection.selectedChart {
-                        case .btcPrice:
-                            chartDataCache.chartSnapshotLandscape = newSnapshot
-                        case .cumulativePortfolio:
-                            chartDataCache.chartSnapshotPortfolioLandscape = newSnapshot
-                        }
-                        brandNewLandscapeSnapshot = newSnapshot
-                        isGeneratingLandscape = false
-                    }
-                }
-            } else {
-                // Just switched back to portrait
-                squishedLandscape = nil
-                brandNewLandscapeSnapshot = nil
-                isGeneratingLandscape = false
-            }
-        }
-    }
     
     private func buildTrueLandscapeSnapshot(completion: @escaping (UIImage) -> Void) {
         let wideChart: AnyView

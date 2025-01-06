@@ -566,7 +566,7 @@ struct ContentView: View {
                     
                 } else if coordinator.isChartBuilding {
                     VStack(spacing: 12) {
-                        Text("Generating Chart…")
+                        Text("Generating Charts…")
                             .font(.headline)
                             .foregroundColor(.white)
                             .padding(.bottom, 20)
@@ -578,11 +578,6 @@ struct ContentView: View {
                                 )
                             )
                             .scaleEffect(2.0)
-                        
-                        // ADDED:
-                        Text("// DEBUG: Currently building chart…")
-                            .foregroundColor(.white)
-                            .font(.footnote)
                     }
                     .offset(y: 270)
 
