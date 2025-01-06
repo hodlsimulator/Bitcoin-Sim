@@ -194,6 +194,18 @@ class SimulationCoordinator: ObservableObject {
                     self.chartDataCache.portfolioRuns = allSimsAsPortfolioPoints
                     self.chartDataCache.storedInputsHash = newHash
                     
+                    // DEBUG: ADDED PRINT
+                    print("// DEBUG: ADDED PRINT => just assigned chartDataCache.allRuns with \(allSimsAsWeekPoints.count) BTC runs.")
+                    if let first = allSimsAsWeekPoints.first?.points, !first.isEmpty {
+                        print("// DEBUG: ADDED PRINT => first BTC run has \(first.count) weeks, e.g. week=\(first[0].week), val=\(first[0].value)")
+                    }
+                    
+                    // DEBUG: ADDED PRINT
+                    print("// DEBUG: ADDED PRINT => just assigned chartDataCache.portfolioRuns with \(allSimsAsPortfolioPoints.count) portfolio runs.")
+                    if let firstPort = allSimsAsPortfolioPoints.first?.points, !firstPort.isEmpty {
+                        print("// DEBUG: ADDED PRINT => first portfolio run has \(firstPort.count) weeks, e.g. week=\(firstPort[0].week), val=\(firstPort[0].value)")
+                    }
+                    
                     print("// DEBUG: chartDataCache => storedInputsHash=\(newHash), allRuns.count=\(allSimsAsWeekPoints.count), portfolioRuns.count=\(allSimsAsPortfolioPoints.count)")
                     
                     // Build only the portrait snapshot for BTC
@@ -285,7 +297,6 @@ class SimulationCoordinator: ObservableObject {
         return combinedString.hashValue
     }
     
-    /// Computes median SimulationData across all runs at each week index
     private func computeMedianSimulationData(allIterations: [[SimulationData]]) -> [SimulationData] {
         guard let firstRun = allIterations.first else { return [] }
         let totalWeeks = firstRun.count

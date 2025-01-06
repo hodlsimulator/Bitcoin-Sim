@@ -19,6 +19,10 @@ struct PortfolioChartView: View {
         // Pull the portfolio runs from the cache
         let simulations = chartDataCache.portfolioRuns ?? []
         
+        // Avoid 'buildExpression' errors by assigning prints to _
+        let _ = print("// DEBUG: ADDED PRINT => PortfolioChartView loaded. isLandscape=\(isLandscape)")
+        let _ = print("// DEBUG: ADDED PRINT => portfolioRuns count = \(simulations.count)")
+        
         Group {
             GeometryReader { geo in
                 ZStack {
@@ -123,10 +127,14 @@ struct PortfolioChartView: View {
             .onAppear {
                 // Debug printing the portfolio runs
                 let count = simulations.count
-                print("// DEBUG: PortfolioChartView => simulations count = \(count)")
+                print("// DEBUG: ADDED PRINT => onAppear: portfolioRuns count = \(count)")
+                
+                // Print a small sample from each of the first two runs
                 for (idx, run) in simulations.prefix(2).enumerated() {
                     if !run.points.isEmpty {
-                        let snippet = run.points.prefix(2).map { "week=\($0.week), val=\($0.value)" }
+                        let snippet = run.points.prefix(2).map {
+                            "week=\($0.week), val=\($0.value)"
+                        }
                         print("// DEBUG: [\(idx)] sample => \(snippet.joined(separator: " | "))")
                     } else {
                         print("// DEBUG: [\(idx)] run => no points")

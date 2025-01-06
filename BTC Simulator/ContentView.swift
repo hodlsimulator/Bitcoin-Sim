@@ -13,10 +13,10 @@ import UIKit
 
 // MARK: - Snapshot Debugging Extension
 extension View {
-    func snapshot() -> UIImage {
+    func snapshot(label: String? = nil) -> UIImage {
         let controller = UIHostingController(rootView: self)
         
-        // Force a dark (or clear) background to avoid white flashes
+        // Force a dark background to avoid white flashes
         controller.view.backgroundColor = UIColor.black
         controller.view.isOpaque = true
         
@@ -33,8 +33,12 @@ extension View {
             controller.view.drawHierarchy(in: controller.view.bounds, afterScreenUpdates: true)
         }
         
-        // ADDED:
-        print("// DEBUG: snapshot() -> image size = \(image.size)")
+        // Print debug info
+        if let label = label {
+            print("// DEBUG: snapshot(\(label)) => image size = \(image.size)")
+        } else {
+            print("// DEBUG: snapshot() => image size = \(image.size)")
+        }
         
         return image
     }
