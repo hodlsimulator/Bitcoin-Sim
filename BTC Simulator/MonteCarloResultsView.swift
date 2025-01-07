@@ -164,10 +164,6 @@ func simulationLines(simulations: [SimulationRun]) -> some ChartContent {
         Color(hue: 0.00, saturation: 0.00, brightness: 1.0), // Pure white
         Color(hue: 0.10, saturation: 0.05, brightness: 1.0), // Warm off-white
 
-        /* Extra near-white
-        Color(hue: 0.00, saturation: 0.00, brightness: 1.0), // Pure white
-        Color(hue: 0.10, saturation: 0.05, brightness: 1.0), // Warm off-white
-        
         // Extra near-white
         Color(hue: 0.00, saturation: 0.00, brightness: 1.0), // Pure white
         Color(hue: 0.10, saturation: 0.05, brightness: 1.0), // Warm off-white
@@ -178,7 +174,11 @@ func simulationLines(simulations: [SimulationRun]) -> some ChartContent {
         
         // Extra near-white
         Color(hue: 0.00, saturation: 0.00, brightness: 1.0), // Pure white
-        Color(hue: 0.10, saturation: 0.05, brightness: 1.0), // Warm off-white */
+        Color(hue: 0.10, saturation: 0.05, brightness: 1.0), // Warm off-white
+        
+        // Extra near-white
+        Color(hue: 0.00, saturation: 0.00, brightness: 1.0), // Pure white
+        Color(hue: 0.10, saturation: 0.05, brightness: 1.0), // Warm off-white 
 
         // Strong reds/oranges
         Color(hue: 0.0000, saturation: 0.8, brightness: 1.0), // Red
@@ -198,7 +198,7 @@ func simulationLines(simulations: [SimulationRun]) -> some ChartContent {
         Color(hue: 0.2333, saturation: 0.6, brightness: 1.0), // Soft Green
         Color(hue: 0.2500, saturation: 0.6, brightness: 1.0), // Spring Green
         
-        // Extra s  trong reds/oranges
+        // Extra strong reds/oranges
         Color(hue: 0.0000, saturation: 0.8, brightness: 1.0), // Red
         Color(hue: 0.0167, saturation: 0.8, brightness: 1.0), // Reddish-Orange
         Color(hue: 0.0333, saturation: 0.8, brightness: 1.0), // Orange
