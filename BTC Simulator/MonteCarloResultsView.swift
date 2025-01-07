@@ -164,7 +164,7 @@ func simulationLines(simulations: [SimulationRun]) -> some ChartContent {
         Color(hue: 0.00, saturation: 0.00, brightness: 1.0), // Pure white
         Color(hue: 0.10, saturation: 0.05, brightness: 1.0), // Warm off-white
 
-        // Extra near-white
+        /* Extra near-white
         Color(hue: 0.00, saturation: 0.00, brightness: 1.0), // Pure white
         Color(hue: 0.10, saturation: 0.05, brightness: 1.0), // Warm off-white
         
@@ -178,9 +178,27 @@ func simulationLines(simulations: [SimulationRun]) -> some ChartContent {
         
         // Extra near-white
         Color(hue: 0.00, saturation: 0.00, brightness: 1.0), // Pure white
-        Color(hue: 0.10, saturation: 0.05, brightness: 1.0), // Warm off-white
+        Color(hue: 0.10, saturation: 0.05, brightness: 1.0), // Warm off-white */
 
         // Strong reds/oranges
+        Color(hue: 0.0000, saturation: 0.8, brightness: 1.0), // Red
+        Color(hue: 0.0167, saturation: 0.8, brightness: 1.0), // Reddish-Orange
+        Color(hue: 0.0333, saturation: 0.8, brightness: 1.0), // Orange
+        Color(hue: 0.0500, saturation: 0.8, brightness: 1.0), // Soft Orange
+        Color(hue: 0.0667, saturation: 0.8, brightness: 1.0), // Golden Yellow
+        Color(hue: 0.0833, saturation: 0.8, brightness: 1.0), // Yellow-Gold
+        Color(hue: 0.1000, saturation: 0.8, brightness: 1.0), // Light Yellow
+        Color(hue: 0.1167, saturation: 0.6, brightness: 1.0), // Pale Yellow
+        Color(hue: 0.1333, saturation: 0.4, brightness: 1.0), // Lime Yellow
+        Color(hue: 0.1500, saturation: 0.8, brightness: 1.0), // Warm Yellow
+        Color(hue: 0.1667, saturation: 0.8, brightness: 1.0), // Pure Yellow
+        Color(hue: 0.1833, saturation: 0.8, brightness: 1.0), // Yellow-Green
+        Color(hue: 0.2000, saturation: 0.6, brightness: 1.0), // Light Yellow-Green
+        Color(hue: 0.2167, saturation: 0.8, brightness: 1.0), // Pastel Green
+        Color(hue: 0.2333, saturation: 0.6, brightness: 1.0), // Soft Green
+        Color(hue: 0.2500, saturation: 0.6, brightness: 1.0), // Spring Green
+        
+        // Extra s  trong reds/oranges
         Color(hue: 0.0000, saturation: 0.8, brightness: 1.0), // Red
         Color(hue: 0.0167, saturation: 0.8, brightness: 1.0), // Reddish-Orange
         Color(hue: 0.0333, saturation: 0.8, brightness: 1.0), // Orange
@@ -216,7 +234,8 @@ func simulationLines(simulations: [SimulationRun]) -> some ChartContent {
         // Color(hue: 0.4500, saturation: 0.6, brightness: 1.0), // Soft Aqua
         // Color(hue: 0.4667, saturation: 0.6, brightness: 1.0), // Pale Aqua
         // Color(hue: 0.4833, saturation: 0.6, brightness: 1.0), // Greenish-Blue
-
+        
+        // Blues
         Color(hue: 0.5000, saturation: 0.8, brightness: 1.0), // Cyan
         Color(hue: 0.5167, saturation: 0.8, brightness: 1.0), // Soft Cyan
         Color(hue: 0.5333, saturation: 0.8, brightness: 1.0), // Light Teal
@@ -228,7 +247,21 @@ func simulationLines(simulations: [SimulationRun]) -> some ChartContent {
         Color(hue: 0.6333, saturation: 0.8, brightness: 1.0), // Medium Blue
         Color(hue: 0.6500, saturation: 0.8, brightness: 1.0), // Blue
         Color(hue: 0.6667, saturation: 0.8, brightness: 1.0), // True Blue
-        Color(hue: 0.6833, saturation: 0.6, brightness: 1.0), // Indigo-Blue
+        // Color(hue: 0.6833, saturation: 0.6, brightness: 1.0), // Indigo-Blue
+        
+        // Extra blues
+        Color(hue: 0.5000, saturation: 0.8, brightness: 1.0), // Cyan
+        Color(hue: 0.5167, saturation: 0.8, brightness: 1.0), // Soft Cyan
+        Color(hue: 0.5333, saturation: 0.8, brightness: 1.0), // Light Teal
+        Color(hue: 0.5500, saturation: 0.6, brightness: 1.0), // Pale Turquoise
+        Color(hue: 0.5667, saturation: 0.6, brightness: 1.0), // Bluish-Turquoise
+        Color(hue: 0.5833, saturation: 0.8, brightness: 1.0), // Light Blue
+        Color(hue: 0.6000, saturation: 0.8, brightness: 1.0), // Sky Blue
+        Color(hue: 0.6167, saturation: 0.8, brightness: 1.0), // Soft Sky Blue
+        Color(hue: 0.6333, saturation: 0.8, brightness: 1.0), // Medium Blue
+        Color(hue: 0.6500, saturation: 0.8, brightness: 1.0), // Blue
+        Color(hue: 0.6667, saturation: 0.8, brightness: 1.0), // True Blue
+        // Color(hue: 0.6833, saturation: 0.6, brightness: 1.0), // Indigo-Blue
 
         // Commented-out purples/indigos
         // Color(hue: 0.7000, saturation: 0.6, brightness: 1.0), // Indigo
