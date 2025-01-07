@@ -326,34 +326,48 @@ class SimulationCoordinator: ObservableObject {
         var medianResult: [SimulationData] = []
         
         for w in 0..<totalWeeks {
+            // Grab the same "week" across all runs
             let allAtWeek = allIterations.compactMap { run -> SimulationData? in
                 guard w < run.count else { return nil }
                 return run[w]
             }
             if allAtWeek.isEmpty { continue }
             
+            // Grab all the decimals
             let allBTCPriceUSD = allAtWeek.map { $0.btcPriceUSD }
             let allBTCPriceEUR = allAtWeek.map { $0.btcPriceEUR }
             let allPortfolioValueEUR = allAtWeek.map { $0.portfolioValueEUR }
-            
-            let allStartingBTC = allAtWeek.map { $0.startingBTC }
-            let allNetBTCHoldings = allAtWeek.map { $0.netBTCHoldings }
-            let allContribEUR = allAtWeek.map { $0.contributionEUR }
-            let allFeeEUR = allAtWeek.map { $0.transactionFeeEUR }
-            let allNetContribBTC = allAtWeek.map { $0.netContributionBTC }
-            let allWithdrawalEUR = allAtWeek.map { $0.withdrawalEUR }
-            
-            let medianBTCPriceUSD = medianOfDecimalArray(allBTCPriceUSD)
-            let medianBTCPriceEUR = medianOfDecimalArray(allBTCPriceEUR)
-            let medianPortfolioValueEUR = medianOfDecimalArray(allPortfolioValueEUR)
-            
-            let medianStartingBTC = medianOfDoubleArray(allStartingBTC)
-            let medianNetBTCHoldings = medianOfDoubleArray(allNetBTCHoldings)
-            let medianContributionEUR = medianOfDoubleArray(allContribEUR)
-            let medianFeeEUR = medianOfDoubleArray(allFeeEUR)
-            let medianNetContributionBTC = medianOfDoubleArray(allNetContribBTC)
-            let medianWithdrawalEUR = medianOfDoubleArray(allWithdrawalEUR)
+            let allPortfolioValueUSD = allAtWeek.map { $0.portfolioValueUSD }
 
+            // Grab the double fields
+            let allStartingBTC    = allAtWeek.map { $0.startingBTC }
+            let allNetBTCHoldings = allAtWeek.map { $0.netBTCHoldings }
+            let allContribEUR     = allAtWeek.map { $0.contributionEUR }
+            let allFeeEUR         = allAtWeek.map { $0.transactionFeeEUR }
+            let allContribUSD     = allAtWeek.map { $0.contributionUSD }       // <--
+            let allFeeUSD         = allAtWeek.map { $0.transactionFeeUSD }     // <--
+            let allNetContribBTC  = allAtWeek.map { $0.netContributionBTC }
+            let allWithdrawalEUR  = allAtWeek.map { $0.withdrawalEUR }
+            let allWithdrawalUSD  = allAtWeek.map { $0.withdrawalUSD }         // <--
+
+            // 1) Take median for decimal fields
+            let medianBTCPriceUSD       = medianOfDecimalArray(allBTCPriceUSD)
+            let medianBTCPriceEUR       = medianOfDecimalArray(allBTCPriceEUR)
+            let medianPortfolioValueEUR = medianOfDecimalArray(allPortfolioValueEUR)
+            let medianPortfolioValueUSD = medianOfDecimalArray(allPortfolioValueUSD)
+
+            // 2) Take median for double fields
+            let medianStartingBTC       = medianOfDoubleArray(allStartingBTC)
+            let medianNetBTCHoldings    = medianOfDoubleArray(allNetBTCHoldings)
+            let medianContributionEUR   = medianOfDoubleArray(allContribEUR)
+            let medianFeeEUR            = medianOfDoubleArray(allFeeEUR)
+            let medianContributionUSD   = medianOfDoubleArray(allContribUSD)   // <--
+            let medianFeeUSD            = medianOfDoubleArray(allFeeUSD)       // <--
+            let medianNetContributionBTC = medianOfDoubleArray(allNetContribBTC)
+            let medianWithdrawalEUR     = medianOfDoubleArray(allWithdrawalEUR)
+            let medianWithdrawalUSD     = medianOfDoubleArray(allWithdrawalUSD) // <--
+
+            // 3) Build the aggregated record
             let medianSimData = SimulationData(
                 week: allAtWeek[0].week,
                 startingBTC: medianStartingBTC,
@@ -361,10 +375,14 @@ class SimulationCoordinator: ObservableObject {
                 btcPriceUSD: medianBTCPriceUSD,
                 btcPriceEUR: medianBTCPriceEUR,
                 portfolioValueEUR: medianPortfolioValueEUR,
+                portfolioValueUSD: medianPortfolioValueUSD,
                 contributionEUR: medianContributionEUR,
+                contributionUSD: medianContributionUSD,   // <--
                 transactionFeeEUR: medianFeeEUR,
+                transactionFeeUSD: medianFeeUSD,           // <--
                 netContributionBTC: medianNetContributionBTC,
-                withdrawalEUR: medianWithdrawalEUR
+                withdrawalEUR: medianWithdrawalEUR,
+                withdrawalUSD: medianWithdrawalUSD         // <--
             )
             
             medianResult.append(medianSimData)

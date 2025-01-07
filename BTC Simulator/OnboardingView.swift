@@ -21,17 +21,12 @@ enum PreferredCurrency: String, CaseIterable, Identifiable {
 }
 
 struct OnboardingView: View {
-    // Pull in the same SimulationSettings your app uses:
     @EnvironmentObject var simSettings: SimulationSettings
-    
-    // Optionally also reference `inputManager` directly:
-    // (Not strictly required if you do `simSettings.inputManager` throughout,
-    //  but it's often simpler to read/write a local var.)
     @EnvironmentObject var inputManager: PersistentInputManager
     
     @Binding var didFinishOnboarding: Bool
     
-    // MARK: - Steps from 0..8
+    // MARK: - Steps 0..8
     @State private var currentStep: Int = 0
     
     // Step 0: Weekly/Monthly
@@ -45,6 +40,7 @@ struct OnboardingView: View {
     
     // Step 3: Starting Balance
     @State private var startingBalance: Double = 0.0
+    @State private var startingBalanceCurrencyForBoth: PreferredCurrency = .usd
     
     // Step 4: Average BTC Purchase Price
     @State private var averageCostBasis: Double = 58000
@@ -53,11 +49,10 @@ struct OnboardingView: View {
     @State private var fetchedBTCPrice: String = "N/A"
     @State private var userBTCPrice: String = ""
     
-    // Step 6: Contributions — changed defaults to 0, so we'll load them on .onAppear
-    @State private var firstYearContribution: Double = 0.0
-    @State private var subsequentContribution: Double = 0.0
+    // Step 6: Single contribution
+    @State private var contributionPerStep: Double = 0.0
     
-    // Step 7: Withdrawals — same approach
+    // Step 7: Withdrawals
     @State private var threshold1: Double = 0.0
     @State private var withdraw1: Double = 0.0
     @State private var threshold2: Double = 0.0
@@ -65,6 +60,7 @@ struct OnboardingView: View {
     
     var body: some View {
         ZStack {
+            // Background
             LinearGradient(
                 gradient: Gradient(colors: [Color.black, Color(white: 0.15), Color.black]),
                 startPoint: .topLeading,
@@ -85,10 +81,12 @@ struct OnboardingView: View {
                         .foregroundColor(.white)
                         .padding(.top, 30)
                     
-                    Text(subtitleForStep(currentStep))
-                        .foregroundColor(.gray)
-                        .font(.callout)
-                        .padding(.top, 4)
+                    if !subtitleForStep(currentStep).isEmpty {
+                        Text(subtitleForStep(currentStep))
+                            .foregroundColor(.gray)
+                            .font(.callout)
+                            .padding(.top, 2)
+                    }
                     
                     switch currentStep {
                     case 0:
@@ -119,6 +117,7 @@ struct OnboardingView: View {
                 }
             }
         }
+        // MARK: - Back Arrow
         .overlay(
             Group {
                 if currentStep > 0 {
@@ -137,6 +136,7 @@ struct OnboardingView: View {
             },
             alignment: .topLeading
         )
+        // MARK: - Next/Finish Button
         .overlay(
             Button(currentStep == 8 ? "Finish" : "Next") {
                 onNextTapped()
@@ -147,22 +147,18 @@ struct OnboardingView: View {
             .background(Color.orange)
             .cornerRadius(6)
             .shadow(color: .black.opacity(0.3), radius: 4, x: 2, y: 2)
-            .padding(.bottom, currentStep == 8 ? 170 : 270),
+            // If step=8 AND user picked Both => 320. Otherwise 270.
+            .padding(.bottom, (currentStep == 8 && currencyPreference == .both) ? 110 : 150),
             alignment: .bottom
         )
         .ignoresSafeArea(.keyboard, edges: .bottom)
-        // Load from API
         .task {
             await fetchBTCPriceFromAPI()
         }
-        // Load any existing settings from inputManager when we appear:
         .onAppear {
-            // If you already typed something previously, show it here:
-            if firstYearContribution == 0.0 {
-                firstYearContribution = Double(inputManager.firstYearContribution) ?? 60.0
-            }
-            if subsequentContribution == 0.0 {
-                subsequentContribution = Double(inputManager.subsequentContribution) ?? 100.0
+            // Migrate older saved values if needed
+            if contributionPerStep == 0.0 {
+                contributionPerStep = Double(inputManager.firstYearContribution) ?? 100.0
             }
             if threshold1 == 0.0 {
                 threshold1 = inputManager.threshold1
@@ -232,20 +228,35 @@ struct OnboardingView: View {
     // MARK: - Step 3
     private func step3_StartingBalance() -> some View {
         VStack(spacing: 20) {
-            Text("Enter your starting balance")
-                .foregroundColor(.white)
+            if currencyPreference == .both {
+                Text("Starting Balance")
+                    .foregroundColor(.white)
+                    .font(.headline)
+                
+                Text("Are you entering your balance in USD or EUR?")
+                    .foregroundColor(.white)
+                
+                Picker("StartingBalCurrency", selection: $startingBalanceCurrencyForBoth) {
+                    Text("USD").tag(PreferredCurrency.usd)
+                    Text("EUR").tag(PreferredCurrency.eur)
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 160)
+                
+            } else {
+                Text("Enter your starting balance in \(currencyPreference.rawValue.uppercased())")
+                    .foregroundColor(.white)
+                    .font(.headline)
+            }
             
             TextField("e.g. 1000.0", value: $startingBalance, format: .number)
                 .keyboardType(.decimalPad)
-                .padding()
+                .padding(8)
                 .background(Color.white.opacity(0.15))
                 .cornerRadius(6)
                 .foregroundColor(.white)
                 .frame(width: 200)
                 .multilineTextAlignment(.center)
-            
-            Text("in \(currencyPreference.rawValue.uppercased())")
-                .foregroundColor(.gray)
         }
     }
     
@@ -291,33 +302,57 @@ struct OnboardingView: View {
     
     // MARK: - Step 6
     private func step6_Contributions() -> some View {
-        VStack(spacing: 16) {
-            Text("Contributions")
-                .foregroundColor(.white)
-                .font(.headline)
-            
-            HStack {
-                Text("Year1 \(chosenPeriodUnit.rawValue.capitalized):")
+        let frequencyWord = (chosenPeriodUnit == .weeks) ? "weekly" : "monthly"
+        
+        return VStack(spacing: 20) {
+            if currencyPreference == .both {
+                // Move the elements up just a bit
+                Spacer().frame(height: 20)
+                
+                Text("Are these contributions in USD or EUR?")
                     .foregroundColor(.white)
-                TextField("60.0", value: $firstYearContribution, format: .number)
-                    .keyboardType(.decimalPad)
-                    .padding(8)
-                    .background(Color.white.opacity(0.15))
-                    .cornerRadius(6)
+                
+                Picker("ContribCurrency", selection: $simSettings.contributionCurrencyWhenBoth) {
+                    Text("USD").tag(PreferredCurrency.usd)
+                    Text("EUR").tag(PreferredCurrency.eur)
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 160)
+                
+                HStack {
+                    Text("\(frequencyWord.capitalized) Amount:")
+                        .foregroundColor(.white)
+                    TextField("100.0", value: $contributionPerStep, format: .number)
+                        .keyboardType(.decimalPad)
+                        .padding(8)
+                        .background(Color.white.opacity(0.15))
+                        .cornerRadius(6)
+                        .foregroundColor(.white)
+                        .frame(width: 80)
+                }
+                
+            } else {
+                // Keep the original design if .usd or .eur
+                Spacer().frame(height: 20)
+                
+                Text("Contribution Setup")
                     .foregroundColor(.white)
-                    .frame(width: 80)
-            }
-            
-            HStack {
-                Text("Year2+ \(chosenPeriodUnit.rawValue.capitalized):")
-                    .foregroundColor(.white)
-                TextField("100.0", value: $subsequentContribution, format: .number)
-                    .keyboardType(.decimalPad)
-                    .padding(8)
-                    .background(Color.white.opacity(0.15))
-                    .cornerRadius(6)
-                    .foregroundColor(.white)
-                    .frame(width: 80)
+                    .font(.headline)
+                
+                Text("Enter your \(frequencyWord) contribution amount")
+                    .foregroundColor(.gray)
+                
+                HStack {
+                    Text("\(frequencyWord.capitalized) Amount:")
+                        .foregroundColor(.white)
+                    TextField("100.0", value: $contributionPerStep, format: .number)
+                        .keyboardType(.decimalPad)
+                        .padding(8)
+                        .background(Color.white.opacity(0.15))
+                        .cornerRadius(6)
+                        .foregroundColor(.white)
+                        .frame(width: 80)
+                }
             }
         }
     }
@@ -384,10 +419,20 @@ struct OnboardingView: View {
                 Text("Frequency: \(chosenPeriodUnit.rawValue.capitalized)")
                 Text("Periods: \(totalPeriods)")
                 Text("Pref. Currency: \(currencyPreference.rawValue)")
-                Text("Starting Bal: \(startingBalance, specifier: "%.2f") \(currencyPreference.rawValue.uppercased())")
+                
+                if currencyPreference == .both {
+                    Text("Starting Bal typed in: \(startingBalanceCurrencyForBoth.rawValue)")
+                }
+                Text("Starting Bal: \(startingBalance, specifier: "%.2f")")
+                
                 Text("Avg. Cost Basis: \(averageCostBasis, specifier: "%.2f") USD")
                 Text("BTC Price: \(finalBTCPrice, specifier: "%.2f") USD")
-                Text("Contrib (Y1/Y2+): \(firstYearContribution, specifier: "%.0f") / \(subsequentContribution, specifier: "%.0f")")
+                
+                if currencyPreference == .both {
+                    Text("Contrib typed in: \(simSettings.contributionCurrencyWhenBoth.rawValue)")
+                }
+                Text("Contribution: \(contributionPerStep, specifier: "%.0f")")
+                
                 Text("Withdraws: \(threshold1, specifier: "%.0f")→\(withdraw1, specifier: "%.0f"), \(threshold2, specifier: "%.0f")→\(withdraw2, specifier: "%.0f")")
             }
             .foregroundColor(.white)
@@ -408,34 +453,46 @@ struct OnboardingView: View {
     
     // MARK: - Apply settings
     private func applySettingsToSim() {
-        // Convert user’s chosen period unit to total weeks
+        // 1) Convert user’s chosen period unit to total weeks
         let finalWeeks = (chosenPeriodUnit == .weeks) ? totalPeriods : totalPeriods * 4
         simSettings.userWeeks = finalWeeks
         
-        // Decide on final BTC price
+        // 2) Decide on final BTC price
         simSettings.initialBTCPriceUSD = finalBTCPrice
         
-        // Store your typed starting balance & average cost basis
+        // 3) Store typed starting balance (and sub-choice if "both")
+        if currencyPreference == .both {
+            simSettings.startingBalanceCurrencyWhenBoth = startingBalanceCurrencyForBoth
+        }
         simSettings.startingBalance = startingBalance
         simSettings.averageCostBasis = averageCostBasis
         
-        // Persist to UserDefaults (optional)
-        UserDefaults.standard.set(startingBalance, forKey: "savedStartingBalance")
-        UserDefaults.standard.set(averageCostBasis, forKey: "savedAverageCostBasis")
-        UserDefaults.standard.set(finalWeeks, forKey: "savedUserWeeks")
-        UserDefaults.standard.set(finalBTCPrice, forKey: "savedInitialBTCPriceUSD")
+        // 4) Store the main currency preference
+        simSettings.currencyPreference = currencyPreference
         
-        // Here’s the crucial part: write your local states to the shared inputManager
-        inputManager.firstYearContribution = String(firstYearContribution)
-        inputManager.subsequentContribution = String(subsequentContribution)
+        // 5) Save the single contribution (and sub-choice if "both")
+        inputManager.firstYearContribution = String(contributionPerStep)
+        inputManager.subsequentContribution = "0.0"
+        if currencyPreference == .both {
+            simSettings.contributionCurrencyWhenBoth = simSettings.contributionCurrencyWhenBoth
+        }
+        
+        // 6) Write threshold & withdraw amounts
         inputManager.threshold1 = threshold1
         inputManager.withdrawAmount1 = withdraw1
         inputManager.threshold2 = threshold2
         inputManager.withdrawAmount2 = withdraw2
         
-        // Debug logs to confirm
-        print("// DEBUG: applySettingsToSim => firstYearContribution=\(firstYearContribution), subsequent=\(subsequentContribution)")
-        print("// DEBUG: inputManager.firstYearContribution => \(inputManager.firstYearContribution)")
+        // 7) Optionally persist to UserDefaults
+        UserDefaults.standard.set(startingBalance, forKey: "savedStartingBalance")
+        UserDefaults.standard.set(averageCostBasis, forKey: "savedAverageCostBasis")
+        UserDefaults.standard.set(finalWeeks, forKey: "savedUserWeeks")
+        UserDefaults.standard.set(finalBTCPrice, forKey: "savedInitialBTCPriceUSD")
+        
+        // Debug logs
+        print("// DEBUG: applySettingsToSim => currencyPreference=\(currencyPreference.rawValue)")
+        print("// DEBUG: startingBalance=\(startingBalance)")
+        print("// DEBUG: contributionPerStep=\(contributionPerStep)")
     }
     
     // MARK: - finalBTCPrice
@@ -489,10 +546,10 @@ struct OnboardingView: View {
         case 0: return "Pick weekly or monthly"
         case 1: return "How many \(chosenPeriodUnit.rawValue)?"
         case 2: return "USD, EUR, or Both?"
-        case 3: return "Set your starting balance"
-        case 4: return "Enter your cost basis"
-        case 5: return "Fetch or type BTC price"
-        case 6: return "Contributions per step"
+        case 3: return "" // removing for more space
+        case 4: return "What did you pay for BTC before?"
+        case 5: return "Fetch or type current BTC price"
+        case 6: return "" // removing the old "Contributions per step" line
         case 7: return "Set your withdrawal triggers"
         default: return "Confirm your setup"
         }

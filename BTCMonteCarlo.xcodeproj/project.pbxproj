@@ -17,8 +17,6 @@
 		E166A8B22CF85B2B0003F518 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E166A8B12CF85B2B0003F518 /* ContentView.swift */; };
 		E166A8B42CF8659D0003F518 /* BTC20YearProjection.csv in Resources */ = {isa = PBXBuildFile; fileRef = E166A8B32CF8659D0003F518 /* BTC20YearProjection.csv */; };
 		E166A8B92CF955ED0003F518 /* ContentOffsetScrollView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E166A8B82CF955E80003F518 /* ContentOffsetScrollView.swift */; };
-		E17A47FE2CF11AC000AAC885 /* project.pbxproj in Resources */ = {isa = PBXBuildFile; fileRef = E17A47FD2CF11AC000AAC885 /* project.pbxproj */; };
-		E17A48012CF178C600AAC885 /* MonteCarloVisualisations.swift in Sources */ = {isa = PBXBuildFile; fileRef = E17A48002CF178C600AAC885 /* MonteCarloVisualisations.swift */; };
 		E17B2F222D26A9F300ECE087 /* SimulationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = E17B2F212D26A9F000ECE087 /* SimulationCoordinator.swift */; };
 		E17B2F242D26DF5200ECE087 /* SnapshotsDebugView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E17B2F232D26DF4F00ECE087 /* SnapshotsDebugView.swift */; };
 		E17B2F282D27505300ECE087 /* LandscapePlaceholderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E17B2F272D27505100ECE087 /* LandscapePlaceholderView.swift */; };
@@ -45,16 +43,6 @@
 		E1A1E51F2D2A7364008F7658 /* PortfolioChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A1E51E2D2A7362008F7658 /* PortfolioChartView.swift */; };
 		E1C543B82D224D23005E416D /* MonteCarloResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1C543B72D224D21005E416D /* MonteCarloResultsView.swift */; };
 		E1C543BA2D2283A2005E416D /* YearlyPercentileData.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1C543B92D22839F005E416D /* YearlyPercentileData.swift */; };
-		E1CD4B3B2CF0F35C0070E8E3 /* BTC20YearProjection.csv in Resources */ = {isa = PBXBuildFile; fileRef = E1CD4B2E2CF0F35C0070E8E3 /* BTC20YearProjection.csv */; };
-		E1CD4B3C2CF0F35C0070E8E3 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E1CD4B302CF0F35C0070E8E3 /* Preview Assets.xcassets */; };
-		E1CD4B3D2CF0F35C0070E8E3 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E1CD4B322CF0F35C0070E8E3 /* Assets.xcassets */; };
-		E1CD4B3E2CF0F35C0070E8E3 /* BTCMoteCarloApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1CD4B342CF0F35C0070E8E3 /* BTCMoteCarloApp.swift */; };
-		E1CD4B3F2CF0F35C0070E8E3 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1CD4B352CF0F35C0070E8E3 /* ContentView.swift */; };
-		E1CD4B402CF0F35C0070E8E3 /* CSVLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1CD4B362CF0F35C0070E8E3 /* CSVLoader.swift */; };
-		E1CD4B412CF0F35C0070E8E3 /* DoubleExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1CD4B372CF0F35C0070E8E3 /* DoubleExtensions.swift */; };
-		E1CD4B422CF0F35C0070E8E3 /* MonteCarloSimulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1CD4B382CF0F35C0070E8E3 /* MonteCarloSimulator.swift */; };
-		E1CD4B432CF0F35C0070E8E3 /* SimulationData.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1CD4B392CF0F35C0070E8E3 /* SimulationData.swift */; };
-		E1E966C62D0A557C0010C1F3 /* PersistentInputManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1E966C52D0A557C0010C1F3 /* PersistentInputManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -71,9 +59,6 @@
 		E166A8B32CF8659D0003F518 /* BTC20YearProjection.csv */ = {isa = PBXFileReference; lastKnownFileType = text; path = BTC20YearProjection.csv; sourceTree = "<group>"; };
 		E166A8B52CF866910003F518 /* BTCMonteCarloSimulator.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = BTCMonteCarloSimulator.entitlements; sourceTree = "<group>"; };
 		E166A8B82CF955E80003F518 /* ContentOffsetScrollView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentOffsetScrollView.swift; sourceTree = "<group>"; };
-		E17A47FD2CF11AC000AAC885 /* project.pbxproj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.pbxproject; path = project.pbxproj; sourceTree = "<group>"; };
-		E17A47FF2CF11D3200AAC885 /* BTCMonteCarlo.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = BTCMonteCarlo.entitlements; sourceTree = "<group>"; };
-		E17A48002CF178C600AAC885 /* MonteCarloVisualisations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonteCarloVisualisations.swift; sourceTree = "<group>"; };
 		E17B2F212D26A9F000ECE087 /* SimulationCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulationCoordinator.swift; sourceTree = "<group>"; };
 		E17B2F232D26DF4F00ECE087 /* SnapshotsDebugView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnapshotsDebugView.swift; sourceTree = "<group>"; };
 		E17B2F272D27505100ECE087 /* LandscapePlaceholderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LandscapePlaceholderView.swift; sourceTree = "<group>"; };
@@ -99,17 +84,6 @@
 		E1A1E51E2D2A7362008F7658 /* PortfolioChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioChartView.swift; sourceTree = "<group>"; };
 		E1C543B72D224D21005E416D /* MonteCarloResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonteCarloResultsView.swift; sourceTree = "<group>"; };
 		E1C543B92D22839F005E416D /* YearlyPercentileData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YearlyPercentileData.swift; sourceTree = "<group>"; };
-		E1CD4B2E2CF0F35C0070E8E3 /* BTC20YearProjection.csv */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = BTC20YearProjection.csv; sourceTree = "<group>"; };
-		E1CD4B2F2CF0F35C0070E8E3 /* BTCMonteCarloSimulator.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = BTCMonteCarloSimulator.entitlements; sourceTree = "<group>"; };
-		E1CD4B302CF0F35C0070E8E3 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
-		E1CD4B322CF0F35C0070E8E3 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		E1CD4B342CF0F35C0070E8E3 /* BTCMoteCarloApp.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BTCMoteCarloApp.swift; sourceTree = "<group>"; };
-		E1CD4B352CF0F35C0070E8E3 /* ContentView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		E1CD4B362CF0F35C0070E8E3 /* CSVLoader.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CSVLoader.swift; sourceTree = "<group>"; };
-		E1CD4B372CF0F35C0070E8E3 /* DoubleExtensions.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DoubleExtensions.swift; sourceTree = "<group>"; };
-		E1CD4B382CF0F35C0070E8E3 /* MonteCarloSimulator.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MonteCarloSimulator.swift; sourceTree = "<group>"; };
-		E1CD4B392CF0F35C0070E8E3 /* SimulationData.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SimulationData.swift; sourceTree = "<group>"; };
-		E1E966C52D0A557C0010C1F3 /* PersistentInputManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistentInputManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -134,7 +108,6 @@
 		E11B45912CEE8D53006B0594 = {
 			isa = PBXGroup;
 			children = (
-				E1CD4B3A2CF0F35C0070E8E3 /* BTCMonteCarlo */,
 				E12CCD892CF8235F0059931D /* BTC Simulator */,
 				E1CDC7812D1BC85900F89006 /* Frameworks */,
 				E11B459B2CEE8D53006B0594 /* Products */,
@@ -199,35 +172,6 @@
 				E12CCD912CF823610059931D /* Preview Assets.xcassets */,
 			);
 			path = "Preview Content";
-			sourceTree = "<group>";
-		};
-		E1CD4B312CF0F35C0070E8E3 /* Preview Content */ = {
-			isa = PBXGroup;
-			children = (
-				E1CD4B2E2CF0F35C0070E8E3 /* BTC20YearProjection.csv */,
-				E1CD4B2F2CF0F35C0070E8E3 /* BTCMonteCarloSimulator.entitlements */,
-				E1CD4B302CF0F35C0070E8E3 /* Preview Assets.xcassets */,
-			);
-			path = "Preview Content";
-			sourceTree = "<group>";
-		};
-		E1CD4B3A2CF0F35C0070E8E3 /* BTCMonteCarlo */ = {
-			isa = PBXGroup;
-			children = (
-				E1CD4B312CF0F35C0070E8E3 /* Preview Content */,
-				E1CD4B322CF0F35C0070E8E3 /* Assets.xcassets */,
-				E1CD4B342CF0F35C0070E8E3 /* BTCMoteCarloApp.swift */,
-				E1CD4B352CF0F35C0070E8E3 /* ContentView.swift */,
-				E1E966C52D0A557C0010C1F3 /* PersistentInputManager.swift */,
-				E1CD4B362CF0F35C0070E8E3 /* CSVLoader.swift */,
-				E1CD4B372CF0F35C0070E8E3 /* DoubleExtensions.swift */,
-				E1CD4B382CF0F35C0070E8E3 /* MonteCarloSimulator.swift */,
-				E17A48002CF178C600AAC885 /* MonteCarloVisualisations.swift */,
-				E1CD4B392CF0F35C0070E8E3 /* SimulationData.swift */,
-				E17A47FD2CF11AC000AAC885 /* project.pbxproj */,
-				E17A47FF2CF11D3200AAC885 /* BTCMonteCarlo.entitlements */,
-			);
-			path = BTCMonteCarlo;
 			sourceTree = "<group>";
 		};
 		E1CDC7812D1BC85900F89006 /* Frameworks */ = {
@@ -320,10 +264,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				E1CD4B3C2CF0F35C0070E8E3 /* Preview Assets.xcassets in Resources */,
-				E17A47FE2CF11AC000AAC885 /* project.pbxproj in Resources */,
-				E1CD4B3D2CF0F35C0070E8E3 /* Assets.xcassets in Resources */,
-				E1CD4B3B2CF0F35C0070E8E3 /* BTC20YearProjection.csv in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -346,14 +286,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				E1CD4B432CF0F35C0070E8E3 /* SimulationData.swift in Sources */,
-				E17A48012CF178C600AAC885 /* MonteCarloVisualisations.swift in Sources */,
-				E1CD4B412CF0F35C0070E8E3 /* DoubleExtensions.swift in Sources */,
-				E1E966C62D0A557C0010C1F3 /* PersistentInputManager.swift in Sources */,
-				E1CD4B402CF0F35C0070E8E3 /* CSVLoader.swift in Sources */,
-				E1CD4B3F2CF0F35C0070E8E3 /* ContentView.swift in Sources */,
-				E1CD4B3E2CF0F35C0070E8E3 /* BTCMoteCarloApp.swift in Sources */,
-				E1CD4B422CF0F35C0070E8E3 /* MonteCarloSimulator.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

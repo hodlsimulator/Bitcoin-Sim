@@ -9,20 +9,34 @@ import SwiftUI
 
 /// A class for storing user toggles and results
 class SimulationSettings: ObservableObject {
-    
+
     var inputManager: PersistentInputManager? = nil
-    
+
     @Published var userWeeks: Int = 52
     @Published var initialBTCPriceUSD: Double = 58000.0
-    
+
     // Onboarding
     @Published var startingBalance: Double = 0.0
     @Published var averageCostBasis: Double = 25000.0
+
+    // CHANGED: Add a currencyPreference
+    @Published var currencyPreference: PreferredCurrency = .eur {
+        didSet {
+            if isInitialized {
+                UserDefaults.standard.set(currencyPreference.rawValue, forKey: "currencyPreference")
+            }
+        }
+    }
     
+    @Published var contributionCurrencyWhenBoth: PreferredCurrency = .eur
+    
+    // ADD THIS
+    @Published var startingBalanceCurrencyWhenBoth: PreferredCurrency = .usd
+
     // Results
     @Published var lastRunResults: [SimulationData] = []
     @Published var allRuns: [[SimulationData]] = []
-    
+
     private var isInitialized = false
 
     @Published var toggleAll = false {
@@ -81,7 +95,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    
+
     private func syncToggleAllState() {
         if !isUpdating {
             isUpdating = true
@@ -107,14 +121,14 @@ class SimulationSettings: ObservableObject {
                 useBearMarket &&
                 useMaturingMarket &&
                 useRecession
-            
+
             if toggleAll != allFactorsEnabled {
                 toggleAll = allFactorsEnabled
             }
             isUpdating = false
         }
     }
-    
+
     // Random Seed
     @Published var lockedRandomSeed: Bool = false {
         didSet {
@@ -123,7 +137,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    
+
     @Published var seedValue: UInt64 = 0 {
         didSet {
             if isInitialized {
@@ -131,7 +145,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    
+
     @Published var useRandomSeed: Bool = true {
         didSet {
             if isInitialized {
@@ -139,15 +153,15 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    
+
     @Published var lastUsedSeed: UInt64 = 0
-    
+
     private var isUpdating = false
-    
+
     // -----------------------------
     // MARK: - BULLISH FACTORS
     // -----------------------------
-    
+
     // Halving
     @Published var useHalving: Bool = true {
         didSet {
@@ -164,7 +178,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    
+
     // Institutional Demand
     @Published var useInstitutionalDemand: Bool = true {
         didSet {
@@ -181,7 +195,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    
+
     // Country Adoption
     @Published var useCountryAdoption: Bool = true {
         didSet {
@@ -198,7 +212,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    
+
     // Regulatory Clarity
     @Published var useRegulatoryClarity: Bool = true {
         didSet {
@@ -215,7 +229,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    
+
     // ETF Approval
     @Published var useEtfApproval: Bool = true {
         didSet {
@@ -232,7 +246,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    
+
     // Tech Breakthrough
     @Published var useTechBreakthrough: Bool = true {
         didSet {
@@ -249,7 +263,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    
+
     // Scarcity Events
     @Published var useScarcityEvents: Bool = true {
         didSet {
@@ -266,7 +280,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    
+
     // Global Macro Hedge
     @Published var useGlobalMacroHedge: Bool = true {
         didSet {
@@ -283,7 +297,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    
+
     // Stablecoin Shift
     @Published var useStablecoinShift: Bool = true {
         didSet {
@@ -300,7 +314,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    
+
     // Demographic Adoption
     @Published var useDemographicAdoption: Bool = true {
         didSet {
@@ -317,7 +331,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    
+
     // Altcoin Flight
     @Published var useAltcoinFlight: Bool = true {
         didSet {
@@ -334,7 +348,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    
+
     // Adoption Factor
     @Published var useAdoptionFactor: Bool = true {
         didSet {
@@ -351,11 +365,11 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    
+
     // -----------------------------
     // MARK: - BEARISH FACTORS
     // -----------------------------
-    
+
     @Published var useRegClampdown: Bool = true {
         didSet {
             if isInitialized {
@@ -371,7 +385,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    
+
     @Published var useCompetitorCoin: Bool = true {
         didSet {
             if isInitialized {
@@ -387,7 +401,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    
+
     @Published var useSecurityBreach: Bool = true {
         didSet {
             if isInitialized {
@@ -403,7 +417,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    
+
     @Published var useBubblePop: Bool = true {
         didSet {
             if isInitialized {
@@ -419,7 +433,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    
+
     @Published var useStablecoinMeltdown: Bool = true {
         didSet {
             if isInitialized {
@@ -435,7 +449,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    
+
     @Published var useBlackSwan: Bool = true {
         didSet {
             if isInitialized {
@@ -451,7 +465,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    
+
     @Published var useBearMarket: Bool = true {
         didSet {
             if isInitialized {
@@ -467,7 +481,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    
+
     @Published var useMaturingMarket: Bool = true {
         didSet {
             if isInitialized {
@@ -483,7 +497,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    
+
     @Published var useRecession: Bool = true {
         didSet {
             if isInitialized {
@@ -499,7 +513,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    
+
     var areAllFactorsEnabled: Bool {
         useHalving &&
         useInstitutionalDemand &&
@@ -523,11 +537,11 @@ class SimulationSettings: ObservableObject {
         useMaturingMarket &&
         useRecession
     }
-    
+
     // -----------------------------
     // MARK: - NEW TOGGLE: LOCK HISTORICAL SAMPLING
     // -----------------------------
-    @Published var lockHistoricalSampling: Bool = false {   // <-- NEW
+    @Published var lockHistoricalSampling: Bool = false {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(lockHistoricalSampling, forKey: "lockHistoricalSampling")
@@ -539,7 +553,7 @@ class SimulationSettings: ObservableObject {
     // MARK: - Init
     init() {
         let defaults = UserDefaults.standard
-        
+
         // Onboarding data
         if let savedBal = defaults.object(forKey: "savedStartingBalance") as? Double {
             self.startingBalance = savedBal
@@ -553,7 +567,15 @@ class SimulationSettings: ObservableObject {
         if let savedBTCPrice = defaults.object(forKey: "savedInitialBTCPriceUSD") as? Double {
             self.initialBTCPriceUSD = savedBTCPrice
         }
-        
+
+        // (NEW) Currency preference
+        if let storedPrefRaw = defaults.string(forKey: "currencyPreference"),
+           let storedPref = PreferredCurrency(rawValue: storedPrefRaw) {
+            self.currencyPreference = storedPref
+        } else {
+            self.currencyPreference = .eur
+        }
+
         // Random seed
         self.lockedRandomSeed = defaults.bool(forKey: "lockedRandomSeed")
         if let storedSeed = defaults.object(forKey: "seedValue") as? UInt64 {
@@ -561,7 +583,7 @@ class SimulationSettings: ObservableObject {
         }
         let storedUseRandom = defaults.object(forKey: "useRandomSeed") as? Bool ?? true
         self.useRandomSeed = storedUseRandom
-        
+
         // BULLISH FACTORS
         if let storedHalving = defaults.object(forKey: "useHalving") as? Bool {
             self.useHalving = storedHalving
@@ -569,84 +591,84 @@ class SimulationSettings: ObservableObject {
         if defaults.object(forKey: "halvingBump") != nil {
             self.halvingBump = defaults.double(forKey: "halvingBump")
         }
-        
+
         if let storedInstitutional = defaults.object(forKey: "useInstitutionalDemand") as? Bool {
             self.useInstitutionalDemand = storedInstitutional
         }
         if defaults.object(forKey: "maxDemandBoost") != nil {
             self.maxDemandBoost = defaults.double(forKey: "maxDemandBoost")
         }
-        
+
         if let storedCountry = defaults.object(forKey: "useCountryAdoption") as? Bool {
             self.useCountryAdoption = storedCountry
         }
         if defaults.object(forKey: "maxCountryAdBoost") != nil {
             self.maxCountryAdBoost = defaults.double(forKey: "maxCountryAdBoost")
         }
-        
+
         if let storedRegClarity = defaults.object(forKey: "useRegulatoryClarity") as? Bool {
             self.useRegulatoryClarity = storedRegClarity
         }
         if defaults.object(forKey: "maxClarityBoost") != nil {
             self.maxClarityBoost = defaults.double(forKey: "maxClarityBoost")
         }
-        
+
         if let storedEtf = defaults.object(forKey: "useEtfApproval") as? Bool {
             self.useEtfApproval = storedEtf
         }
         if defaults.object(forKey: "maxEtfBoost") != nil {
             self.maxEtfBoost = defaults.double(forKey: "maxEtfBoost")
         }
-        
+
         if let storedTech = defaults.object(forKey: "useTechBreakthrough") as? Bool {
             self.useTechBreakthrough = storedTech
         }
         if defaults.object(forKey: "maxTechBoost") != nil {
             self.maxTechBoost = defaults.double(forKey: "maxTechBoost")
         }
-        
+
         if let storedScarcity = defaults.object(forKey: "useScarcityEvents") as? Bool {
             self.useScarcityEvents = storedScarcity
         }
         if defaults.object(forKey: "maxScarcityBoost") != nil {
             self.maxScarcityBoost = defaults.double(forKey: "maxScarcityBoost")
         }
-        
+
         if let storedMacro = defaults.object(forKey: "useGlobalMacroHedge") as? Bool {
             self.useGlobalMacroHedge = storedMacro
         }
         if defaults.object(forKey: "maxMacroBoost") != nil {
             self.maxMacroBoost = defaults.double(forKey: "maxMacroBoost")
         }
-        
+
         if let storedStableShift = defaults.object(forKey: "useStablecoinShift") as? Bool {
             self.useStablecoinShift = storedStableShift
         }
         if defaults.object(forKey: "maxStablecoinBoost") != nil {
             self.maxStablecoinBoost = defaults.double(forKey: "maxStablecoinBoost")
         }
-        
+
         if let storedDemo = defaults.object(forKey: "useDemographicAdoption") as? Bool {
             self.useDemographicAdoption = storedDemo
         }
         if defaults.object(forKey: "maxDemoBoost") != nil {
             self.maxDemoBoost = defaults.double(forKey: "maxDemoBoost")
         }
-        
+
         if let storedAltcoinFlight = defaults.object(forKey: "useAltcoinFlight") as? Bool {
             self.useAltcoinFlight = storedAltcoinFlight
         }
         if defaults.object(forKey: "maxAltcoinBoost") != nil {
             self.maxAltcoinBoost = defaults.double(forKey: "maxAltcoinBoost")
         }
-        
+
         if let storedAdoption = defaults.object(forKey: "useAdoptionFactor") as? Bool {
             self.useAdoptionFactor = storedAdoption
         }
         if defaults.object(forKey: "adoptionBaseFactor") != nil {
             self.adoptionBaseFactor = defaults.double(forKey: "adoptionBaseFactor")
         }
-        
+
         // BEARISH FACTORS
         if let storedRegClamp = defaults.object(forKey: "useRegClampdown") as? Bool {
             self.useRegClampdown = storedRegClamp
@@ -654,75 +676,75 @@ class SimulationSettings: ObservableObject {
         if defaults.object(forKey: "maxClampDown") != nil {
             self.maxClampDown = defaults.double(forKey: "maxClampDown")
         }
-        
+
         if let storedCompetitor = defaults.object(forKey: "useCompetitorCoin") as? Bool {
             self.useCompetitorCoin = storedCompetitor
         }
         if defaults.object(forKey: "maxCompetitorBoost") != nil {
             self.maxCompetitorBoost = defaults.double(forKey: "maxCompetitorBoost")
         }
-        
+
         if let storedSecBreach = defaults.object(forKey: "useSecurityBreach") as? Bool {
             self.useSecurityBreach = storedSecBreach
         }
         if defaults.object(forKey: "breachImpact") != nil {
             self.breachImpact = defaults.double(forKey: "breachImpact")
         }
-        
+
         if let storedBubblePop = defaults.object(forKey: "useBubblePop") as? Bool {
             self.useBubblePop = storedBubblePop
         }
         if defaults.object(forKey: "maxPopDrop") != nil {
             self.maxPopDrop = defaults.double(forKey: "maxPopDrop")
         }
-        
+
         if let storedStableMeltdown = defaults.object(forKey: "useStablecoinMeltdown") as? Bool {
             self.useStablecoinMeltdown = storedStableMeltdown
         }
         if defaults.object(forKey: "maxMeltdownDrop") != nil {
             self.maxMeltdownDrop = defaults.double(forKey: "maxMeltdownDrop")
         }
-        
+
         if let storedSwan = defaults.object(forKey: "useBlackSwan") as? Bool {
             self.useBlackSwan = storedSwan
         }
         if defaults.object(forKey: "blackSwanDrop") != nil {
             self.blackSwanDrop = defaults.double(forKey: "blackSwanDrop")
         }
-        
+
         if let storedBearMkt = defaults.object(forKey: "useBearMarket") as? Bool {
             self.useBearMarket = storedBearMkt
         }
         if defaults.object(forKey: "bearWeeklyDrift") != nil {
             self.bearWeeklyDrift = defaults.double(forKey: "bearWeeklyDrift")
         }
-        
+
         if let storedMaturing = defaults.object(forKey: "useMaturingMarket") as? Bool {
             self.useMaturingMarket = storedMaturing
         }
         if defaults.object(forKey: "maxMaturingDrop") != nil {
             self.maxMaturingDrop = defaults.double(forKey: "maxMaturingDrop")
         }
-        
+
         if let storedRecession = defaults.object(forKey: "useRecession") as? Bool {
             self.useRecession = storedRecession
         }
         if defaults.object(forKey: "maxRecessionDrop") != nil {
             self.maxRecessionDrop = defaults.double(forKey: "maxRecessionDrop")
         }
-        
-        // Load our NEW lockHistoricalSampling toggle from defaults // <-- NEW
+
+        // Load our NEW lockHistoricalSampling toggle from defaults
         if let savedLockSampling = defaults.object(forKey: "lockHistoricalSampling") as? Bool {
             self.lockHistoricalSampling = savedLockSampling
         }
-        
+
         isInitialized = true
         syncToggleAllState()
-        
-        // ADDED: Print all the settings once we've loaded them
+
+        // Print all settings once we've loaded them
         printAllSettings()
     }
-    
+
     // MARK: - Run Simulation
     func runSimulation(
         annualCAGR: Double,
@@ -732,11 +754,11 @@ class SimulationSettings: ObservableObject {
     ) {
         // ...
     }
-    
+
     // MARK: - Restore Defaults
     func restoreDefaults() {
         let defaults = UserDefaults.standard
-        
+
         // Remove factor keys
         defaults.removeObject(forKey: "useHalving")
         defaults.removeObject(forKey: "halvingBump")
@@ -780,9 +802,12 @@ class SimulationSettings: ObservableObject {
         defaults.removeObject(forKey: "maxMaturingDrop")
         defaults.removeObject(forKey: "useRecession")
         defaults.removeObject(forKey: "maxRecessionDrop")
-        
+
         // Optionally also remove lockHistoricalSampling
-        defaults.removeObject(forKey: "lockHistoricalSampling")  // optional line
+        defaults.removeObject(forKey: "lockHistoricalSampling")
+
+        // Optionally remove currencyPreference if you want
+        defaults.removeObject(forKey: "currencyPreference")
 
         // Reassign them to the new midpoints
         useHalving = true
@@ -850,16 +875,20 @@ class SimulationSettings: ObservableObject {
 
         // Enable everything
         toggleAll = true
-        
+
         // Optionally reset lockHistoricalSampling to false
         lockHistoricalSampling = false
+
+        // Optionally reset currencyPreference to .eur
+        currencyPreference = .eur
     }
-    
+
     // ADDED: This helper prints out relevant toggles & settings
     private func printAllSettings() {
         print("// DEBUG: SimulationSettings init => userWeeks=\(userWeeks), initialBTCPriceUSD=\(initialBTCPriceUSD)")
         print("// DEBUG:   startingBalance=\(startingBalance), averageCostBasis=\(averageCostBasis)")
         print("// DEBUG:   lockedRandomSeed=\(lockedRandomSeed), seedValue=\(seedValue), useRandomSeed=\(useRandomSeed)")
+        print("// DEBUG:   currencyPreference=\(currencyPreference.rawValue)")
         
         // BULLISH
         print("// DEBUG: BULLISH FACTORS =>")
@@ -875,7 +904,7 @@ class SimulationSettings: ObservableObject {
         print("// DEBUG:   useDemographicAdoption=\(useDemographicAdoption), maxDemoBoost=\(maxDemoBoost)")
         print("// DEBUG:   useAltcoinFlight=\(useAltcoinFlight), maxAltcoinBoost=\(maxAltcoinBoost)")
         print("// DEBUG:   useAdoptionFactor=\(useAdoptionFactor), adoptionBaseFactor=\(adoptionBaseFactor)")
-        
+
         // BEARISH
         print("// DEBUG: BEARISH FACTORS =>")
         print("// DEBUG:   useRegClampdown=\(useRegClampdown), maxClampDown=\(maxClampDown)")
@@ -887,7 +916,7 @@ class SimulationSettings: ObservableObject {
         print("// DEBUG:   useBearMarket=\(useBearMarket), bearWeeklyDrift=\(bearWeeklyDrift)")
         print("// DEBUG:   useMaturingMarket=\(useMaturingMarket), maxMaturingDrop=\(maxMaturingDrop)")
         print("// DEBUG:   useRecession=\(useRecession), maxRecessionDrop=\(maxRecessionDrop)")
-        
+
         print("// DEBUG: lockHistoricalSampling=\(lockHistoricalSampling)")
         print("// DEBUG: toggleAll=\(toggleAll), areAllFactorsEnabled=\(areAllFactorsEnabled)")
     }
