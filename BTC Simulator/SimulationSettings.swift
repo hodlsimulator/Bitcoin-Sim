@@ -1,3 +1,5 @@
+// MARK: FILE 2: SimulationSettings.swift
+
 //
 //  SimulationSettings.swift
 //  BTCMonteCarlo
@@ -27,10 +29,8 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    
+
     @Published var contributionCurrencyWhenBoth: PreferredCurrency = .eur
-    
-    // ADD THIS
     @Published var startingBalanceCurrencyWhenBoth: PreferredCurrency = .usd
 
     // Results
@@ -137,7 +137,6 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-
     @Published var seedValue: UInt64 = 0 {
         didSet {
             if isInitialized {
@@ -145,7 +144,6 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-
     @Published var useRandomSeed: Bool = true {
         didSet {
             if isInitialized {
@@ -153,7 +151,6 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-
     @Published var lastUsedSeed: UInt64 = 0
 
     private var isUpdating = false
@@ -171,7 +168,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var halvingBump: Double = 0.13333331346511842 {
+    @Published var halvingBump: Double = 0.47967220152334283 {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(halvingBump, forKey: "halvingBump")
@@ -188,7 +185,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxDemandBoost: Double = 0.0024082224369049074 {
+    @Published var maxDemandBoost: Double = 0.0012392541338671777 {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxDemandBoost, forKey: "maxDemandBoost")
@@ -205,7 +202,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxCountryAdBoost: Double = 0.005378854691982269 {
+    @Published var maxCountryAdBoost: Double = 0.00047095964199831683 {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxCountryAdBoost, forKey: "maxCountryAdBoost")
@@ -222,7 +219,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxClarityBoost: Double = 0.0010977973222732543 {
+    @Published var maxClarityBoost: Double = 0.0016644023749474966 {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxClarityBoost, forKey: "maxClarityBoost")
@@ -239,7 +236,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxEtfBoost: Double = 0.0016 {
+    @Published var maxEtfBoost: Double = 0.0004546850204467774 {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxEtfBoost, forKey: "maxEtfBoost")
@@ -256,7 +253,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxTechBoost: Double = 0.0014625550508499145 {
+    @Published var maxTechBoost: Double = 0.00040663959745637255 {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxTechBoost, forKey: "maxTechBoost")
@@ -273,7 +270,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxScarcityBoost: Double = 0.0033039648085832598 {
+    @Published var maxScarcityBoost: Double = 0.0007968083934443039 {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxScarcityBoost, forKey: "maxScarcityBoost")
@@ -290,7 +287,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxMacroBoost: Double = 0.003 {
+    @Published var maxMacroBoost: Double = 0.000419354572892189 {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxMacroBoost, forKey: "maxMacroBoost")
@@ -307,7 +304,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxStablecoinBoost: Double = 0.0008757708549499511 {
+    @Published var maxStablecoinBoost: Double = 0.0004049262363101775 {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxStablecoinBoost, forKey: "maxStablecoinBoost")
@@ -324,7 +321,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxDemoBoost: Double = 0.002 {
+    @Published var maxDemoBoost: Double = 0.0013056834936141968 {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxDemoBoost, forKey: "maxDemoBoost")
@@ -341,7 +338,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxAltcoinBoost: Double = 0.0008898678421974183 {
+    @Published var maxAltcoinBoost: Double = 0.0002802194461803342 {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxAltcoinBoost, forKey: "maxAltcoinBoost")
@@ -358,7 +355,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var adoptionBaseFactor: Double = 1.2e-06 {
+    @Published var adoptionBaseFactor: Double = 0.0009685099124908447 {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(adoptionBaseFactor, forKey: "adoptionBaseFactor")
@@ -369,7 +366,6 @@ class SimulationSettings: ObservableObject {
     // -----------------------------
     // MARK: - BEARISH FACTORS
     // -----------------------------
-
     @Published var useRegClampdown: Bool = true {
         didSet {
             if isInitialized {
@@ -378,7 +374,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxClampDown: Double = -0.0004 {
+    @Published var maxClampDown: Double = -0.0011883256912231445 {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxClampDown, forKey: "maxClampDown")
@@ -394,7 +390,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxCompetitorBoost: Double = -0.0005629956722259521 {
+    @Published var maxCompetitorBoost: Double = -0.0011259913444519043 {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxCompetitorBoost, forKey: "maxCompetitorBoost")
@@ -410,7 +406,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var breachImpact: Double = -0.03303965330123901 {
+    @Published var breachImpact: Double = -0.0007612827334384092 {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(breachImpact, forKey: "breachImpact")
@@ -442,7 +438,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxMeltdownDrop: Double = -0.000756240963935852 {
+    @Published var maxMeltdownDrop: Double = -0.0007028046205417837 {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxMeltdownDrop, forKey: "maxMeltdownDrop")
@@ -458,7 +454,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var blackSwanDrop: Double = -0.45550661087036126 {
+    @Published var blackSwanDrop: Double = -0.0018411452783672483 {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(blackSwanDrop, forKey: "blackSwanDrop")
@@ -740,9 +736,6 @@ class SimulationSettings: ObservableObject {
 
         isInitialized = true
         syncToggleAllState()
-
-        // Print all settings once we've loaded them
-        printAllSettings()
     }
 
     // MARK: - Run Simulation
@@ -752,7 +745,8 @@ class SimulationSettings: ObservableObject {
         iterations: Int,
         exchangeRateEURUSD: Double = 1.06
     ) {
-        // ...
+        printAllSettings()
+        // ...rest of the simulation logic...
     }
 
     // MARK: - Restore Defaults
@@ -802,67 +796,63 @@ class SimulationSettings: ObservableObject {
         defaults.removeObject(forKey: "maxMaturingDrop")
         defaults.removeObject(forKey: "useRecession")
         defaults.removeObject(forKey: "maxRecessionDrop")
-
-        // Optionally also remove lockHistoricalSampling
         defaults.removeObject(forKey: "lockHistoricalSampling")
-
-        // Optionally remove currencyPreference if you want
         defaults.removeObject(forKey: "currencyPreference")
 
-        // Reassign them to the new midpoints
+        // Reassign them to the NEW defaults:
         useHalving = true
-        halvingBump = 0.13333331346511842
+        halvingBump = 0.47967220152334283
 
         useInstitutionalDemand = true
-        maxDemandBoost = 0.0024082224369049074
+        maxDemandBoost = 0.0012392541338671777
 
         useCountryAdoption = true
-        maxCountryAdBoost = 0.005378854691982269
+        maxCountryAdBoost = 0.00047095964199831683
 
         useRegulatoryClarity = true
-        maxClarityBoost = 0.0010977973222732543
+        maxClarityBoost = 0.0016644023749474966
 
         useEtfApproval = true
-        maxEtfBoost = 0.0016
+        maxEtfBoost = 0.0004546850204467774
 
         useTechBreakthrough = true
-        maxTechBoost = 0.0014625550508499145
+        maxTechBoost = 0.00040663959745637255
 
         useScarcityEvents = true
-        maxScarcityBoost = 0.0033039648085832598
+        maxScarcityBoost = 0.0007968083934443039
 
         useGlobalMacroHedge = true
-        maxMacroBoost = 0.003
+        maxMacroBoost = 0.000419354572892189
 
         useStablecoinShift = true
-        maxStablecoinBoost = 0.0008757708549499511
+        maxStablecoinBoost = 0.0004049262363101775
 
         useDemographicAdoption = true
-        maxDemoBoost = 0.002
+        maxDemoBoost = 0.0013056834936141968
 
         useAltcoinFlight = true
-        maxAltcoinBoost = 0.0008898678421974183
+        maxAltcoinBoost = 0.0002802194461803342
 
         useAdoptionFactor = true
-        adoptionBaseFactor = 1.2e-06
+        adoptionBaseFactor = 0.0009685099124908447
 
         useRegClampdown = true
-        maxClampDown = -0.0004
+        maxClampDown = -0.0011883256912231445
 
         useCompetitorCoin = true
-        maxCompetitorBoost = -0.0005629956722259521
+        maxCompetitorBoost = -0.0011259913444519043
 
         useSecurityBreach = true
-        breachImpact = -0.03303965330123901
+        breachImpact = -0.0007612827334384092
 
         useBubblePop = true
         maxPopDrop = -0.0012555068731307985
 
         useStablecoinMeltdown = true
-        maxMeltdownDrop = -0.000756240963935852
+        maxMeltdownDrop = -0.0007028046205417837
 
         useBlackSwan = true
-        blackSwanDrop = -0.45550661087036126
+        blackSwanDrop = -0.0018411452783672483
 
         useBearMarket = true
         bearWeeklyDrift = -0.0007195305824279769
@@ -876,20 +866,21 @@ class SimulationSettings: ObservableObject {
         // Enable everything
         toggleAll = true
 
-        // Optionally reset lockHistoricalSampling to false
+        // Reset lockHistoricalSampling
         lockHistoricalSampling = false
 
-        // Optionally reset currencyPreference to .eur
+        // Reset currencyPreference to .eur
         currencyPreference = .eur
     }
 
-    // ADDED: This helper prints out relevant toggles & settings
-    private func printAllSettings() {
-        print("// DEBUG: SimulationSettings init => userWeeks=\(userWeeks), initialBTCPriceUSD=\(initialBTCPriceUSD)")
+    // Prints out relevant toggles & settings once per run
+    func printAllSettings() {
+        print("=== FACTOR SETTINGS (once only) ===")
+        print("// DEBUG: SimulationSettings run => userWeeks=\(userWeeks), initialBTCPriceUSD=\(initialBTCPriceUSD)")
         print("// DEBUG:   startingBalance=\(startingBalance), averageCostBasis=\(averageCostBasis)")
         print("// DEBUG:   lockedRandomSeed=\(lockedRandomSeed), seedValue=\(seedValue), useRandomSeed=\(useRandomSeed)")
         print("// DEBUG:   currencyPreference=\(currencyPreference.rawValue)")
-        
+
         // BULLISH
         print("// DEBUG: BULLISH FACTORS =>")
         print("// DEBUG:   useHalving=\(useHalving), halvingBump=\(halvingBump)")
@@ -919,6 +910,7 @@ class SimulationSettings: ObservableObject {
 
         print("// DEBUG: lockHistoricalSampling=\(lockHistoricalSampling)")
         print("// DEBUG: toggleAll=\(toggleAll), areAllFactorsEnabled=\(areAllFactorsEnabled)")
+        
+        print("======================================================================================")
     }
 }
-

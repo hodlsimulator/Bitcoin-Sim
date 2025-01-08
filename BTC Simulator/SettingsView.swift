@@ -101,8 +101,8 @@ struct SettingsView: View {
                     title: "Halving",
                     isOn: $simSettings.useHalving,
                     sliderValue: $simSettings.halvingBump,
-                    sliderRange: 0.0...0.26666662693023684,  // double of 0.13333331346511842
-                    defaultValue: 0.13333331346511842,
+                    sliderRange: 0.0...0.95934440304668566, // double of 0.47967220152334283
+                    defaultValue: 0.47967220152334283,
                     parameterDescription: """
                         Occurs roughly every four years, reducing the block reward in half.
                         This lowers the new supply entering circulation, often causing supply-demand imbalances.
@@ -111,7 +111,6 @@ struct SettingsView: View {
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
                 )
-                // Anchor for Halving tooltip
                 .anchorPreference(
                     key: TooltipAnchorKey.self,
                     value: .center
@@ -130,8 +129,8 @@ struct SettingsView: View {
                     title: "Institutional Demand",
                     isOn: $simSettings.useInstitutionalDemand,
                     sliderValue: $simSettings.maxDemandBoost,
-                    sliderRange: 0.0...0.004816444873809815, // double of 0.0024082224369049074
-                    defaultValue: 0.0024082224369049074,
+                    sliderRange: 0.0...0.0024785082677343554, // double of 0.0012392541338671777
+                    defaultValue: 0.0012392541338671777,
                     parameterDescription: """
                 Large financial institutions and corporate treasuries entering the BTC market can drive prices up.
                 Increased legitimacy and adoption by well-known firms can attract more mainstream interest.
@@ -146,8 +145,8 @@ struct SettingsView: View {
                     title: "Country Adoption",
                     isOn: $simSettings.useCountryAdoption,
                     sliderValue: $simSettings.maxCountryAdBoost,
-                    sliderRange: 0.0...0.010757709383964538, // double of 0.005378854691982269
-                    defaultValue: 0.005378854691982269,
+                    sliderRange: 0.0...0.0009419192839966337, // double of 0.00047095964199831683
+                    defaultValue: 0.00047095964199831683,
                     parameterDescription: """
                 Nations adopting BTC as legal tender or as part of their reserves can lead to massive demand.
                 Wider government acceptance signals mainstream credibility and potential new use cases.
@@ -162,8 +161,8 @@ struct SettingsView: View {
                     title: "Regulatory Clarity",
                     isOn: $simSettings.useRegulatoryClarity,
                     sliderValue: $simSettings.maxClarityBoost,
-                    sliderRange: 0.0...0.0021955946445465086, // double of 0.0010977973222732543
-                    defaultValue: 0.0010977973222732543,
+                    sliderRange: 0.0...0.0033288047498949932, // double of 0.0016644023749474966
+                    defaultValue: 0.0016644023749474966,
                     parameterDescription: """
                 Clear, favourable regulations can reduce uncertainty and risk for investors.
                 When watchdogs provide guidelines, more capital may flow into BTC, boosting price.
@@ -178,8 +177,8 @@ struct SettingsView: View {
                     title: "ETF Approval",
                     isOn: $simSettings.useEtfApproval,
                     sliderValue: $simSettings.maxEtfBoost,
-                    sliderRange: 0.0...0.0032,  // double of 0.0016
-                    defaultValue: 0.0016,
+                    sliderRange: 0.0...0.0009093700408935548, // double of 0.0004546850204467774
+                    defaultValue: 0.0004546850204467774,
                     parameterDescription: """
                 Spot BTC ETFs allow traditional investors to gain exposure without holding actual BTC.
                 The ease of acquisition via brokers can significantly expand demand.
@@ -194,8 +193,8 @@ struct SettingsView: View {
                     title: "Tech Breakthrough",
                     isOn: $simSettings.useTechBreakthrough,
                     sliderValue: $simSettings.maxTechBoost,
-                    sliderRange: 0.0...0.002925110101699829, // double of 0.0014625550508499145
-                    defaultValue: 0.0014625550508499145,
+                    sliderRange: 0.0...0.0008132791949127451, // double of 0.00040663959745637255
+                    defaultValue: 0.00040663959745637255,
                     parameterDescription: """
                 Major improvements in Bitcoin’s protocol or L2 networks (Lightning, etc.)
                 can spur optimism and adoption, enhancing scalability or privacy.
@@ -210,8 +209,8 @@ struct SettingsView: View {
                     title: "Scarcity Events",
                     isOn: $simSettings.useScarcityEvents,
                     sliderValue: $simSettings.maxScarcityBoost,
-                    sliderRange: 0.0...0.00660792961716652, // double of 0.0033039648085832598
-                    defaultValue: 0.0033039648085832598,
+                    sliderRange: 0.0...0.0015936167868886078, // double of 0.0007968083934443039
+                    defaultValue: 0.0007968083934443039,
                     parameterDescription: """
                 Unusual events that reduce BTC supply—like large holders moving coins off exchanges—
                 can push prices upward by limiting sell pressure.
@@ -226,8 +225,8 @@ struct SettingsView: View {
                     title: "Global Macro Hedge",
                     isOn: $simSettings.useGlobalMacroHedge,
                     sliderValue: $simSettings.maxMacroBoost,
-                    sliderRange: 0.0...0.006, // double of 0.003
-                    defaultValue: 0.003,
+                    sliderRange: 0.0...0.000838709145784378, // double of 0.000419354572892189
+                    defaultValue: 0.000419354572892189,
                     parameterDescription: """
                 BTC’s “digital gold” narrative can be strong during uncertainty.
                 Investors may seek refuge in BTC if they lose faith in fiat systems or markets.
@@ -242,8 +241,8 @@ struct SettingsView: View {
                     title: "Stablecoin Shift",
                     isOn: $simSettings.useStablecoinShift,
                     sliderValue: $simSettings.maxStablecoinBoost,
-                    sliderRange: 0.0...0.0017515417098999022,  // double of 0.0008757708549499511
-                    defaultValue: 0.0008757708549499511,
+                    sliderRange: 0.0...0.000809852472620355, // double of 0.0004049262363101775
+                    defaultValue: 0.0004049262363101775,
                     parameterDescription: """
                 Sometimes large sums move from stablecoins directly into BTC.
                 This short-term demand spike can push prices up quickly.
@@ -258,8 +257,8 @@ struct SettingsView: View {
                     title: "Demographic Adoption",
                     isOn: $simSettings.useDemographicAdoption,
                     sliderValue: $simSettings.maxDemoBoost,
-                    sliderRange: 0.0...0.004, // double of 0.002
-                    defaultValue: 0.002,
+                    sliderRange: 0.0...0.0026113669872283936, // double of 0.0013056834936141968
+                    defaultValue: 0.0013056834936141968,
                     parameterDescription: """
                 Younger, more tech-savvy generations often invest in BTC,
                 accelerating mainstream adoption over time.
@@ -274,8 +273,8 @@ struct SettingsView: View {
                     title: "Altcoin Flight",
                     isOn: $simSettings.useAltcoinFlight,
                     sliderValue: $simSettings.maxAltcoinBoost,
-                    sliderRange: 0.0...0.0017797356843948366, // double of 0.0008898678421974183
-                    defaultValue: 0.0008898678421974183,
+                    sliderRange: 0.0...0.0005604388923606684, // double of 0.0002802194461803342
+                    defaultValue: 0.0002802194461803342,
                     parameterDescription: """
                 During altcoin uncertainty or crackdowns, capital can rotate into BTC,
                 considered the ‘blue-chip’ crypto with the strongest fundamentals.
@@ -290,10 +289,10 @@ struct SettingsView: View {
                     title: "Adoption Factor (Incremental Drift)",
                     isOn: $simSettings.useAdoptionFactor,
                     sliderValue: $simSettings.adoptionBaseFactor,
-                    sliderRange: 0.0...0.0000024,  // double of 1.2e-06
-                    defaultValue: 0.0000012,
+                    sliderRange: 0.0...0.0019370198249816894, // double of 0.0009685099124908447
+                    defaultValue: 0.0009685099124908447,
                     parameterDescription: """
-                A slow, steady upward drift. 1.2e-06 is the midpoint, giving a modest long-term growth rate.
+                A slow, steady upward drift in BTC price from incremental adoption.
                 """,
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
@@ -305,14 +304,14 @@ struct SettingsView: View {
             // BEARISH FACTORS
             //====================================
             Section("Bearish Factors") {
-                // (unchanged)
+                // Regulatory Clampdown
                 FactorToggleRow(
                     iconName: "hand.raised.slash",
                     title: "Regulatory Clampdown",
                     isOn: $simSettings.useRegClampdown,
                     sliderValue: $simSettings.maxClampDown,
-                    sliderRange: -0.0008...0.0,
-                    defaultValue: -0.0004,
+                    sliderRange: -0.002376651382446289...0.0, // double of -0.0011883256912231445
+                    defaultValue: -0.0011883256912231445,
                     parameterDescription: """
                     Strict government regulations or bans can curb adoption,
                     leading to lower demand and negative price impacts.
@@ -321,13 +320,14 @@ struct SettingsView: View {
                     onTitleTap: toggleFactor
                 )
 
+                // Competitor Coin
                 FactorToggleRow(
                     iconName: "bitcoinsign.circle",
                     title: "Competitor Coin",
                     isOn: $simSettings.useCompetitorCoin,
                     sliderValue: $simSettings.maxCompetitorBoost,
-                    sliderRange: -0.0011259913444519042...0.0,
-                    defaultValue: -0.0005629956722259521,
+                    sliderRange: -0.0022519826889038086...0.0, // double of -0.0011259913444519043
+                    defaultValue: -0.0011259913444519043,
                     parameterDescription: """
                     A rival cryptocurrency that promises superior tech or speed
                     may siphon capital away from BTC, reducing its dominance.
@@ -336,13 +336,14 @@ struct SettingsView: View {
                     onTitleTap: toggleFactor
                 )
 
+                // Security Breach
                 FactorToggleRow(
                     iconName: "lock.shield",
                     title: "Security Breach",
                     isOn: $simSettings.useSecurityBreach,
                     sliderValue: $simSettings.breachImpact,
-                    sliderRange: -0.06607930660247802...0.0,
-                    defaultValue: -0.03303965330123901,
+                    sliderRange: -0.0015225654668768184...0.0, // double of -0.0007612827334384092
+                    defaultValue: -0.0007612827334384092,
                     parameterDescription: """
                     A major hack or exploit targeting BTC or big exchanges
                     can severely damage confidence and cause panic selling.
@@ -351,6 +352,7 @@ struct SettingsView: View {
                     onTitleTap: toggleFactor
                 )
 
+                // Bubble Pop
                 FactorToggleRow(
                     iconName: "bubble.left.and.bubble.right.fill",
                     title: "Bubble Pop",
@@ -366,13 +368,14 @@ struct SettingsView: View {
                     onTitleTap: toggleFactor
                 )
 
+                // Stablecoin Meltdown
                 FactorToggleRow(
                     iconName: "exclamationmark.triangle.fill",
                     title: "Stablecoin Meltdown",
                     isOn: $simSettings.useStablecoinMeltdown,
                     sliderValue: $simSettings.maxMeltdownDrop,
-                    sliderRange: -0.001512481927871704...0.0,
-                    defaultValue: -0.000756240963935852,
+                    sliderRange: -0.0014056092410835674...0.0, // double of -0.0007028046205417837
+                    defaultValue: -0.0007028046205417837,
                     parameterDescription: """
                     Major stablecoins de-pegging or collapsing can spark a crisis of confidence
                     that spills over into BTC markets.
@@ -381,13 +384,14 @@ struct SettingsView: View {
                     onTitleTap: toggleFactor
                 )
 
+                // Black Swan Events
                 FactorToggleRow(
                     iconName: "tornado",
                     title: "Black Swan Events",
                     isOn: $simSettings.useBlackSwan,
                     sliderValue: $simSettings.blackSwanDrop,
-                    sliderRange: -0.9110132217407225...0.0,
-                    defaultValue: -0.45550661087036126,
+                    sliderRange: -0.0036822905567344966...0.0, // double of -0.0018411452783672483
+                    defaultValue: -0.0018411452783672483,
                     parameterDescription: """
                     Highly unpredictable disasters or wars can undermine all markets,
                     including BTC, causing extreme selloffs.
@@ -396,6 +400,7 @@ struct SettingsView: View {
                     onTitleTap: toggleFactor
                 )
 
+                // Bear Market Conditions
                 FactorToggleRow(
                     iconName: "chart.bar.xaxis",
                     title: "Bear Market Conditions",
@@ -411,6 +416,7 @@ struct SettingsView: View {
                     onTitleTap: toggleFactor
                 )
 
+                // Declining ARR / Maturing Market
                 FactorToggleRow(
                     iconName: "chart.line.downtrend.xyaxis",
                     title: "Declining ARR / Maturing Market",
@@ -426,6 +432,7 @@ struct SettingsView: View {
                     onTitleTap: toggleFactor
                 )
 
+                // Recession / Macro Crash
                 FactorToggleRow(
                     iconName: "chart.line.downtrend.xyaxis.circle.fill",
                     title: "Recession / Macro Crash",
@@ -498,13 +505,12 @@ struct SettingsView: View {
             //====================================
             // NEW: LOCK HISTORICAL SAMPLING
             //====================================
-            Section("Historical Sampling") {   // <-- NEW
+            Section("Historical Sampling") {
                 Toggle("Lock Historical Sampling", isOn: $simSettings.lockHistoricalSampling)
                     .tint(.orange)
                     .foregroundColor(.white)
             }
             .listRowBackground(Color(white: 0.15))
-            // <-- END NEW
 
             //====================================
             // RESTORE DEFAULTS
@@ -521,7 +527,6 @@ struct SettingsView: View {
             // ABOUT
             //====================================
             Section {
-                // Remove this if you don’t actually have an AboutView
                 NavigationLink("About") {
                     AboutView()
                 }
@@ -538,73 +543,8 @@ struct SettingsView: View {
                 .buttonStyle(PressableDestructiveButtonStyle())
                 .alert("Confirm Reset", isPresented: $showResetCriteriaConfirmation) {
                     Button("Reset", role: .destructive) {
-                        // Reset all factor settings to the new midpoints
-                        simSettings.useHalving = true
-                        simSettings.halvingBump = 0.13333331346511842
-
-                        simSettings.useInstitutionalDemand = true
-                        simSettings.maxDemandBoost = 0.0024082224369049074
-
-                        simSettings.useCountryAdoption = true
-                        simSettings.maxCountryAdBoost = 0.005378854691982269
-
-                        simSettings.useRegulatoryClarity = true
-                        simSettings.maxClarityBoost = 0.0010977973222732543
-
-                        simSettings.useEtfApproval = true
-                        simSettings.maxEtfBoost = 0.0016
-
-                        simSettings.useTechBreakthrough = true
-                        simSettings.maxTechBoost = 0.0014625550508499145
-
-                        simSettings.useScarcityEvents = true
-                        simSettings.maxScarcityBoost = 0.0033039648085832598
-
-                        simSettings.useGlobalMacroHedge = true
-                        simSettings.maxMacroBoost = 0.003
-
-                        simSettings.useStablecoinShift = true
-                        simSettings.maxStablecoinBoost = 0.0008757708549499511
-
-                        simSettings.useDemographicAdoption = true
-                        simSettings.maxDemoBoost = 0.002
-
-                        simSettings.useAltcoinFlight = true
-                        simSettings.maxAltcoinBoost = 0.0008898678421974183
-
-                        simSettings.useAdoptionFactor = true
-                        simSettings.adoptionBaseFactor = 1.2e-06
-
-                        simSettings.useRegClampdown = true
-                        simSettings.maxClampDown = -0.0004
-
-                        simSettings.useCompetitorCoin = true
-                        simSettings.maxCompetitorBoost = -0.0005629956722259521
-
-                        simSettings.useSecurityBreach = true
-                        simSettings.breachImpact = -0.03303965330123901
-
-                        simSettings.useBubblePop = true
-                        simSettings.maxPopDrop = -0.0012555068731307985
-
-                        simSettings.useStablecoinMeltdown = true
-                        simSettings.maxMeltdownDrop = -0.000756240963935852
-
-                        simSettings.useBlackSwan = true
-                        simSettings.blackSwanDrop = -0.45550661087036126
-
-                        simSettings.useBearMarket = true
-                        simSettings.bearWeeklyDrift = -0.0007195305824279769
-
-                        simSettings.useMaturingMarket = true
-                        simSettings.maxMaturingDrop = -0.001255506277084352
-
-                        simSettings.useRecession = true
-                        simSettings.maxRecessionDrop = -0.0014508080482482913
-
-                        // Sync toggleAll state
-                        simSettings.toggleAll = true
-
+                        // Reset all factor settings to the old midpoints, or your custom logic
+                        simSettings.restoreDefaults()
                         // 2) Ensure "hasOnboarded" is false so onboarding reappears
                         didFinishOnboarding = false
                     }
@@ -621,19 +561,6 @@ struct SettingsView: View {
         .environment(\.colorScheme, .dark)
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.large)
-        // .onAppear block is commented out
-        /*
-        .onAppear {
-            let defaults = UserDefaults.standard
-            if !defaults.bool(forKey: "hasPerformedInitialSync") {
-                // ...original code that reassigns toggles to default...
-                defaults.set(true, forKey: "hasPerformedInitialSync")
-            } else {
-                // ...original code that reassigns toggles...
-            }
-            // syncToggleAll()
-        }
-        */
         .overlayPreferenceValue(TooltipAnchorKey.self) { allAnchors in
             GeometryReader { proxy in
                 guard let item = allAnchors.last else {
@@ -693,33 +620,6 @@ struct SettingsView: View {
         }
     }
     
-    /// Syncs the toggleAll state based on the current state of individual toggles
-    private func syncToggleAll() {
-        let allFactorsOn = simSettings.useHalving &&
-                           simSettings.useInstitutionalDemand &&
-                           simSettings.useCountryAdoption &&
-                           simSettings.useRegulatoryClarity &&
-                           simSettings.useEtfApproval &&
-                           simSettings.useTechBreakthrough &&
-                           simSettings.useScarcityEvents &&
-                           simSettings.useGlobalMacroHedge &&
-                           simSettings.useStablecoinShift &&
-                           simSettings.useDemographicAdoption &&
-                           simSettings.useAltcoinFlight &&
-                           simSettings.useAdoptionFactor &&
-                           simSettings.useRegClampdown &&
-                           simSettings.useCompetitorCoin &&
-                           simSettings.useSecurityBreach &&
-                           simSettings.useBubblePop &&
-                           simSettings.useStablecoinMeltdown &&
-                           simSettings.useBlackSwan &&
-                           simSettings.useBearMarket &&
-                           simSettings.useMaturingMarket &&
-                           simSettings.useRecession
-
-        simSettings.toggleAll = allFactorsOn
-    }
-
     /// If tapped factor is already active, hide it. Otherwise activate it.
     private func toggleFactor(_ tappedTitle: String) {
         withAnimation {

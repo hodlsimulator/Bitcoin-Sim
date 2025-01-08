@@ -54,6 +54,9 @@ class SimulationCoordinator: ObservableObject {
         let newHash = computeInputsHash()
         print("// DEBUG: runSimulation() => newHash = \(newHash), storedInputsHash = \(String(describing: chartDataCache.storedInputsHash))")
 
+        // ** Add the printAllSettings call here **
+        simSettings.printAllSettings()
+
         // CSV loads (placeholders)
         historicalBTCWeeklyReturns = loadBTCWeeklyReturns()
         sp500WeeklyReturns = loadSP500WeeklyReturns()
@@ -105,7 +108,6 @@ class SimulationCoordinator: ObservableObject {
             }
             
             // The user’s CAGR & Volatility as Doubles
-            // This is good; it yields 30.0 if user typed "30"
             let userInputCAGR = self.inputManager.getParsedAnnualCAGR()
             let userInputVolatility = Double(self.inputManager.annualVolatility) ?? 1.0
 
@@ -117,7 +119,7 @@ class SimulationCoordinator: ObservableObject {
             let userPriceUSDAsDecimal = Decimal(self.simSettings.initialBTCPriceUSD)
             let userPriceUSDAsDouble = NSDecimalNumber(decimal: userPriceUSDAsDecimal).doubleValue
 
-            // Run the simulations (don’t rely on the built-in median from the function):
+            // Run the simulations
             let (_, allIterations) = runMonteCarloSimulationsWithProgress(
                 settings: self.simSettings,
                 annualCAGR: userInputCAGR,
@@ -144,7 +146,7 @@ class SimulationCoordinator: ObservableObject {
                 return
             }
             
-            // Sort runs by final portfolio (just for logs)
+            // Sort runs by final portfolio
             let finalRuns = allIterations.map { ($0.last?.portfolioValueEUR ?? Decimal.zero, $0) }
             let sortedRuns = finalRuns.sorted { $0.0 < $1.0 }
             
@@ -175,7 +177,7 @@ class SimulationCoordinator: ObservableObject {
                     // The composite line used by the UI
                     let medianLineData = self.computeMedianSimulationData(allIterations: allIterations)
                     
-                    // Print the final from that composite line => matches the chart
+                    // Print the final from that composite line
                     let medianBTCFinal = medianLineData.last?.btcPriceUSD ?? 0
                     let medianPortfolioFinal = medianLineData.last?.portfolioValueEUR ?? 0
                     
@@ -183,7 +185,7 @@ class SimulationCoordinator: ObservableObject {
                     print("// DEBUG: Ninetieth final portfolio => \(ninetiethRun.last?.portfolioValueEUR ?? 0)")
                     print("// DEBUG: medianLineData => \(medianLineData.count) weeks. Final BTC => \(medianBTCFinal), final portfolio => \(medianPortfolioFinal)")
                     
-                    // Store or display that composite line in the UI:
+                    // Store data
                     self.tenthPercentileResults = tenthRun
                     self.medianResults = medianLineData
                     self.ninetiethPercentileResults = ninetiethRun
