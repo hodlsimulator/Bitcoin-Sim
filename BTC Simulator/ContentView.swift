@@ -11,6 +11,23 @@ import UniformTypeIdentifiers
 import PocketSVG
 import UIKit
 
+// MARK: - Custom Checkbox Style
+struct CheckboxToggleStyle: ToggleStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        Button {
+            configuration.isOn.toggle()
+        } label: {
+            HStack {
+                Image(systemName: configuration.isOn ? "checkmark.square" : "square")
+                    .foregroundColor(configuration.isOn ? .orange : .gray)
+                configuration.label
+                    .foregroundColor(.white)
+            }
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
 // MARK: - Snapshot Debugging Extension
 extension View {
     func snapshot(label: String? = nil) -> UIImage {
@@ -84,6 +101,9 @@ class PersistentInputManager: ObservableObject {
     @Published var annualVolatility: String {
         didSet { UserDefaults.standard.set(annualVolatility, forKey: "annualVolatility") }
     }
+    @Published var standardDeviation: String {  // new field
+        didSet { UserDefaults.standard.set(standardDeviation, forKey: "standardDeviation") }
+    }
     @Published var selectedWeek: String {
         didSet { UserDefaults.standard.set(selectedWeek, forKey: "selectedWeek") }
     }
@@ -130,6 +150,7 @@ class PersistentInputManager: ObservableObject {
         self.iterations = UserDefaults.standard.string(forKey: "iterations") ?? "1000"
         self.annualCAGR = UserDefaults.standard.string(forKey: "annualCAGR") ?? "40.0"
         self.annualVolatility = UserDefaults.standard.string(forKey: "annualVolatility") ?? "80.0"
+        self.standardDeviation = UserDefaults.standard.string(forKey: "standardDeviation") ?? "15.0"
         self.selectedWeek = UserDefaults.standard.string(forKey: "selectedWeek") ?? "1"
         self.btcPriceMinInput = UserDefaults.standard.string(forKey: "btcPriceMinInput") ?? ""
         self.btcPriceMaxInput = UserDefaults.standard.string(forKey: "btcPriceMaxInput") ?? ""
@@ -159,6 +180,7 @@ class PersistentInputManager: ObservableObject {
         UserDefaults.standard.set(iterations, forKey: "iterations")
         UserDefaults.standard.set(annualCAGR, forKey: "annualCAGR")
         UserDefaults.standard.set(annualVolatility, forKey: "annualVolatility")
+        UserDefaults.standard.set(standardDeviation, forKey: "standardDeviation")
         UserDefaults.standard.set(selectedWeek, forKey: "selectedWeek")
         UserDefaults.standard.set(btcPriceMinInput, forKey: "btcPriceMinInput")
         UserDefaults.standard.set(btcPriceMaxInput, forKey: "btcPriceMaxInput")
@@ -301,38 +323,24 @@ class ChartDataCache: ObservableObject {
 
 // MARK: - ContentView
 struct ContentView: View {
-
     @StateObject var inputManager: PersistentInputManager
     @StateObject var simSettings: SimulationSettings
     @StateObject var chartDataCache: ChartDataCache
     @StateObject var coordinator: SimulationCoordinator
 
-    init() {
-        // Create one manager, one settings, one cache, then link them all:
-        let manager = PersistentInputManager()
-        let settings = SimulationSettings()
-        settings.inputManager = manager
-        let cache = ChartDataCache()
+    // Track old values so we can invalidate the chart if changed
+    @State private var oldIterationsValue: String = ""
+    @State private var oldAnnualCAGRValue: String = ""
+    @State private var oldAnnualVolatilityValue: String = ""
+    @State private var oldStandardDevValue: String = ""
 
-        // NEW: Create a ChartSelection instance so we can pass it to the coordinator
-        let chartSel = ChartSelection()
+    // Toggles for row 3
+    @State private var generateGraphs = false
+    @State private var lockRandomSeed = false
 
-        // Pass chartSel to SimulationCoordinator
-        let simCoord = SimulationCoordinator(
-            chartDataCache: cache,
-            simSettings: settings,
-            inputManager: manager,
-            chartSelection: chartSel
-        )
-
-        _inputManager = StateObject(wrappedValue: manager)
-        _simSettings = StateObject(wrappedValue: settings)
-        _chartDataCache = StateObject(wrappedValue: cache)
-        _coordinator = StateObject(wrappedValue: simCoord)
-    }
-
-    // Various states
+    // Focus for text fields
     @FocusState private var activeField: ActiveField?
+
     @State private var isAtBottom: Bool = false
     @State private var lastViewedWeek: Int = 0
     
@@ -419,6 +427,7 @@ struct ContentView: View {
         "Tip: Turn all factors off for a plain baseline simulation."
     ]
     
+    // Columns in the table view (depending on the user’s currency preference):
     private var columns: [(String, PartialKeyPath<SimulationData>)] {
         switch simSettings.currencyPreference {
         case .usd:
@@ -476,18 +485,36 @@ struct ContentView: View {
     
     @State private var chartLoadingState: ChartLoadingState = .none
     
-    @State private var oldIterationsValue: String = ""
-    @State private var oldAnnualCAGRValue: String = ""
-    @State private var oldAnnualVolatilityValue: String = ""
-    
     @State private var showSnapshotView = false
     @State private var showSnapshotsDebug = false
+
+    init() {
+        // Create one manager, one settings, one cache, then link them all:
+        let manager = PersistentInputManager()
+        let settings = SimulationSettings()
+        settings.inputManager = manager
+        let cache = ChartDataCache()
+
+        let chartSel = ChartSelection() // for the coordinator
+        let simCoord = SimulationCoordinator(
+            chartDataCache: cache,
+            simSettings: settings,
+            inputManager: manager,
+            chartSelection: chartSel
+        )
+
+        _inputManager = StateObject(wrappedValue: manager)
+        _simSettings = StateObject(wrappedValue: settings)
+        _chartDataCache = StateObject(wrappedValue: cache)
+        _coordinator = StateObject(wrappedValue: simCoord)
+    }
 
     var body: some View {
         NavigationStack {
             ZStack {
                 if !coordinator.isSimulationRun {
                     parametersScreen
+                    // Bottom icons only if not loading & keyboard not active
                     if !coordinator.isLoading && activeField == nil {
                         bottomIcons
                     }
@@ -495,13 +522,14 @@ struct ContentView: View {
                     simulationResultsView
                 }
                 
-                // Hide forward button if chart is building
+                // Show the “→” button if we have results + chart built
                 if !coordinator.isSimulationRun &&
                     !coordinator.monteCarloResults.isEmpty &&
                     !coordinator.isChartBuilding {
                     transitionToResultsButton
                 }
                 
+                // Loading / Chart-building overlay
                 if coordinator.isLoading || coordinator.isChartBuilding {
                     loadingOverlayCombined
                 }
@@ -518,6 +546,7 @@ struct ContentView: View {
                     .environmentObject(coordinator.chartDataCache)
             }
             .onAppear {
+                // Load last viewed row + page
                 let savedWeek = UserDefaults.standard.integer(forKey: "lastViewedWeek")
                 if savedWeek != 0 {
                     lastViewedWeek = savedWeek
@@ -539,7 +568,7 @@ struct ContentView: View {
                     MonteCarloResultsView()
                         .environmentObject(coordinator.chartDataCache)
                         .environmentObject(simSettings)
-                        .environmentObject(coordinator.chartSelection) // <-- Use coordinator's chartSelection
+                        .environmentObject(coordinator.chartSelection)
                 } else {
                     Text("Loading chart…")
                         .foregroundColor(.white)
@@ -548,7 +577,494 @@ struct ContentView: View {
         }
     }
     
-    // MARK: - Overlay that shows simulation + chart generation phases
+    // MARK: - Parameter Screen
+    private var parametersScreen: some View {
+        ZStack {
+            LinearGradient(
+                gradient: Gradient(colors: [Color.black, Color(white: 0.15), Color.black]),
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+            
+            VStack(spacing: 30) {
+                Spacer().frame(height: 60)
+                
+                Text("HODL Simulator")
+                    .font(.system(size: 34, weight: .bold))
+                    .foregroundColor(.white)
+                
+                Text("Set your simulation parameters")
+                    .font(.callout)
+                    .foregroundColor(.gray)
+                
+                // Parameter card
+                VStack(spacing: 20) {
+                    
+                    // Row 1: Iterations & CAGR
+                    HStack(spacing: 24) {
+                        // Iterations
+                        VStack(spacing: 4) {
+                            Text("Iterations")
+                                .foregroundColor(.white)
+                            TextField("1000", text: $inputManager.iterations)
+                                .keyboardType(.numberPad)
+                                .padding(8)
+                                .frame(width: 80)
+                                .background(Color.white)
+                                .cornerRadius(6)
+                                .foregroundColor(.black)
+                                .focused($activeField, equals: .iterations)
+                                .onChange(of: inputManager.iterations) { newVal in
+                                    if newVal != oldIterationsValue {
+                                        oldIterationsValue = newVal
+                                        invalidateChartIfInputChanged()
+                                    }
+                                }
+                        }
+                        
+                        // CAGR
+                        VStack(spacing: 4) {
+                            Text("CAGR (%)")
+                                .foregroundColor(.white)
+                            TextField("40.0", text: $inputManager.annualCAGR)
+                                .keyboardType(.decimalPad)
+                                .padding(8)
+                                .frame(width: 80)
+                                .background(Color.white)
+                                .cornerRadius(6)
+                                .foregroundColor(.black)
+                                .focused($activeField, equals: .annualCAGR)
+                                .onChange(of: inputManager.annualCAGR) { newVal in
+                                    if newVal != oldAnnualCAGRValue {
+                                        oldAnnualCAGRValue = newVal
+                                        invalidateChartIfInputChanged()
+                                    }
+                                }
+                        }
+                    }
+                    
+                    // Row 2: Vol & StdDev
+                    HStack(spacing: 24) {
+                        // Vol
+                        VStack(spacing: 4) {
+                            Text("Vol (%)")
+                                .foregroundColor(.white)
+                            TextField("80.0", text: $inputManager.annualVolatility)
+                                .keyboardType(.decimalPad)
+                                .padding(8)
+                                .frame(width: 80)
+                                .background(Color.white)
+                                .cornerRadius(6)
+                                .foregroundColor(.black)
+                                .focused($activeField, equals: .annualVolatility)
+                                .onChange(of: inputManager.annualVolatility) { newVal in
+                                    if newVal != oldAnnualVolatilityValue {
+                                        oldAnnualVolatilityValue = newVal
+                                        invalidateChartIfInputChanged()
+                                    }
+                                }
+                        }
+                        
+                        // StdDev
+                        VStack(spacing: 4) {
+                            Text("StdDev")
+                                .foregroundColor(.white)
+                            TextField("15.0", text: $inputManager.standardDeviation)
+                                .keyboardType(.decimalPad)
+                                .padding(8)
+                                .frame(width: 80)
+                                .background(Color.white)
+                                .cornerRadius(6)
+                                .foregroundColor(.black)
+                                .focused($activeField, equals: .standardDeviation)
+                                .onChange(of: inputManager.standardDeviation) { newVal in
+                                    if newVal != oldStandardDevValue {
+                                        oldStandardDevValue = newVal
+                                        invalidateChartIfInputChanged()
+                                    }
+                                }
+                        }
+                    }
+                    
+                    // Row 3: Toggles
+                    HStack(spacing: 32) {
+                        Toggle("Graphs", isOn: $generateGraphs)
+                            .toggleStyle(CheckboxToggleStyle())
+                            .foregroundColor(.white)
+                        
+                        Toggle("Lock Seed", isOn: $lockRandomSeed)
+                            .toggleStyle(CheckboxToggleStyle())
+                            .foregroundColor(.white)
+                    }
+                    
+                }
+                .padding(20)
+                .frame(maxWidth: .infinity)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color(white: 0.1).opacity(0.8))
+                )
+                .padding(.horizontal, 30)
+                
+                // Run Simulation
+                if coordinator.isLoading || coordinator.isChartBuilding {
+                    // Invisible placeholder so layout stays put
+                    Text(" ")
+                        .font(.callout)
+                        .foregroundColor(.clear)
+                        .padding(.horizontal, 32)
+                        .padding(.vertical, 14)
+                        .background(Color.clear)
+                        .cornerRadius(8)
+                        .padding(.top, 6)
+                    
+                    Spacer()
+                } else {
+                    Button {
+                        activeField = nil
+                        coordinator.isLoading = true
+                        coordinator.isChartBuilding = false
+                        coordinator.runSimulation()
+                    } label: {
+                        Text("RUN SIMULATION")
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 32)
+                            .padding(.vertical, 14)
+                            .background(Color.orange)
+                            .cornerRadius(8)
+                    }
+                    .padding(.top, 6)
+                    
+                    Spacer()
+                }
+            }
+        }
+        .onTapGesture {
+            // Dismiss keyboard
+            activeField = nil
+        }
+    }
+    
+    // MARK: - If inputs change, clear cached chart
+    
+    private func invalidateChartIfInputChanged() {
+        coordinator.chartDataCache.allRuns = nil
+        coordinator.chartDataCache.storedInputsHash = nil
+        print("// DEBUG: invalidateChartIfInputChanged => cleared chart cache.")
+    }
+    
+    // MARK: - Bottom icons (gear, info)
+    
+    @ViewBuilder
+    private var bottomIcons: some View {
+        if !coordinator.isLoading && !coordinator.isChartBuilding {
+            VStack {
+                Spacer()
+                HStack {
+                    Button(action: { showAbout = true }) {
+                        Image(systemName: "info.circle")
+                            .font(.system(size: 28))
+                            .foregroundColor(.white)
+                            .padding()
+                    }
+                    .padding(.leading, 15)
+                    
+                    Spacer()
+                    
+                    Button(action: { showSettings = true }) {
+                        Image(systemName: "gearshape")
+                            .font(.system(size: 28))
+                            .foregroundColor(.white)
+                            .padding()
+                    }
+                    .padding(.trailing, 15)
+                }
+                .padding(.bottom, 30)
+            }
+        }
+    }
+    
+    // MARK: - Simulation Results Screen
+    
+    private var simulationResultsView: some View {
+        ScrollViewReader { scrollProxy in
+            ZStack {
+                Color(white: 0.12)
+                    .edgesIgnoringSafeArea(.bottom)
+                
+                VStack(spacing: 0) {
+                    // Top bar
+                    HStack {
+                        Button(action: {
+                            print("// DEBUG: Back button tapped in simulationResultsView.")
+                            UserDefaults.standard.set(lastViewedWeek, forKey: "lastViewedWeek")
+                            UserDefaults.standard.set(currentPage, forKey: "lastViewedPage")
+                            lastViewedPage = currentPage
+                            coordinator.isSimulationRun = false
+                        }) {
+                            Image(systemName: "chevron.left")
+                                .foregroundColor(.white)
+                                .imageScale(.large)
+                        }
+                        
+                        Spacer()
+                        
+                        Button(action: {
+                            print("// DEBUG: Chart button pressed.")
+                            print("// DEBUG: chartDataCache.chartSnapshot == \(coordinator.chartDataCache.chartSnapshot == nil ? "nil" : "non-nil")")
+                            
+                            if let allRuns = coordinator.chartDataCache.allRuns {
+                                print("// DEBUG: chartDataCache.allRuns has \(allRuns.count) runs.")
+                            } else {
+                                print("// DEBUG: chartDataCache.allRuns is nil.")
+                            }
+                            
+                            showHistograms = true
+                        }) {
+                            Image(systemName: "chart.line.uptrend.xyaxis")
+                                .foregroundColor(.white)
+                                .imageScale(.large)
+                        }
+                    }
+                    .padding(.horizontal, 55)
+                    .padding(.vertical, 10)
+                    .background(Color(white: 0.12))
+                    
+                    // Column headers
+                    HStack(spacing: 0) {
+                        Text("Week")
+                            .frame(width: 60, alignment: .leading)
+                            .font(.headline)
+                            .padding(.leading, 50)
+                            .padding(.vertical, 8)
+                            .background(Color.black)
+                            .foregroundColor(.orange)
+                        
+                        ZStack {
+                            Text(columns[currentPage].0)
+                                .font(.headline)
+                                .padding(.leading, 100)
+                                .padding(.vertical, 8)
+                                .background(Color.black)
+                                .foregroundColor(.orange)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            
+                            // Invisible left-right areas to swipe columns
+                            GeometryReader { geometry in
+                                HStack(spacing: 0) {
+                                    Color.clear
+                                        .frame(width: geometry.size.width * 0.2)
+                                        .contentShape(Rectangle())
+                                        .onTapGesture {
+                                            if currentPage > 0 {
+                                                withAnimation { currentPage -= 1 }
+                                            }
+                                        }
+                                    Spacer()
+                                    Color.clear
+                                        .frame(width: geometry.size.width * 0.2)
+                                        .contentShape(Rectangle())
+                                        .onTapGesture {
+                                            if currentPage < columns.count - 1 {
+                                                withAnimation { currentPage += 1 }
+                                            }
+                                        }
+                                }
+                            }
+                        }
+                        .frame(height: 50)
+                    }
+                    .background(Color.black)
+                    
+                    // Main data scroll
+                    ScrollView(.vertical, showsIndicators: !hideScrollIndicators) {
+                        HStack(spacing: 0) {
+                            // Left column: Week numbers
+                            VStack(spacing: 0) {
+                                ForEach(coordinator.monteCarloResults.indices, id: \.self) { index in
+                                    let result = coordinator.monteCarloResults[index]
+                                    let rowBackground = index.isMultiple(of: 2)
+                                        ? Color(white: 0.10)
+                                        : Color(white: 0.14)
+                                    
+                                    Text("\(result.week)")
+                                        .frame(width: 70, alignment: .leading)
+                                        .padding(.leading, 50)
+                                        .padding(.vertical, 12)
+                                        .padding(.horizontal, 8)
+                                        .background(rowBackground)
+                                        .foregroundColor(.white)
+                                        .id("week-\(result.week)")
+                                        .background(RowOffsetReporter(week: result.week))
+                                }
+                            }
+                            
+                            // Right column: Data in pages
+                            TabView(selection: $currentPage) {
+                                ForEach(0..<columns.count, id: \.self) { idx in
+                                    ZStack {
+                                        VStack(spacing: 0) {
+                                            ForEach(coordinator.monteCarloResults.indices, id: \.self) { rowIndex in
+                                                let rowResult = coordinator.monteCarloResults[rowIndex]
+                                                let rowBackground = rowIndex.isMultiple(of: 2)
+                                                    ? Color(white: 0.10)
+                                                    : Color(white: 0.14)
+                                                
+                                                Text(getValue(rowResult, columns[idx].1))
+                                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                                    .padding(.leading, 80)
+                                                    .padding(.vertical, 12)
+                                                    .padding(.horizontal, 8)
+                                                    .background(rowBackground)
+                                                    .foregroundColor(.white)
+                                                    .id("data-week-\(rowResult.week)")
+                                                    .background(RowOffsetReporter(week: rowResult.week))
+                                            }
+                                        }
+                                        // Invisible left-right “swipe” areas
+                                        GeometryReader { geometry in
+                                            HStack(spacing: 0) {
+                                                Color.clear
+                                                    .frame(width: geometry.size.width * 0.2)
+                                                    .contentShape(Rectangle())
+                                                    .onTapGesture {
+                                                        if currentPage > 0 {
+                                                            withAnimation { currentPage -= 1 }
+                                                        }
+                                                    }
+                                                Spacer()
+                                                Color.clear
+                                                    .frame(width: geometry.size.width * 0.2)
+                                                    .contentShape(Rectangle())
+                                                    .onTapGesture {
+                                                        if currentPage < columns.count - 1 {
+                                                            withAnimation { currentPage += 1 }
+                                                        }
+                                                    }
+                                            }
+                                        }
+                                    }
+                                    .tag(idx)
+                                }
+                            }
+                            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+                            .frame(width: UIScreen.main.bounds.width - 60)
+                        }
+                        .coordinateSpace(name: "scrollArea")
+                        .onPreferenceChange(RowOffsetPreferenceKey.self) { offsets in
+                            let targetY: CGFloat = 160
+                            let filtered = offsets.filter { (week, _) in week != 1040 }
+                            let mapped = filtered.mapValues { abs($0 - targetY) }
+                            if let (closestWeek, _) = mapped.min(by: { $0.value < $1.value }) {
+                                lastViewedWeek = closestWeek
+                            }
+                        }
+                        .onChange(of: scrollToBottom) { value in
+                            if value, let lastResult = coordinator.monteCarloResults.last {
+                                withAnimation {
+                                    scrollProxy.scrollTo("week-\(lastResult.week)", anchor: .bottom)
+                                }
+                                scrollToBottom = false
+                            }
+                        }
+                        .background(
+                            GeometryReader { geometry -> Color in
+                                DispatchQueue.main.async {
+                                    let atBottom = geometry.frame(in: .global).maxY <= UIScreen.main.bounds.height
+                                    if atBottom != isAtBottom {
+                                        isAtBottom = atBottom
+                                    }
+                                }
+                                return Color(white: 0.12)
+                            }
+                        )
+                        // Detect dragging to show/hide scroll indicators
+                        .simultaneousGesture(
+                            DragGesture(minimumDistance: 0)
+                                .onChanged { _ in
+                                    hideScrollIndicators = false
+                                    lastScrollTime = Date()
+                                }
+                                .onEnded { _ in
+                                    lastScrollTime = Date()
+                                }
+                        )
+                    }
+                    // Re-hide indicators after a bit
+                    .onReceive(
+                        Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()
+                    ) { _ in
+                        if Date().timeIntervalSince(lastScrollTime) > 1.5 {
+                            hideScrollIndicators = true
+                        }
+                    }
+                }
+                .onAppear {
+                    contentScrollProxy = scrollProxy
+                }
+                .onDisappear {
+                    print("// DEBUG: simulationResultsView onDisappear => saving lastViewedWeek=\(lastViewedWeek), lastViewedPage=\(currentPage)")
+                    UserDefaults.standard.set(lastViewedWeek, forKey: "lastViewedWeek")
+                    UserDefaults.standard.set(currentPage, forKey: "lastViewedPage")
+                }
+                
+                // A button to jump to bottom if needed
+                if !isAtBottom {
+                    VStack {
+                        Spacer()
+                        Button(action: {
+                            scrollToBottom = true
+                        }) {
+                            Image(systemName: "chevron.down")
+                                .foregroundColor(.white)
+                                .imageScale(.large)
+                                .padding()
+                                .background(Color(white: 0.2).opacity(0.9))
+                                .clipShape(Circle())
+                        }
+                        .padding()
+                    }
+                }
+            }
+        }
+    }
+    
+    // MARK: - Next arrow to show results
+    
+    private var transitionToResultsButton: some View {
+        VStack {
+            HStack {
+                Spacer()
+                Button(action: {
+                    print("// DEBUG: transitionToResultsButton tapped => showing simulation screen.")
+                    coordinator.isSimulationRun = true
+                    currentPage = lastViewedPage
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        if let scrollProxy = contentScrollProxy {
+                            let savedWeek = UserDefaults.standard.integer(forKey: "lastViewedWeek")
+                            if savedWeek != 0 {
+                                lastViewedWeek = savedWeek
+                            }
+                            if let target = coordinator.monteCarloResults.first(where: { $0.week == lastViewedWeek }) {
+                                withAnimation {
+                                    scrollProxy.scrollTo("week-\(target.week)", anchor: .top)
+                                }
+                            }
+                        }
+                    }
+                }) {
+                    Image(systemName: "chevron.right")
+                        .foregroundColor(.white)
+                        .imageScale(.large)
+                        .padding()
+                }
+            }
+            Spacer()
+        }
+    }
+    
+    // MARK: - Loading Overlay
     private var loadingOverlayCombined: some View {
         ZStack {
             Color.black.opacity(0.6).ignoresSafeArea()
@@ -557,10 +1073,8 @@ struct ContentView: View {
                 
                 HStack {
                     Spacer()
-                    
                     if coordinator.isLoading && !coordinator.isChartBuilding {
                         Button(action: {
-                            // ADDED:
                             print("// DEBUG: Cancel button tapped in combined overlay.")
                             coordinator.isCancelled = true
                             coordinator.isLoading = false
@@ -590,8 +1104,8 @@ struct ContentView: View {
                             .frame(width: 200)
                     }
                     .padding(.bottom, 20)
-                    
-                } else if coordinator.isChartBuilding {
+                }
+                else if coordinator.isChartBuilding {
                     VStack(spacing: 12) {
                         Text("Generating Charts…")
                             .font(.headline)
@@ -628,453 +1142,6 @@ struct ContentView: View {
         .onDisappear { stopTipCycle() }
     }
     
-    private func invalidateChartIfInputChanged() {
-        // ADDED:
-        print("DEBUG: invalidateChartIfInputChanged() => clearing chartDataCache.")
-        coordinator.chartDataCache.allRuns = nil
-        coordinator.chartDataCache.storedInputsHash = nil
-    }
-    
-    // MARK: - UI
-    @ViewBuilder
-    private var bottomIcons: some View {
-        if !coordinator.isLoading && !coordinator.isChartBuilding {
-            VStack {
-                Spacer()
-                HStack {
-                    Button(action: { showAbout = true }) {
-                        Image(systemName: "info.circle")
-                            .font(.system(size: 28))
-                            .foregroundColor(.white)
-                            .padding()
-                    }
-                    .padding(.leading, 15)
-                    
-                    Spacer()
-                    
-                    Button(action: { showSettings = true }) {
-                        Image(systemName: "gearshape")
-                            .font(.system(size: 28))
-                            .foregroundColor(.white)
-                            .padding()
-                    }
-                    .padding(.trailing, 15)
-                }
-                .padding(.bottom, 30)
-            }
-        } else {
-            EmptyView()
-        }
-    }
-    
-    private var parametersScreen: some View {
-        ZStack {
-            LinearGradient(
-                gradient: Gradient(colors: [Color.black, Color(white: 0.15), Color.black]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
-            
-            VStack(spacing: 30) {
-                Spacer().frame(height: 60)
-                
-                Text("HODL Simulator")
-                    .font(.system(size: 34, weight: .bold))
-                    .foregroundColor(.white)
-                    .padding(.top, 10)
-                
-                Text("Set your simulation parameters")
-                    .font(.callout)
-                    .foregroundColor(.gray)
-                
-                VStack(alignment: .leading, spacing: 16) {
-                    // Iterations Field
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Iterations")
-                            .foregroundColor(.white)
-                        TextField("e.g. 1000", text: $inputManager.iterations)
-                            .keyboardType(.numberPad)
-                            .padding(8)
-                            .background(Color.white)
-                            .cornerRadius(6)
-                            .foregroundColor(.black)
-                            .focused($activeField, equals: .iterations)
-                            .onChange(of: inputManager.iterations) { newValue in
-                                if newValue != oldIterationsValue {
-                                    oldIterationsValue = newValue
-                                    invalidateChartIfInputChanged()
-                                }
-                            }
-                    }
-                    
-                    // Annual CAGR Field
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Annual CAGR (%)")
-                            .foregroundColor(.white)
-                        TextField("e.g. 40.0", text: $inputManager.annualCAGR)
-                            .keyboardType(.decimalPad)
-                            .padding(8)
-                            .background(Color.white)
-                            .cornerRadius(6)
-                            .foregroundColor(.black)
-                            .focused($activeField, equals: .annualCAGR)
-                            .onChange(of: inputManager.annualCAGR) { newValue in
-                                if newValue != oldAnnualCAGRValue {
-                                    oldAnnualCAGRValue = newValue
-                                    invalidateChartIfInputChanged()
-                                }
-                            }
-                    }
-                    
-                    // Annual Volatility Field
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Annual Volatility (%)")
-                            .foregroundColor(.white)
-                        TextField("e.g. 80.0", text: $inputManager.annualVolatility)
-                            .keyboardType(.decimalPad)
-                            .padding(8)
-                            .background(Color.white)
-                            .cornerRadius(6)
-                            .foregroundColor(.black)
-                            .focused($activeField, equals: .annualVolatility)
-                            .onChange(of: inputManager.annualVolatility) { newValue in
-                                if newValue != oldAnnualVolatilityValue {
-                                    oldAnnualVolatilityValue = newValue
-                                    invalidateChartIfInputChanged()
-                                }
-                            }
-                    }
-                }
-                .padding(20)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color(white: 0.1).opacity(0.8))
-                )
-                .padding(.horizontal, 30)
-                
-                if !coordinator.isLoading && !coordinator.isChartBuilding {
-                    Button {
-                        activeField = nil
-                        coordinator.isLoading = true
-                        coordinator.isChartBuilding = false
-                        
-                        // ADDED:
-                        print("// DEBUG: RUN SIMULATION tapped with \(inputManager.iterations) iterations.")
-                        
-                        coordinator.runSimulation()
-                    } label: {
-                        Text("RUN SIMULATION")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 32)
-                            .padding(.vertical, 14)
-                            .background(Color.orange)
-                            .cornerRadius(8)
-                            .shadow(color: .black.opacity(0.3), radius: 4, x: 2, y: 2)
-                    }
-                    .padding(.top, 6)
-                }
-                
-                Spacer()
-            }
-        }
-        .onTapGesture {
-            activeField = nil
-        }
-    }
-    
-    private var simulationResultsView: some View {
-        ScrollViewReader { scrollProxy in
-            ZStack {
-                Color(white: 0.12)
-                    .edgesIgnoringSafeArea(.bottom)
-                
-                VStack(spacing: 0) {
-                    HStack {
-                        Button(action: {
-                            // ADDED:
-                            print("// DEBUG: Back button tapped in simulationResultsView.")
-                            UserDefaults.standard.set(lastViewedWeek, forKey: "lastViewedWeek")
-                            UserDefaults.standard.set(currentPage, forKey: "lastViewedPage")
-                            lastViewedPage = currentPage
-                            coordinator.isSimulationRun = false
-                        }) {
-                            Image(systemName: "chevron.left")
-                                .foregroundColor(.white)
-                                .imageScale(.large)
-                        }
-                        
-                        Spacer()
-                        
-                        Button(action: {
-                            // ADDED:
-                            print("// DEBUG: Chart button pressed.")
-                            print("// DEBUG: chartDataCache.chartSnapshot == \(coordinator.chartDataCache.chartSnapshot == nil ? "nil" : "non-nil")")
-                            
-                            if let allRuns = coordinator.chartDataCache.allRuns {
-                                print("// DEBUG: chartDataCache.allRuns has \(allRuns.count) runs.")
-                            } else {
-                                print("// DEBUG: chartDataCache.allRuns is nil.")
-                            }
-                            
-                            showHistograms = true
-                        }) {
-                            Image(systemName: "chart.line.uptrend.xyaxis")
-                                .foregroundColor(.white)
-                                .imageScale(.large)
-                        }
-                    }
-                    .padding(.horizontal, 55)
-                    .padding(.vertical, 10)
-                    .background(Color(white: 0.12))
-                    
-                    HStack(spacing: 0) {
-                        Text("Week")
-                            .frame(width: 60, alignment: .leading)
-                            .font(.headline)
-                            .padding(.leading, 50)
-                            .padding(.vertical, 8)
-                            .background(Color.black)
-                            .foregroundColor(.orange)
-                        
-                        ZStack {
-                            Text(columns[currentPage].0)
-                                .font(.headline)
-                                .padding(.leading, 100)
-                                .padding(.vertical, 8)
-                                .background(Color.black)
-                                .foregroundColor(.orange)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            
-                            GeometryReader { geometry in
-                                HStack(spacing: 0) {
-                                    Color.clear
-                                        .frame(width: geometry.size.width * 0.2)
-                                        .contentShape(Rectangle())
-                                        .gesture(
-                                            TapGesture()
-                                                .onEnded {
-                                                    if currentPage > 0 {
-                                                        withAnimation {
-                                                            currentPage -= 1
-                                                        }
-                                                    }
-                                                }
-                                        )
-                                    Spacer()
-                                    Color.clear
-                                        .frame(width: geometry.size.width * 0.2)
-                                        .contentShape(Rectangle())
-                                        .gesture(
-                                            TapGesture()
-                                                .onEnded {
-                                                    if currentPage < columns.count - 1 {
-                                                        withAnimation {
-                                                            currentPage += 1
-                                                        }
-                                                    }
-                                                }
-                                        )
-                                }
-                            }
-                        }
-                        .frame(height: 50)
-                    }
-                    .background(Color.black)
-                    
-                    ScrollView(.vertical, showsIndicators: !hideScrollIndicators) {
-                        HStack(spacing: 0) {
-                            VStack(spacing: 0) {
-                                ForEach(coordinator.monteCarloResults.indices, id: \.self) { index in
-                                    let result = coordinator.monteCarloResults[index]
-                                    let rowBackground = index.isMultiple(of: 2)
-                                        ? Color(white: 0.10)
-                                        : Color(white: 0.14)
-                                    
-                                    Text("\(result.week)")
-                                        .frame(width: 70, alignment: .leading)
-                                        .padding(.leading, 50)
-                                        .padding(.vertical, 12)
-                                        .padding(.horizontal, 8)
-                                        .background(rowBackground)
-                                        .foregroundColor(.white)
-                                        .id("week-\(result.week)")
-                                        .background(RowOffsetReporter(week: result.week))
-                                }
-                            }
-                            
-                            TabView(selection: $currentPage) {
-                                ForEach(0..<columns.count, id: \.self) { index in
-                                    ZStack {
-                                        VStack(spacing: 0) {
-                                            ForEach(coordinator.monteCarloResults.indices, id: \.self) { rowIndex in
-                                                let rowResult = coordinator.monteCarloResults[rowIndex]
-                                                let rowBackground = rowIndex.isMultiple(of: 2)
-                                                    ? Color(white: 0.10)
-                                                    : Color(white: 0.14)
-                                                
-                                                Text(getValue(rowResult, columns[index].1))
-                                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                                    .padding(.leading, 80)
-                                                    .padding(.vertical, 12)
-                                                    .padding(.horizontal, 8)
-                                                    .background(rowBackground)
-                                                    .foregroundColor(.white)
-                                                    .id("data-week-\(rowResult.week)")
-                                                    .background(RowOffsetReporter(week: rowResult.week))
-                                            }
-                                        }
-                                        GeometryReader { geometry in
-                                            HStack(spacing: 0) {
-                                                Color.clear
-                                                    .frame(width: geometry.size.width * 0.2)
-                                                    .contentShape(Rectangle())
-                                                    .gesture(
-                                                        TapGesture()
-                                                            .onEnded {
-                                                                if currentPage > 0 {
-                                                                    withAnimation {
-                                                                        currentPage -= 1
-                                                                    }
-                                                                }
-                                                            }
-                                                    )
-                                                Spacer()
-                                                Color.clear
-                                                    .frame(width: geometry.size.width * 0.2)
-                                                    .contentShape(Rectangle())
-                                                    .gesture(
-                                                        TapGesture()
-                                                            .onEnded {
-                                                                if currentPage < columns.count - 1 {
-                                                                    withAnimation {
-                                                                        currentPage += 1
-                                                                    }
-                                                                }
-                                                            }
-                                                    )
-                                            }
-                                        }
-                                    }
-                                    .tag(index)
-                                }
-                            }
-                            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
-                            .frame(width: UIScreen.main.bounds.width - 60)
-                        }
-                        .coordinateSpace(name: "scrollArea")
-                        .onPreferenceChange(RowOffsetPreferenceKey.self) { offsets in
-                            let targetY: CGFloat = 160
-                            let filtered = offsets.filter { (week, _) in week != 1040 }
-                            let mapped = filtered.mapValues { abs($0 - targetY) }
-                            if let (closestWeek, _) = mapped.min(by: { $0.value < $1.value }) {
-                                lastViewedWeek = closestWeek
-                            }
-                        }
-                        .onChange(of: scrollToBottom) { value in
-                            if value, let lastResult = coordinator.monteCarloResults.last {
-                                withAnimation {
-                                    scrollProxy.scrollTo("week-\(lastResult.week)", anchor: .bottom)
-                                }
-                                scrollToBottom = false
-                            }
-                        }
-                        .background(
-                            GeometryReader { geometry -> Color in
-                                DispatchQueue.main.async {
-                                    let atBottom = geometry.frame(in: .global).maxY <= UIScreen.main.bounds.height
-                                    if atBottom != isAtBottom {
-                                        isAtBottom = atBottom
-                                    }
-                                }
-                                return Color(white: 0.12)
-                            }
-                        )
-                        .simultaneousGesture(
-                            DragGesture(minimumDistance: 0)
-                                .onChanged { _ in
-                                    hideScrollIndicators = false
-                                    lastScrollTime = Date()
-                                }
-                                .onEnded { _ in
-                                    lastScrollTime = Date()
-                                }
-                        )
-                    }
-                    .onReceive(
-                        Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()
-                    ) { _ in
-                        if Date().timeIntervalSince(lastScrollTime) > 1.5 {
-                            hideScrollIndicators = true
-                        }
-                    }
-                }
-                .onAppear {
-                    contentScrollProxy = scrollProxy
-                }
-                .onDisappear {
-                    // ADDED:
-                    print("// DEBUG: simulationResultsView onDisappear => saving lastViewedWeek=\(lastViewedWeek), lastViewedPage=\(currentPage).")
-                    UserDefaults.standard.set(lastViewedWeek, forKey: "lastViewedWeek")
-                    UserDefaults.standard.set(currentPage, forKey: "lastViewedPage")
-                }
-                
-                if !isAtBottom {
-                    VStack {
-                        Spacer()
-                        Button(action: {
-                            scrollToBottom = true
-                        }) {
-                            Image(systemName: "chevron.down")
-                                .foregroundColor(.white)
-                                .imageScale(.large)
-                                .padding()
-                                .background(Color(white: 0.2).opacity(0.9))
-                                .clipShape(Circle())
-                        }
-                        .padding()
-                    }
-                }
-            }
-        }
-    }
-    
-    // MARK: - Forward (transitionToResultsButton)
-    private var transitionToResultsButton: some View {
-        VStack {
-            HStack {
-                Spacer()
-                Button(action: {
-                    // ADDED:
-                    print("// DEBUG: transitionToResultsButton tapped => showing simulation screen.")
-                    
-                    coordinator.isSimulationRun = true
-                    currentPage = lastViewedPage
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        if let scrollProxy = contentScrollProxy {
-                            let savedWeek = UserDefaults.standard.integer(forKey: "lastViewedWeek")
-                            if savedWeek != 0 {
-                                lastViewedWeek = savedWeek
-                            }
-                            if let target = coordinator.monteCarloResults.first(where: { $0.week == lastViewedWeek }) {
-                                withAnimation {
-                                    scrollProxy.scrollTo("week-\(target.week)", anchor: .top)
-                                }
-                            }
-                        }
-                    }
-                }) {
-                    Image(systemName: "chevron.right")
-                        .foregroundColor(.white)
-                        .imageScale(.large)
-                        .padding()
-                }
-            }
-            Spacer()
-        }
-    }
-    
     // MARK: - Tip cycle
     private func startTipCycle() {
         showTip = false
@@ -1107,6 +1174,7 @@ struct ContentView: View {
         showTip = false
     }
     
+    // MARK: - Data Formatting
     private func getValue(_ item: SimulationData, _ keyPath: PartialKeyPath<SimulationData>) -> String {
         // 1) If the field is a Decimal:
         if let decimalVal = item[keyPath: keyPath] as? Decimal {
@@ -1123,7 +1191,7 @@ struct ContentView: View {
             case \SimulationData.btcPriceUSD,
                  \SimulationData.btcPriceEUR,
                  \SimulationData.portfolioValueEUR,
-                 \SimulationData.portfolioValueUSD,  // <-- ADDED
+                 \SimulationData.portfolioValueUSD,
                  \SimulationData.contributionEUR,
                  \SimulationData.transactionFeeEUR,
                  \SimulationData.withdrawalEUR:
@@ -1135,8 +1203,9 @@ struct ContentView: View {
         // 3) If the field is an Int:
         } else if let intVal = item[keyPath: keyPath] as? Int {
             return "\(intVal)"
+            
+        // 4) Otherwise (e.g. a String?), return empty or handle differently
         } else {
-            // 4) Otherwise (e.g. a String?), return empty or handle differently:
             return ""
         }
     }

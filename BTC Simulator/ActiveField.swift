@@ -7,8 +7,9 @@
 
 import SwiftUI
 
-enum ActiveField {
+enum ActiveField: Hashable {
     case iterations
     case annualCAGR
     case annualVolatility
+    case standardDeviation
 }
