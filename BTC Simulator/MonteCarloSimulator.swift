@@ -54,7 +54,6 @@ fileprivate func seededRandomNormal<G: RandomNumberGenerator>(
 
 /// A gentle dampening function to soften extreme outliers
 func dampenArctan(_ rawReturn: Double) -> Double {
-    // Same factor as before
     let factor = 3.0
     let scaled = rawReturn * factor
     let flattened = (2.0 / Double.pi) * atan(scaled)
@@ -96,13 +95,10 @@ func runOneFullSimulation(
     let userStartingBalanceBTC: Double
     switch settings.currencyPreference {
     case .usd:
-        // typed in USD => convert from USD to BTC
         userStartingBalanceBTC = settings.startingBalance / initialBTCPriceUSD
     case .eur:
-        // typed in EUR => convert from EUR to BTC
         userStartingBalanceBTC = settings.startingBalance / firstEURPrice
     case .both:
-        // If "both," treat typed as EUR if user selected both
         userStartingBalanceBTC = settings.startingBalance / firstEURPrice
     }
 
@@ -164,17 +160,14 @@ func runOneFullSimulation(
     let transactionFeePct  = 0.006
     
     // 6) Main loop using log-returns
-    // Extra scale factor to dampen historical picks even further
-    let shrinkFactor = 0.05
+    let shrinkFactor = 0.01  // further dampening
 
     for week in 2...userWeeks {
         
-        // Historical return
+        // Historical picks
         let btcArr = useWeightedSampling ? weightedBTCWeeklyReturns : historicalBTCWeeklyReturns
         let histReturn = pickRandomReturn(from: btcArr)
-        // Hard shrink factor:
         let scaledReturn = histReturn * shrinkFactor
-        // Then apply arctan dampening
         let dampenedReturn = dampenArctan(scaledReturn)
 
         // Combine that with logDrift
@@ -207,7 +200,70 @@ func runOneFullSimulation(
         if settings.useHalving, halvingWeeks.contains(week) {
             logReturn += settings.halvingBump
         }
-        // (And so on for other toggles.)
+        if settings.useInstitutionalDemand {
+            logReturn += settings.maxDemandBoost
+        }
+        if settings.useCountryAdoption {
+            logReturn += settings.maxCountryAdBoost
+        }
+        if settings.useRegulatoryClarity {
+            logReturn += settings.maxClarityBoost
+        }
+        if settings.useEtfApproval {
+            logReturn += settings.maxEtfBoost
+        }
+        if settings.useTechBreakthrough {
+            logReturn += settings.maxTechBoost
+        }
+        if settings.useScarcityEvents {
+            logReturn += settings.maxScarcityBoost
+        }
+        if settings.useGlobalMacroHedge {
+            logReturn += settings.maxMacroBoost
+        }
+        if settings.useStablecoinShift {
+            logReturn += settings.maxStablecoinBoost
+        }
+        if settings.useDemographicAdoption {
+            logReturn += settings.maxDemoBoost
+        }
+        if settings.useAltcoinFlight {
+            logReturn += settings.maxAltcoinBoost
+        }
+        if settings.useAdoptionFactor {
+            // Basic additive approach; adapt as needed
+            logReturn += settings.adoptionBaseFactor
+        }
+
+        // Bearish factors
+        if settings.useRegClampdown {
+            logReturn += settings.maxClampDown
+        }
+        if settings.useCompetitorCoin {
+            // If it’s truly negative, confirm variable name
+            logReturn += settings.maxCompetitorBoost
+        }
+        if settings.useSecurityBreach {
+            logReturn += settings.breachImpact
+        }
+        if settings.useBubblePop {
+            logReturn += settings.maxPopDrop
+        }
+        if settings.useStablecoinMeltdown {
+            logReturn += settings.maxMeltdownDrop
+        }
+        if settings.useBlackSwan {
+            logReturn += settings.blackSwanDrop
+        }
+        if settings.useBearMarket {
+            logReturn += settings.bearWeeklyDrift
+        }
+        if settings.useMaturingMarket {
+            logReturn += settings.maxMaturingDrop
+        }
+        if settings.useRecession {
+            logReturn += settings.maxRecessionDrop
+        }
 
         // 8) Price update with exp(logReturn)
         var btcPriceUSD = previousBTCPriceUSD * exp(logReturn)
@@ -295,7 +351,7 @@ func runMonteCarloSimulationsWithProgress(
     seed: UInt64? = nil
 ) -> ([SimulationData], [[SimulationData]]) {
     
-    // Lock or unlock the random seed
+    // Lock/unlock the seed
     setRandomSeed(seed)
     
     var allRuns = [[SimulationData]]()
@@ -353,3 +409,4 @@ private func randomNormal(mean: Double, standardDeviation: Double) -> Double {
     let z0 = sqrt(-2.0 * log(u1)) * cos(2.0 * .pi * u2)
     return z0 * standardDeviation + mean
 }
+    
