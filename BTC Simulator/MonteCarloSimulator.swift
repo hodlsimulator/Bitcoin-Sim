@@ -152,7 +152,13 @@ func runOneFullSimulation(
 
     // Annual CAGR => weekly portion
     let baseWeeklyGrowth = pow(1.0 + annualCAGR, 1.0 / 52.0) - 1.0
+    
+    // Original volatility logic
     let weeklyVol = annualVolatility / sqrt(52.0)
+    
+    // Parse standardDeviation -> weeklySD
+    let parsedSD = Double(settings.inputManager?.standardDeviation ?? "15.0") ?? 15.0
+    let weeklySD = parsedSD / sqrt(52.0) / 100.0
 
     var results: [SimulationData] = []
 
@@ -210,7 +216,7 @@ func runOneFullSimulation(
         // Combine with base CAGR
         var combinedWeeklyReturn = dampenedReturn + baseWeeklyGrowth
         
-        // Insert an annualVolatility shock
+        // Insert the annualVolatility shock
         if useSeededRandom, var localRNG = seededGen {
             let shock = seededRandomNormal(mean: 0, stdDev: weeklyVol, rng: &localRNG)
             seededGen = localRNG
@@ -220,6 +226,23 @@ func runOneFullSimulation(
             combinedWeeklyReturn += shock
         }
         
+        // Now add the SD shock (clamped to ±2.0)
+        if weeklySD > 0 {
+            var shockSD: Double
+            if useSeededRandom, var localRNG = seededGen {
+                var local = localRNG
+                shockSD = seededRandomNormal(mean: 0, stdDev: weeklySD, rng: &local)
+                seededGen = local
+            } else {
+                shockSD = randomNormal(mean: 0, standardDeviation: weeklySD)
+            }
+            
+            // Step 4: symmetrical clamp to ±2.0 (i.e. -200% to +200%)
+            shockSD = max(min(shockSD, 2.0), -2.0)
+            
+            combinedWeeklyReturn += shockSD
+        }
+
         // 5) Factor toggles (halving, etc.)
         if settings.useHalving, halvingWeeks.contains(week) {
             combinedWeeklyReturn += settings.halvingBump
@@ -386,7 +409,6 @@ func runOneFullSimulation(
         let portfolioValUSD = finalHoldings * btcPriceUSD
 
         // 9) Append results
-        // Only fill the currency that matches user preference; or both if you like.
         results.append(
             SimulationData(
                 week: week,
@@ -397,7 +419,6 @@ func runOneFullSimulation(
                 portfolioValueEUR: Decimal(portfolioValEUR),
                 portfolioValueUSD: Decimal(portfolioValUSD),
                 
-                // We'll store whichever net contributions we have:
                 contributionEUR: netContribEur,
                 contributionUSD: netContribUsd,
                 
