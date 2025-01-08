@@ -503,12 +503,20 @@ struct ContentView: View {
                             .toggleStyle(CheckboxToggleStyle())
                             .foregroundColor(.white)
                         
-                        // Updated to bind directly to simSettings.lockedRandomSeed
                         Toggle("Lock Seed", isOn: $simSettings.lockedRandomSeed)
                             .toggleStyle(CheckboxToggleStyle())
                             .foregroundColor(.white)
+                            .onChange(of: simSettings.lockedRandomSeed) { locked in
+                                if locked {
+                                    let newSeed = UInt64.random(in: 0..<UInt64.max)
+                                    simSettings.seedValue = newSeed
+                                    simSettings.useRandomSeed = false
+                                } else {
+                                    simSettings.seedValue = 0
+                                    simSettings.useRandomSeed = true
+                                }
+                            }
                     }
-                    
                 }
                 .padding(20)
                 .frame(maxWidth: .infinity)
