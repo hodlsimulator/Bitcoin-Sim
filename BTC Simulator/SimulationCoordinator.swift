@@ -105,12 +105,14 @@ class SimulationCoordinator: ObservableObject {
             }
             
             // The user’s CAGR & Volatility as Doubles
-            let userInputCAGR = self.inputManager.getParsedAnnualCAGR() / 100.0
-            let userInputVolatility = (Double(self.inputManager.annualVolatility) ?? 1.0) / 100.0
-            let userWeeks = self.simSettings.userWeeks
+            // This is good; it yields 30.0 if user typed "30"
+            let userInputCAGR = self.inputManager.getParsedAnnualCAGR()
+            let userInputVolatility = Double(self.inputManager.annualVolatility) ?? 1.0
 
-            print("// DEBUG: userInputCAGR => \(userInputCAGR * 100)%")
-            print("// DEBUG: userInputVolatility => \(userInputVolatility * 100)%")
+            print("// DEBUG: userInputCAGR => \(userInputCAGR)%")
+            print("// DEBUG: userInputVolatility => \(userInputVolatility)%")
+
+            let userWeeks = self.simSettings.userWeeks
             
             let userPriceUSDAsDecimal = Decimal(self.simSettings.initialBTCPriceUSD)
             let userPriceUSDAsDouble = NSDecimalNumber(decimal: userPriceUSDAsDecimal).doubleValue
