@@ -47,7 +47,10 @@ class SimulationCoordinator: ObservableObject {
         self.chartSelection = chartSelection
     }
     
-    func runSimulation() {
+    func runSimulation(generateGraphs: Bool, lockRandomSeed: Bool) {
+        // If you do want to use lockRandomSeed, you can flip the setting here:
+        simSettings.lockedRandomSeed = lockRandomSeed
+
         let newHash = computeInputsHash()
         print("// DEBUG: runSimulation() => newHash = \(newHash), storedInputsHash = \(String(describing: chartDataCache.storedInputsHash))")
 
@@ -222,6 +225,14 @@ class SimulationCoordinator: ObservableObject {
                     let oldSelection = self.chartSelection.selectedChart
                     print("// CHANGED: oldSelection => \(oldSelection)")
 
+                    // ADDED OR MODIFIED: Only build snapshots if generateGraphs == true
+                    if !generateGraphs {
+                        print("// DEBUG: Skipping chart building because generateGraphs == false.")
+                        self.isChartBuilding = false
+                        self.isSimulationRun = true
+                        return
+                    }
+                    
                     DispatchQueue.main.async {
                         if self.isCancelled {
                             self.isChartBuilding = false
