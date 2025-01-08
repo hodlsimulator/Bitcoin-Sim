@@ -54,7 +54,8 @@ fileprivate func seededRandomNormal<G: RandomNumberGenerator>(
 
 /// A gentle dampening function to soften extreme outliers
 func dampenArctan(_ rawReturn: Double) -> Double {
-    let factor = 5.5
+    // Same factor as before
+    let factor = 3.0
     let scaled = rawReturn * factor
     let flattened = (2.0 / Double.pi) * atan(scaled)
     return flattened
@@ -163,14 +164,18 @@ func runOneFullSimulation(
     let transactionFeePct  = 0.006
     
     // 6) Main loop using log-returns
+    // Extra scale factor to dampen historical picks even further
+    let shrinkFactor = 0.05
+
     for week in 2...userWeeks {
         
-        // Historical return / dampening
+        // Historical return
         let btcArr = useWeightedSampling ? weightedBTCWeeklyReturns : historicalBTCWeeklyReturns
-        // Reintroduce the random pick from btcArr:
         let histReturn = pickRandomReturn(from: btcArr)
-        // Then dampen extremes:
-        let dampenedReturn = dampenArctan(histReturn)
+        // Hard shrink factor:
+        let scaledReturn = histReturn * shrinkFactor
+        // Then apply arctan dampening
+        let dampenedReturn = dampenArctan(scaledReturn)
 
         // Combine that with logDrift
         var logReturn = logDrift + dampenedReturn
@@ -194,18 +199,15 @@ func runOneFullSimulation(
             } else {
                 shockSD = randomNormal(mean: 0, standardDeviation: weeklySD)
             }
-
-            // Possibly clamp if you want
             shockSD = max(min(shockSD, 2.0), -1.0)
             logReturn += shockSD
         }
 
         // 7) Factor toggles => now add them to logReturn
         if settings.useHalving, halvingWeeks.contains(week) {
-            // If you used .1 in additive code, maybe 0.05 in log code
             logReturn += settings.halvingBump
         }
-        // (And so on for other toggles, each adding to logReturn)
+        // (And so on for other toggles.)
 
         // 8) Price update with exp(logReturn)
         var btcPriceUSD = previousBTCPriceUSD * exp(logReturn)
