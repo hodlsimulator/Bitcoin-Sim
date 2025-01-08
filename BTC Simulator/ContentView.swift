@@ -299,28 +299,25 @@ struct ContentView: View {
     @State private var showSnapshotView = false
     @State private var showSnapshotsDebug = false
     
-    @State private var lockRandomSeed = false
-
     init() {
-        // Create one manager, one settings, one cache, then link them all:
-        let manager = PersistentInputManager()
-        let settings = SimulationSettings()
-        settings.inputManager = manager
-        let cache = ChartDataCache()
+            let manager = PersistentInputManager()
+            let settings = SimulationSettings()
+            settings.inputManager = manager
+            let cache = ChartDataCache()
 
-        let chartSel = ChartSelection() // for the coordinator
-        let simCoord = SimulationCoordinator(
-            chartDataCache: cache,
-            simSettings: settings,
-            inputManager: manager,
-            chartSelection: chartSel
-        )
+            let chartSel = ChartSelection()
+            let simCoord = SimulationCoordinator(
+                chartDataCache: cache,
+                simSettings: settings,
+                inputManager: manager,
+                chartSelection: chartSel
+            )
 
-        _inputManager = StateObject(wrappedValue: manager)
-        _simSettings = StateObject(wrappedValue: settings)
-        _chartDataCache = StateObject(wrappedValue: cache)
-        _coordinator = StateObject(wrappedValue: simCoord)
-    }
+            _inputManager = StateObject(wrappedValue: manager)
+            _simSettings = StateObject(wrappedValue: settings)
+            _chartDataCache = StateObject(wrappedValue: cache)
+            _coordinator = StateObject(wrappedValue: simCoord)
+        }
 
     var body: some View {
         NavigationStack {
@@ -502,12 +499,12 @@ struct ContentView: View {
                     
                     // Row 3: Toggles
                     HStack(spacing: 32) {
-                        // ADDED OR MODIFIED:
                         Toggle("Charts", isOn: $inputManager.generateGraphs)
                             .toggleStyle(CheckboxToggleStyle())
                             .foregroundColor(.white)
                         
-                        Toggle("Lock Seed", isOn: $lockRandomSeed)
+                        // Updated to bind directly to simSettings.lockedRandomSeed
+                        Toggle("Lock Seed", isOn: $simSettings.lockedRandomSeed)
                             .toggleStyle(CheckboxToggleStyle())
                             .foregroundColor(.white)
                     }
@@ -540,10 +537,9 @@ struct ContentView: View {
                         coordinator.isLoading = true
                         coordinator.isChartBuilding = false
                         
-                        // ADDED OR MODIFIED:
                         coordinator.runSimulation(
                             generateGraphs: inputManager.generateGraphs,
-                            lockRandomSeed: lockRandomSeed
+                            lockRandomSeed: simSettings.lockedRandomSeed
                         )
                     } label: {
                         Text("RUN SIMULATION")
