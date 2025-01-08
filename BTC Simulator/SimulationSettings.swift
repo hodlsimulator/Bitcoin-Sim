@@ -921,3 +921,4 @@ class SimulationSettings: ObservableObject {
         print("// DEBUG: toggleAll=\(toggleAll), areAllFactorsEnabled=\(areAllFactorsEnabled)")
     }
 }
+
