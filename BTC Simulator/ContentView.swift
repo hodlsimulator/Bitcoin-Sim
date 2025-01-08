@@ -86,6 +86,14 @@ struct RowOffsetReporter: View {
 
 // MARK: - PersistentInputManager
 class PersistentInputManager: ObservableObject {
+
+    // ADDED:
+    @Published var generateGraphs: Bool {
+        didSet {
+            UserDefaults.standard.set(generateGraphs, forKey: "generateGraphs")
+        }
+    }
+
     @Published var firstYearContribution: String {
         didSet { UserDefaults.standard.set(firstYearContribution, forKey: "firstYearContribution") }
     }
@@ -144,6 +152,9 @@ class PersistentInputManager: ObservableObject {
     }
 
     init() {
+        // ADDED:
+        self.generateGraphs = UserDefaults.standard.bool(forKey: "generateGraphs")
+
         // Strings
         self.firstYearContribution = UserDefaults.standard.string(forKey: "firstYearContribution") ?? "60"
         self.subsequentContribution = UserDefaults.standard.string(forKey: "subsequentContribution") ?? "100"
@@ -327,16 +338,12 @@ struct ContentView: View {
     @StateObject var simSettings: SimulationSettings
     @StateObject var chartDataCache: ChartDataCache
     @StateObject var coordinator: SimulationCoordinator
-
+    
     // Track old values so we can invalidate the chart if changed
     @State private var oldIterationsValue: String = ""
     @State private var oldAnnualCAGRValue: String = ""
     @State private var oldAnnualVolatilityValue: String = ""
     @State private var oldStandardDevValue: String = ""
-
-    // Toggles for row 3
-    @State private var generateGraphs = false  // This is our "Graphs" checkbox
-    @State private var lockRandomSeed = false
 
     // Focus for text fields
     @FocusState private var activeField: ActiveField?
@@ -487,6 +494,8 @@ struct ContentView: View {
     
     @State private var showSnapshotView = false
     @State private var showSnapshotsDebug = false
+    
+    @State private var lockRandomSeed = false
 
     init() {
         // Create one manager, one settings, one cache, then link them all:
@@ -689,7 +698,8 @@ struct ContentView: View {
                     
                     // Row 3: Toggles
                     HStack(spacing: 32) {
-                        Toggle("Graphs", isOn: $generateGraphs)
+                        // ADDED OR MODIFIED:
+                        Toggle("Charts", isOn: $inputManager.generateGraphs)
                             .toggleStyle(CheckboxToggleStyle())
                             .foregroundColor(.white)
                         
@@ -727,8 +737,10 @@ struct ContentView: View {
                         coordinator.isChartBuilding = false
                         
                         // ADDED OR MODIFIED:
-                        // Pass along whether or not we want to generate graphs
-                        coordinator.runSimulation(generateGraphs: generateGraphs, lockRandomSeed: lockRandomSeed)
+                        coordinator.runSimulation(
+                            generateGraphs: inputManager.generateGraphs,
+                            lockRandomSeed: lockRandomSeed
+                        )
                     } label: {
                         Text("RUN SIMULATION")
                             .foregroundColor(.white)
@@ -789,7 +801,6 @@ struct ContentView: View {
     }
     
     // MARK: - Simulation Results Screen
-    
     private var simulationResultsView: some View {
         ScrollViewReader { scrollProxy in
             ZStack {
@@ -814,17 +825,17 @@ struct ContentView: View {
                         Spacer()
                         
                         // ADDED OR MODIFIED:
-                        // We grey out (disable) the Charts button if generateGraphs == false
+                        // We grey out (disable) the Charts button if inputManager.generateGraphs == false
                         Button(action: {
                             print("// DEBUG: Chart button pressed.")
                             showHistograms = true
                         }) {
                             Image(systemName: "chart.line.uptrend.xyaxis")
                                 // If generateGraphs is false, we use .gray so it looks disabled
-                                .foregroundColor(generateGraphs ? .white : .gray)
+                                .foregroundColor(inputManager.generateGraphs ? .white : .gray)
                                 .imageScale(.large)
                         }
-                        .disabled(!generateGraphs) // Actually disables the button
+                        .disabled(!inputManager.generateGraphs) // Actually disables the button
                     }
                     .padding(.horizontal, 55)
                     .padding(.vertical, 10)
