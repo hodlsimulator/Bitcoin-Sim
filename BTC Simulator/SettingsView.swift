@@ -95,17 +95,16 @@ struct SettingsView: View {
             // BULLISH FACTORS
             //====================================
             Section("Bullish Factors") {
-                // Halving
                 FactorToggleRow(
                     iconName: "globe.europe.africa",
                     title: "Halving",
                     isOn: $simSettings.useHalving,
-                    sliderValue: $simSettings.halvingBump,
-                    sliderRange: 0.0...0.95934440304668566, // double of 0.47967220152334283
-                    defaultValue: 0.47967220152334283,
+                    sliderValue: $simSettings.halvingBumpForUI,
+                    sliderRange: 0.0...1.0,        // so 0.48 sits comfortably
+                    defaultValue: 0.48,
                     parameterDescription: """
                         Occurs roughly every four years, reducing the block reward in half.
-                        This lowers the new supply entering circulation, often causing supply-demand imbalances.
+                        This lowers new supply and often causes supply-demand imbalances.
                         Historically, halving events have coincided with substantial BTC price increases.
                         """,
                     activeFactor: activeFactor,

@@ -7,33 +7,26 @@
 
 import SwiftUI
 
-/// Whether arrow is physically up (apex at top) or down (apex at bottom).
 enum ArrowDirection {
     case up
     case down
 }
 
-/// We define ArrowShape with apex at top => physically up.
-/// If arrowDirection == .down, rotate 180°.
 struct ArrowShape: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
-        // Apex at top-center
         path.move(to: CGPoint(x: rect.midX, y: rect.minY))
-        // Bottom-right
         path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
-        // Bottom-left
         path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
         path.closeSubpath()
         return path
     }
 }
 
-/// A bubble with text and a triangular arrow physically up (top) or down (bottom).
 struct TooltipBubble: View {
     let text: String
     let arrowDirection: ArrowDirection
-
+    
     var body: some View {
         VStack(spacing: 0) {
             if arrowDirection == .up {
@@ -41,8 +34,7 @@ struct TooltipBubble: View {
                     .frame(width: 20, height: 10)
                     .foregroundColor(Color.gray.opacity(0.85))
             }
-
-            // No ScrollView, so it just grows
+            
             Text(text)
                 .foregroundColor(.white)
                 .multilineTextAlignment(.leading)
@@ -50,7 +42,7 @@ struct TooltipBubble: View {
                 .padding(.vertical, 8)
                 .background(Color.gray.opacity(0.85))
                 .cornerRadius(8)
-
+            
             if arrowDirection == .down {
                 ArrowShape()
                     .rotationEffect(.degrees(180))
@@ -62,8 +54,6 @@ struct TooltipBubble: View {
     }
 }
 
-/// A row that publishes an anchor if `activeFactor == title`.
-/// Tapping the title calls `onTitleTap(title)`.
 struct FactorToggleRow: View {
     let iconName: String?
     let title: String
@@ -82,6 +72,34 @@ struct FactorToggleRow: View {
     /// Called when user taps the row’s title
     let onTitleTap: (String) -> Void
 
+    /// NEW: decide whether we show X% or just X
+    let displayAsPercent: Bool
+
+    // Provide default values so existing calls don’t need to specify them.
+    init(
+        iconName: String? = nil,
+        title: String,
+        isOn: Binding<Bool>,
+        sliderValue: Binding<Double>,
+        sliderRange: ClosedRange<Double>,
+        defaultValue: Double,
+        parameterDescription: String? = nil,
+        activeFactor: String? = nil,
+        onTitleTap: @escaping (String) -> Void = { _ in },
+        displayAsPercent: Bool = true
+    ) {
+        self.iconName = iconName
+        self.title = title
+        self._isOn = isOn
+        self._sliderValue = sliderValue
+        self.sliderRange = sliderRange
+        self.defaultValue = defaultValue
+        self.parameterDescription = parameterDescription
+        self.activeFactor = activeFactor
+        self.onTitleTap = onTitleTap
+        self.displayAsPercent = displayAsPercent
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             // Title row
@@ -94,7 +112,7 @@ struct FactorToggleRow: View {
                         Image(systemName: icon)
                             .resizable()
                             .scaledToFit()
-                            .frame(width: 24, height: 24) // fixed frame for alignment
+                            .frame(width: 24, height: 24)
                             .foregroundColor(.orange)
                     }
                     .buttonStyle(.plain)
@@ -105,7 +123,6 @@ struct FactorToggleRow: View {
                     .onTapGesture {
                         onTitleTap(title)
                     }
-                    // Only publish anchor if this row is active & has a non-empty description
                     .anchorPreference(key: TooltipAnchorKey.self, value: .center) { pt in
                         guard activeFactor == title,
                               let desc = parameterDescription,
@@ -129,16 +146,31 @@ struct FactorToggleRow: View {
                     .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
                     .disabled(!isOn)
 
-                // Now showing a percentage sign by multiplying sliderValue * 100
-                Text(String(format: "%.4f%%", sliderValue * 100))
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .frame(width: 70, alignment: .trailing)
-                    .disabled(!isOn)
+                // If this is Halving, show 0.48% directly.
+                if title == "Halving" {
+                    Text(String(format: "%.4f%%", sliderValue))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .frame(width: 70, alignment: .trailing)
+                        .disabled(!isOn)
+                }
+                else if displayAsPercent {
+                    Text(String(format: "%.4f%%", sliderValue * 100))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .frame(width: 70, alignment: .trailing)
+                        .disabled(!isOn)
+                } else {
+                    Text(String(format: "%.4f", sliderValue))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .frame(width: 70, alignment: .trailing)
+                        .disabled(!isOn)
+                }
             }
             .opacity(isOn ? 1.0 : 0.6)
         }
         .padding(.vertical, 4)
         .opacity(isOn ? 1.0 : 0.5)
-    }
+    }   
 }

@@ -189,6 +189,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
+
     @Published var halvingBump: Double = 0.47967220152334283 {
         didSet {
             if isInitialized {
@@ -197,6 +198,14 @@ class SimulationSettings: ObservableObject {
         }
     }
 
+    /// This property is for UI display/editing.
+    /// Internally, `halvingBump` remains ~0.48.
+    // Keep it straightforward — no * 10
+    var halvingBumpForUI: Double {
+        get { halvingBump }     // just return it
+        set { halvingBump = newValue }
+    }
+    
     // Institutional Demand
     @Published var useInstitutionalDemand: Bool = true {
         didSet {
