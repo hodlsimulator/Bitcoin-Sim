@@ -66,11 +66,11 @@ var historicalBTCWeeklyReturns: [Double] = []
 var sp500WeeklyReturns: [Double] = []
 var weightedBTCWeeklyReturns: [Double] = []
 
-// MARK: - runOneFullSimulation (Hybrid: Historical + Lognormal)
+// MARK: - runOneFullSimulation (Modified lumpsum path to include volatility)
 func runOneFullSimulation(
     settings: SimulationSettings,
-    annualCAGR: Double,
-    annualVolatility: Double,
+    annualCAGR: Double,       // e.g. 30%
+    annualVolatility: Double, // e.g. 80%
     exchangeRateEURUSD: Double,
     userWeeks: Int,
     initialBTCPriceUSD: Double,
@@ -81,13 +81,14 @@ func runOneFullSimulation(
         static var didPrintFactorSettings: Bool = false
     }
     
+    // Print toggles only once
     if !PrintOnce.didPrintFactorSettings {
         print("=== FACTOR SETTINGS (once only) ===")
-        settings.printAllSettings()
+        settings.printAllSettings() // e.g. to confirm toggles
         PrintOnce.didPrintFactorSettings = true
     }
 
-    // 1) Convert USD → EUR
+    // 1) Convert USD → EUR for the initial price
     let firstEURPrice = initialBTCPriceUSD / exchangeRateEURUSD
 
     // 2) Convert user’s typed `startingBalance` to BTC
@@ -99,19 +100,18 @@ func runOneFullSimulation(
         userStartingBalanceBTC = settings.startingBalance / firstEURPrice
     }
 
-    // 3) Set up initial state
+    // 3) Initialise
     var previousBTCHoldings = userStartingBalanceBTC
     var previousBTCPriceUSD = initialBTCPriceUSD
-
-    // For lognormal
+    
+    // For lognormal drift
     let cagrDecimal = annualCAGR / 100.0
     let logDrift = cagrDecimal / 52.0
 
-    // For lumpsum approach
-    // e.g. once a year, multiply by (1 + cagrDecimal)
-    
-    // For volatility (if you still want it in lumpsum mode)
+    // For volatility shocks
     let weeklyVol = (annualVolatility / 100.0) / sqrt(52.0)
+    let parsedSD = Double(settings.inputManager?.standardDeviation ?? "15.0") ?? 15.0
+    let weeklySD = (parsedSD / 100.0) / sqrt(52.0)
 
     let initialPortfolioEUR = userStartingBalanceBTC * firstEURPrice
     let initialPortfolioUSD = userStartingBalanceBTC * initialBTCPriceUSD
@@ -136,57 +136,111 @@ func runOneFullSimulation(
         )
     )
 
-    // 4) Grab user’s thresholds etc.
-    let firstYearContrib   = Double(settings.inputManager?.firstYearContribution ?? "") ?? 0.0
-    let subsequentContrib  = Double(settings.inputManager?.subsequentContribution ?? "") ?? 0.0
-    let threshold1         = settings.inputManager?.threshold1 ?? 0.0
-    let withdraw1          = settings.inputManager?.withdrawAmount1 ?? 0.0
-    let threshold2         = settings.inputManager?.threshold2 ?? 0.0
-    let withdraw2          = settings.inputManager?.withdrawAmount2 ?? 0.0
-    let transactionFeePct  = 0.006
-
-    // Additional items if you want
-    // let parsedSD = Double(settings.inputManager?.standardDeviation ?? "15.0") ?? 15.0
-    // let weeklySD = (parsedSD / 100.0) / sqrt(52.0)
+    // 4) Thresholds, contributions, etc.
+    let firstYearContrib  = Double(settings.inputManager?.firstYearContribution ?? "") ?? 0.0
+    let subsequentContrib = Double(settings.inputManager?.subsequentContribution ?? "") ?? 0.0
+    let threshold1        = settings.inputManager?.threshold1 ?? 0.0
+    let withdraw1         = settings.inputManager?.withdrawAmount1 ?? 0.0
+    let threshold2        = settings.inputManager?.threshold2 ?? 0.0
+    let withdraw2         = settings.inputManager?.withdrawAmount2 ?? 0.0
+    let transactionFeePct = 0.006
 
     for week in 2...userWeeks {
 
-        // (A) Decide which approach for price growth
-        if settings.useHistoricalSampling {
-            // 1) Historical
-            var weeklyReturn = pickRandomReturn(
-                from: historicalBTCWeeklyReturns
-            )
-            // If you want a shrink factor or dampenArctan, do it here.
-            // weeklyReturn *= shrinkFactor
-            // weeklyReturn = dampenArctan(weeklyReturn)
-            // Then update price
-            previousBTCPriceUSD *= (1 + weeklyReturn)
+        // Decide which path: Historical, Lognormal, or lumpsum
+        let useHist = settings.useHistoricalSampling
+        let useLog  = settings.useLognormalGrowth
+        let lumpsum = (!useHist && !useLog) // if both are off
 
-        } else if settings.useLognormalGrowth {
-            // 2) Lognormal
-            let returnThisWeek = logDrift // ignoring weeklyVol for brevity
-            previousBTCPriceUSD *= exp(returnThisWeek)
+        if lumpsum {
+            // Annual lumpsum each year
+            if week % 52 == 0 {
+                // === ADDED: incorporate volatility once a year too ===
+                var lumpsumGrowth = cagrDecimal
+                
+                // If volatility is toggled on, apply a random shock once per year
+                if settings.useVolShocks {
+                    // main shock
+                    let shockVol: Double
+                    if useSeededRandom, var localRNG = seededGen {
+                        shockVol = seededRandomNormal(mean: 0, stdDev: weeklyVol, rng: &localRNG)
+                        seededGen = localRNG
+                    } else {
+                        shockVol = randomNormal(mean: 0, standardDeviation: weeklyVol)
+                    }
+                    
+                    // second shock
+                    var shockSD: Double = 0.0
+                    if weeklySD > 0 {
+                        if useSeededRandom, var rng = seededGen {
+                            shockSD = seededRandomNormal(mean: 0, stdDev: weeklySD, rng: &rng)
+                            seededGen = rng
+                        } else {
+                            shockSD = randomNormal(mean: 0, standardDeviation: weeklySD)
+                        }
+                        shockSD = max(min(shockSD, 2.0), -1.0)
+                    }
+                    
+                    // Convert them to exponent form
+                    let combinedShocks = exp(shockVol + shockSD)
+                    // Combine lumpsum growth with shocks (like 1 + lumpsumGrowth) * e^(shockVol + shockSD)
+                    lumpsumGrowth = (1.0 + lumpsumGrowth) * combinedShocks - 1.0
+                }
+                
+                // Apply lumpsum + any volatility factor
+                previousBTCPriceUSD *= (1.0 + lumpsumGrowth)
+            }
 
         } else {
-            // 3) Annual lumpsum approach
-            let isYearBoundary = (week % 52 == 0)
-            if isYearBoundary {
-                previousBTCPriceUSD *= (1.0 + cagrDecimal)
+            // Weekly path
+            var totalWeeklyReturn = 0.0
+
+            // If historical
+            if useHist {
+                var histReturn = pickRandomReturn(from: historicalBTCWeeklyReturns)
+                totalWeeklyReturn += histReturn
             }
+
+            // If lognormal
+            if useLog {
+                totalWeeklyReturn += logDrift
+            }
+
+            // If volatility is toggled on
+            if settings.useVolShocks {
+                // main shock
+                let shockVol: Double
+                if useSeededRandom, var localRNG = seededGen {
+                    shockVol = seededRandomNormal(mean: 0, stdDev: weeklyVol, rng: &localRNG)
+                    seededGen = localRNG
+                } else {
+                    shockVol = randomNormal(mean: 0, standardDeviation: weeklyVol)
+                }
+                totalWeeklyReturn += shockVol
+
+                // second shock if you want
+                if weeklySD > 0 {
+                    var shockSD: Double
+                    if useSeededRandom, var rng = seededGen {
+                        shockSD = seededRandomNormal(mean: 0, stdDev: weeklySD, rng: &rng)
+                        seededGen = rng
+                    } else {
+                        shockSD = randomNormal(mean: 0, standardDeviation: weeklySD)
+                    }
+                    shockSD = max(min(shockSD, 2.0), -1.0)
+                    totalWeeklyReturn += shockSD
+                }
+            }
+
+            previousBTCPriceUSD *= exp(totalWeeklyReturn)
         }
 
-        // (Optional) If you still want factor toggles in lumpsum path, add them below
-        // Or incorporate them in the if/else above, up to you.
-
-        // Just ensure we never go below $1
+        // Safeguard
         previousBTCPriceUSD = max(1.0, previousBTCPriceUSD)
-
-        // Convert to EUR
         let currentBTCPriceEUR = previousBTCPriceUSD / exchangeRateEURUSD
 
-        // (B) Do contributions & thresholds
-        let isFirstYear = (week <= 52)
+        // Contributions & threshold logic
+        let isFirstYear  = (week <= 52)
         let typedContrib = isFirstYear ? firstYearContrib : subsequentContrib
         
         let feeUSD = typedContrib * transactionFeePct
@@ -194,7 +248,7 @@ func runOneFullSimulation(
         let netBTC = netUSD / previousBTCPriceUSD
 
         let hypotheticalHoldings = previousBTCHoldings + netBTC
-        let hypotheticalValueEUR = hypotheticalHoldings * currentBTCPriceEUR
+        let hypotheticalValueEUR  = hypotheticalHoldings * currentBTCPriceEUR
         
         var withdrawalEUR = 0.0
         if hypotheticalValueEUR > threshold2 {
@@ -205,10 +259,10 @@ func runOneFullSimulation(
         let withdrawalBTC = withdrawalEUR / currentBTCPriceEUR
         let finalHoldings = max(0.0, hypotheticalHoldings - withdrawalBTC)
 
+        // Final portfolio
         let portfolioEUR = finalHoldings * currentBTCPriceEUR
         let portfolioUSD = finalHoldings * previousBTCPriceUSD
 
-        // (C) Append results
         results.append(
             SimulationData(
                 week: week,
@@ -228,7 +282,6 @@ func runOneFullSimulation(
             )
         )
 
-        // Update for next iteration
         previousBTCHoldings = finalHoldings
     }
 
@@ -401,4 +454,3 @@ private func randomNormal(mean: Double, standardDeviation: Double) -> Double {
     let z0 = sqrt(-2.0 * log(u1)) * cos(2.0 * .pi * u2)
     return z0 * standardDeviation + mean
 }
-    
