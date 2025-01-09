@@ -8,28 +8,23 @@
 import Foundation
 import SwiftUI
 
-// MARK: - Factor windows
 private let halvingWeeks    = [210, 420, 630, 840]
 private let blackSwanWeeks  = [150, 500]
 
-// Weighted sampling / seeded generator toggles
 private let useWeightedSampling = false
 private var useSeededRandom = false
 private var seededGen: SeededGenerator?
 
-/// A simple seeded RNG
 private struct SeededGenerator: RandomNumberGenerator {
     private var state: UInt64
     init(seed: UInt64) { self.state = seed }
     
     mutating func next() -> UInt64 {
-        // A simple LCG progression
         state = 2862933555777941757 &* state &+ 3037000493
         return state
     }
 }
 
-/// Lock or unlock the seed.
 private func setRandomSeed(_ seed: UInt64?) {
     if let s = seed {
         useSeededRandom = true
@@ -40,7 +35,6 @@ private func setRandomSeed(_ seed: UInt64?) {
     }
 }
 
-/// If you want a seeded normal distribution, define it here:
 fileprivate func seededRandomNormal<G: RandomNumberGenerator>(
     mean: Double,
     stdDev: Double,
@@ -52,7 +46,74 @@ fileprivate func seededRandomNormal<G: RandomNumberGenerator>(
     return z0 * stdDev + mean
 }
 
-/// A gentle dampening function to soften extreme outliers
+/// Instead of a fixed “shrinkFactor = 0.46”, we do a small percent cut per toggle.
+private func lumpsumAdjustFactor(
+    settings: SimulationSettings,
+    annualVolatility: Double
+) -> Double {
+    // Start at 1.0 => no dampening at all
+    var factor = 1.0
+    var toggles = 0
+    
+    // 1) Approx increment for volatility
+    //    e.g. 0–5% => toggles = 0
+    //         5–10% => toggles = 1
+    //         10–15% => toggles = 2
+    //         etc.
+    if annualVolatility > 5.0 {
+        toggles += Int((annualVolatility - 5.0) / 5.0) + 1
+    }
+    
+    // 2) If volShocks is on (for lumpsum), bump toggles by 1
+    if settings.useVolShocks {
+        toggles += 1
+    }
+    
+    // 3) If any bullish or bearish factor is on, bump toggles by 1
+    let bullishCount = [
+        settings.useHalving,
+        settings.useInstitutionalDemand,
+        settings.useCountryAdoption,
+        settings.useRegulatoryClarity,
+        settings.useEtfApproval,
+        settings.useTechBreakthrough,
+        settings.useScarcityEvents,
+        settings.useGlobalMacroHedge,
+        settings.useStablecoinShift,
+        settings.useDemographicAdoption,
+        settings.useAltcoinFlight,
+        settings.useAdoptionFactor
+    ].filter { $0 }.count
+    
+    let bearishCount = [
+        settings.useRegClampdown,
+        settings.useCompetitorCoin,
+        settings.useSecurityBreach,
+        settings.useBubblePop,
+        settings.useStablecoinMeltdown,
+        settings.useBlackSwan,
+        settings.useBearMarket,
+        settings.useMaturingMarket,
+        settings.useRecession
+    ].filter { $0 }.count
+    
+    if bullishCount + bearishCount > 0 {
+        toggles += 1
+    }
+    
+    // For each toggle, cut lumpsum growth by 2% (adjust to taste)
+    // So if toggles = 5 => lumpsumGrowth * 0.90 => a 10% cut
+    let maxCutPerToggle = 0.02 // 2%
+    let totalCut = Double(toggles) * maxCutPerToggle
+    
+    factor -= totalCut
+    // Don’t drop below 80% => lumpsumGrowth * 0.80
+    factor = max(factor, 0.80)
+    
+    return factor
+}
+
+/// Our old “dampen outliers” approach — you can keep or remove
 func dampenArctan(_ rawReturn: Double) -> Double {
     let factor = 3.0
     let scaled = rawReturn * factor
@@ -60,43 +121,29 @@ func dampenArctan(_ rawReturn: Double) -> Double {
     return flattened
 }
 
-// MARK: - Historical Arrays
-// If you load from CSV or so, just populate these before running:
+// Historical arrays
 var historicalBTCWeeklyReturns: [Double] = []
 var sp500WeeklyReturns: [Double] = []
 var weightedBTCWeeklyReturns: [Double] = []
 
-// MARK: - runOneFullSimulation (Modified lumpsum path to include volatility + factor toggles)
 func runOneFullSimulation(
     settings: SimulationSettings,
-    annualCAGR: Double,       // e.g. 30%
-    annualVolatility: Double, // e.g. 80%
+    annualCAGR: Double,
+    annualVolatility: Double,
     exchangeRateEURUSD: Double,
     userWeeks: Int,
     initialBTCPriceUSD: Double,
     seed: UInt64? = nil
 ) -> [SimulationData] {
     
-    struct PrintOnce {
-        static var didPrintFactorSettings: Bool = false
-    }
-    
-    // Print toggles only once
+    struct PrintOnce { static var didPrintFactorSettings: Bool = false }
     if !PrintOnce.didPrintFactorSettings {
         print("=== FACTOR SETTINGS (once only) ===")
         settings.printAllSettings()
         PrintOnce.didPrintFactorSettings = true
     }
     
-    // ---------------------------------------
-    // OLD shrinkFactor code restored:
-    // ---------------------------------------
-    let shrinkFactor = 0.46  // further dampening
-
-    // 1) Convert USD → EUR for the initial price
     let firstEURPrice = initialBTCPriceUSD / exchangeRateEURUSD
-
-    // 2) Convert user’s typed `startingBalance` to BTC
     let userStartingBalanceBTC: Double
     switch settings.currencyPreference {
     case .usd:
@@ -105,15 +152,12 @@ func runOneFullSimulation(
         userStartingBalanceBTC = settings.startingBalance / firstEURPrice
     }
 
-    // 3) Initialise
     var previousBTCHoldings = userStartingBalanceBTC
     var previousBTCPriceUSD = initialBTCPriceUSD
     
-    // For lognormal drift
     let cagrDecimal = annualCAGR / 100.0
     let logDrift = cagrDecimal / 52.0
 
-    // For volatility shocks
     let weeklyVol = (annualVolatility / 100.0) / sqrt(52.0)
     let parsedSD = Double(settings.inputManager?.standardDeviation ?? "15.0") ?? 15.0
     let weeklySD = (parsedSD / 100.0) / sqrt(52.0)
@@ -141,7 +185,7 @@ func runOneFullSimulation(
         )
     )
 
-    // 4) Thresholds, contributions, etc.
+    // Thresholds, contributions, etc.
     let firstYearContrib  = Double(settings.inputManager?.firstYearContribution ?? "") ?? 0.0
     let subsequentContrib = Double(settings.inputManager?.subsequentContribution ?? "") ?? 0.0
     let threshold1        = settings.inputManager?.threshold1 ?? 0.0
@@ -152,18 +196,17 @@ func runOneFullSimulation(
 
     for week in 2...userWeeks {
         
-        // Decide path: lumpsum if both historical & lognormal are off
         let useHist = settings.useHistoricalSampling
         let useLog  = settings.useLognormalGrowth
         let lumpsum = (!useHist && !useLog)
 
         if lumpsum {
-            // Annual lumpsum each year
+            // Annual lumpsum
             if week % 52 == 0 {
                 var lumpsumGrowth = cagrDecimal
-                
-                // If volatility is toggled on, apply random shock once/year
-                if settings.useVolShocks {
+
+                // If vol is on, apply a once/year shock
+                if settings.useVolShocks && annualVolatility > 0.0 {
                     let shockVol: Double
                     if useSeededRandom, var localRNG = seededGen {
                         shockVol = seededRandomNormal(mean: 0, stdDev: weeklyVol, rng: &localRNG)
@@ -172,7 +215,7 @@ func runOneFullSimulation(
                         shockVol = randomNormal(mean: 0, standardDeviation: weeklyVol)
                     }
                     
-                    var shockSD: Double = 0.0
+                    var shockSD: Double = 0
                     if weeklySD > 0 {
                         if useSeededRandom, var rng = seededGen {
                             shockSD = seededRandomNormal(mean: 0, stdDev: weeklySD, rng: &rng)
@@ -183,16 +226,16 @@ func runOneFullSimulation(
                         shockSD = max(min(shockSD, 2.0), -1.0)
                     }
                     
-                    // Combine lumpsum + volatility
                     let combinedShocks = exp(shockVol + shockSD)
                     lumpsumGrowth = (1.0 + lumpsumGrowth) * combinedShocks - 1.0
                 }
                 
-                // >>> APPLY FACTOR TOGGLES (bullish/bearish) to lumpsumGrowth
+                // Factor toggles
                 lumpsumGrowth = applyFactorToggles(baseReturn: lumpsumGrowth, week: week, settings: settings)
                 
-                // Multiply lumpsumGrowth by shrinkFactor
-                lumpsumGrowth *= shrinkFactor
+                // Dynamically adjust lumpsum => small cut per toggle
+                let factor = lumpsumAdjustFactor(settings: settings, annualVolatility: annualVolatility)
+                lumpsumGrowth *= factor
                 
                 previousBTCPriceUSD *= (1.0 + lumpsumGrowth)
             }
@@ -200,16 +243,12 @@ func runOneFullSimulation(
         } else {
             // Weekly path
             var totalWeeklyReturn = 0.0
-            
-            // Historical returns
             if useHist {
                 totalWeeklyReturn += pickRandomReturn(from: historicalBTCWeeklyReturns)
             }
-            // Lognormal
             if useLog {
                 totalWeeklyReturn += logDrift
             }
-            // Vol shocks
             if settings.useVolShocks {
                 let shockVol: Double
                 if useSeededRandom, var localRNG = seededGen {
@@ -233,11 +272,13 @@ func runOneFullSimulation(
                 }
             }
             
-            // >>> APPLY FACTOR TOGGLES (bullish/bearish) to totalWeeklyReturn
+            // Factor toggles
             totalWeeklyReturn = applyFactorToggles(baseReturn: totalWeeklyReturn, week: week, settings: settings)
             
-            // Multiply weekly returns by shrinkFactor
-            totalWeeklyReturn *= shrinkFactor
+            // For weekly path, still do a certain dampening (like 0.46) if you want:
+            // Or you could do your lumpsumAdjustFactor as well.
+            let baseShrinkFactor = 0.46
+            totalWeeklyReturn *= baseShrinkFactor
             
             previousBTCPriceUSD *= exp(totalWeeklyReturn)
         }
@@ -246,7 +287,6 @@ func runOneFullSimulation(
         previousBTCPriceUSD = max(1.0, previousBTCPriceUSD)
         let currentBTCPriceEUR = previousBTCPriceUSD / exchangeRateEURUSD
         
-        // Contributions & threshold logic
         let isFirstYear  = (week <= 52)
         let typedContrib = isFirstYear ? firstYearContrib : subsequentContrib
         
@@ -266,7 +306,6 @@ func runOneFullSimulation(
         let withdrawalBTC = withdrawalEUR / currentBTCPriceEUR
         let finalHoldings = max(0.0, hypotheticalHoldings - withdrawalBTC)
 
-        // Final portfolio
         let portfolioEUR = finalHoldings * currentBTCPriceEUR
         let portfolioUSD = finalHoldings * previousBTCPriceUSD
 
@@ -294,18 +333,14 @@ func runOneFullSimulation(
 
     return results
 }
- 
-// -----------------------------------------
-// Helper to apply factor toggles
-// -----------------------------------------
+
 private func applyFactorToggles(
     baseReturn: Double,
     week: Int,
     settings: SimulationSettings
 ) -> Double {
     var r = baseReturn
-    
-    // BULLISH
+
     if settings.useHalving, halvingWeeks.contains(week) {
         r += settings.halvingBump
     }
@@ -343,7 +378,6 @@ private func applyFactorToggles(
         r += settings.adoptionBaseFactor
     }
 
-    // BEARISH
     if settings.useRegClampdown {
         r += settings.maxClampDown
     }
@@ -375,7 +409,6 @@ private func applyFactorToggles(
     return r
 }
 
-// MARK: - pickRandomReturn
 fileprivate func pickRandomReturn(from arr: [Double]) -> Double {
     guard !arr.isEmpty else { return 0.0 }
     if useSeededRandom, var rng = seededGen {
@@ -387,8 +420,6 @@ fileprivate func pickRandomReturn(from arr: [Double]) -> Double {
     }
 }
 
-// MARK: - runMonteCarloSimulationsWithProgress
-/// Example multi-run method (like 1000 Monte Carlo runs).
 func runMonteCarloSimulationsWithProgress(
     settings: SimulationSettings,
     annualCAGR: Double,
@@ -403,9 +434,7 @@ func runMonteCarloSimulationsWithProgress(
     seed: UInt64? = nil
 ) -> ([SimulationData], [[SimulationData]]) {
     
-    // Lock/unlock the seed
     setRandomSeed(seed)
-    
     var allRuns = [[SimulationData]]()
     
     print("// DEBUG: runMonteCarloSimulationsWithProgress => Starting loop. iterations=\(iterations)")
@@ -416,7 +445,6 @@ func runMonteCarloSimulationsWithProgress(
             break
         }
         
-        // Optional tiny delay
         Thread.sleep(forTimeInterval: 0.01)
         
         let simRun = runOneFullSimulation(
@@ -434,7 +462,6 @@ func runMonteCarloSimulationsWithProgress(
             break
         }
         
-        // Fire the progress callback
         progressCallback(i + 1)
     }
     
@@ -443,18 +470,15 @@ func runMonteCarloSimulationsWithProgress(
         return ([], [])
     }
     
-    // Sort final runs by last week's (EUR) portfolio value
     var finalValues = allRuns.map { ($0.last?.portfolioValueEUR ?? Decimal.zero, $0) }
     finalValues.sort { $0.0 < $1.0 }
 
-    // Median run
     let medianRun = finalValues[finalValues.count / 2].1
     
     print("// DEBUG: loop ended => built \(allRuns.count) runs. Returning median & allRuns.")
     return (medianRun, allRuns)
 }
 
-// MARK: - randomNormal (fallback if not seeded)
 private func randomNormal(mean: Double, standardDeviation: Double) -> Double {
     let u1 = Double.random(in: 0..<1)
     let u2 = Double.random(in: 0..<1)
