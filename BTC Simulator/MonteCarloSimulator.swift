@@ -66,7 +66,7 @@ var historicalBTCWeeklyReturns: [Double] = []
 var sp500WeeklyReturns: [Double] = []
 var weightedBTCWeeklyReturns: [Double] = []
 
-// MARK: - runOneFullSimulation (Modified lumpsum path to include volatility)
+// MARK: - runOneFullSimulation (Modified lumpsum path to include volatility + factor toggles)
 func runOneFullSimulation(
     settings: SimulationSettings,
     annualCAGR: Double,       // e.g. 30%
@@ -84,9 +84,14 @@ func runOneFullSimulation(
     // Print toggles only once
     if !PrintOnce.didPrintFactorSettings {
         print("=== FACTOR SETTINGS (once only) ===")
-        settings.printAllSettings() // e.g. to confirm toggles
+        settings.printAllSettings()
         PrintOnce.didPrintFactorSettings = true
     }
+    
+    // ---------------------------------------
+    // OLD shrinkFactor code restored:
+    // ---------------------------------------
+    let shrinkFactor = 0.46  // further dampening
 
     // 1) Convert USD → EUR for the initial price
     let firstEURPrice = initialBTCPriceUSD / exchangeRateEURUSD
@@ -146,21 +151,19 @@ func runOneFullSimulation(
     let transactionFeePct = 0.006
 
     for week in 2...userWeeks {
-
-        // Decide which path: Historical, Lognormal, or lumpsum
+        
+        // Decide path: lumpsum if both historical & lognormal are off
         let useHist = settings.useHistoricalSampling
         let useLog  = settings.useLognormalGrowth
-        let lumpsum = (!useHist && !useLog) // if both are off
+        let lumpsum = (!useHist && !useLog)
 
         if lumpsum {
             // Annual lumpsum each year
             if week % 52 == 0 {
-                // === ADDED: incorporate volatility once a year too ===
                 var lumpsumGrowth = cagrDecimal
                 
-                // If volatility is toggled on, apply a random shock once per year
+                // If volatility is toggled on, apply random shock once/year
                 if settings.useVolShocks {
-                    // main shock
                     let shockVol: Double
                     if useSeededRandom, var localRNG = seededGen {
                         shockVol = seededRandomNormal(mean: 0, stdDev: weeklyVol, rng: &localRNG)
@@ -169,7 +172,6 @@ func runOneFullSimulation(
                         shockVol = randomNormal(mean: 0, standardDeviation: weeklyVol)
                     }
                     
-                    // second shock
                     var shockSD: Double = 0.0
                     if weeklySD > 0 {
                         if useSeededRandom, var rng = seededGen {
@@ -181,34 +183,34 @@ func runOneFullSimulation(
                         shockSD = max(min(shockSD, 2.0), -1.0)
                     }
                     
-                    // Convert them to exponent form
+                    // Combine lumpsum + volatility
                     let combinedShocks = exp(shockVol + shockSD)
-                    // Combine lumpsum growth with shocks (like 1 + lumpsumGrowth) * e^(shockVol + shockSD)
                     lumpsumGrowth = (1.0 + lumpsumGrowth) * combinedShocks - 1.0
                 }
                 
-                // Apply lumpsum + any volatility factor
+                // >>> APPLY FACTOR TOGGLES (bullish/bearish) to lumpsumGrowth
+                lumpsumGrowth = applyFactorToggles(baseReturn: lumpsumGrowth, week: week, settings: settings)
+                
+                // Multiply lumpsumGrowth by shrinkFactor
+                lumpsumGrowth *= shrinkFactor
+                
                 previousBTCPriceUSD *= (1.0 + lumpsumGrowth)
             }
 
         } else {
             // Weekly path
             var totalWeeklyReturn = 0.0
-
-            // If historical
+            
+            // Historical returns
             if useHist {
-                var histReturn = pickRandomReturn(from: historicalBTCWeeklyReturns)
-                totalWeeklyReturn += histReturn
+                totalWeeklyReturn += pickRandomReturn(from: historicalBTCWeeklyReturns)
             }
-
-            // If lognormal
+            // Lognormal
             if useLog {
                 totalWeeklyReturn += logDrift
             }
-
-            // If volatility is toggled on
+            // Vol shocks
             if settings.useVolShocks {
-                // main shock
                 let shockVol: Double
                 if useSeededRandom, var localRNG = seededGen {
                     shockVol = seededRandomNormal(mean: 0, stdDev: weeklyVol, rng: &localRNG)
@@ -218,7 +220,6 @@ func runOneFullSimulation(
                 }
                 totalWeeklyReturn += shockVol
 
-                // second shock if you want
                 if weeklySD > 0 {
                     var shockSD: Double
                     if useSeededRandom, var rng = seededGen {
@@ -231,14 +232,20 @@ func runOneFullSimulation(
                     totalWeeklyReturn += shockSD
                 }
             }
-
+            
+            // >>> APPLY FACTOR TOGGLES (bullish/bearish) to totalWeeklyReturn
+            totalWeeklyReturn = applyFactorToggles(baseReturn: totalWeeklyReturn, week: week, settings: settings)
+            
+            // Multiply weekly returns by shrinkFactor
+            totalWeeklyReturn *= shrinkFactor
+            
             previousBTCPriceUSD *= exp(totalWeeklyReturn)
         }
-
+        
         // Safeguard
         previousBTCPriceUSD = max(1.0, previousBTCPriceUSD)
         let currentBTCPriceEUR = previousBTCPriceUSD / exchangeRateEURUSD
-
+        
         // Contributions & threshold logic
         let isFirstYear  = (week <= 52)
         let typedContrib = isFirstYear ? firstYearContrib : subsequentContrib
