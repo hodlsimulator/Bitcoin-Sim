@@ -66,7 +66,7 @@ var historicalBTCWeeklyReturns: [Double] = []
 var sp500WeeklyReturns: [Double] = []
 var weightedBTCWeeklyReturns: [Double] = []
 
-// MARK: - runOneFullSimulation (Lognormal Version)
+// MARK: - runOneFullSimulation
 func runOneFullSimulation(
     settings: SimulationSettings,
     annualCAGR: Double,
@@ -81,48 +81,34 @@ func runOneFullSimulation(
         static var didPrintFactorSettings: Bool = false
     }
     
-    // Print the factor toggles only once
+    // Print factor toggles once
     if !PrintOnce.didPrintFactorSettings {
         print("=== FACTOR SETTINGS (once only) ===")
         // ... same prints as before ...
         PrintOnce.didPrintFactorSettings = true
     }
 
-    // 1) Convert USD → EUR for the initial price
+    // 1) Convert USD → EUR
     let firstEURPrice = initialBTCPriceUSD / exchangeRateEURUSD
 
-    // 2) Convert the user’s typed `startingBalance` depending on currencyPreference
+    // 2) Convert user’s typed `startingBalance`
     let userStartingBalanceBTC: Double
     switch settings.currencyPreference {
     case .usd:
         userStartingBalanceBTC = settings.startingBalance / initialBTCPriceUSD
-    case .eur:
-        userStartingBalanceBTC = settings.startingBalance / firstEURPrice
-    case .both:
+    case .eur, .both:
         userStartingBalanceBTC = settings.startingBalance / firstEURPrice
     }
 
+    // Track BTC holdings & last known price
     var previousBTCHoldings = userStartingBalanceBTC
-    var previousBTCPriceUSD = initialBTCPriceUSD
+    var currentBTCPriceUSD   = initialBTCPriceUSD
 
-    // ---------------------------
-    // LOGNORMAL LOGIC BELOW
-    // ---------------------------
-    let cagrAsDecimal = annualCAGR / 100.0
-    let logDrift = cagrAsDecimal / 52.0  // simplified approach
-
-    // 4) weeklyVol for log-returns
-    let weeklyVol = (annualVolatility / 100.0) / sqrt(52.0)
-
-    // 5) Standard Deviation (if you want a 2nd shock)
-    let parsedSD = Double(settings.inputManager?.standardDeviation ?? "15.0") ?? 15.0
-    let weeklySD = (parsedSD / 100.0) / sqrt(52.0)
+    // Record initial portfolio
+    let initialPortfolioEUR = userStartingBalanceBTC * firstEURPrice
+    let initialPortfolioUSD = userStartingBalanceBTC * initialBTCPriceUSD
 
     var results: [SimulationData] = []
-
-    // Record the initial portfolio
-    let initialPortfolioValueEUR = userStartingBalanceBTC * firstEURPrice
-    let initialPortfolioValueUSD = userStartingBalanceBTC * initialBTCPriceUSD
     results.append(
         SimulationData(
             week: 1,
@@ -130,8 +116,8 @@ func runOneFullSimulation(
             netBTCHoldings: userStartingBalanceBTC,
             btcPriceUSD: Decimal(initialBTCPriceUSD),
             btcPriceEUR: Decimal(firstEURPrice),
-            portfolioValueEUR: Decimal(initialPortfolioValueEUR),
-            portfolioValueUSD: Decimal(initialPortfolioValueUSD),
+            portfolioValueEUR: Decimal(initialPortfolioEUR),
+            portfolioValueUSD: Decimal(initialPortfolioUSD),
             contributionEUR: 0.0,
             contributionUSD: 0.0,
             transactionFeeEUR: 0.0,
@@ -142,185 +128,177 @@ func runOneFullSimulation(
         )
     )
 
-    // Grab user’s thresholds, contributions, etc.
-    let firstYearContribString  = settings.inputManager?.firstYearContribution
-    let subsequentContribString = settings.inputManager?.subsequentContribution
-    let threshold1              = settings.inputManager?.threshold1
-    let withdraw1               = settings.inputManager?.withdrawAmount1
-    let threshold2              = settings.inputManager?.threshold2
-    let withdraw2               = settings.inputManager?.withdrawAmount2
+    // Grab user’s thresholds & contributions
+    let firstYearContrib  = Double(settings.inputManager?.firstYearContribution ?? "") ?? 0.0
+    let subsequentContrib = Double(settings.inputManager?.subsequentContribution ?? "") ?? 0.0
+    let threshold1        = settings.inputManager?.threshold1 ?? 0.0
+    let withdraw1         = settings.inputManager?.withdrawAmount1 ?? 0.0
+    let threshold2        = settings.inputManager?.threshold2 ?? 0.0
+    let withdraw2         = settings.inputManager?.withdrawAmount2 ?? 0.0
 
-    let firstYearContrib   = Double(firstYearContribString ?? "") ?? 0.0
-    let subsequentContrib  = Double(subsequentContribString ?? "") ?? 0.0
-    let finalThreshold1    = threshold1 ?? 0.0
-    let finalWithdraw1     = withdraw1  ?? 0.0
-    let finalThreshold2    = threshold2 ?? 0.0
-    let finalWithdraw2     = withdraw2  ?? 0.0
+    let transactionFeePct = 0.006
 
-    let transactionFeePct  = 0.006
-    
-    // 6) Main loop using log-returns
-    let shrinkFactor = 0.01  // further dampening
+    // For the lognormal path, you still might have weeklyVol, etc.
+    let cagrDecimal = annualCAGR / 100.0
+    let weeklyBase  = cagrDecimal / 52.0
 
     for week in 2...userWeeks {
-        
-        // Historical picks
-        let btcArr = useWeightedSampling ? weightedBTCWeeklyReturns : historicalBTCWeeklyReturns
-        let histReturn = pickRandomReturn(from: btcArr)
-        let scaledReturn = histReturn * shrinkFactor
-        let dampenedReturn = dampenArctan(scaledReturn)
 
-        // Combine that with logDrift
-        var logReturn = logDrift + dampenedReturn
-
-        // Vol shock
-        let shockVol: Double
-        if useSeededRandom, var localRNG = seededGen {
-            shockVol = seededRandomNormal(mean: 0, stdDev: weeklyVol, rng: &localRNG)
-            seededGen = localRNG
-        } else {
-            shockVol = randomNormal(mean: 0, standardDeviation: weeklyVol)
-        }
-        logReturn += shockVol
-
-        // Optional 2nd SD shock
-        if weeklySD > 0.0 {
-            var shockSD: Double
-            if useSeededRandom, var localRNG = seededGen {
-                shockSD = seededRandomNormal(mean: 0, stdDev: weeklySD, rng: &localRNG)
-                seededGen = localRNG
-            } else {
-                shockSD = randomNormal(mean: 0, standardDeviation: weeklySD)
-            }
-            shockSD = max(min(shockSD, 2.0), -1.0)
-            logReturn += shockSD
-        }
-
-        // 7) Factor toggles => now add them to logReturn
-        if settings.useHalving, halvingWeeks.contains(week) {
-            logReturn += settings.halvingBump
-        }
-        if settings.useInstitutionalDemand {
-            logReturn += settings.maxDemandBoost
-        }
-        if settings.useCountryAdoption {
-            logReturn += settings.maxCountryAdBoost
-        }
-        if settings.useRegulatoryClarity {
-            logReturn += settings.maxClarityBoost
-        }
-        if settings.useEtfApproval {
-            logReturn += settings.maxEtfBoost
-        }
-        if settings.useTechBreakthrough {
-            logReturn += settings.maxTechBoost
-        }
-        if settings.useScarcityEvents {
-            logReturn += settings.maxScarcityBoost
-        }
-        if settings.useGlobalMacroHedge {
-            logReturn += settings.maxMacroBoost
-        }
-        if settings.useStablecoinShift {
-            logReturn += settings.maxStablecoinBoost
-        }
-        if settings.useDemographicAdoption {
-            logReturn += settings.maxDemoBoost
-        }
-        if settings.useAltcoinFlight {
-            logReturn += settings.maxAltcoinBoost
-        }
-        if settings.useAdoptionFactor {
-            // Basic additive approach; adapt as needed
-            logReturn += settings.adoptionBaseFactor
-        }
-
-        // Bearish factors
-        if settings.useRegClampdown {
-            logReturn += settings.maxClampDown
-        }
-        if settings.useCompetitorCoin {
-            // If it’s truly negative, confirm variable name
-            logReturn += settings.maxCompetitorBoost
-        }
-        if settings.useSecurityBreach {
-            logReturn += settings.breachImpact
-        }
-        if settings.useBubblePop {
-            logReturn += settings.maxPopDrop
-        }
-        if settings.useStablecoinMeltdown {
-            logReturn += settings.maxMeltdownDrop
-        }
-        if settings.useBlackSwan {
-            logReturn += settings.blackSwanDrop
-        }
-        if settings.useBearMarket {
-            logReturn += settings.bearWeeklyDrift
-        }
-        if settings.useMaturingMarket {
-            logReturn += settings.maxMaturingDrop
-        }
-        if settings.useRecession {
-            logReturn += settings.maxRecessionDrop
-        }
-
-        // 8) Price update with exp(logReturn)
-        var btcPriceUSD = previousBTCPriceUSD * exp(logReturn)
-        btcPriceUSD = max(btcPriceUSD, 1.0)
-        let btcPriceEUR = btcPriceUSD / exchangeRateEURUSD
-        
-        // 9) Contributions & thresholds
-        let isFirstYear = (week <= 52)
+        // (A) Figure out how much user contributes
+        let isFirstYear  = (week <= 52)
         let typedContrib = isFirstYear ? firstYearContrib : subsequentContrib
-        
-        let feeInUsd = typedContrib * transactionFeePct
-        let netUsd   = typedContrib - feeInUsd
-        let netBTC   = netUsd / btcPriceUSD
-        
-        let hypotheticalHoldings = previousBTCHoldings + netBTC
-        let hypotheticalValueUSD  = hypotheticalHoldings * btcPriceUSD
-        let hypotheticalValueEUR  = hypotheticalHoldings * btcPriceEUR
-        
-        var withdrawalEur = 0.0
-        if hypotheticalValueEUR > finalThreshold2 {
-            withdrawalEur = finalWithdraw2
-        } else if hypotheticalValueEUR > finalThreshold1 {
-            withdrawalEur = finalWithdraw1
-        }
-        
-        let withdrawalBTC = withdrawalEur / btcPriceEUR
-        let finalHoldings = max(0.0, hypotheticalHoldings - withdrawalBTC)
-        
-        let portfolioValEUR = finalHoldings * btcPriceEUR
-        let portfolioValUSD = finalHoldings * btcPriceUSD
 
-        // 10) Append results
+        // (B) Adjust BTC Price
+        if settings.useLognormalGrowth {
+            // Normal log-based weekly approach
+            // e.g. currentBTCPriceUSD *= exp( weeklyBase ) or add your factor toggles
+            let finalReturn = weeklyBase  // + factor toggles if desired
+            currentBTCPriceUSD *= exp(finalReturn)
+        } else {
+            // ============================
+            // Simple "Annual Lump" Approach
+            // ============================
+            // Every 52 weeks (i.e. when week % 52 == 0), we multiply by (1 + annualCAGR).
+            // This ensures lumps at week=52, 104, 156, …, 1040 for a full 20 lumps in 20 years.
+            let isYearBoundary = (week % 52 == 0)
+            if isYearBoundary {
+                currentBTCPriceUSD *= (1.0 + cagrDecimal)
+            } else {
+                // Otherwise, leave the BTC price alone this week.
+            }
+        }
+
+        // Safety clamp
+        currentBTCPriceUSD = max(1.0, currentBTCPriceUSD)
+
+        // (C) Convert price to EUR
+        let currentBTCPriceEUR = currentBTCPriceUSD / exchangeRateEURUSD
+
+        // (D) Contribute
+        let feeUSD = typedContrib * transactionFeePct
+        let netUsd = typedContrib - feeUSD
+        let netBtc = netUsd / currentBTCPriceUSD
+        let holdingsAfterContrib = previousBTCHoldings + netBtc
+
+        // (E) Check thresholds => withdrawals
+        let hypotheticalValueEUR = holdingsAfterContrib * currentBTCPriceEUR
+        var withdrawalEUR = 0.0
+        if hypotheticalValueEUR > threshold2 {
+            withdrawalEUR = withdraw2
+        } else if hypotheticalValueEUR > threshold1 {
+            withdrawalEUR = withdraw1
+        }
+        let withdrawalBTC = withdrawalEUR / currentBTCPriceEUR
+        let finalHoldings = max(0.0, holdingsAfterContrib - withdrawalBTC)
+
+        // (F) Final portfolio
+        let finalPortfolioEUR = finalHoldings * currentBTCPriceEUR
+        let finalPortfolioUSD = finalHoldings * currentBTCPriceUSD
+
         results.append(
             SimulationData(
                 week: week,
                 startingBTC: previousBTCHoldings,
                 netBTCHoldings: finalHoldings,
-                btcPriceUSD: Decimal(btcPriceUSD),
-                btcPriceEUR: Decimal(btcPriceEUR),
-                portfolioValueEUR: Decimal(portfolioValEUR),
-                portfolioValueUSD: Decimal(portfolioValUSD),
+                btcPriceUSD: Decimal(currentBTCPriceUSD),
+                btcPriceEUR: Decimal(currentBTCPriceEUR),
+                portfolioValueEUR: Decimal(finalPortfolioEUR),
+                portfolioValueUSD: Decimal(finalPortfolioUSD),
                 contributionEUR: 0.0,
                 contributionUSD: 0.0,
                 transactionFeeEUR: 0.0,
                 transactionFeeUSD: 0.0,
-                netContributionBTC: netBTC,
-                withdrawalEUR: withdrawalEur,
-                withdrawalUSD: withdrawalEur / exchangeRateEURUSD
+                netContributionBTC: netBtc,
+                withdrawalEUR: withdrawalEUR,
+                withdrawalUSD: withdrawalEUR / exchangeRateEURUSD
             )
         )
 
-        // Update for next iteration
+        // (G) Update for next iteration
         previousBTCHoldings = finalHoldings
-        previousBTCPriceUSD = btcPriceUSD
     }
 
     return results
+}   
+
+// -----------------------------------------
+// Helper to apply factor toggles
+// -----------------------------------------
+private func applyFactorToggles(
+    baseReturn: Double,
+    week: Int,
+    settings: SimulationSettings
+) -> Double {
+    var r = baseReturn
+    
+    // BULLISH
+    if settings.useHalving, halvingWeeks.contains(week) {
+        r += settings.halvingBump
+    }
+    if settings.useInstitutionalDemand {
+        r += settings.maxDemandBoost
+    }
+    if settings.useCountryAdoption {
+        r += settings.maxCountryAdBoost
+    }
+    if settings.useRegulatoryClarity {
+        r += settings.maxClarityBoost
+    }
+    if settings.useEtfApproval {
+        r += settings.maxEtfBoost
+    }
+    if settings.useTechBreakthrough {
+        r += settings.maxTechBoost
+    }
+    if settings.useScarcityEvents {
+        r += settings.maxScarcityBoost
+    }
+    if settings.useGlobalMacroHedge {
+        r += settings.maxMacroBoost
+    }
+    if settings.useStablecoinShift {
+        r += settings.maxStablecoinBoost
+    }
+    if settings.useDemographicAdoption {
+        r += settings.maxDemoBoost
+    }
+    if settings.useAltcoinFlight {
+        r += settings.maxAltcoinBoost
+    }
+    if settings.useAdoptionFactor {
+        r += settings.adoptionBaseFactor
+    }
+
+    // BEARISH
+    if settings.useRegClampdown {
+        r += settings.maxClampDown
+    }
+    if settings.useCompetitorCoin {
+        r += settings.maxCompetitorBoost
+    }
+    if settings.useSecurityBreach {
+        r += settings.breachImpact
+    }
+    if settings.useBubblePop {
+        r += settings.maxPopDrop
+    }
+    if settings.useStablecoinMeltdown {
+        r += settings.maxMeltdownDrop
+    }
+    if settings.useBlackSwan {
+        r += settings.blackSwanDrop
+    }
+    if settings.useBearMarket {
+        r += settings.bearWeeklyDrift
+    }
+    if settings.useMaturingMarket {
+        r += settings.maxMaturingDrop
+    }
+    if settings.useRecession {
+        r += settings.maxRecessionDrop
+    }
+    
+    return r
 }
 
 // MARK: - pickRandomReturn

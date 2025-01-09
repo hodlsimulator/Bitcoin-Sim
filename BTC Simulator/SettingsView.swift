@@ -503,10 +503,37 @@ struct SettingsView: View {
             .listRowBackground(Color(white: 0.15))
 
             //====================================
-            // NEW: LOCK HISTORICAL SAMPLING
+            // GROWTH MODEL TOGGLE
+            //====================================
+            Section("Growth Model") {
+                // IMPORTANT: use *exactly* the same name as in SimulationSettings
+                Toggle("Use Lognormal Growth", isOn: $simSettings.useLognormalGrowth)
+                    .tint(.orange)
+                    .foregroundColor(.white)
+            }
+            .listRowBackground(Color(white: 0.15))
+
+            //====================================
+            // HISTORICAL SAMPLING
             //====================================
             Section("Historical Sampling") {
+                // 1) Use Historical Sampling
+                Toggle("Use Historical Sampling", isOn: $simSettings.useHistoricalSampling)
+                    .tint(.orange)
+                    .foregroundColor(.white)
+
+                // 2) Lock Historical Sampling (if you're still using it)
                 Toggle("Lock Historical Sampling", isOn: $simSettings.lockHistoricalSampling)
+                    .tint(.orange)
+                    .foregroundColor(.white)
+            }
+            .listRowBackground(Color(white: 0.15))
+            
+            //====================================
+            // VOLATILITY
+            //====================================
+            Section("Volatility") {
+                Toggle("Use Volatility Shocks", isOn: $simSettings.useVolShocks)
                     .tint(.orange)
                     .foregroundColor(.white)
             }

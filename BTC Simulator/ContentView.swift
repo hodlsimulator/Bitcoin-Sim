@@ -103,13 +103,15 @@ class PersistentInputManager: ObservableObject {
         self.threshold1 = (storedT1 != 0.0) ? storedT1 : 30000.0
 
         let storedW1 = UserDefaults.standard.double(forKey: "withdrawAmount1")
-        self.withdrawAmount1 = (storedW1 != 0.0) ? storedW1 : 100.0
+        // Instead of 100.0 fallback, use 0.0:
+        self.withdrawAmount1 = (storedW1 != 0.0) ? storedW1 : 0.0
 
         let storedT2 = UserDefaults.standard.double(forKey: "threshold2")
         self.threshold2 = (storedT2 != 0.0) ? storedT2 : 60000.0
 
         let storedW2 = UserDefaults.standard.double(forKey: "withdrawAmount2")
-        self.withdrawAmount2 = (storedW2 != 0.0) ? storedW2 : 200.0
+        // Instead of 200.0 fallback, use 0.0:
+        self.withdrawAmount2 = (storedW2 != 0.0) ? storedW2 : 0.0
     }
 
     func saveToDefaults() {

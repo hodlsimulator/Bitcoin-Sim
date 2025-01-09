@@ -1,5 +1,3 @@
-// MARK: FILE 2: SimulationSettings.swift
-
 //
 //  SimulationSettings.swift
 //  BTCMonteCarlo
@@ -13,6 +11,8 @@ import SwiftUI
 class SimulationSettings: ObservableObject {
 
     var inputManager: PersistentInputManager? = nil
+    
+    @AppStorage("useLognormalGrowth") var useLognormalGrowth: Bool = true
 
     @Published var userWeeks: Int = 52
     @Published var initialBTCPriceUSD: Double = 58000.0
@@ -36,7 +36,7 @@ class SimulationSettings: ObservableObject {
     // Results
     @Published var lastRunResults: [SimulationData] = []
     @Published var allRuns: [[SimulationData]] = []
-
+    
     private var isInitialized = false
 
     @Published var toggleAll = false {
@@ -148,6 +148,21 @@ class SimulationSettings: ObservableObject {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(useRandomSeed, forKey: "useRandomSeed")
+            }
+        }
+    }
+    @Published var useHistoricalSampling: Bool = true {
+        didSet {
+            if isInitialized {
+                UserDefaults.standard.set(useHistoricalSampling, forKey: "useHistoricalSampling")
+            }
+        }
+    }
+
+    @Published var useVolShocks: Bool = true {
+        didSet {
+            if isInitialized {
+                UserDefaults.standard.set(useVolShocks, forKey: "useVolShocks")
             }
         }
     }
@@ -579,6 +594,13 @@ class SimulationSettings: ObservableObject {
         }
         let storedUseRandom = defaults.object(forKey: "useRandomSeed") as? Bool ?? true
         self.useRandomSeed = storedUseRandom
+        
+        if defaults.object(forKey: "useHistoricalSampling") != nil {
+            useHistoricalSampling = defaults.bool(forKey: "useHistoricalSampling")
+        }
+        if defaults.object(forKey: "useVolShocks") != nil {
+            useVolShocks = defaults.bool(forKey: "useVolShocks")
+        }
 
         // BULLISH FACTORS
         if let storedHalving = defaults.object(forKey: "useHalving") as? Bool {
@@ -752,6 +774,8 @@ class SimulationSettings: ObservableObject {
     // MARK: - Restore Defaults
     func restoreDefaults() {
         let defaults = UserDefaults.standard
+        defaults.set(useHistoricalSampling, forKey: "useHistoricalSampling")
+        defaults.set(useVolShocks, forKey: "useVolShocks")
 
         // Remove factor keys
         defaults.removeObject(forKey: "useHalving")
@@ -797,8 +821,16 @@ class SimulationSettings: ObservableObject {
         defaults.removeObject(forKey: "useRecession")
         defaults.removeObject(forKey: "maxRecessionDrop")
         defaults.removeObject(forKey: "lockHistoricalSampling")
-        defaults.removeObject(forKey: "currencyPreference")
+        // REMOVED: defaults.removeObject(forKey: "currencyPreference")
 
+        // Remove your new toggles
+        defaults.removeObject(forKey: "useHistoricalSampling")
+        defaults.removeObject(forKey: "useVolShocks")
+
+        // Reassign them to the NEW defaults:
+        useHistoricalSampling = true
+        useVolShocks = true
+    
         // Reassign them to the NEW defaults:
         useHalving = true
         halvingBump = 0.47967220152334283
@@ -869,8 +901,7 @@ class SimulationSettings: ObservableObject {
         // Reset lockHistoricalSampling
         lockHistoricalSampling = false
 
-        // Reset currencyPreference to .eur
-        currencyPreference = .eur
+        // REMOVED: currencyPreference = .eur
     }
 
     // Prints out relevant toggles & settings once per run
@@ -880,6 +911,10 @@ class SimulationSettings: ObservableObject {
         print("// DEBUG:   startingBalance=\(startingBalance), averageCostBasis=\(averageCostBasis)")
         print("// DEBUG:   lockedRandomSeed=\(lockedRandomSeed), seedValue=\(seedValue), useRandomSeed=\(useRandomSeed)")
         print("// DEBUG:   currencyPreference=\(currencyPreference.rawValue)")
+
+        // NEW Toggles
+        print("// DEBUG: useHistoricalSampling=\(useHistoricalSampling)")
+        print("// DEBUG: useVolShocks=\(useVolShocks)")
 
         // BULLISH
         print("// DEBUG: BULLISH FACTORS =>")
@@ -908,6 +943,7 @@ class SimulationSettings: ObservableObject {
         print("// DEBUG:   useMaturingMarket=\(useMaturingMarket), maxMaturingDrop=\(maxMaturingDrop)")
         print("// DEBUG:   useRecession=\(useRecession), maxRecessionDrop=\(maxRecessionDrop)")
 
+        // Existing line for historical lock
         print("// DEBUG: lockHistoricalSampling=\(lockHistoricalSampling)")
         print("// DEBUG: toggleAll=\(toggleAll), areAllFactorsEnabled=\(areAllFactorsEnabled)")
         

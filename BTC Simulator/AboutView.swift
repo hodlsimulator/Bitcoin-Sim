@@ -20,7 +20,7 @@ struct AboutView: View {
 
                 // INTRO SECTION
                 Text("""
-HODL Simulator is a forward-looking modelling tool for anyone seeking to understand Bitcoin’s potential price paths over the next 20 years. By weaving together historical BTC returns, market volatility, and a wide array of bullish and bearish factors, it provides a comprehensive picture of how Bitcoin’s future might unfold. Whether you're studying halving cycles, technological breakthroughs, or recession risks, the app’s Monte Carlo approach lets you spin up thousands of “what if” scenarios.
+HODL Simulator is a forward-looking modelling tool for anyone seeking to understand Bitcoin’s potential price paths over the next 20 years. By weaving together historical BTC returns, market volatility, and a wide array of bullish and bearish factors, it provides a comprehensive picture of how Bitcoin’s future might unfold.
 """)
                 
                 // HOW IT WORKS
@@ -31,17 +31,20 @@ HODL Simulator is a forward-looking modelling tool for anyone seeking to underst
 1. **Historical Data Foundation**  
    We use real BTC weekly returns as a baseline, sampling them at random to preserve market realism. Over 1,040 weeks (~20 years), the simulator adjusts these returns with your chosen settings.  
 
-2. **Bullish and Bearish Factors**  
-   Each factor represents a plausible event or trend—think new institutional demand, breakthroughs in Bitcoin technology, or macroeconomic turmoil. Toggle these factors on or off, setting their strengths to see how events might stack up.
+2. **Lognormal Price Model & Standard Deviation**  
+   The simulator now uses a lognormal approach to capture *multiplicative* changes in price. This means returns are modelled in log-space rather than additively, allowing more realistic growth paths (and avoiding instant wipeouts). We’ve also added a separate standard deviation setting for finer control over volatility.  
 
-3. **Monte Carlo Simulation**  
-   Rather than producing one deterministic path, HODL Simulator runs many randomised trials. In each trial, weekly BTC returns are drawn from historical data, shaped by your factor settings. This process is repeated hundreds or thousands of times, painting a full distribution of possible outcomes.
+3. **Bullish and Bearish Factors**  
+   Each factor represents a plausible event—think new institutional demand or macroeconomic turmoil. Toggle these factors on or off to see how events might stack up over time.
 
-4. **Portfolio Evolution**  
-   You can configure personal contributions, initial balances, and cost bases. Each simulation tracks your hypothetical BTC holdings, adjusted weekly by performance and contributions. This shows how your portfolio’s value might shift under various conditions.
+4. **Monte Carlo Simulation**  
+   Instead of producing one deterministic path, HODL Simulator runs many randomised trials. This paints a distribution of possible outcomes.
 
-5. **Week-by-Week Median**  
-   After all runs complete, the app computes a *median line*—a realistic midpoint at each week. On the chart, it’s rendered in orange, so you can see how the “middle ground” compares to the many individual paths.
+5. **Portfolio Evolution**  
+   You can configure personal contributions, initial balances, and cost bases. Each simulation tracks your hypothetical BTC holdings, adjusted weekly by performance and contributions.
+
+6. **Week-by-Week Median**  
+   After all runs complete, the app computes a *median line*—a midpoint at each week—so you can see the “middle ground” compared to the many individual paths.
 """)
 
                 // EXTREME PRICE SCENARIOS
@@ -49,7 +52,7 @@ HODL Simulator is a forward-looking modelling tool for anyone seeking to underst
                     .font(.title2)
                     .bold()
                 Text("""
-Because some factors can be dialled up quite high, HODL Simulator supports extraordinarily large BTC prices (up to decillions!). Behind the scenes, we store these prices using Decimal to avoid precision loss, and the y-axis now includes expanded suffixes like “N” (nonillion) and “D” (decillion). So, if you push every bullish factor to the max, rest assured the simulator can handle any moonshot scenario you throw at it!
+Because some factors can be dialled up quite high, HODL Simulator supports extraordinarily large BTC prices. Behind the scenes, we store these prices in Decimal form to avoid precision loss, and the y-axis may include expanded suffixes for extremely large numbers. If you push every bullish factor to the max, the simulator can still handle it!
 """)
 
                 // THE CHART
@@ -57,7 +60,7 @@ Because some factors can be dialled up quite high, HODL Simulator supports extra
                     .font(.title2)
                     .bold()
                 Text("""
-The simulator’s chart displays each run as a faint line on a **log-scale** y-axis, capturing Bitcoin’s capacity for large moves. The orange line indicates the median BTC price at every week, offering a single “most typical” reference curve. This visualisation makes it straightforward to grasp how varied Bitcoin’s trajectory could be, spanning moderate price growth, explosive rallies, or marked downturns.
+The simulator’s chart displays each run on a **log-scale** y-axis, reflecting the multiplicative nature of BTC’s price moves. The orange line indicates the median BTC price at every week, revealing a single “most typical” reference curve. This approach makes it straightforward to grasp just how varied Bitcoin’s trajectory could be, from moderate growth to explosive rallies or marked downturns.
 """)
 
                 // SETTINGS & TOGGLES
@@ -65,10 +68,10 @@ The simulator’s chart displays each run as a faint line on a **log-scale** y-a
                     .font(.title2)
                     .bold()
                 Text("""
-- **Toggle All**: Flip all bullish and bearish factors on or off instantly, to create fully bear or bull scenarios.  
-- **Annual CAGR & Volatility**: Adjust the broader growth rate and price swings to align with your expectations.  
-- **Random Seed**: Lock the seed for reproducible runs, or leave it random for fresh outcomes.  
-- **Factors**: Incorporate halving bumps, scarcity events, black swans, regulatory clampdowns, and more—each factor is customisable to match your outlook.
+- **Toggle All**: Flip all bullish and bearish factors on or off for fully bear or bull scenarios.  
+- **Annual CAGR & Volatility**: Adjust the broader growth rate and price swings to align with your outlook.  
+- **Lognormal & Std Dev**: Fine-tune how aggressively or gently prices fluctuate.  
+- **Random Seed**: Lock the seed for reproducible runs, or leave it random for fresh outcomes.
 """)
 
                 // WHO ITS FOR
@@ -76,12 +79,12 @@ The simulator’s chart displays each run as a faint line on a **log-scale** y-a
                     .font(.title2)
                     .bold()
                 Text("""
-HODL Simulator serves those keen to experiment with data-driven, long-term Bitcoin scenarios. If you’re interested in how supply shocks, market psychology, and global economic conditions might affect Bitcoin’s journey, this tool can help you test your theories in a structured, scenario-based environment.
+HODL Simulator is ideal for anyone curious about long-term Bitcoin scenarios. If you’re interested in how supply shocks, market psychology, and global economic conditions might affect Bitcoin’s journey, this tool can help you test your theories in a structured, scenario-based environment.
 """)
 
                 // CLOSING
                 Text("""
-By configuring different assumptions, you can see just how dramatically Bitcoin’s outlook might change with shifts in demand, regulatory stances, or major technological developments. We hope HODL Simulator offers a nuanced perspective on Bitcoin’s evolution, helping you refine your projections and cultivate a deeper understanding of the market’s potential.
+By configuring different assumptions, you can see how dramatically Bitcoin’s outlook could shift with changes in demand, regulation, or major technological developments. We hope HODL Simulator offers a nuanced perspective on Bitcoin’s evolution, helping you refine your projections and deepen your understanding of the market’s potential.
 """)
             }
             .foregroundColor(.white)
