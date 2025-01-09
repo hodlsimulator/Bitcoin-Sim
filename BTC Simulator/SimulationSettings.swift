@@ -12,7 +12,7 @@ class SimulationSettings: ObservableObject {
 
     var inputManager: PersistentInputManager? = nil
     
-    @AppStorage("useLognormalGrowth") var useLognormalGrowth: Bool = true
+    // @AppStorage("useLognormalGrowth") var useLognormalGrowth: Bool = true
 
     @Published var userWeeks: Int = 52
     @Published var initialBTCPriceUSD: Double = 58000.0
@@ -128,7 +128,11 @@ class SimulationSettings: ObservableObject {
             isUpdating = false
         }
     }
-
+    @Published var useLognormalGrowth: Bool = true {
+            didSet {
+                UserDefaults.standard.set(useLognormalGrowth, forKey: "useLognormalGrowth")
+            }
+        }
     // Random Seed
     @Published var lockedRandomSeed: Bool = false {
         didSet {
@@ -565,6 +569,14 @@ class SimulationSettings: ObservableObject {
     init() {
         let defaults = UserDefaults.standard
 
+        // (A) Load any stored boolean for useLognormalGrowth (if it exists)
+        if defaults.object(forKey: "useLognormalGrowth") != nil {
+            useLognormalGrowth = defaults.bool(forKey: "useLognormalGrowth")
+        } else {
+            // If there's no stored value, default to true
+            useLognormalGrowth = true
+        }
+        
         // Onboarding data
         if let savedBal = defaults.object(forKey: "savedStartingBalance") as? Double {
             self.startingBalance = savedBal
@@ -827,6 +839,10 @@ class SimulationSettings: ObservableObject {
         defaults.removeObject(forKey: "useHistoricalSampling")
         defaults.removeObject(forKey: "useVolShocks")
 
+        // Also remove or reset the toggle
+        defaults.removeObject(forKey: "useLognormalGrowth")
+        useLognormalGrowth = true
+    
         // Reassign them to the NEW defaults:
         useHistoricalSampling = true
         useVolShocks = true
