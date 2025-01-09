@@ -128,11 +128,13 @@ class SimulationSettings: ObservableObject {
             isUpdating = false
         }
     }
+
     @Published var useLognormalGrowth: Bool = true {
-            didSet {
-                UserDefaults.standard.set(useLognormalGrowth, forKey: "useLognormalGrowth")
-            }
+        didSet {
+            UserDefaults.standard.set(useLognormalGrowth, forKey: "useLognormalGrowth")
         }
+    }
+
     // Random Seed
     @Published var lockedRandomSeed: Bool = false {
         didSet {
@@ -772,6 +774,56 @@ class SimulationSettings: ObservableObject {
         syncToggleAllState()
     }
 
+    // NEW: We'll compute a hash of the relevant toggles, so the simulation detects changes
+    private func computeInputsHash(
+        annualCAGR: Double,
+        annualVolatility: Double,
+        iterations: Int,
+        exchangeRateEURUSD: Double
+    ) -> UInt64 {
+        var hasher = Hasher()
+        hasher.combine(userWeeks)
+        hasher.combine(initialBTCPriceUSD)
+        hasher.combine(startingBalance)
+        hasher.combine(averageCostBasis)
+        hasher.combine(lockedRandomSeed)
+        hasher.combine(seedValue)
+        hasher.combine(useRandomSeed)
+        hasher.combine(useHistoricalSampling)     // <-- Important for toggling historical sampling
+        hasher.combine(useVolShocks)
+        hasher.combine(annualCAGR)
+        hasher.combine(annualVolatility)
+        hasher.combine(iterations)
+        hasher.combine(currencyPreference.rawValue)
+        hasher.combine(exchangeRateEURUSD)
+
+        // If you want to go further, you can combine bullish/bearish toggles too
+        hasher.combine(useHalving)
+        hasher.combine(useInstitutionalDemand)
+        hasher.combine(useCountryAdoption)
+        hasher.combine(useRegulatoryClarity)
+        hasher.combine(useEtfApproval)
+        hasher.combine(useTechBreakthrough)
+        hasher.combine(useScarcityEvents)
+        hasher.combine(useGlobalMacroHedge)
+        hasher.combine(useStablecoinShift)
+        hasher.combine(useDemographicAdoption)
+        hasher.combine(useAltcoinFlight)
+        hasher.combine(useAdoptionFactor)
+        hasher.combine(useRegClampdown)
+        hasher.combine(useCompetitorCoin)
+        hasher.combine(useSecurityBreach)
+        hasher.combine(useBubblePop)
+        hasher.combine(useStablecoinMeltdown)
+        hasher.combine(useBlackSwan)
+        hasher.combine(useBearMarket)
+        hasher.combine(useMaturingMarket)
+        hasher.combine(useRecession)
+        hasher.combine(lockHistoricalSampling)
+
+        return UInt64(hasher.finalize())
+    }
+
     // MARK: - Run Simulation
     func runSimulation(
         annualCAGR: Double,
@@ -779,8 +831,32 @@ class SimulationSettings: ObservableObject {
         iterations: Int,
         exchangeRateEURUSD: Double = 1.06
     ) {
+        // 1) Compute new hash from toggles/settings
+        let newHash = computeInputsHash(
+            annualCAGR: annualCAGR,
+            annualVolatility: annualVolatility,
+            iterations: iterations,
+            exchangeRateEURUSD: exchangeRateEURUSD
+        )
+
+        // 2) Compare with old hash (if you have one stored). For example:
+        //    If you have something like chartDataCache.storedInputsHash:
+        /*
+        if let oldHash = chartDataCache.storedInputsHash, oldHash == newHash {
+            print("// DEBUG: No input changes => skipping new run.")
+            return
+        } else {
+            chartDataCache.storedInputsHash = newHash
+        }
+        */
+
+        // For demonstration, just print the hash comparison:
+        print("// DEBUG: runSimulation() => newHash = \(newHash), storedInputsHash = nil or unknown if you’re not storing it.")
+        
         printAllSettings()
+        
         // ...rest of the simulation logic...
+        // e.g. build simulations, store results in lastRunResults, etc.
     }
 
     // MARK: - Restore Defaults
@@ -833,7 +909,6 @@ class SimulationSettings: ObservableObject {
         defaults.removeObject(forKey: "useRecession")
         defaults.removeObject(forKey: "maxRecessionDrop")
         defaults.removeObject(forKey: "lockHistoricalSampling")
-        // REMOVED: defaults.removeObject(forKey: "currencyPreference")
 
         // Remove your new toggles
         defaults.removeObject(forKey: "useHistoricalSampling")
@@ -916,8 +991,6 @@ class SimulationSettings: ObservableObject {
 
         // Reset lockHistoricalSampling
         lockHistoricalSampling = false
-
-        // REMOVED: currencyPreference = .eur
     }
 
     // Prints out relevant toggles & settings once per run
