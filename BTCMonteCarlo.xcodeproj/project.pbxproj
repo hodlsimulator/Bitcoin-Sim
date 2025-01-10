@@ -48,6 +48,7 @@
 		E1A1E52F2D2E3A40008F7658 /* RowOffsetHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A1E52E2D2E3A3E008F7658 /* RowOffsetHelpers.swift */; };
 		E1C543B82D224D23005E416D /* MonteCarloResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1C543B72D224D21005E416D /* MonteCarloResultsView.swift */; };
 		E1C543BA2D2283A2005E416D /* YearlyPercentileData.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1C543B92D22839F005E416D /* YearlyPercentileData.swift */; };
+		E1CFF0272D30D07A00D9D044 /* ChartBuilders.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1CFF0262D30D07800D9D044 /* ChartBuilders.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -94,6 +95,7 @@
 		E1A1E52E2D2E3A3E008F7658 /* RowOffsetHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RowOffsetHelpers.swift; sourceTree = "<group>"; };
 		E1C543B72D224D21005E416D /* MonteCarloResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonteCarloResultsView.swift; sourceTree = "<group>"; };
 		E1C543B92D22839F005E416D /* YearlyPercentileData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YearlyPercentileData.swift; sourceTree = "<group>"; };
+		E1CFF0262D30D07800D9D044 /* ChartBuilders.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartBuilders.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -141,6 +143,7 @@
 				E191AD5C2D1B06E000020DBE /* BitcoinHistoricalData.swift */,
 				E1883F512D1FDDB0007AA90B /* BitcoinShapes.swift */,
 				E12CCD8A2CF8235F0059931D /* BTC_SimulatorApp.swift */,
+				E1CFF0262D30D07800D9D044 /* ChartBuilders.swift */,
 				E18C2BE02D259245006E7438 /* ChartSnapshotView.swift */,
 				E1A1E5282D2E38F9008F7658 /* CheckboxToggleStyle.swift */,
 				E166A8B82CF955E80003F518 /* ContentOffsetScrollView.swift */,
@@ -342,6 +345,7 @@
 				E1883F3A2D1DD94F007AA90B /* SimulationSettings.swift in Sources */,
 				E1883F422D1E43DB007AA90B /* VisualEffectBlur.swift in Sources */,
 				E166A8AE2CF855BF0003F518 /* MonteCarloSimulator.swift in Sources */,
+				E1CFF0272D30D07A00D9D044 /* ChartBuilders.swift in Sources */,
 				E1883F382D1DD4C8007AA90B /* SettingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
