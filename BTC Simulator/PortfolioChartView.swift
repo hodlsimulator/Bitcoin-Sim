@@ -19,7 +19,19 @@ struct PortfolioChartView: View {
         // Pull the portfolio runs from the cache
         let simulations = chartDataCache.portfolioRuns ?? []
         
-        // Avoid 'buildExpression' errors by assigning prints to _
+        // 1) Compute min & max from all points
+        let allValues = simulations.flatMap { $0.points.map { $0.value } }
+        let minVal = allValues.min() ?? Decimal(1)
+        let maxVal = allValues.max() ?? Decimal(2)
+        
+        // 2) Convert them to Double
+        let minDouble = NSDecimalNumber(decimal: minVal).doubleValue
+        let maxDouble = NSDecimalNumber(decimal: maxVal).doubleValue
+        
+        // 3) Clamp so the log scale never sees 0 or negative
+        let minY = max(1.0, minDouble)
+        let maxY = max(minY + 1.0, maxDouble)
+        
         let _ = print("// DEBUG: ADDED PRINT => PortfolioChartView loaded. isLandscape=\(isLandscape)")
         let _ = print("// DEBUG: ADDED PRINT => portfolioRuns count = \(simulations.count)")
         
@@ -36,8 +48,11 @@ struct PortfolioChartView: View {
                                 medianLines(simulations: simulations)
                             }
                             .chartLegend(.hidden)
+                            
+                            // 4) Use clamped Y domain
                             .chartXScale(domain: 0.0...20.0, type: .linear)
-                            .chartYScale(domain: .automatic(includesZero: false), type: .log)
+                            .chartYScale(domain: minY...maxY, type: .log)
+                            
                             .chartXAxis {
                                 let yearMarkers = [5.0, 10.0, 15.0, 20.0]
                                 AxisMarks(values: yearMarkers) { axisValue in
@@ -83,8 +98,10 @@ struct PortfolioChartView: View {
                                 medianLines(simulations: simulations)
                             }
                             .chartLegend(.hidden)
+                            // 4) Use clamped Y domain
                             .chartXScale(domain: 0.0...20.0, type: .linear)
-                            .chartYScale(domain: .automatic(includesZero: false), type: .log)
+                            .chartYScale(domain: minY...maxY, type: .log)
+                            
                             .chartXAxis {
                                 let yearMarkers = [5.0, 10.0, 15.0, 20.0]
                                 AxisMarks(values: yearMarkers) { axisValue in
