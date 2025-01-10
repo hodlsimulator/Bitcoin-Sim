@@ -185,24 +185,32 @@ struct MonteCarloChartView: View {
         // We'll read from chartDataCache.allRuns
         let simulations = chartDataCache.allRuns ?? []
         
-        // 1) Compute min & max from the data
+        // 1) Gather all BTC values
         let allValues = simulations.flatMap { $0.points.map { $0.value } }
         let minVal = allValues.min() ?? Decimal(1)
         let maxVal = allValues.max() ?? Decimal(2)
+
+        // 2) Convert to plain Doubles
+        let rawMinDouble = NSDecimalNumber(decimal: minVal).doubleValue
+        let rawMaxDouble = NSDecimalNumber(decimal: maxVal).doubleValue
         
-        // 2) Convert to Double
-        let minDouble = NSDecimalNumber(decimal: minVal).doubleValue
-        let maxDouble = NSDecimalNumber(decimal: maxVal).doubleValue
+        // 3) For a log scale, find the nearest powers of 10 below & above
+        let logFloor = floor(log10(rawMinDouble))  // e.g. 2.3 -> 2
+        let logCeil  = ceil(log10(rawMaxDouble))   // e.g. 11.6 -> 12
         
-        // 3) Enforce a minimum of 1 for the log scale
-        let minY = max(1.0, minDouble)
-        let maxY = max(minY + 1.0, maxDouble)
+        let domainMin = pow(10.0, logFloor)  // e.g. 1e2 = 100
+        let domainMax = pow(10.0, logCeil)   // e.g. 1e12 = 1T
         
-        if !simulations.isEmpty {
-            let firstRun = simulations[0].points
-            if !firstRun.isEmpty {
-                print("// DEBUG: ADDED PRINT => first BTC run sample => week=\(firstRun[0].week), val=\(firstRun[0].value)")
-            }
+        // Debug printing
+        print("// DEBUG: rawMinDouble=\(rawMinDouble), rawMaxDouble=\(rawMaxDouble)")
+        print("// DEBUG: logFloor=\(logFloor), logCeil=\(logCeil)")
+        print("// DEBUG: domainMin=\(domainMin), domainMax=\(domainMax)")
+        
+        // (If you want to ensure the domain never goes below 1, you could clamp domainMin = max(1, domainMin).)
+        
+        // Optional debug of the first run
+        if let firstRun = simulations.first?.points, !firstRun.isEmpty {
+            print("// DEBUG: first BTC run sample => week=\(firstRun[0].week), val=\(firstRun[0].value)")
         }
         
         return GeometryReader { geo in
@@ -218,9 +226,9 @@ struct MonteCarloChartView: View {
                         }
                         .chartLegend(.hidden)
                         
-                        // 4) Force X = 20.0, clamp Y via minY...maxY
+                        // Force X = 20.0, clamp Y to domainMin...domainMax
                         .chartXScale(domain: 0.0...20.0, type: .linear)
-                        .chartYScale(domain: minY...maxY, type: .log)
+                        .chartYScale(domain: domainMin...domainMax, type: .log)
                         
                         // X-axis
                         .chartXAxis {
@@ -269,9 +277,10 @@ struct MonteCarloChartView: View {
                             medianLines(simulations: simulations)
                         }
                         .chartLegend(.hidden)
-                        // 4) Force X = 20.0, clamp Y
+                        
+                        // Force X domain, dynamic Y domain
                         .chartXScale(domain: 0.0...20.0, type: .linear)
-                        .chartYScale(domain: minY...maxY, type: .log)
+                        .chartYScale(domain: domainMin...domainMax, type: .log)
                         
                         .chartXAxis {
                             let yearMarkers = [5.0, 10.0, 15.0, 20.0]
@@ -304,6 +313,7 @@ struct MonteCarloChartView: View {
                                 }
                             }
                         }
+                        // Slight vertical squish
                         .scaleEffect(x: 1.0, y: 0.95, anchor: .bottom)
                         .frame(width: geo.size.width, height: geo.size.height * 0.94)
                         
