@@ -218,10 +218,8 @@ struct MonteCarloChartView: View {
                         medianLines(simulations: simulations)
                     }
                     .chartLegend(.hidden)
-                    // X scale = 0..totalYears, Y scale = log domain
                     .chartXScale(domain: 0.0...totalYears, type: .linear)
                     .chartYScale(domain: domainMin...domainMax, type: .log)
-                    // Custom X-axis ticks using stride
                     .chartXAxis {
                         AxisMarks(values: Array(stride(
                             from: 0.0,
@@ -234,7 +232,6 @@ struct MonteCarloChartView: View {
                                 .foregroundStyle(.white.opacity(0.3))
                             AxisValueLabel(centered: false) {
                                 if let val = axisValue.as(Double.self) {
-                                    // e.g. 3.0 => "3"
                                     Text("\(Int(val))")
                                         .foregroundColor(.white)
                                 }
@@ -256,7 +253,6 @@ struct MonteCarloChartView: View {
                             }
                         }
                     }
-                    .padding()
                     
                 } else {
                     // PORTRAIT
@@ -303,7 +299,6 @@ struct MonteCarloChartView: View {
                                 }
                             }
                         }
-                        .padding()
                         
                         Spacer()
                     }
