@@ -634,18 +634,16 @@ struct ContentView: View {
                         
                         Spacer()
                         
-                        // ADDED OR MODIFIED:
-                        // We grey out (disable) the Charts button if inputManager.generateGraphs == false
+                        // Grey out the Charts button if inputManager.generateGraphs == false
                         Button(action: {
                             print("// DEBUG: Chart button pressed.")
                             showHistograms = true
                         }) {
                             Image(systemName: "chart.line.uptrend.xyaxis")
-                                // If generateGraphs is false, we use .gray so it looks disabled
                                 .foregroundColor(inputManager.generateGraphs ? .white : .gray)
                                 .imageScale(.large)
                         }
-                        .disabled(!inputManager.generateGraphs) // Actually disables the button
+                        .disabled(!inputManager.generateGraphs)
                     }
                     .padding(.horizontal, 55)
                     .padding(.vertical, 10)
@@ -774,8 +772,13 @@ struct ContentView: View {
                         .coordinateSpace(name: "scrollArea")
                         .onPreferenceChange(RowOffsetPreferenceKey.self) { offsets in
                             let targetY: CGFloat = 160
-                            let filtered = offsets.filter { (week, _) in week != 1040 }
+                            let totalWeeks = simSettings.userWeeks
+                            // Filter out weeks outside our domain
+                            let filtered = offsets.filter { (week, _) in
+                                week >= 0 && week <= totalWeeks
+                            }
                             let mapped = filtered.mapValues { abs($0 - targetY) }
+                            
                             if let (closestWeek, _) = mapped.min(by: { $0.value < $1.value }) {
                                 lastViewedWeek = closestWeek
                             }

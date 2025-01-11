@@ -232,10 +232,9 @@ struct OnboardingView: View {
             Text("Which currency do you want to display?")
                 .foregroundColor(.white)
             
-            Picker("Currency", selection: $currencyPreference) {
-                ForEach(PreferredCurrency.allCases) { cur in
-                    Text(cur.rawValue).tag(cur)
-                }
+            Picker("ContribCurrency", selection: $simSettings.contributionCurrencyWhenBoth) {
+                Text("USD").tag(PreferredCurrency.usd)
+                Text("EUR").tag(PreferredCurrency.eur)
             }
             .pickerStyle(.segmented)
             .frame(width: 200)
@@ -588,3 +587,4 @@ extension View {
         )
     }
 }
+
