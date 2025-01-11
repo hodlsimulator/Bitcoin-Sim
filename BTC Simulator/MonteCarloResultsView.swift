@@ -180,39 +180,51 @@ struct MonteCarloChartView: View {
     @EnvironmentObject var chartDataCache: ChartDataCache
     @EnvironmentObject var simSettings: SimulationSettings
     
+    /// How far to shift the entire chart after squishing (up = negative)
+    private let topOffset: CGFloat = 0
+    
+    /// Vertical “squish” factor (1.0 = no squish; e.g. 0.9 = 90% original height)
+    private let scaleY: CGFloat = 0.92
+    
     var body: some View {
-        let isLandscape = orientationObserver.isLandscape
+        
+        // 1) Do domain logic outside the ViewBuilder
         let simulations = chartDataCache.allRuns ?? []
+        let allValues = simulations.flatMap { $0.points.map(\.value) }
         
-        // 1) Gather all BTC values
-        let allValues = simulations.flatMap { $0.points.map { $0.value } }
-        let minVal = allValues.min() ?? Decimal(1)
-        let maxVal = allValues.max() ?? Decimal(2)
-
-        // 2) Convert to Doubles
-        let rawMinDouble = NSDecimalNumber(decimal: minVal).doubleValue
-        let rawMaxDouble = NSDecimalNumber(decimal: maxVal).doubleValue
+        let rawMin = allValues.min().map { NSDecimalNumber(decimal: $0).doubleValue } ?? 1.0
+        let rawMax = allValues.max().map { NSDecimalNumber(decimal: $0).doubleValue } ?? 2.0
         
-        // 3) Determine Y-axis log domain
-        let logFloor = floor(log10(rawMinDouble))
-        let logCeil  = ceil(log10(rawMaxDouble))
+        // BOTTOM domain logic
+        var bottomExp = floor(log10(rawMin))
+        if rawMin <= pow(10, bottomExp), bottomExp > 0 {
+            bottomExp -= 1
+        }
+        let domainMin = max(pow(10.0, bottomExp), 1.0)
         
-        let domainMin = pow(10.0, logFloor)
-        let domainMax = pow(10.0, logCeil)
+        // TOP domain logic
+        var topExp = floor(log10(rawMax))
+        if rawMax >= pow(10, topExp) {
+            topExp += 1
+        }
+        let domainMax = pow(10.0, topExp)
         
-        // 4) Convert the user’s total weeks to years for the X-axis
+        // Y ticks
+        let intBottom = Int(bottomExp)
+        let intTop    = Int(topExp)
+        let yTickValues = (intBottom...intTop).map { pow(10.0, Double($0)) }
+        
+        // X domain => weeks->years
         let totalWeeks = Double(simSettings.userWeeks)
         let totalYears = totalWeeks / 52.0
+        let xStride = (totalYears == 0.0) ? 1.0 : (totalYears / 4.0)
         
-        // We'll aim for ~4 major ticks on the X-axis
-        let xStride = totalYears == 0 ? 1.0 : totalYears / 4.0
-        
-        GeometryReader { geo in
+        // 2) Return the SwiftUI View
+        return GeometryReader { geo in
             ZStack {
                 Color.black.ignoresSafeArea()
                 
-                if isLandscape {
-                    // LANDSCAPE
+                VStack(spacing: 0) {
                     Chart {
                         simulationLines(simulations: simulations)
                         medianLines(simulations: simulations)
@@ -220,109 +232,144 @@ struct MonteCarloChartView: View {
                     .chartLegend(.hidden)
                     .chartXScale(domain: 0.0...totalYears, type: .linear)
                     .chartYScale(domain: domainMin...domainMax, type: .log)
-                    .chartXAxis {
-                        AxisMarks(values: Array(stride(
-                            from: 0.0,
-                            through: totalYears,
-                            by: xStride
-                        ))) { axisValue in
-                            AxisGridLine(centered: false)
-                                .foregroundStyle(.white.opacity(0.3))
-                            AxisTick(centered: false)
-                                .foregroundStyle(.white.opacity(0.3))
-                            AxisValueLabel(centered: false) {
-                                if let val = axisValue.as(Double.self) {
-                                    Text("\(Int(val))")
-                                        .foregroundColor(.white)
-                                }
-                            }
-                        }
+                    
+                    .chartPlotStyle { plotArea in
+                        // bottom padding so data doesn’t overlap x-axis
+                        plotArea
+                            .padding(.top, 0)
+                            .padding(.bottom, 20)
                     }
+                    
+                    // Y-axis => powers of ten
                     .chartYAxis {
-                        AxisMarks(position: .leading) { axisValue in
-                            AxisGridLine()
-                                .foregroundStyle(.white.opacity(0.3))
-                            AxisTick()
-                                .foregroundStyle(.white.opacity(0.3))
+                        AxisMarks(position: .leading, values: yTickValues) { axisValue in
+                            AxisGridLine().foregroundStyle(.white.opacity(0.3))
+                            AxisTick().foregroundStyle(.white.opacity(0.3))
                             AxisValueLabel {
-                                if let doubleVal = axisValue.as(Double.self) {
-                                    let decimalVal = Decimal(doubleVal)
-                                    Text(formatSuffix(decimalVal))
+                                if let dblVal = axisValue.as(Double.self) {
+                                    let exponent = Int(log10(dblVal))
+                                    Text(formatPowerOfTenLabel(exponent))
                                         .foregroundColor(.white)
                                 }
                             }
                         }
                     }
                     
-                } else {
-                    // PORTRAIT
-                    VStack {
-                        Spacer().frame(height: 30)
-                        
-                        Chart {
-                            simulationLines(simulations: simulations)
-                            medianLines(simulations: simulations)
-                        }
-                        .chartLegend(.hidden)
-                        .chartXScale(domain: 0.0...totalYears, type: .linear)
-                        .chartYScale(domain: domainMin...domainMax, type: .log)
-                        .chartXAxis {
-                            AxisMarks(values: Array(stride(
-                                from: 0.0,
-                                through: totalYears,
-                                by: xStride
-                            ))) { axisValue in
-                                AxisGridLine(centered: false)
-                                    .foregroundStyle(.white.opacity(0.3))
-                                AxisTick(centered: false)
-                                    .foregroundStyle(.white.opacity(0.3))
-                                AxisValueLabel(centered: false) {
-                                    if let val = axisValue.as(Double.self) {
-                                        Text("\(Int(val))")
-                                            .foregroundColor(.white)
-                                    }
+                    // X-axis => ~4 ticks
+                    .chartXAxis {
+                        AxisMarks(values: Array(stride(from: 0.0, through: totalYears, by: xStride))) { axisValue in
+                            AxisGridLine(centered: false)
+                                .foregroundStyle(.white.opacity(0.3))
+                            AxisTick(centered: false)
+                                .foregroundStyle(.white.opacity(0.3))
+                            AxisValueLabel(centered: false) {
+                                if let dblVal = axisValue.as(Double.self) {
+                                    Text("\(Int(dblVal))")
+                                        .foregroundColor(.white)
                                 }
                             }
                         }
-                        .chartYAxis {
-                            AxisMarks(position: .leading) { axisValue in
-                                AxisGridLine()
-                                    .foregroundStyle(.white.opacity(0.3))
-                                AxisTick()
-                                    .foregroundStyle(.white.opacity(0.3))
-                                AxisValueLabel {
-                                    if let doubleVal = axisValue.as(Double.self) {
-                                        let decimalVal = Decimal(doubleVal)
-                                        Text(formatSuffix(decimalVal))
-                                            .foregroundColor(.white)
-                                    }
-                                }
-                            }
-                        }
-                        
-                        Spacer()
                     }
+                    .frame(width: geo.size.width, height: geo.size.height)
                 }
+                // Squish vertically from the bottom
+                .scaleEffect(x: 1.0, y: scaleY, anchor: .bottom)
+                // Additional offset if you want to push it up or down more
+                .offset(y: -topOffset)
             }
         }
         .navigationBarHidden(false)
     }
+}
     
     // MARK: - Format suffix on log scale
-    private func formatSuffix(_ val: Decimal) -> String {
-        let doubleVal = NSDecimalNumber(decimal: val).doubleValue
-        switch doubleVal {
-        case 1_000_000_000_000...:
-            return String(format: "%.2fT", doubleVal/1_000_000_000_000)
-        case 1_000_000_000...:
-            return String(format: "%.2fB", doubleVal/1_000_000_000)
-        case 1_000_000...:
-            return String(format: "%.2fM", doubleVal/1_000_000)
-        case 1_000...:
-            return String(format: "%.2fK", doubleVal/1_000)
+    /// Convert an integer exponent to its short suffix label (1, 10, 100, 1k, …, 1Q, etc.).
+    /// Covers up to 1e48 = quattuordecillion in your list.
+    func formatPowerOfTenExponent(_ exponent: Int) -> String {
+        switch exponent {
+        case 0:  return "1"
+        case 1:  return "10"
+        case 2:  return "100"
+        case 3:  return "1k"         // 1×10^3
+        case 4:  return "10k"        // 1×10^4
+        case 5:  return "100k"       // 1×10^5
+        case 6:  return "1M"         // 1×10^6
+        case 7:  return "10M"        // 1×10^7
+        case 8:  return "100M"       // 1×10^8
+        case 9:  return "1B"         // 1×10^9
+        case 10: return "10B"
+        case 11: return "100B"
+        case 12: return "1T"         // 1×10^12 (trillion)
+        case 13: return "10T"
+        case 14: return "100T"
+        case 15: return "1Q"         // 1×10^15 (quadrillion)
+        case 16: return "10Q"
+        case 17: return "100Q"
+        case 18: return "1Qn"        // 1×10^18 (quintillion)
+        case 19: return "10Qn"
+        case 20: return "100Qn"
+        case 21: return "1Se"        // 1×10^21 (sextillion)
+        case 22: return "10Se"
+        case 23: return "100Se"
+        case 24: return "1S"         // 1×10^24 (septillion)
+        case 25: return "10S"
+        case 26: return "100S"
+        case 27: return "1O"         // 1×10^27 (octillion)
+        case 28: return "10O"
+        case 29: return "100O"
+        case 30: return "1N"         // 1×10^30 (nonillion)
+        case 31: return "10N"
+        case 32: return "100N"
+        case 33: return "1D"         // 1×10^33 (decillion)
+        case 34: return "10D"
+        case 35: return "100D"
+        case 36: return "1U"         // 1×10^36 (undecillion)
+        case 37: return "10U"
+        case 38: return "100U"
+        case 39: return "1Do"        // 1×10^39 (duodecillion)
+        case 40: return "10Do"
+        case 41: return "100Do"
+        case 42: return "1Td"        // 1×10^42 (tredecillion)
+        case 43: return "10Td"
+        case 44: return "100Td"
+        case 45: return "1Qd"        // 1×10^45 (quattuordecillion)
+        case 46: return "10Qd"
+        case 47: return "100Qd"
+        case 48: return "1…"         // You can extend further if needed
         default:
-            return String(format: "%.0f", doubleVal)
+            // If beyond your known range, fallback:
+            return "10^\(exponent)"
         }
+    }
+
+/// For exponents like 0->"1", 1->"10", 2->"100", 3->"1K", 4->"10K", 5->"100K", etc.
+func formatPowerOfTenLabel(_ exponent: Int) -> String {
+    switch exponent {
+    case 0:  return "1"
+    case 1:  return "10"
+    case 2:  return "100"
+    case 3:  return "1K"
+    case 4:  return "10K"
+    case 5:  return "100K"
+    case 6:  return "1M"
+    case 7:  return "10M"
+    case 8:  return "100M"
+    case 9:  return "1B"
+    case 10: return "10B"
+    case 11: return "100B"
+    case 12: return "1T"
+    case 13: return "10T"
+    case 14: return "100T"
+    case 15: return "1Q"   // quadrillion
+    case 16: return "10Q"
+    case 17: return "100Q"
+    case 18: return "1Qn"  // quintillion
+    case 19: return "10Qn"
+    case 20: return "100Qn"
+    case 21: return "1Se"  // sextillion
+    // ...and so forth, or fallback:
+    default:
+        return "10^\(exponent)"
     }
 }
 
@@ -588,3 +635,4 @@ struct ForceReflowView<Content: View>: View {
             }
     }
 }
+    
