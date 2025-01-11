@@ -183,12 +183,12 @@ struct MonteCarloChartView: View {
     /// How far to shift the entire chart after squishing (up = negative)
     private let topOffset: CGFloat = 0
     
-    /// Vertical “squish” factor (1.0 = no squish; e.g. 0.9 = 90% original height)
+    /// Vertical "squish" factor (1.0 = no squish; e.g. 0.9 = 90% original height)
     private let scaleY: CGFloat = 0.92
     
     var body: some View {
         
-        // 1) Do domain logic outside the ViewBuilder
+        // 1) Domain logic
         let simulations = chartDataCache.allRuns ?? []
         let allValues = simulations.flatMap { $0.points.map(\.value) }
         
@@ -209,7 +209,7 @@ struct MonteCarloChartView: View {
         }
         let domainMax = pow(10.0, topExp)
         
-        // Y ticks
+        // Y-axis ticks => powers of ten
         let intBottom = Int(bottomExp)
         let intTop    = Int(topExp)
         let yTickValues = (intBottom...intTop).map { pow(10.0, Double($0)) }
@@ -217,7 +217,30 @@ struct MonteCarloChartView: View {
         // X domain => weeks->years
         let totalWeeks = Double(simSettings.userWeeks)
         let totalYears = totalWeeks / 52.0
-        let xStride = (totalYears == 0.0) ? 1.0 : (totalYears / 4.0)
+        
+        // Helper to pick a 'nice' stride so we don't have loads of ticks
+        func dynamicXStride(for totalY: Double) -> Double {
+            switch totalY {
+            case ..<1.01:
+                // ~3-month chunks => 0, 3, 6, 9, 12
+                return 0.25
+            case ..<2.01:
+                // ~6-month chunks => 0, 6, 12, 18, 24
+                return 0.5
+            case ..<5.01:
+                return 1.0
+            case ..<10.01:
+                return 2.0
+            case ..<25.01:
+                return 5.0
+            case ..<50.01:
+                return 10.0
+            default:
+                return 25.0
+            }
+        }
+        
+        let xStride = dynamicXStride(for: totalYears)
         
         // 2) Return the SwiftUI View
         return GeometryReader { geo in
@@ -255,17 +278,22 @@ struct MonteCarloChartView: View {
                         }
                     }
                     
-                    // X-axis => ~4 ticks
+                    // X-axis => wrap the stride in Array(...)
                     .chartXAxis {
                         AxisMarks(values: Array(stride(from: 0.0, through: totalYears, by: xStride))) { axisValue in
-                            AxisGridLine(centered: false)
-                                .foregroundStyle(.white.opacity(0.3))
-                            AxisTick(centered: false)
-                                .foregroundStyle(.white.opacity(0.3))
-                            AxisValueLabel(centered: false) {
-                                if let dblVal = axisValue.as(Double.self) {
-                                    Text("\(Int(dblVal))")
-                                        .foregroundColor(.white)
+                            AxisGridLine().foregroundStyle(.white.opacity(0.3))
+                            AxisTick().foregroundStyle(.white.opacity(0.3))
+                            AxisValueLabel {
+                                if let dblVal = axisValue.as(Double.self), dblVal > 0 {
+                                    if totalYears <= 2.0 {
+                                        // Display in months, e.g. 3M, 6M, etc.
+                                        Text("\(Int(dblVal * 12))M")
+                                            .foregroundColor(.white)
+                                    } else {
+                                        // Display in years, e.g. 1Y, 2Y, etc.
+                                        Text("\(Int(dblVal))Y")
+                                            .foregroundColor(.white)
+                                    }
                                 }
                             }
                         }
