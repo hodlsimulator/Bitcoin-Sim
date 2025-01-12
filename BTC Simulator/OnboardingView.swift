@@ -166,8 +166,16 @@ struct OnboardingView: View {
             alignment: .bottom
         )
         .ignoresSafeArea(.keyboard, edges: .bottom)
+        .onChange(of: chosenPeriodUnit) { newVal in
+            if newVal == .months {
+                totalPeriods = 240
+            } else {
+                totalPeriods = 1040
+            }
+        }
         .task {
             await fetchBTCPriceFromAPI()
+            updateAverageCostBasisIfNeeded()
         }
     }
     
@@ -258,6 +266,8 @@ struct OnboardingView: View {
     // MARK: - Step 4
     private func step4_AverageCostBasis() -> some View {
         VStack(spacing: 20) {
+            let currencyLabelForCostBasis = (currencyPreference == .eur) ? "EUR" : "USD"
+            
             Text("Enter your average BTC purchase price")
                 .foregroundColor(.white)
             
@@ -270,7 +280,7 @@ struct OnboardingView: View {
                 .frame(width: 200)
                 .multilineTextAlignment(.center)
             
-            Text("(in USD)")
+            Text("(in \(currencyLabelForCostBasis))")
                 .foregroundColor(.gray)
         }
     }
@@ -278,7 +288,10 @@ struct OnboardingView: View {
     // MARK: - Step 5
     private func step5_BTCPriceInput() -> some View {
         VStack(spacing: 16) {
-            Text("Fetched BTC Price (USD): \(fetchedBTCPrice)")
+            // Show fetched price in whichever currency was chosen
+            let currencyLabelForBTCPrice = (currencyPreference == .eur) ? "EUR" : "USD"
+            
+            Text("Fetched BTC Price (\(currencyLabelForBTCPrice)): \(fetchedBTCPrice)")
                 .foregroundColor(.white)
             
             Text("Or type your own:")
@@ -347,8 +360,9 @@ struct OnboardingView: View {
                 }
             }
         }
-        // Defaults to the same currency you picked at Step 3 if "Both" was chosen
         .onAppear {
+            // If "Both" was chosen, default the contribution currency
+            // to whichever was used for the starting balance
             if currencyPreference == .both {
                 simSettings.contributionCurrencyWhenBoth = startingBalanceCurrencyForBoth
             }
@@ -423,8 +437,8 @@ struct OnboardingView: View {
                 }
                 Text("Starting Bal: \(startingBalance, specifier: "%.2f")")
                 
-                Text("Avg. Cost Basis: \(averageCostBasis, specifier: "%.2f") USD")
-                Text("BTC Price: \(finalBTCPrice, specifier: "%.2f") USD")
+                Text("Avg. Cost Basis: \(averageCostBasis, specifier: "%.2f") \(currencyPreference == .eur ? "EUR" : "USD")")
+                Text("BTC Price: \(finalBTCPrice, specifier: "%.2f") \(currencyPreference == .eur ? "EUR" : "USD")")
                 
                 if currencyPreference == .both {
                     Text("Contrib typed in: \(simSettings.contributionCurrencyWhenBoth.rawValue)")
@@ -467,7 +481,6 @@ struct OnboardingView: View {
         inputManager.firstYearContribution = String(contributionPerStep)
         inputManager.subsequentContribution = String(contributionPerStep)
         
-        // Keep whichever currency you picked for "both" contributions
         if currencyPreference == .both {
             simSettings.contributionCurrencyWhenBoth = simSettings.contributionCurrencyWhenBoth
         }
@@ -482,6 +495,7 @@ struct OnboardingView: View {
         UserDefaults.standard.set(finalWeeks, forKey: "savedUserWeeks")
         UserDefaults.standard.set(finalBTCPrice, forKey: "savedInitialBTCPriceUSD")
         
+        // Debug prints
         print("// DEBUG: applySettingsToSim => currencyPreference=\(currencyPreference.rawValue)")
         print("// DEBUG: startingBalance=\(startingBalance)")
         print("// DEBUG: contributionPerStep=\(contributionPerStep)")
@@ -491,6 +505,7 @@ struct OnboardingView: View {
     
     // MARK: - finalBTCPrice
     private var finalBTCPrice: Double {
+        // This value is in whichever currency is currently fetched
         if let typedVal = Double(userBTCPrice), typedVal > 0 {
             return typedVal
         }
@@ -502,15 +517,21 @@ struct OnboardingView: View {
     
     // MARK: - Networking
     private func fetchBTCPriceFromAPI() async {
-        let urlString = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"
+        // Pick which currency to fetch based on user selection
+        // If "Both" or "USD" => fetch USD. If "EUR" => fetch EUR
+        let currencyToFetch = (currencyPreference == .eur) ? "eur" : "usd"
+        let urlString = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=\(currencyToFetch)"
+        
         guard let url = URL(string: urlString) else { return }
+        
         do {
             let (data, _) = try await URLSession.shared.data(from: url)
             struct SimplePriceResponse: Decodable {
                 let bitcoin: [String: Double]
             }
             let decoded = try JSONDecoder().decode(SimplePriceResponse.self, from: data)
-            if let price = decoded.bitcoin["usd"] {
+            
+            if let price = decoded.bitcoin[currencyToFetch] {
                 fetchedBTCPrice = String(format: "%.2f", price)
             } else {
                 fetchedBTCPrice = "N/A"
@@ -518,6 +539,13 @@ struct OnboardingView: View {
         } catch {
             fetchedBTCPrice = "N/A"
         }
+    }
+    
+    // If the user hasn't changed the default averageCostBasis,
+    // update it to the fetched price so it displays by default
+    private func updateAverageCostBasisIfNeeded() {
+        guard averageCostBasis == 58000, let fetchedVal = Double(fetchedBTCPrice) else { return }
+        averageCostBasis = fetchedVal
     }
     
     // MARK: - Titles
