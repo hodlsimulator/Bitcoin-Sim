@@ -146,7 +146,7 @@ class SimulationCoordinator: ObservableObject {
                 return
             }
             
-            // Sort runs by final portfolio
+            // Sort runs by final portfolio (in EUR here, just for ranking)
             let finalRuns = allIterations.map { ($0.last?.portfolioValueEUR ?? Decimal.zero, $0) }
             let sortedRuns = finalRuns.sorted { $0.0 < $1.0 }
             
@@ -157,6 +157,10 @@ class SimulationCoordinator: ObservableObject {
                 let midIndex = firstRun.count / 2
                 print("// DEBUG: partial sample from first run => week1 => BTC=\(firstRun[0].btcPriceUSD), portfolio=\(firstRun[0].portfolioValueEUR)")
                 print("                         => week\(midIndex) => BTC=\(firstRun[midIndex].btcPriceUSD), portfolio=\(firstRun[midIndex].portfolioValueEUR)")
+                // ADDED: Print last week so logs match UI
+                if let lastItem = firstRun.last {
+                    print("// DEBUG: partial sample from first run => last => BTC=\(lastItem.btcPriceUSD), portfolio=\(lastItem.portfolioValueEUR)")
+                }
             }
 
             if !sortedRuns.isEmpty {
@@ -177,12 +181,38 @@ class SimulationCoordinator: ObservableObject {
                     // The composite line used by the UI
                     let medianLineData = self.computeMedianSimulationData(allIterations: allIterations)
                     
-                    // Print the final from that composite line
-                    let medianBTCFinal = medianLineData.last?.btcPriceUSD ?? 0
-                    let medianPortfolioFinal = medianLineData.last?.portfolioValueEUR ?? 0
+                    // Decide which currency (USD or EUR) to show in logs
+                    let medianBTCFinal: Decimal
+                    let medianPortfolioFinal: Decimal
+                    let tenthPortfolioFinal: Decimal
+                    let ninetiethPortfolioFinal: Decimal
                     
-                    print("// DEBUG: Tenth final portfolio => \(tenthRun.last?.portfolioValueEUR ?? 0)")
-                    print("// DEBUG: Ninetieth final portfolio => \(ninetiethRun.last?.portfolioValueEUR ?? 0)")
+                    switch self.simSettings.currencyPreference {
+                    case .usd:
+                        medianBTCFinal       = medianLineData.last?.btcPriceUSD       ?? 0
+                        medianPortfolioFinal = medianLineData.last?.portfolioValueUSD ?? 0
+                        
+                        tenthPortfolioFinal     = tenthRun.last?.portfolioValueUSD     ?? 0
+                        ninetiethPortfolioFinal = ninetiethRun.last?.portfolioValueUSD ?? 0
+                        
+                    case .eur:
+                        medianBTCFinal       = medianLineData.last?.btcPriceEUR       ?? 0
+                        medianPortfolioFinal = medianLineData.last?.portfolioValueEUR ?? 0
+                        
+                        tenthPortfolioFinal     = tenthRun.last?.portfolioValueEUR     ?? 0
+                        ninetiethPortfolioFinal = ninetiethRun.last?.portfolioValueEUR ?? 0
+                        
+                    case .both:
+                        // Example: default to USD for logging if "Both" is selected
+                        medianBTCFinal       = medianLineData.last?.btcPriceUSD       ?? 0
+                        medianPortfolioFinal = medianLineData.last?.portfolioValueUSD ?? 0
+                        
+                        tenthPortfolioFinal     = tenthRun.last?.portfolioValueUSD     ?? 0
+                        ninetiethPortfolioFinal = ninetiethRun.last?.portfolioValueUSD ?? 0
+                    }
+
+                    print("// DEBUG: Tenth final portfolio => \(tenthPortfolioFinal)")
+                    print("// DEBUG: Ninetieth final portfolio => \(ninetiethPortfolioFinal)")
                     print("// DEBUG: medianLineData => \(medianLineData.count) weeks. Final BTC => \(medianBTCFinal), final portfolio => \(medianPortfolioFinal)")
                     
                     // Store data
@@ -359,11 +389,11 @@ class SimulationCoordinator: ObservableObject {
             let allNetBTCHoldings = allAtWeek.map { $0.netBTCHoldings }
             let allContribEUR     = allAtWeek.map { $0.contributionEUR }
             let allFeeEUR         = allAtWeek.map { $0.transactionFeeEUR }
-            let allContribUSD     = allAtWeek.map { $0.contributionUSD }       // <--
-            let allFeeUSD         = allAtWeek.map { $0.transactionFeeUSD }     // <--
+            let allContribUSD     = allAtWeek.map { $0.contributionUSD }
+            let allFeeUSD         = allAtWeek.map { $0.transactionFeeUSD }
             let allNetContribBTC  = allAtWeek.map { $0.netContributionBTC }
             let allWithdrawalEUR  = allAtWeek.map { $0.withdrawalEUR }
-            let allWithdrawalUSD  = allAtWeek.map { $0.withdrawalUSD }         // <--
+            let allWithdrawalUSD  = allAtWeek.map { $0.withdrawalUSD }
 
             // 1) Take median for decimal fields
             let medianBTCPriceUSD       = medianOfDecimalArray(allBTCPriceUSD)
@@ -376,11 +406,11 @@ class SimulationCoordinator: ObservableObject {
             let medianNetBTCHoldings    = medianOfDoubleArray(allNetBTCHoldings)
             let medianContributionEUR   = medianOfDoubleArray(allContribEUR)
             let medianFeeEUR            = medianOfDoubleArray(allFeeEUR)
-            let medianContributionUSD   = medianOfDoubleArray(allContribUSD)   // <--
-            let medianFeeUSD            = medianOfDoubleArray(allFeeUSD)       // <--
+            let medianContributionUSD   = medianOfDoubleArray(allContribUSD)
+            let medianFeeUSD            = medianOfDoubleArray(allFeeUSD)
             let medianNetContributionBTC = medianOfDoubleArray(allNetContribBTC)
             let medianWithdrawalEUR     = medianOfDoubleArray(allWithdrawalEUR)
-            let medianWithdrawalUSD     = medianOfDoubleArray(allWithdrawalUSD) // <--
+            let medianWithdrawalUSD     = medianOfDoubleArray(allWithdrawalUSD)
 
             // 3) Build the aggregated record
             let medianSimData = SimulationData(
@@ -392,12 +422,12 @@ class SimulationCoordinator: ObservableObject {
                 portfolioValueEUR: medianPortfolioValueEUR,
                 portfolioValueUSD: medianPortfolioValueUSD,
                 contributionEUR: medianContributionEUR,
-                contributionUSD: medianContributionUSD,   // <--
+                contributionUSD: medianContributionUSD,
                 transactionFeeEUR: medianFeeEUR,
-                transactionFeeUSD: medianFeeUSD,           // <--
+                transactionFeeUSD: medianFeeUSD,
                 netContributionBTC: medianNetContributionBTC,
                 withdrawalEUR: medianWithdrawalEUR,
-                withdrawalUSD: medianWithdrawalUSD         // <--
+                withdrawalUSD: medianWithdrawalUSD
             )
             
             medianResult.append(medianSimData)
