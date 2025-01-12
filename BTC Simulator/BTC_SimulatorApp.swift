@@ -56,10 +56,9 @@ struct BTCMonteCarloApp: App {
                     NavigationStack {
                         ContentView()
                             .environmentObject(inputManager)
-                            .environmentObject(simSettings)
+                            .environmentObject(simSettings)        // <-- ensures SimulationSettings is available
                             .environmentObject(chartDataCache)
                             .environmentObject(appViewModel)
-                            // Provide the chartSelection environment object here:
                             .environmentObject(chartSelection)
                     }
                     .preferredColorScheme(.dark)
@@ -67,7 +66,7 @@ struct BTCMonteCarloApp: App {
                     NavigationStack {
                         OnboardingView(didFinishOnboarding: $didFinishOnboarding)
                             .environmentObject(inputManager)
-                            .environmentObject(simSettings)
+                            .environmentObject(simSettings)        // <-- ensures SimulationSettings is available
                             .environmentObject(chartDataCache)
                             .environmentObject(appViewModel)
                             .environmentObject(chartSelection)

@@ -406,6 +406,7 @@ func formatPowerOfTenLabel(_ exponent: Int) -> String {
 struct MonteCarloResultsView: View {
     @EnvironmentObject var chartSelection: ChartSelection
     @EnvironmentObject var chartDataCache: ChartDataCache
+    @EnvironmentObject var simSettings: SimulationSettings
     @StateObject private var orientationObserver = OrientationObserver()
     
     @State private var squishedLandscape: UIImage? = nil
@@ -469,10 +470,12 @@ struct MonteCarloResultsView: View {
                             MonteCarloChartView()
                                 .environmentObject(orientationObserver)
                                 .environmentObject(chartDataCache)
+                                .environmentObject(simSettings)
                         } else {
                             PortfolioChartView()
                                 .environmentObject(orientationObserver)
                                 .environmentObject(chartDataCache)
+                                .environmentObject(simSettings)
                         }
                     }
                 }
@@ -486,6 +489,7 @@ struct MonteCarloResultsView: View {
                         MonteCarloChartView()
                             .environmentObject(orientationObserver)
                             .environmentObject(chartDataCache)
+                            .environmentObject(simSettings)
                     }
                 } else {
                     if let portfolioSnapshot = chartDataCache.chartSnapshotPortfolio {
@@ -494,6 +498,7 @@ struct MonteCarloResultsView: View {
                         PortfolioChartView()
                             .environmentObject(orientationObserver)
                             .environmentObject(chartDataCache)
+                            .environmentObject(simSettings)
                     }
                 }
                 
@@ -627,6 +632,7 @@ struct MonteCarloResultsView: View {
                 MonteCarloChartView()
                     .environmentObject(orientationObserver)
                     .environmentObject(chartDataCache)
+                    .environmentObject(simSettings)
                     .frame(width: 800, height: 400)
                     .background(Color.black)
             )
@@ -635,6 +641,7 @@ struct MonteCarloResultsView: View {
                 PortfolioChartView()
                     .environmentObject(orientationObserver)
                     .environmentObject(chartDataCache)
+                    .environmentObject(simSettings)
                     .frame(width: 800, height: 400)
                     .background(Color.black)
             )

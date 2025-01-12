@@ -136,13 +136,33 @@ func runOneFullSimulation(
     seed: UInt64? = nil
 ) -> [SimulationData] {
     
-    struct PrintOnce { static var didPrintFactorSettings: Bool = false }
+    struct PrintOnce {
+        static var didPrintFactorSettings: Bool = false
+        static var didPrintStandardDeviation: Bool = false
+    }
+
     if !PrintOnce.didPrintFactorSettings {
         print("=== FACTOR SETTINGS (once only) ===")
         settings.printAllSettings()
         PrintOnce.didPrintFactorSettings = true
     }
-    
+
+    let parsedSD: Double
+    if let standardDeviationString = settings.inputManager?.standardDeviation {
+        if let sdValue = Double(standardDeviationString) {
+            parsedSD = sdValue
+        } else {
+            parsedSD = 15.0
+        }
+    } else {
+        parsedSD = 15.0
+    }
+
+    if !PrintOnce.didPrintStandardDeviation {
+        print("User-input standard deviation (once): \(parsedSD)")
+        PrintOnce.didPrintStandardDeviation = true
+    }
+
     let firstEURPrice = initialBTCPriceUSD / exchangeRateEURUSD
     let userStartingBalanceBTC: Double
     switch settings.currencyPreference {
@@ -159,7 +179,6 @@ func runOneFullSimulation(
     let logDrift = cagrDecimal / 52.0
 
     let weeklyVol = (annualVolatility / 100.0) / sqrt(52.0)
-    let parsedSD = Double(settings.inputManager?.standardDeviation ?? "15.0") ?? 15.0
     let weeklySD = (parsedSD / 100.0) / sqrt(52.0)
 
     let initialPortfolioEUR = userStartingBalanceBTC * firstEURPrice
@@ -185,27 +204,15 @@ func runOneFullSimulation(
         )
     )
 
-    // Thresholds, contributions, etc.
-    let firstYearContrib  = Double(settings.inputManager?.firstYearContribution ?? "") ?? 0.0
-    let subsequentContrib = Double(settings.inputManager?.subsequentContribution ?? "") ?? 0.0
-    let threshold1        = settings.inputManager?.threshold1 ?? 0.0
-    let withdraw1         = settings.inputManager?.withdrawAmount1 ?? 0.0
-    let threshold2        = settings.inputManager?.threshold2 ?? 0.0
-    let withdraw2         = settings.inputManager?.withdrawAmount2 ?? 0.0
-    let transactionFeePct = 0.006
-
     for week in 2...userWeeks {
-        
         let useHist = settings.useHistoricalSampling
-        let useLog  = settings.useLognormalGrowth
+        let useLog = settings.useLognormalGrowth
         let lumpsum = (!useHist && !useLog)
 
         if lumpsum {
-            // Annual lumpsum
             if week % 52 == 0 {
                 var lumpsumGrowth = cagrDecimal
 
-                // If vol is on, apply a once/year shock
                 if settings.useVolShocks && annualVolatility > 0.0 {
                     let shockVol: Double
                     if useSeededRandom, var localRNG = seededGen {
@@ -214,7 +221,7 @@ func runOneFullSimulation(
                     } else {
                         shockVol = randomNormal(mean: 0, standardDeviation: weeklyVol)
                     }
-                    
+
                     var shockSD: Double = 0
                     if weeklySD > 0 {
                         if useSeededRandom, var rng = seededGen {
@@ -225,23 +232,18 @@ func runOneFullSimulation(
                         }
                         shockSD = max(min(shockSD, 2.0), -1.0)
                     }
-                    
+
                     let combinedShocks = exp(shockVol + shockSD)
                     lumpsumGrowth = (1.0 + lumpsumGrowth) * combinedShocks - 1.0
                 }
-                
-                // Factor toggles
+
                 lumpsumGrowth = applyFactorToggles(baseReturn: lumpsumGrowth, week: week, settings: settings)
-                
-                // Dynamically adjust lumpsum => small cut per toggle
                 let factor = lumpsumAdjustFactor(settings: settings, annualVolatility: annualVolatility)
                 lumpsumGrowth *= factor
-                
                 previousBTCPriceUSD *= (1.0 + lumpsumGrowth)
             }
 
         } else {
-            // Weekly path
             var totalWeeklyReturn = 0.0
             if useHist {
                 totalWeeklyReturn += pickRandomReturn(from: historicalBTCWeeklyReturns)
@@ -271,38 +273,49 @@ func runOneFullSimulation(
                     totalWeeklyReturn += shockSD
                 }
             }
-            
-            // Factor toggles
+
             totalWeeklyReturn = applyFactorToggles(baseReturn: totalWeeklyReturn, week: week, settings: settings)
-            
-            // For weekly path, still do a certain dampening (like 0.46) if you want:
-            // Or you could do your lumpsumAdjustFactor as well.
             let baseShrinkFactor = 0.46
             totalWeeklyReturn *= baseShrinkFactor
-            
             previousBTCPriceUSD *= exp(totalWeeklyReturn)
         }
-        
-        // Safeguard
+
         previousBTCPriceUSD = max(1.0, previousBTCPriceUSD)
         let currentBTCPriceEUR = previousBTCPriceUSD / exchangeRateEURUSD
-        
-        let isFirstYear  = (week <= 52)
-        let typedContrib = isFirstYear ? firstYearContrib : subsequentContrib
-        
-        let feeUSD = typedContrib * transactionFeePct
+
+        // Corrected Contribution Logic
+        let isFirstYear = (week <= 52)
+        let typedContrib: Double
+        if isFirstYear {
+            if let firstYearContributionString = settings.inputManager?.firstYearContribution,
+               let firstYearContribution = Double(firstYearContributionString) {
+                typedContrib = firstYearContribution
+            } else {
+                typedContrib = 0.0
+            }
+        } else {
+            if let subsequentContributionString = settings.inputManager?.subsequentContribution,
+               let subsequentContribution = Double(subsequentContributionString) {
+                typedContrib = subsequentContribution
+            } else {
+                typedContrib = 0.0
+            }
+        }
+
+        let feeUSD = typedContrib * 0.006
         let netUSD = typedContrib - feeUSD
         let netBTC = netUSD / previousBTCPriceUSD
 
         let hypotheticalHoldings = previousBTCHoldings + netBTC
-        let hypotheticalValueEUR  = hypotheticalHoldings * currentBTCPriceEUR
-        
+        let hypotheticalValueEUR = hypotheticalHoldings * currentBTCPriceEUR
         var withdrawalEUR = 0.0
-        if hypotheticalValueEUR > threshold2 {
-            withdrawalEUR = withdraw2
-        } else if hypotheticalValueEUR > threshold1 {
-            withdrawalEUR = withdraw1
+
+        if hypotheticalValueEUR > settings.inputManager?.threshold2 ?? 0.0 {
+            withdrawalEUR = settings.inputManager?.withdrawAmount2 ?? 0.0
+        } else if hypotheticalValueEUR > settings.inputManager?.threshold1 ?? 0.0 {
+            withdrawalEUR = settings.inputManager?.withdrawAmount1 ?? 0.0
         }
+
         let withdrawalBTC = withdrawalEUR / currentBTCPriceEUR
         let finalHoldings = max(0.0, hypotheticalHoldings - withdrawalBTC)
 
