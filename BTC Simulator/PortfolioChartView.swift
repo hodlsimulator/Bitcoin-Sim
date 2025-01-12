@@ -9,153 +9,122 @@ import SwiftUI
 import Charts
 
 /// This chart is nearly identical to the BTC one, but uses `portfolioValueEUR` data.
+/// It now includes dynamic X and Y logic, while clamping invalid values to avoid crashes.
 struct PortfolioChartView: View {
     @EnvironmentObject var orientationObserver: OrientationObserver
     @EnvironmentObject var chartDataCache: ChartDataCache
+    @EnvironmentObject var simSettings: SimulationSettings
     
+    /// Vertical "squish" factor (1.0 = no squish)
+    private let scaleY: CGFloat = 0.92
+
     var body: some View {
         let isLandscape = orientationObserver.isLandscape
-        
-        // Pull the portfolio runs from the cache
+
+        // 1) Grab the portfolio runs
         let simulations = chartDataCache.portfolioRuns ?? []
-        
-        // 1) Compute min & max from all points
-        let allValues = simulations.flatMap { $0.points.map { $0.value } }
-        let minVal = allValues.min() ?? Decimal(1)
-        let maxVal = allValues.max() ?? Decimal(2)
-        
-        // 2) Convert them to Double
-        let minDouble = NSDecimalNumber(decimal: minVal).doubleValue
-        let maxDouble = NSDecimalNumber(decimal: maxVal).doubleValue
-        
-        // 3) Clamp so the log scale never sees 0 or negative
-        let minY = max(1.0, minDouble)
-        let maxY = max(minY + 1.0, maxDouble)
-        
-        let _ = print("// DEBUG: ADDED PRINT => PortfolioChartView loaded. isLandscape=\(isLandscape)")
-        let _ = print("// DEBUG: ADDED PRINT => portfolioRuns count = \(simulations.count)")
-        
-        Group {
-            GeometryReader { geo in
-                ZStack {
-                    Color.black.ignoresSafeArea()
+        let allValues = simulations.flatMap { $0.points.map(\.value) }
 
-                    if isLandscape {
-                        // LANDSCAPE LAYOUT
-                        ZStack {
-                            Chart {
-                                simulationLines(simulations: simulations)
-                                medianLines(simulations: simulations)
-                            }
-                            .chartLegend(.hidden)
-                            
-                            // 4) Use clamped Y domain
-                            .chartXScale(domain: 0.0...20.0, type: .linear)
-                            .chartYScale(domain: minY...maxY, type: .log)
-                            
-                            .chartXAxis {
-                                let yearMarkers = [5.0, 10.0, 15.0, 20.0]
-                                AxisMarks(values: yearMarkers) { axisValue in
-                                    AxisGridLine(centered: false)
-                                        .foregroundStyle(.white.opacity(0.3))
-                                    AxisTick(centered: false)
-                                        .foregroundStyle(.white.opacity(0.3))
-                                    AxisValueLabel(centered: false) {
-                                        if let yearVal = axisValue.as(Double.self) {
-                                            Text("\(Int(yearVal))")
-                                                .foregroundColor(.white)
-                                        }
-                                    }
-                                }
-                            }
-                            .chartYAxis {
-                                AxisMarks(position: .leading) { axisValue in
-                                    AxisGridLine()
-                                        .foregroundStyle(.white.opacity(0.3))
-                                    AxisTick()
-                                        .foregroundStyle(.white.opacity(0.3))
-                                    AxisValueLabel {
-                                        if let doubleVal = axisValue.as(Double.self) {
-                                            let decimalVal = Decimal(doubleVal)
-                                            Text(formatSuffix(decimalVal))
-                                                .foregroundColor(.white)
-                                        }
-                                    }
-                                }
-                            }
-                            // Make the chart 10% wider; anchor right
-                            .frame(width: geo.size.width * 1.1, height: geo.size.height)
-                            .offset(x: -(geo.size.width * 0.04))
-                            .scaleEffect(x: 1.0, y: 0.98, anchor: .bottom)
-                        }
-                    } else {
-                        // PORTRAIT LAYOUT
-                        VStack {
-                            Spacer().frame(height: 30)
-                            
-                            Chart {
-                                simulationLines(simulations: simulations)
-                                medianLines(simulations: simulations)
-                            }
-                            .chartLegend(.hidden)
-                            // 4) Use clamped Y domain
-                            .chartXScale(domain: 0.0...20.0, type: .linear)
-                            .chartYScale(domain: minY...maxY, type: .log)
-                            
-                            .chartXAxis {
-                                let yearMarkers = [5.0, 10.0, 15.0, 20.0]
-                                AxisMarks(values: yearMarkers) { axisValue in
-                                    AxisGridLine(centered: false)
-                                        .foregroundStyle(.white.opacity(0.3))
-                                    AxisTick(centered: false)
-                                        .foregroundStyle(.white.opacity(0.3))
-                                    AxisValueLabel(centered: false) {
-                                        if let yearVal = axisValue.as(Double.self) {
-                                            Text("\(Int(yearVal))")
-                                                .foregroundColor(.white)
-                                        }
-                                    }
-                                }
-                            }
-                            .chartYAxis {
-                                AxisMarks(position: .leading) { axisValue in
-                                    AxisGridLine()
-                                        .foregroundStyle(.white.opacity(0.3))
-                                    AxisTick()
-                                        .foregroundStyle(.white.opacity(0.3))
-                                    AxisValueLabel {
-                                        if let doubleVal = axisValue.as(Double.self) {
-                                            let decimalVal = Decimal(doubleVal)
-                                            Text(formatSuffix(decimalVal))
-                                                .foregroundColor(.white)
-                                        }
-                                    }
-                                }
-                            }
-                            // Slight vertical squish, pinned at bottom
-                            .scaleEffect(x: 1.0, y: 0.95, anchor: .bottom)
-                            .frame(width: geo.size.width, height: geo.size.height * 0.94)
+        // 2) Convert all min & max to Double
+        var rawMin = allValues.min().map { NSDecimalNumber(decimal: $0).doubleValue } ?? 1.0
+        var rawMax = allValues.max().map { NSDecimalNumber(decimal: $0).doubleValue } ?? 2.0
 
-                            Spacer().frame(height: 10)
+        // 3) Clamp any invalid or non-positive values so log10 won't crash
+        if !rawMin.isFinite || rawMin <= 0 {
+            rawMin = 1.0
+        }
+        if !rawMax.isFinite || rawMax <= 0 {
+            rawMax = rawMin + 1.0
+        }
+
+        // 4) Compute log-based domain bounds
+        var bottomExp = floor(log10(rawMin))
+        var topExp    = floor(log10(rawMax))
+        if rawMax >= pow(10.0, topExp) {
+            topExp += 1
+        }
+
+        // 5) Construct the domain from powers of ten
+        let domainMin = pow(10.0, bottomExp)
+        let domainMax = pow(10.0, topExp)
+
+        // If you want at least 1.0 for the bottom:
+        let finalDomainMin = max(1.0, domainMin)
+        // Ensure we have at least some range
+        let finalDomainMax = max(finalDomainMin + 1.0, domainMax)
+
+        // 6) Build power-of-ten tick marks for Y
+        let intBottom = Int(floor(log10(finalDomainMin)))
+        let intTop    = Int(floor(log10(finalDomainMax)))
+        let yTickValues = (intBottom...intTop).map { pow(10.0, Double($0)) }
+
+        // 7) Convert weeks -> years for X scale & choose stride
+        let totalWeeks = Double(simSettings.userWeeks)
+        let totalYears = totalWeeks / 52.0
+        let xStride = dynamicXStride(for: totalYears)
+
+        return GeometryReader { geo in
+            ZStack {
+                Color.black.ignoresSafeArea()
+
+                VStack(spacing: 0) {
+                    Chart {
+                        // Below calls rely on your existing helper functions
+                        // (simulationLines, medianLines) — don't redeclare them here.
+                        simulationLines(simulations: simulations)
+                        medianLines(simulations: simulations)
+                    }
+                    .chartLegend(.hidden)
+                    .chartXScale(domain: 0.0...totalYears, type: .linear)
+                    .chartYScale(domain: finalDomainMin...finalDomainMax, type: .log)
+
+                    .chartPlotStyle { plotArea in
+                        plotArea
+                            // Extra padding so data doesn’t overlap x-axis
+                            .padding(.top, 0)
+                            .padding(.bottom, 20)
+                    }
+
+                    // Y-axis => powers of ten
+                    .chartYAxis {
+                        AxisMarks(position: .leading, values: yTickValues) { axisValue in
+                            AxisGridLine().foregroundStyle(.white.opacity(0.3))
+                            AxisTick().foregroundStyle(.white.opacity(0.3))
+                            AxisValueLabel {
+                                if let dblVal = axisValue.as(Double.self) {
+                                    let exponent = Int(log10(dblVal))
+                                    // formatPowerOfTenLabel is also presumably declared elsewhere
+                                    Text(formatPowerOfTenLabel(exponent))
+                                        .foregroundColor(.white)
+                                }
+                            }
                         }
                     }
-                }
-            }
-            .onAppear {
-                // Debug printing the portfolio runs
-                let count = simulations.count
-                print("// DEBUG: ADDED PRINT => onAppear: portfolioRuns count = \(count)")
-                
-                // Print a small sample from each of the first two runs
-                for (idx, run) in simulations.prefix(2).enumerated() {
-                    if !run.points.isEmpty {
-                        let snippet = run.points.prefix(2).map {
-                            "week=\($0.week), val=\($0.value)"
+
+                    // X-axis => months/years
+                    .chartXAxis {
+                        AxisMarks(values: Array(stride(from: 0.0, through: totalYears, by: xStride))) { axisValue in
+                            AxisGridLine().foregroundStyle(.white.opacity(0.3))
+                            AxisTick().foregroundStyle(.white.opacity(0.3))
+                            AxisValueLabel {
+                                if let dblVal = axisValue.as(Double.self), dblVal > 0 {
+                                    // For short time spans, show months
+                                    if totalYears <= 2.0 {
+                                        Text("\(Int(dblVal * 12))M")
+                                            .foregroundColor(.white)
+                                    } else {
+                                        // For longer, show years
+                                        Text("\(Int(dblVal))Y")
+                                            .foregroundColor(.white)
+                                    }
+                                }
+                            }
                         }
-                        print("// DEBUG: [\(idx)] sample => \(snippet.joined(separator: " | "))")
-                    } else {
-                        print("// DEBUG: [\(idx)] run => no points")
                     }
+
+                    // Slightly squash vertically, anchored at bottom
+                    .scaleEffect(x: 1.0, y: scaleY, anchor: .bottom)
+                    .frame(width: geo.size.width, height: geo.size.height)
                 }
             }
         }
@@ -163,32 +132,23 @@ struct PortfolioChartView: View {
     }
 }
 
-// MARK: - Local median line calculator
-private func computeMedianLine(for runs: [SimulationRun]) -> [WeekPoint] {
-    guard let firstRun = runs.first else { return [] }
-    let weeksCount = firstRun.points.count
-    var result: [WeekPoint] = []
-    
-    for w in 0..<weeksCount {
-        let allValuesAtW = runs.compactMap { run -> Decimal? in
-            guard w < run.points.count else { return nil }
-            return run.points[w].value
-        }
-        if allValuesAtW.isEmpty { continue }
-        
-        let sortedVals = allValuesAtW.sorted()
-        let mid = sortedVals.count / 2
-        let median: Decimal
-        if sortedVals.count.isMultiple(of: 2) {
-            median = (sortedVals[mid] + sortedVals[mid - 1]) / Decimal(2)
-        } else {
-            median = sortedVals[mid]
-        }
-        
-        result.append(WeekPoint(
-            week: firstRun.points[w].week,
-            value: median
-        ))
+// MARK: - Helper for choosing an X-axis stride
+/// Avoid too many X ticks by picking a decent stride.
+private func dynamicXStride(for totalYears: Double) -> Double {
+    switch totalYears {
+    case ..<1.01:
+        return 0.25 // ~3-month intervals
+    case ..<2.01:
+        return 0.5  // ~6-month intervals
+    case ..<5.01:
+        return 1.0
+    case ..<10.01:
+        return 2.0
+    case ..<25.01:
+        return 5.0
+    case ..<50.01:
+        return 10.0
+    default:
+        return 25.0
     }
-    return result
 }
