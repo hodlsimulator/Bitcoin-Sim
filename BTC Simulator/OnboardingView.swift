@@ -21,11 +21,9 @@ enum PreferredCurrency: String, CaseIterable, Identifiable {
 }
 
 struct OnboardingView: View {
-    // Pull in your SimulationSettings & PersistentInputManager from Environment
     @EnvironmentObject var simSettings: SimulationSettings
     @EnvironmentObject var inputManager: PersistentInputManager
     
-    // Bind to know when the user has finished onboarding
     @Binding var didFinishOnboarding: Bool
     
     // MARK: - Steps 0..8
@@ -37,7 +35,7 @@ struct OnboardingView: View {
     // Step 1: How many total periods
     @State private var totalPeriods: Int = 1040
     
-    // Step 2: Which currency to display (USD/EUR/Both)
+    // Step 2: Which currency to display
     @State private var currencyPreference: PreferredCurrency = .usd
     
     // Step 3: Starting Balance
@@ -61,19 +59,14 @@ struct OnboardingView: View {
     @State private var withdraw2: Double = 0.0
     
     // MARK: - Button positioning
-    // For steps 0..7 => Next button at 260
-    // For step=8 => Finish button can differ for "both" vs normal
     private let bottomPaddingNext: CGFloat       = 260   // steps 0..7
     private let bottomPaddingFinish: CGFloat     = 150   // step 8 if not both
     private let bottomPaddingFinishBoth: CGFloat = 110   // step 8 if both
     
-    // Decide the bottom padding for the Next/Finish button
     private var bottomPaddingForStep: CGFloat {
         if currentStep != 8 {
-            // Not final => Next button
             return bottomPaddingNext
         } else {
-            // Step 8 => Finish
             if currencyPreference == .both {
                 return bottomPaddingFinishBoth
             } else {
@@ -84,7 +77,6 @@ struct OnboardingView: View {
     
     var body: some View {
         ZStack {
-            // Gradient background
             LinearGradient(
                 gradient: Gradient(colors: [Color.black, Color(white: 0.15), Color.black]),
                 startPoint: .topLeading,
@@ -92,7 +84,6 @@ struct OnboardingView: View {
             )
             .ignoresSafeArea()
             
-            // Main scrollable content
             ScrollView {
                 VStack(spacing: 20) {
                     Spacer().frame(height: 40)
@@ -112,7 +103,6 @@ struct OnboardingView: View {
                             .padding(.top, 2)
                     }
                     
-                    // Switch on currentStep
                     switch currentStep {
                     case 0:
                         step0_PeriodFrequency()
@@ -139,13 +129,11 @@ struct OnboardingView: View {
                 .frame(maxWidth: .infinity)
                 .background(Color.clear)
                 .contentShape(Rectangle())
-                // Dismiss keyboard on background tap
                 .onTapGesture {
                     hideKeyboard()
                 }
             }
         }
-        // Back arrow if step > 0
         .overlay(
             Group {
                 if currentStep > 0 {
@@ -164,7 +152,6 @@ struct OnboardingView: View {
             },
             alignment: .topLeading
         )
-        // Next or Finish button
         .overlay(
             Button(currentStep == 8 ? "Finish" : "Next") {
                 onNextTapped()
@@ -179,17 +166,9 @@ struct OnboardingView: View {
             alignment: .bottom
         )
         .ignoresSafeArea(.keyboard, edges: .bottom)
-        // If you fetch a live BTC price:
         .task {
             await fetchBTCPriceFromAPI()
         }
-        // If you want to force brand-new defaults each time, keep .onAppear commented out
-        /*
-        .onAppear {
-            // e.g. if (contributionPerStep == 0.0) then load from old inputManager
-            // or comment out to always use the new defaults
-        }
-        */
     }
     
     // MARK: - Step 0
@@ -232,12 +211,13 @@ struct OnboardingView: View {
             Text("Which currency do you want to display?")
                 .foregroundColor(.white)
             
-            Picker("ContribCurrency", selection: $simSettings.contributionCurrencyWhenBoth) {
+            Picker("Currency", selection: $currencyPreference) {
                 Text("USD").tag(PreferredCurrency.usd)
                 Text("EUR").tag(PreferredCurrency.eur)
+                Text("Both").tag(PreferredCurrency.both)
             }
             .pickerStyle(.segmented)
-            .frame(width: 200)
+            .frame(width: 300)
         }
     }
     
@@ -315,7 +295,7 @@ struct OnboardingView: View {
         }
     }
     
-    // MARK: - Step 6 (Single contribution)
+    // MARK: - Step 6
     private func step6_Contributions() -> some View {
         let frequencyWord = (chosenPeriodUnit == .weeks) ? "weekly" : "monthly"
         
@@ -344,7 +324,6 @@ struct OnboardingView: View {
                         .foregroundColor(.white)
                         .frame(width: 80)
                 }
-                
             } else {
                 Spacer().frame(height: 20)
                 
@@ -368,9 +347,15 @@ struct OnboardingView: View {
                 }
             }
         }
+        // Defaults to the same currency you picked at Step 3 if "Both" was chosen
+        .onAppear {
+            if currencyPreference == .both {
+                simSettings.contributionCurrencyWhenBoth = startingBalanceCurrencyForBoth
+            }
+        }
     }
     
-    // MARK: - Step 7: Withdrawals
+    // MARK: - Step 7
     private func step7_Withdrawals() -> some View {
         VStack(spacing: 16) {
             Text("Withdrawal Rules")
@@ -389,7 +374,6 @@ struct OnboardingView: View {
                 Text("→ withdraw:")
                     .foregroundColor(.white)
                 
-                // Default to 0.0
                 TextField("0.0", value: $withdraw1, format: .number)
                     .keyboardType(.decimalPad)
                     .padding(8)
@@ -411,7 +395,6 @@ struct OnboardingView: View {
                 Text("→ withdraw:")
                     .foregroundColor(.white)
                 
-                // Default to 0.0
                 TextField("0.0", value: $withdraw2, format: .number)
                     .keyboardType(.decimalPad)
                     .padding(8)
@@ -456,12 +439,10 @@ struct OnboardingView: View {
     
     // MARK: - onNextTapped
     private func onNextTapped() {
-        // If final step => finish
         if currentStep == 8 {
             applySettingsToSim()
             didFinishOnboarding = true
         } else {
-            // Otherwise go to the next
             withAnimation {
                 currentStep += 1
             }
@@ -470,45 +451,37 @@ struct OnboardingView: View {
     
     // MARK: - Apply settings
     private func applySettingsToSim() {
-        // Convert chosen period to total weeks
         let finalWeeks = (chosenPeriodUnit == .weeks) ? totalPeriods : totalPeriods * 4
         simSettings.userWeeks = finalWeeks
         
-        // Final BTC price
         simSettings.initialBTCPriceUSD = finalBTCPrice
         
-        // If "both," record which currency the user typed for starting balance
         if currencyPreference == .both {
             simSettings.startingBalanceCurrencyWhenBoth = startingBalanceCurrencyForBoth
         }
         simSettings.startingBalance = startingBalance
         simSettings.averageCostBasis = averageCostBasis
         
-        // Overall currency preference
         simSettings.currencyPreference = currencyPreference
         
-        // Single contribution => store in inputManager
         inputManager.firstYearContribution = String(contributionPerStep)
         inputManager.subsequentContribution = String(contributionPerStep)
         
+        // Keep whichever currency you picked for "both" contributions
         if currencyPreference == .both {
-            // Also store which currency user typed their contribution in
             simSettings.contributionCurrencyWhenBoth = simSettings.contributionCurrencyWhenBoth
         }
         
-        // Thresholds & withdrawal
         inputManager.threshold1 = threshold1
         inputManager.withdrawAmount1 = withdraw1
         inputManager.threshold2 = threshold2
         inputManager.withdrawAmount2 = withdraw2
         
-        // Optionally persist
         UserDefaults.standard.set(startingBalance, forKey: "savedStartingBalance")
         UserDefaults.standard.set(averageCostBasis, forKey: "savedAverageCostBasis")
         UserDefaults.standard.set(finalWeeks, forKey: "savedUserWeeks")
         UserDefaults.standard.set(finalBTCPrice, forKey: "savedInitialBTCPriceUSD")
         
-        // Debug
         print("// DEBUG: applySettingsToSim => currencyPreference=\(currencyPreference.rawValue)")
         print("// DEBUG: startingBalance=\(startingBalance)")
         print("// DEBUG: contributionPerStep=\(contributionPerStep)")
@@ -587,4 +560,3 @@ extension View {
         )
     }
 }
-
