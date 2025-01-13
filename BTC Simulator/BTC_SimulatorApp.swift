@@ -20,21 +20,7 @@ struct BTCMonteCarloApp: App {
     @StateObject private var chartDataCache = ChartDataCache()
     @StateObject private var appViewModel = AppViewModel()
 
-    // NEW: This holds the currently selected chart
     @StateObject private var chartSelection = ChartSelection()
-
-    init() {
-        let appearance = UINavigationBarAppearance()
-        appearance.configureWithOpaqueBackground()
-        appearance.backgroundColor = UIColor.black
-        appearance.titleTextAttributes = [.foregroundColor: UIColor.white]
-
-        UINavigationBar.appearance().standardAppearance = appearance
-        UINavigationBar.appearance().scrollEdgeAppearance = appearance
-        UINavigationBar.appearance().compactAppearance = appearance
-        UINavigationBar.appearance().isTranslucent = false
-        UINavigationBar.appearance().tintColor = .white
-    }
 
     var body: some Scene {
         WindowGroup {
@@ -56,7 +42,7 @@ struct BTCMonteCarloApp: App {
                     NavigationStack {
                         ContentView()
                             .environmentObject(inputManager)
-                            .environmentObject(simSettings)        // <-- ensures SimulationSettings is available
+                            .environmentObject(simSettings)
                             .environmentObject(chartDataCache)
                             .environmentObject(appViewModel)
                             .environmentObject(chartSelection)
@@ -66,7 +52,7 @@ struct BTCMonteCarloApp: App {
                     NavigationStack {
                         OnboardingView(didFinishOnboarding: $didFinishOnboarding)
                             .environmentObject(inputManager)
-                            .environmentObject(simSettings)        // <-- ensures SimulationSettings is available
+                            .environmentObject(simSettings)
                             .environmentObject(chartDataCache)
                             .environmentObject(appViewModel)
                             .environmentObject(chartSelection)
