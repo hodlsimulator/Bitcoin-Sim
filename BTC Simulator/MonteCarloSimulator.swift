@@ -331,10 +331,12 @@ func runOneFullSimulation(
                 btcPriceEUR: Decimal(currentBTCPriceEUR),
                 portfolioValueEUR: Decimal(portfolioEUR),
                 portfolioValueUSD: Decimal(portfolioUSD),
+                // Store the actual contribution
                 contributionEUR: 0.0,
-                contributionUSD: 0.0,
+                contributionUSD: typedContrib,
+                // Also store the fee if you’d like
                 transactionFeeEUR: 0.0,
-                transactionFeeUSD: 0.0,
+                transactionFeeUSD: feeUSD,
                 netContributionBTC: netBTC,
                 withdrawalEUR: withdrawalEUR,
                 withdrawalUSD: withdrawalEUR / exchangeRateEURUSD
