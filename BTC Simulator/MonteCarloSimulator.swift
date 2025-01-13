@@ -51,25 +51,20 @@ private func lumpsumAdjustFactor(
     settings: SimulationSettings,
     annualVolatility: Double
 ) -> Double {
-    // Start at 1.0 => no dampening at all
     var factor = 1.0
     var toggles = 0
     
-    // 1) Approx increment for volatility
-    //    e.g. 0–5% => toggles = 0
-    //         5–10% => toggles = 1
-    //         10–15% => toggles = 2
-    //         etc.
+    // (1) Approx increment for volatility
     if annualVolatility > 5.0 {
         toggles += Int((annualVolatility - 5.0) / 5.0) + 1
     }
     
-    // 2) If volShocks is on (for lumpsum), bump toggles by 1
+    // (2) If volShocks is on (for lumpsum), bump toggles by 1
     if settings.useVolShocks {
         toggles += 1
     }
     
-    // 3) If any bullish or bearish factor is on, bump toggles by 1
+    // (3) If any bullish or bearish factor is on, bump toggles by 1
     let bullishCount = [
         settings.useHalving,
         settings.useInstitutionalDemand,
@@ -101,19 +96,18 @@ private func lumpsumAdjustFactor(
         toggles += 1
     }
     
-    // For each toggle, cut lumpsum growth by 2% (adjust to taste)
-    // So if toggles = 5 => lumpsumGrowth * 0.90 => a 10% cut
-    let maxCutPerToggle = 0.02 // 2%
+    // For each toggle, cut lumpsum growth by 2%
+    let maxCutPerToggle = 0.02
     let totalCut = Double(toggles) * maxCutPerToggle
-    
     factor -= totalCut
-    // Don’t drop below 80% => lumpsumGrowth * 0.80
+    
+    // Don’t drop below 80%
     factor = max(factor, 0.80)
     
     return factor
 }
 
-/// Our old “dampen outliers” approach — you can keep or remove
+/// “Dampen outliers” approach using atan
 func dampenArctan(_ rawReturn: Double) -> Double {
     let factor = 3.0
     let scaled = rawReturn * factor
@@ -141,19 +135,18 @@ func runOneFullSimulation(
         static var didPrintStandardDeviation: Bool = false
     }
 
+    // Print factor settings once
     if !PrintOnce.didPrintFactorSettings {
         print("=== FACTOR SETTINGS (once only) ===")
         settings.printAllSettings()
         PrintOnce.didPrintFactorSettings = true
     }
 
+    // Get user-specified or default standard deviation
     let parsedSD: Double
-    if let standardDeviationString = settings.inputManager?.standardDeviation {
-        if let sdValue = Double(standardDeviationString) {
-            parsedSD = sdValue
-        } else {
-            parsedSD = 15.0
-        }
+    if let standardDeviationString = settings.inputManager?.standardDeviation,
+       let sdValue = Double(standardDeviationString) {
+        parsedSD = sdValue
     } else {
         parsedSD = 15.0
     }
@@ -163,7 +156,10 @@ func runOneFullSimulation(
         PrintOnce.didPrintStandardDeviation = true
     }
 
+    // Convert the USD price to EUR
     let firstEURPrice = initialBTCPriceUSD / exchangeRateEURUSD
+    
+    // Convert user’s starting balance to BTC, based on currency
     let userStartingBalanceBTC: Double
     switch settings.currencyPreference {
     case .usd:
@@ -175,15 +171,19 @@ func runOneFullSimulation(
     var previousBTCHoldings = userStartingBalanceBTC
     var previousBTCPriceUSD = initialBTCPriceUSD
     
+    // Lognormal growth
     let cagrDecimal = annualCAGR / 100.0
-    let logDrift = cagrDecimal / 52.0
+    let logDrift    = cagrDecimal / 52.0
 
+    // Weekly volatility as fraction
     let weeklyVol = (annualVolatility / 100.0) / sqrt(52.0)
-    let weeklySD = (parsedSD / 100.0) / sqrt(52.0)
+    let weeklySD  = (parsedSD / 100.0) / sqrt(52.0)
 
+    // Initial portfolio
     let initialPortfolioEUR = userStartingBalanceBTC * firstEURPrice
     let initialPortfolioUSD = userStartingBalanceBTC * initialBTCPriceUSD
 
+    // Results array
     var results: [SimulationData] = []
     results.append(
         SimulationData(
@@ -204,16 +204,19 @@ func runOneFullSimulation(
         )
     )
 
+    // Main loop
     for week in 2...userWeeks {
         let useHist = settings.useHistoricalSampling
-        let useLog = settings.useLognormalGrowth
+        let useLog  = settings.useLognormalGrowth
         let lumpsum = (!useHist && !useLog)
 
+        // Lump sum => once per year
         if lumpsum {
             if week % 52 == 0 {
                 var lumpsumGrowth = cagrDecimal
 
                 if settings.useVolShocks && annualVolatility > 0.0 {
+                    // Vol shock
                     let shockVol: Double
                     if useSeededRandom, var localRNG = seededGen {
                         shockVol = seededRandomNormal(mean: 0, stdDev: weeklyVol, rng: &localRNG)
@@ -222,6 +225,7 @@ func runOneFullSimulation(
                         shockVol = randomNormal(mean: 0, standardDeviation: weeklyVol)
                     }
 
+                    // Additional standard deviation shock
                     var shockSD: Double = 0
                     if weeklySD > 0 {
                         if useSeededRandom, var rng = seededGen {
@@ -233,6 +237,7 @@ func runOneFullSimulation(
                         shockSD = max(min(shockSD, 2.0), -1.0)
                     }
 
+                    // Combine them => lumpsumGrowth = (1 + lumpsumGrowth) * e^(shockVol+shockSD) - 1
                     let combinedShocks = exp(shockVol + shockSD)
                     lumpsumGrowth = (1.0 + lumpsumGrowth) * combinedShocks - 1.0
                 }
@@ -244,6 +249,7 @@ func runOneFullSimulation(
             }
 
         } else {
+            // Weekly approach => random draws
             var totalWeeklyReturn = 0.0
             if useHist {
                 totalWeeklyReturn += pickRandomReturn(from: historicalBTCWeeklyReturns)
@@ -252,6 +258,7 @@ func runOneFullSimulation(
                 totalWeeklyReturn += logDrift
             }
             if settings.useVolShocks {
+                // Vol shock
                 let shockVol: Double
                 if useSeededRandom, var localRNG = seededGen {
                     shockVol = seededRandomNormal(mean: 0, stdDev: weeklyVol, rng: &localRNG)
@@ -261,6 +268,7 @@ func runOneFullSimulation(
                 }
                 totalWeeklyReturn += shockVol
 
+                // Additional standard deviation shock
                 if weeklySD > 0 {
                     var shockSD: Double
                     if useSeededRandom, var rng = seededGen {
@@ -275,53 +283,92 @@ func runOneFullSimulation(
             }
 
             totalWeeklyReturn = applyFactorToggles(baseReturn: totalWeeklyReturn, week: week, settings: settings)
+            // Original code had 0.46 as a “shrink factor”
             let baseShrinkFactor = 0.46
             totalWeeklyReturn *= baseShrinkFactor
             previousBTCPriceUSD *= exp(totalWeeklyReturn)
         }
 
+        // Don’t let price go below $1
         previousBTCPriceUSD = max(1.0, previousBTCPriceUSD)
         let currentBTCPriceEUR = previousBTCPriceUSD / exchangeRateEURUSD
 
-        // Corrected Contribution Logic
+        // Figure out typed contributions
         let isFirstYear = (week <= 52)
-        let typedContrib: Double
+        var typedContrib = 0.0
         if isFirstYear {
             if let firstYearContributionString = settings.inputManager?.firstYearContribution,
-               let firstYearContribution = Double(firstYearContributionString) {
-                typedContrib = firstYearContribution
-            } else {
-                typedContrib = 0.0
+               let val = Double(firstYearContributionString) {
+                typedContrib = val
             }
         } else {
             if let subsequentContributionString = settings.inputManager?.subsequentContribution,
-               let subsequentContribution = Double(subsequentContributionString) {
-                typedContrib = subsequentContribution
-            } else {
-                typedContrib = 0.0
+               let val = Double(subsequentContributionString) {
+                typedContrib = val
             }
         }
 
-        let feeUSD = typedContrib * 0.006
-        let netUSD = typedContrib - feeUSD
-        let netBTC = netUSD / previousBTCPriceUSD
+        // Split for USD / EUR / Both
+        var typedContribUSD: Double = 0.0
+        var typedContribEUR: Double = 0.0
+        var netBTC             = 0.0
+        var feeUSD: Double     = 0.0
+        var feeEUR: Double     = 0.0
 
+        switch settings.currencyPreference {
+        case .usd:
+            // Contribution is in USD
+            typedContribUSD = typedContrib
+            feeUSD = typedContribUSD * 0.006
+            let netUSD = typedContribUSD - feeUSD
+            netBTC = netUSD / previousBTCPriceUSD
+
+        case .eur:
+            // Contribution is in EUR
+            typedContribEUR = typedContrib
+            feeEUR = typedContribEUR * 0.006
+            let netEUR = typedContribEUR - feeEUR
+            netBTC = netEUR / currentBTCPriceEUR
+
+        case .both:
+            // Use whichever currency is selected by user
+            if settings.contributionCurrencyWhenBoth == .eur {
+                typedContribEUR = typedContrib
+                feeEUR = typedContribEUR * 0.006
+                let netEUR = typedContribEUR - feeEUR
+                netBTC = netEUR / currentBTCPriceEUR
+            } else {
+                typedContribUSD = typedContrib
+                feeUSD = typedContribUSD * 0.006
+                let netUSD = typedContribUSD - feeUSD
+                netBTC = netUSD / previousBTCPriceUSD
+            }
+        }
+
+        // Hypothetical holdings => check if threshold triggered
         let hypotheticalHoldings = previousBTCHoldings + netBTC
-        let hypotheticalValueEUR = hypotheticalHoldings * currentBTCPriceEUR
-        var withdrawalEUR = 0.0
-
-        if hypotheticalValueEUR > settings.inputManager?.threshold2 ?? 0.0 {
+        let hypotheticalValueEUR  = hypotheticalHoldings * currentBTCPriceEUR
+        var withdrawalEUR         = 0.0
+        
+        if hypotheticalValueEUR > (settings.inputManager?.threshold2 ?? 0.0) {
             withdrawalEUR = settings.inputManager?.withdrawAmount2 ?? 0.0
-        } else if hypotheticalValueEUR > settings.inputManager?.threshold1 ?? 0.0 {
+        } else if hypotheticalValueEUR > (settings.inputManager?.threshold1 ?? 0.0) {
             withdrawalEUR = settings.inputManager?.withdrawAmount1 ?? 0.0
         }
 
+        // Subtract withdrawal
         let withdrawalBTC = withdrawalEUR / currentBTCPriceEUR
         let finalHoldings = max(0.0, hypotheticalHoldings - withdrawalBTC)
 
+        // Final portfolio
         let portfolioEUR = finalHoldings * currentBTCPriceEUR
         let portfolioUSD = finalHoldings * previousBTCPriceUSD
+        
+        // Store net contribution in the final data
+        let netContribUSD = typedContribUSD - feeUSD
+        let netContribEUR = typedContribEUR - feeEUR
 
+        // Append simulation data
         results.append(
             SimulationData(
                 week: week,
@@ -331,11 +378,12 @@ func runOneFullSimulation(
                 btcPriceEUR: Decimal(currentBTCPriceEUR),
                 portfolioValueEUR: Decimal(portfolioEUR),
                 portfolioValueUSD: Decimal(portfolioUSD),
-                // Store the actual contribution
-                contributionEUR: 0.0,
-                contributionUSD: typedContrib,
-                // Also store the fee if you’d like
-                transactionFeeEUR: 0.0,
+                
+                // Instead of the typedContrib, store the net (after fee)
+                contributionEUR: netContribEUR,
+                contributionUSD: netContribUSD,
+                
+                transactionFeeEUR: feeEUR,
                 transactionFeeUSD: feeUSD,
                 netContributionBTC: netBTC,
                 withdrawalEUR: withdrawalEUR,
@@ -343,6 +391,7 @@ func runOneFullSimulation(
             )
         )
 
+        // Update for next iteration
         previousBTCHoldings = finalHoldings
     }
 
@@ -460,6 +509,7 @@ func runMonteCarloSimulationsWithProgress(
             break
         }
         
+        // Just to simulate a bit of processing time
         Thread.sleep(forTimeInterval: 0.01)
         
         let simRun = runOneFullSimulation(
@@ -485,9 +535,11 @@ func runMonteCarloSimulationsWithProgress(
         return ([], [])
     }
     
+    // Sort runs by their final portfolio value
     var finalValues = allRuns.map { ($0.last?.portfolioValueEUR ?? Decimal.zero, $0) }
     finalValues.sort { $0.0 < $1.0 }
 
+    // The median run
     let medianRun = finalValues[finalValues.count / 2].1
     
     print("// DEBUG: loop ended => built \(allRuns.count) runs. Returning median & allRuns.")
