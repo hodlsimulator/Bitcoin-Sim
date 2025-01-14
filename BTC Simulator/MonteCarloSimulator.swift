@@ -15,6 +15,10 @@ private let useWeightedSampling = false
 private var useSeededRandom = false
 private var seededGen: SeededGenerator?
 
+/// Approx weeks-per-month factor (52 weeks / 12 months)
+private let weeksPerMonthApprox: Double = 52.0 / 12.0
+
+/// A generator that allows a repeatable random sequence if a seed is locked
 private struct SeededGenerator: RandomNumberGenerator {
     private var state: UInt64
     init(seed: UInt64) { self.state = seed }
@@ -121,16 +125,95 @@ var historicalBTCWeeklyReturns: [Double] = []
 var sp500WeeklyReturns: [Double] = []
 var weightedBTCWeeklyReturns: [Double] = []
 
+/// Core function that always runs "weekly steps" (even if the user selected months).
+///
+/// * If `periodUnit == .weeks`, we do `totalWeeks = userWeeks`.
+/// * If `periodUnit == .months`, we do `totalWeeks = Int(round(Double(userWeeks) * 4.3333))`.
+///   That means e.g. 240 months => ~1040 weeks behind the scenes.
+/// After building the full weekly results, if the user wanted months, we resample it back
+/// to 240 monthly points.
 func runOneFullSimulation(
     settings: SimulationSettings,
     annualCAGR: Double,
     annualVolatility: Double,
     exchangeRateEURUSD: Double,
-    userWeeks: Int,       // Actually 'userPeriods' => # of weeks or months
+    userWeeks: Int,       // Could be 1040 if weeks, or 240 if months
     initialBTCPriceUSD: Double,
     seed: UInt64? = nil
 ) -> [SimulationData] {
     
+    // 1) Convert months → weeks if needed
+    let isActuallyMonths = (settings.periodUnit == .months)
+    let doublePeriods = Double(userWeeks) // e.g. 240 if months
+    var totalWeeklySteps = userWeeks // e.g. 1040 if weeks
+    if isActuallyMonths {
+        // e.g. 240 months => ~ 240 * 4.3333 = ~1040
+        let approxWeeks = doublePeriods * weeksPerMonthApprox
+        totalWeeklySteps = Int(round(approxWeeks))
+    }
+
+    // We store each "weekly step" in an array
+    var weeklyResults = runWeeklySimulation(
+        settings: settings,
+        annualCAGR: annualCAGR,
+        annualVolatility: annualVolatility,
+        exchangeRateEURUSD: exchangeRateEURUSD,
+        totalWeeklySteps: totalWeeklySteps,
+        initialBTCPriceUSD: initialBTCPriceUSD
+    )
+
+    // If user wanted weeks, just return weeklyResults
+    if !isActuallyMonths {
+        return weeklyResults
+    }
+
+    // Otherwise, the user asked for months => resample the weekly array
+    // to produce "userWeeks" points, i.e. 240 monthly data points.
+    // For each month M = 1..240 => pick the snapshot from weekly data
+    // at index = round(M * 4.3333).
+    
+    var monthlyResults: [SimulationData] = []
+    for monthIndex in 1...userWeeks {
+        let approxWeek = Double(monthIndex) * weeksPerMonthApprox
+        let bestWeekIndex = Int(round(approxWeek))
+        let safeIndex = max(1, min(bestWeekIndex, weeklyResults.count))
+        
+        let snap = weeklyResults[safeIndex - 1]
+
+        let monthData = SimulationData(
+            week: monthIndex,
+            startingBTC: snap.startingBTC,
+            netBTCHoldings: snap.netBTCHoldings,
+            btcPriceUSD: snap.btcPriceUSD,
+            btcPriceEUR: snap.btcPriceEUR,
+            portfolioValueEUR: snap.portfolioValueEUR,
+            portfolioValueUSD: snap.portfolioValueUSD,
+            contributionEUR: snap.contributionEUR,
+            contributionUSD: snap.contributionUSD,
+            transactionFeeEUR: snap.transactionFeeEUR,
+            transactionFeeUSD: snap.transactionFeeUSD,
+            netContributionBTC: snap.netContributionBTC,
+            withdrawalEUR: snap.withdrawalEUR,
+            withdrawalUSD: snap.withdrawalUSD
+        )
+        monthlyResults.append(monthData)
+    }
+
+    return monthlyResults
+}
+
+/// A helper that does the full weekly logic over totalWeeklySteps.
+/// This is the same approach you'd normally do for weekly simulation:
+/// lumpsum once a year (check step % 52 == 0), random draws each week, etc.
+private func runWeeklySimulation(
+    settings: SimulationSettings,
+    annualCAGR: Double,
+    annualVolatility: Double,
+    exchangeRateEURUSD: Double,
+    totalWeeklySteps: Int,
+    initialBTCPriceUSD: Double
+) -> [SimulationData] {
+
     struct PrintOnce {
         static var didPrintFactorSettings: Bool = false
         static var didPrintStandardDeviation: Bool = false
@@ -157,32 +240,10 @@ func runOneFullSimulation(
         PrintOnce.didPrintStandardDeviation = true
     }
 
-    // Decide if each iteration is 1 week or 1 month
-    let periodsPerYear = (settings.periodUnit == .weeks) ? 52.0 : 12.0
-    
-    // Convert annual CAGR to "per period"
-    let cagrDecimal = annualCAGR / 100.0
-    
-    // For lognormal mode, we treat that as a *log* drift
-    // i.e. weekly => cagrDecimal/52, monthly => cagrDecimal/12
-    // But we’ll add a “boost” for monthly so it’s closer to weekly’s final compounding:
-    // ----------------------------------------------------------------------
-    // CHANGED FOR MONTHLY BOOST (1.5):
-    // Feel free to tweak 'monthlyDial' to get even closer or exceed weekly.
-    // ----------------------------------------------------------------------
-    let monthlyDial = 1.5
+    let periodVol = (annualVolatility / 100.0) / sqrt(52.0)   // always treat as weekly
+    let periodSD  = (parsedSD        / 100.0) / sqrt(52.0)    // always treat as weekly
 
-    let logDrift: Double = {
-        if settings.periodUnit == .weeks {
-            return cagrDecimal / 52.0
-        } else {
-            return (cagrDecimal / 12.0) * monthlyDial
-        }
-    }()
-    
-    // Convert annualVolatility & standardDeviation to "per period"
-    let periodVol = (annualVolatility / 100.0) / sqrt(periodsPerYear)
-    let periodSD  = (parsedSD        / 100.0) / sqrt(periodsPerYear)
+    let cagrDecimal = annualCAGR / 100.0
 
     // Convert the USD price to EUR
     let firstEURPrice = initialBTCPriceUSD / exchangeRateEURUSD
@@ -203,9 +264,9 @@ func runOneFullSimulation(
     let initialPortfolioEUR = userStartingBalanceBTC * firstEURPrice
     let initialPortfolioUSD = userStartingBalanceBTC * initialBTCPriceUSD
 
-    // Results array
-    var results: [SimulationData] = []
-    results.append(
+    // Weekly results array
+    var weeklyResults: [SimulationData] = []
+    weeklyResults.append(
         SimulationData(
             week: 1,
             startingBTC: 0.0,
@@ -224,56 +285,16 @@ func runOneFullSimulation(
         )
     )
 
-    // Main loop
-    // (Here 'week' is really "period"—one week or one month)
-    for week in 2...userWeeks {
+    for currentWeek in 2...totalWeeklySteps {
         let useHist = settings.useHistoricalSampling
         let useLog  = settings.useLognormalGrowth
-        
-        // lumpsum => user turned off historical & lognormal => single lumpsum approach
         let lumpsum = (!useHist && !useLog)
 
         if lumpsum {
-            // If lumpsum approach, remain the same:
-            if settings.periodUnit == .weeks {
-                // weekly lumpsum once a year
-                if Double(week).truncatingRemainder(dividingBy: 52.0) == 0 {
-                    var lumpsumGrowth = cagrDecimal
-                    // Add vol shocks if on
-                    if settings.useVolShocks && annualVolatility > 0.0 {
-                        let shockVol: Double
-                        if useSeededRandom, var localRNG = seededGen {
-                            shockVol = seededRandomNormal(mean: 0, stdDev: periodVol, rng: &localRNG)
-                            seededGen = localRNG
-                        } else {
-                            shockVol = randomNormal(mean: 0, standardDeviation: periodVol)
-                        }
-                        
-                        var shockSD: Double = 0
-                        if periodSD > 0 {
-                            if useSeededRandom, var rng = seededGen {
-                                shockSD = seededRandomNormal(mean: 0, stdDev: periodSD, rng: &rng)
-                                seededGen = rng
-                            } else {
-                                shockSD = randomNormal(mean: 0, standardDeviation: periodSD)
-                            }
-                            shockSD = max(min(shockSD, 2.0), -1.0)
-                        }
-
-                        let combinedShocks = exp(shockVol + shockSD)
-                        lumpsumGrowth = (1.0 + lumpsumGrowth) * combinedShocks - 1.0
-                    }
-                    
-                    lumpsumGrowth = applyFactorToggles(baseReturn: lumpsumGrowth, week: week, settings: settings)
-                    let factor = lumpsumAdjustFactor(settings: settings, annualVolatility: annualVolatility)
-                    lumpsumGrowth *= factor
-                    previousBTCPriceUSD *= (1.0 + lumpsumGrowth)
-                }
-            } else {
-                // monthly lumpsum => smaller chunk each month
-                let monthlyGrowth = pow(1.0 + cagrDecimal, 1.0/12.0) - 1.0
-                var lumpsumGrowth = monthlyGrowth
-                
+            // Lumpsum approach => once per year => if currentWeek % 52 == 0
+            if Double(currentWeek).truncatingRemainder(dividingBy: 52.0) == 0 {
+                var lumpsumGrowth = cagrDecimal
+                // Add vol shocks if on
                 if settings.useVolShocks && annualVolatility > 0.0 {
                     let shockVol: Double
                     if useSeededRandom, var localRNG = seededGen {
@@ -293,12 +314,12 @@ func runOneFullSimulation(
                         }
                         shockSD = max(min(shockSD, 2.0), -1.0)
                     }
-                    
+
                     let combinedShocks = exp(shockVol + shockSD)
                     lumpsumGrowth = (1.0 + lumpsumGrowth) * combinedShocks - 1.0
                 }
                 
-                lumpsumGrowth = applyFactorToggles(baseReturn: lumpsumGrowth, week: week, settings: settings)
+                lumpsumGrowth = applyFactorToggles(baseReturn: lumpsumGrowth, week: currentWeek, settings: settings)
                 let factor = lumpsumAdjustFactor(settings: settings, annualVolatility: annualVolatility)
                 lumpsumGrowth *= factor
                 previousBTCPriceUSD *= (1.0 + lumpsumGrowth)
@@ -313,9 +334,10 @@ func runOneFullSimulation(
                 totalReturn += pickRandomReturn(from: historicalBTCWeeklyReturns)
             }
             
-            // If lognormal is on => add log drift
+            // If lognormal is on => add weekly drift
+            // (We treat log drift as cagrDecimal/52 for weekly)
             if useLog {
-                totalReturn += logDrift
+                totalReturn += (cagrDecimal / 52.0)
             }
             
             // If vol shocks on => add shockVol + shockSD
@@ -342,7 +364,7 @@ func runOneFullSimulation(
                 }
             }
 
-            totalReturn = applyFactorToggles(baseReturn: totalReturn, week: week, settings: settings)
+            totalReturn = applyFactorToggles(baseReturn: totalReturn, week: currentWeek, settings: settings)
             
             // Original code had 0.46 as a "shrink factor" for the random draws
             let baseShrinkFactor = 0.46
@@ -350,13 +372,13 @@ func runOneFullSimulation(
             
             previousBTCPriceUSD *= exp(totalReturn)
         }
-            
+
         // Don’t let price go below $1
         previousBTCPriceUSD = max(1.0, previousBTCPriceUSD)
         let currentBTCPriceEUR = previousBTCPriceUSD / exchangeRateEURUSD
 
-        // For monthly vs. weekly: “first year” means first 12 or 52 periods
-        let isFirstYear = Double(week) <= periodsPerYear
+        // “First year” means weeks <= 52
+        let isFirstYear = Double(currentWeek) <= 52.0
         
         var typedContrib = 0.0
         if isFirstYear {
@@ -371,7 +393,7 @@ func runOneFullSimulation(
             }
         }
 
-        // Split for USD / EUR / Both
+        // Currency preference
         var typedContribUSD: Double = 0.0
         var typedContribEUR: Double = 0.0
         var netBTC             = 0.0
@@ -429,9 +451,9 @@ func runOneFullSimulation(
         let netContribEUR = typedContribEUR - feeEUR
 
         // Append simulation data
-        results.append(
+        weeklyResults.append(
             SimulationData(
-                week: week,
+                week: currentWeek,
                 startingBTC: previousBTCHoldings,
                 netBTCHoldings: finalHoldings,
                 btcPriceUSD: Decimal(previousBTCPriceUSD),
@@ -454,7 +476,7 @@ func runOneFullSimulation(
         previousBTCHoldings = finalHoldings
     }
 
-    return results
+    return weeklyResults
 }
 
 private func applyFactorToggles(
@@ -543,13 +565,14 @@ fileprivate func pickRandomReturn(from arr: [Double]) -> Double {
     }
 }
 
+/// The main multi-run function, but behind the scenes we do "weeks" even if the user wants months.
 func runMonteCarloSimulationsWithProgress(
     settings: SimulationSettings,
     annualCAGR: Double,
     annualVolatility: Double,
     correlationWithSP500: Double,
     exchangeRateEURUSD: Double,
-    userWeeks: Int,
+    userWeeks: Int,              // Might be 1040 if weeks, or 240 if months
     iterations: Int,
     initialBTCPriceUSD: Double,
     isCancelled: () -> Bool,
@@ -568,8 +591,7 @@ func runMonteCarloSimulationsWithProgress(
             break
         }
         
-        // Just to simulate a bit of processing time
-        Thread.sleep(forTimeInterval: 0.01)
+        Thread.sleep(forTimeInterval: 0.01) // just to simulate some processing time
         
         let simRun = runOneFullSimulation(
             settings: settings,
@@ -598,13 +620,14 @@ func runMonteCarloSimulationsWithProgress(
     var finalValues = allRuns.map { ($0.last?.portfolioValueEUR ?? Decimal.zero, $0) }
     finalValues.sort { $0.0 < $1.0 }
     
-    // Median run
+    // The median run
     let medianRun = finalValues[finalValues.count / 2].1
     
     print("// DEBUG: loop ended => built \(allRuns.count) runs. Returning median & allRuns.")
     return (medianRun, allRuns)
 }
 
+/// Basic normal distribution generator (unseeded)
 private func randomNormal(mean: Double, standardDeviation: Double) -> Double {
     let u1 = Double.random(in: 0..<1)
     let u2 = Double.random(in: 0..<1)
