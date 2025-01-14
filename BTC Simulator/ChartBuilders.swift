@@ -263,3 +263,4 @@ fileprivate func convertPeriodToYears(
         return Double(periodIndex) / 12.0
     }
 }
+    

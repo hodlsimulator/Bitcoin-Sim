@@ -35,6 +35,7 @@ private func setRandomSeed(_ seed: UInt64?) {
     }
 }
 
+/// A helper to do normal draws with a seeded generator (if present)
 fileprivate func seededRandomNormal<G: RandomNumberGenerator>(
     mean: Double,
     stdDev: Double,
@@ -156,19 +157,32 @@ func runOneFullSimulation(
         PrintOnce.didPrintStandardDeviation = true
     }
 
-    // -------------------------------
-    // NEW OR CHANGED:
     // Decide if each iteration is 1 week or 1 month
     let periodsPerYear = (settings.periodUnit == .weeks) ? 52.0 : 12.0
     
     // Convert annual CAGR to "per period"
     let cagrDecimal = annualCAGR / 100.0
-    let logDrift    = cagrDecimal / periodsPerYear
+    
+    // For lognormal mode, we treat that as a *log* drift
+    // i.e. weekly => cagrDecimal/52, monthly => cagrDecimal/12
+    // But we’ll add a “boost” for monthly so it’s closer to weekly’s final compounding:
+    // ----------------------------------------------------------------------
+    // CHANGED FOR MONTHLY BOOST (1.5):
+    // Feel free to tweak 'monthlyDial' to get even closer or exceed weekly.
+    // ----------------------------------------------------------------------
+    let monthlyDial = 1.5
+
+    let logDrift: Double = {
+        if settings.periodUnit == .weeks {
+            return cagrDecimal / 52.0
+        } else {
+            return (cagrDecimal / 12.0) * monthlyDial
+        }
+    }()
     
     // Convert annualVolatility & standardDeviation to "per period"
     let periodVol = (annualVolatility / 100.0) / sqrt(periodsPerYear)
-    let periodSD  = (parsedSD / 100.0) / sqrt(periodsPerYear)
-    // -------------------------------
+    let periodSD  = (parsedSD        / 100.0) / sqrt(periodsPerYear)
 
     // Convert the USD price to EUR
     let firstEURPrice = initialBTCPriceUSD / exchangeRateEURUSD
@@ -215,43 +229,75 @@ func runOneFullSimulation(
     for week in 2...userWeeks {
         let useHist = settings.useHistoricalSampling
         let useLog  = settings.useLognormalGrowth
+        
+        // lumpsum => user turned off historical & lognormal => single lumpsum approach
         let lumpsum = (!useHist && !useLog)
 
         if lumpsum {
-            // Lump sum => once per year
-            // e.g. if months => apply lumpsum in the 12th, 24th, 36th iteration
-            // if weeks => 52nd, 104th, 156th iteration, etc.
-            
-            if Double(week).truncatingRemainder(dividingBy: periodsPerYear) == 0 {
-                var lumpsumGrowth = cagrDecimal
+            // If lumpsum approach, remain the same:
+            if settings.periodUnit == .weeks {
+                // weekly lumpsum once a year
+                if Double(week).truncatingRemainder(dividingBy: 52.0) == 0 {
+                    var lumpsumGrowth = cagrDecimal
+                    // Add vol shocks if on
+                    if settings.useVolShocks && annualVolatility > 0.0 {
+                        let shockVol: Double
+                        if useSeededRandom, var localRNG = seededGen {
+                            shockVol = seededRandomNormal(mean: 0, stdDev: periodVol, rng: &localRNG)
+                            seededGen = localRNG
+                        } else {
+                            shockVol = randomNormal(mean: 0, standardDeviation: periodVol)
+                        }
+                        
+                        var shockSD: Double = 0
+                        if periodSD > 0 {
+                            if useSeededRandom, var rng = seededGen {
+                                shockSD = seededRandomNormal(mean: 0, stdDev: periodSD, rng: &rng)
+                                seededGen = rng
+                            } else {
+                                shockSD = randomNormal(mean: 0, standardDeviation: periodSD)
+                            }
+                            shockSD = max(min(shockSD, 2.0), -1.0)
+                        }
 
+                        let combinedShocks = exp(shockVol + shockSD)
+                        lumpsumGrowth = (1.0 + lumpsumGrowth) * combinedShocks - 1.0
+                    }
+                    
+                    lumpsumGrowth = applyFactorToggles(baseReturn: lumpsumGrowth, week: week, settings: settings)
+                    let factor = lumpsumAdjustFactor(settings: settings, annualVolatility: annualVolatility)
+                    lumpsumGrowth *= factor
+                    previousBTCPriceUSD *= (1.0 + lumpsumGrowth)
+                }
+            } else {
+                // monthly lumpsum => smaller chunk each month
+                let monthlyGrowth = pow(1.0 + cagrDecimal, 1.0/12.0) - 1.0
+                var lumpsumGrowth = monthlyGrowth
+                
                 if settings.useVolShocks && annualVolatility > 0.0 {
-                    // Vol shock
                     let shockVol: Double
                     if useSeededRandom, var localRNG = seededGen {
-                        shockVol = seededRandomNormal(mean: 0, stdDev: periodVol, rng: &localRNG)  // <-- changed weeklyVol => periodVol
+                        shockVol = seededRandomNormal(mean: 0, stdDev: periodVol, rng: &localRNG)
                         seededGen = localRNG
                     } else {
                         shockVol = randomNormal(mean: 0, standardDeviation: periodVol)
                     }
-
-                    // Additional standard deviation shock
+                    
                     var shockSD: Double = 0
                     if periodSD > 0 {
                         if useSeededRandom, var rng = seededGen {
-                            shockSD = seededRandomNormal(mean: 0, stdDev: periodSD, rng: &rng)    // <-- changed weeklySD => periodSD
+                            shockSD = seededRandomNormal(mean: 0, stdDev: periodSD, rng: &rng)
                             seededGen = rng
                         } else {
                             shockSD = randomNormal(mean: 0, standardDeviation: periodSD)
                         }
                         shockSD = max(min(shockSD, 2.0), -1.0)
                     }
-
-                    // lumpsumGrowth = (1 + lumpsumGrowth) * e^(shockVol+shockSD) - 1
+                    
                     let combinedShocks = exp(shockVol + shockSD)
                     lumpsumGrowth = (1.0 + lumpsumGrowth) * combinedShocks - 1.0
                 }
-
+                
                 lumpsumGrowth = applyFactorToggles(baseReturn: lumpsumGrowth, week: week, settings: settings)
                 let factor = lumpsumAdjustFactor(settings: settings, annualVolatility: annualVolatility)
                 lumpsumGrowth *= factor
@@ -259,30 +305,34 @@ func runOneFullSimulation(
             }
 
         } else {
-            // "Random draws" approach => log + historical + volShocks
+            // "Random draws" approach => user toggled historical or lognormal
             var totalReturn = 0.0
+            
+            // If historical is on => pick random from historical array
             if useHist {
                 totalReturn += pickRandomReturn(from: historicalBTCWeeklyReturns)
             }
+            
+            // If lognormal is on => add log drift
             if useLog {
                 totalReturn += logDrift
             }
+            
+            // If vol shocks on => add shockVol + shockSD
             if settings.useVolShocks {
-                // Vol shock
                 let shockVol: Double
                 if useSeededRandom, var localRNG = seededGen {
-                    shockVol = seededRandomNormal(mean: 0, stdDev: periodVol, rng: &localRNG) // <-- changed
+                    shockVol = seededRandomNormal(mean: 0, stdDev: periodVol, rng: &localRNG)
                     seededGen = localRNG
                 } else {
                     shockVol = randomNormal(mean: 0, standardDeviation: periodVol)
                 }
                 totalReturn += shockVol
 
-                // Additional standard deviation shock
                 if periodSD > 0 {
                     var shockSD: Double
                     if useSeededRandom, var rng = seededGen {
-                        shockSD = seededRandomNormal(mean: 0, stdDev: periodSD, rng: &rng)     // <-- changed
+                        shockSD = seededRandomNormal(mean: 0, stdDev: periodSD, rng: &rng)
                         seededGen = rng
                     } else {
                         shockSD = randomNormal(mean: 0, standardDeviation: periodSD)
@@ -294,23 +344,18 @@ func runOneFullSimulation(
 
             totalReturn = applyFactorToggles(baseReturn: totalReturn, week: week, settings: settings)
             
-            // Original code had 0.46 as a "shrink factor"
+            // Original code had 0.46 as a "shrink factor" for the random draws
             let baseShrinkFactor = 0.46
             totalReturn *= baseShrinkFactor
             
             previousBTCPriceUSD *= exp(totalReturn)
         }
-
+            
         // Don’t let price go below $1
         previousBTCPriceUSD = max(1.0, previousBTCPriceUSD)
         let currentBTCPriceEUR = previousBTCPriceUSD / exchangeRateEURUSD
 
-        // Figure out typed contributions
-        // If user picks .months, then "week <= 52" doesn't make sense.
-        // Instead, let's say "first year" means the first 'periodsPerYear' iterations.
-        // (So if months => first 12; if weeks => first 52)
-        
-        // <-- NEW OR CHANGED:
+        // For monthly vs. weekly: “first year” means first 12 or 52 periods
         let isFirstYear = Double(week) <= periodsPerYear
         
         var typedContrib = 0.0
@@ -335,21 +380,18 @@ func runOneFullSimulation(
 
         switch settings.currencyPreference {
         case .usd:
-            // Contribution is in USD
             typedContribUSD = typedContrib
             feeUSD = typedContribUSD * 0.006
             let netUSD = typedContribUSD - feeUSD
             netBTC = netUSD / previousBTCPriceUSD
 
         case .eur:
-            // Contribution is in EUR
             typedContribEUR = typedContrib
             feeEUR = typedContribEUR * 0.006
             let netEUR = typedContribEUR - feeEUR
             netBTC = netEUR / currentBTCPriceEUR
 
         case .both:
-            // Use whichever currency is selected by user
             if settings.contributionCurrencyWhenBoth == .eur {
                 typedContribEUR = typedContrib
                 feeEUR = typedContribEUR * 0.006
@@ -363,7 +405,7 @@ func runOneFullSimulation(
             }
         }
 
-        // Hypothetical holdings => check if threshold triggered
+        // Check thresholds
         let hypotheticalHoldings = previousBTCHoldings + netBTC
         let hypotheticalValueEUR  = hypotheticalHoldings * currentBTCPriceEUR
         var withdrawalEUR         = 0.0
@@ -382,7 +424,7 @@ func runOneFullSimulation(
         let portfolioEUR = finalHoldings * currentBTCPriceEUR
         let portfolioUSD = finalHoldings * previousBTCPriceUSD
         
-        // Store net contribution in the final data
+        // Net contribution
         let netContribUSD = typedContribUSD - feeUSD
         let netContribEUR = typedContribEUR - feeEUR
 
@@ -397,7 +439,6 @@ func runOneFullSimulation(
                 portfolioValueEUR: Decimal(portfolioEUR),
                 portfolioValueUSD: Decimal(portfolioUSD),
                 
-                // Instead of the typedContrib, store the net (after fee)
                 contributionEUR: netContribEUR,
                 contributionUSD: netContribUSD,
                 
@@ -553,11 +594,11 @@ func runMonteCarloSimulationsWithProgress(
         return ([], [])
     }
     
-    // Sort runs by their final portfolio value
+    // Sort runs by final portfolio value
     var finalValues = allRuns.map { ($0.last?.portfolioValueEUR ?? Decimal.zero, $0) }
     finalValues.sort { $0.0 < $1.0 }
     
-    // The median run
+    // Median run
     let medianRun = finalValues[finalValues.count / 2].1
     
     print("// DEBUG: loop ended => built \(allRuns.count) runs. Returning median & allRuns.")
