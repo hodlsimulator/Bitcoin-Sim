@@ -364,15 +364,14 @@ class SimulationCoordinator: ObservableObject {
         }
     }
     
-    /// Adjusted to compute a finalWeeks value
     private func computeInputsHash() -> Int {
-        let finalWeeks = (simSettings.periodUnit == .weeks)
+        let finalPeriods = (simSettings.periodUnit == .weeks)
             ? simSettings.userPeriods
-            : (simSettings.userPeriods * 4)
-        
+            : simSettings.userPeriods  // no longer multiply by 4
+
         let combinedString = """
         \(inputManager.iterations)_\(inputManager.annualCAGR)_\(inputManager.annualVolatility)_\
-        \(finalWeeks)_\(simSettings.initialBTCPriceUSD)
+        \(finalPeriods)_\(simSettings.initialBTCPriceUSD)
         """
         return combinedString.hashValue
     }

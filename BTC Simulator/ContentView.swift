@@ -709,19 +709,16 @@ struct ContentView: View {
                                         ? Color(white: 0.10)
                                         : Color(white: 0.14)
                                     
-                                    Text(
-                                        simSettings.periodUnit == .weeks
-                                        ? "\(result.week)"
-                                        : "\((result.week + 3) / 4)"  // rounding up to month index
-                                    )
-                                    .frame(width: 70, alignment: .leading)
-                                    .padding(.leading, 50)
-                                    .padding(.vertical, 12)
-                                    .padding(.horizontal, 8)
-                                    .background(rowBackground)
-                                    .foregroundColor(.white)
-                                    .id("week-\(result.week)")
-                                    .background(RowOffsetReporter(week: result.week))
+                                    // FIX #1: remove (result.week + 3)/4
+                                    Text("\(result.week)")
+                                        .frame(width: 70, alignment: .leading)
+                                        .padding(.leading, 50)
+                                        .padding(.vertical, 12)
+                                        .padding(.horizontal, 8)
+                                        .background(rowBackground)
+                                        .foregroundColor(.white)
+                                        .id("week-\(result.week)")
+                                        .background(RowOffsetReporter(week: result.week))
                                 }
                             }
                             
@@ -780,16 +777,8 @@ struct ContentView: View {
                         .onPreferenceChange(RowOffsetPreferenceKey.self) { offsets in
                             let targetY: CGFloat = 160
                             
-                            // ---------------------------
-                            // Re-check finalWeeks for clamp
-                            let finalWeeks: Int = {
-                                if simSettings.periodUnit == .weeks {
-                                    return simSettings.userPeriods
-                                } else {
-                                    return simSettings.userPeriods * 4
-                                }
-                            }()
-                            // ---------------------------
+                            // FIX #2: remove *4 from finalWeeks
+                            let finalWeeks = simSettings.userPeriods
                             
                             // Filter out weeks outside our domain
                             let filtered = offsets.filter { (week, _) in

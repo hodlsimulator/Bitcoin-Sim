@@ -76,10 +76,8 @@ struct PortfolioChartView: View {
 
                 VStack(spacing: 0) {
                     Chart {
-                        // Below calls rely on your existing helper functions
-                        // (simulationLines, medianLines) — don't redeclare them here.
-                        simulationLines(simulations: simulations)
-                        medianLines(simulations: simulations)
+                        simulationLines(simulations: simulations, simSettings: simSettings)
+                        medianLines(simulations: simulations, simSettings: simSettings)
                     }
                     .chartLegend(.hidden)
                     .chartXScale(domain: 0.0...totalYears, type: .linear)
