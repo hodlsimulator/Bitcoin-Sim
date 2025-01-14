@@ -56,8 +56,6 @@ struct SnapshotView: View {
             .clipped()
             .padding(.bottom, 90)
             .ignoresSafeArea(edges: .top)
-            // .transition(.move(edge: .bottom)) // Remove this
-            // .animation(.easeInOut(duration: 0.5), value: snapshot) // Remove or comment this out
     }
 }
 
@@ -214,9 +212,12 @@ struct MonteCarloChartView: View {
         let intTop    = Int(topExp)
         let yTickValues = (intBottom...intTop).map { pow(10.0, Double($0)) }
         
-        // X domain => weeks->years
-        let totalWeeks = Double(simSettings.userWeeks)
-        let totalYears = totalWeeks / 52.0
+        // X domain => figure out "weeks" from simSettings
+        // If periodUnit == .weeks => userPeriods
+        // If periodUnit == .months => userPeriods * 4
+        let totalUnits = Double(simSettings.userPeriods)
+        let finalWeeks = (simSettings.periodUnit == .weeks) ? totalUnits : totalUnits * 4
+        let totalYears = finalWeeks / 52.0
         
         // Helper to pick a 'nice' stride so we don't have loads of ticks
         func dynamicXStride(for totalY: Double) -> Double {
@@ -310,67 +311,8 @@ struct MonteCarloChartView: View {
     }
 }
     
-    // MARK: - Format suffix on log scale
-    /// Convert an integer exponent to its short suffix label (1, 10, 100, 1k, …, 1Q, etc.).
-    /// Covers up to 1e48 = quattuordecillion in your list.
-    func formatPowerOfTenExponent(_ exponent: Int) -> String {
-        switch exponent {
-        case 0:  return "1"
-        case 1:  return "10"
-        case 2:  return "100"
-        case 3:  return "1k"         // 1×10^3
-        case 4:  return "10k"        // 1×10^4
-        case 5:  return "100k"       // 1×10^5
-        case 6:  return "1M"         // 1×10^6
-        case 7:  return "10M"        // 1×10^7
-        case 8:  return "100M"       // 1×10^8
-        case 9:  return "1B"         // 1×10^9
-        case 10: return "10B"
-        case 11: return "100B"
-        case 12: return "1T"         // 1×10^12 (trillion)
-        case 13: return "10T"
-        case 14: return "100T"
-        case 15: return "1Q"         // 1×10^15 (quadrillion)
-        case 16: return "10Q"
-        case 17: return "100Q"
-        case 18: return "1Qn"        // 1×10^18 (quintillion)
-        case 19: return "10Qn"
-        case 20: return "100Qn"
-        case 21: return "1Se"        // 1×10^21 (sextillion)
-        case 22: return "10Se"
-        case 23: return "100Se"
-        case 24: return "1S"         // 1×10^24 (septillion)
-        case 25: return "10S"
-        case 26: return "100S"
-        case 27: return "1O"         // 1×10^27 (octillion)
-        case 28: return "10O"
-        case 29: return "100O"
-        case 30: return "1N"         // 1×10^30 (nonillion)
-        case 31: return "10N"
-        case 32: return "100N"
-        case 33: return "1D"         // 1×10^33 (decillion)
-        case 34: return "10D"
-        case 35: return "100D"
-        case 36: return "1U"         // 1×10^36 (undecillion)
-        case 37: return "10U"
-        case 38: return "100U"
-        case 39: return "1Do"        // 1×10^39 (duodecillion)
-        case 40: return "10Do"
-        case 41: return "100Do"
-        case 42: return "1Td"        // 1×10^42 (tredecillion)
-        case 43: return "10Td"
-        case 44: return "100Td"
-        case 45: return "1Qd"        // 1×10^45 (quattuordecillion)
-        case 46: return "10Qd"
-        case 47: return "100Qd"
-        case 48: return "1…"         // You can extend further if needed
-        default:
-            // If beyond your known range, fallback:
-            return "10^\(exponent)"
-        }
-    }
-
-/// For exponents like 0->"1", 1->"10", 2->"100", 3->"1K", 4->"10K", 5->"100K", etc.
+// MARK: - Format suffix on log scale
+/// Convert an integer exponent to its short suffix label (1, 10, 100, 1k, etc.).
 func formatPowerOfTenLabel(_ exponent: Int) -> String {
     switch exponent {
     case 0:  return "1"
@@ -395,7 +337,6 @@ func formatPowerOfTenLabel(_ exponent: Int) -> String {
     case 19: return "10Qn"
     case 20: return "100Qn"
     case 21: return "1Se"  // sextillion
-    // ...and so forth, or fallback:
     default:
         return "10^\(exponent)"
     }
@@ -499,12 +440,8 @@ struct MonteCarloResultsView: View {
                     .frame(maxWidth: .infinity, minHeight: 50)
                 }
                 .buttonStyle(.plain)
-                .background(Color.black)   // match nav bar colour
-                // Optional if you like a shadow behind the drawer:
-                // .shadow(color: .black.opacity(0.6), radius: 10, x: 0, y: 5)
+                .background(Color.black)
                 .edgesIgnoringSafeArea(.horizontal)
-                // Bump it down so it sits below the nav bar
-                // (adjust this to taste—some devices might need more or less)
                 .padding(.top, 120)
                 .transition(.move(edge: .top))
                 .zIndex(2)
@@ -533,7 +470,6 @@ struct MonteCarloResultsView: View {
                 }
             }
         }
-        // If we enter in landscape, generate a "squished" version
         .onAppear {
             if isLandscape, let portrait = portraitSnapshot {
                 squishedLandscape = squishPortraitImage(portrait)
@@ -688,4 +624,3 @@ struct ForceReflowView<Content: View>: View {
             }
     }
 }
-    

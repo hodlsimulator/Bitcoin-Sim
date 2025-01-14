@@ -465,9 +465,13 @@ struct OnboardingView: View {
     
     // MARK: - Apply settings
     private func applySettingsToSim() {
-        let finalWeeks = (chosenPeriodUnit == .weeks) ? totalPeriods : totalPeriods * 4
-        simSettings.userWeeks = finalWeeks
+        // Store the user’s chosen period unit (weeks or months)
+        simSettings.periodUnit = chosenPeriodUnit
         
+        // Save the raw totalPeriods directly
+        simSettings.userPeriods = totalPeriods
+        
+        // Keep everything else the same
         simSettings.initialBTCPriceUSD = finalBTCPrice
         
         if currencyPreference == .both {
@@ -490,13 +494,18 @@ struct OnboardingView: View {
         inputManager.threshold2 = threshold2
         inputManager.withdrawAmount2 = withdraw2
         
-        UserDefaults.standard.set(startingBalance, forKey: "savedStartingBalance")
-        UserDefaults.standard.set(averageCostBasis, forKey: "savedAverageCostBasis")
-        UserDefaults.standard.set(finalWeeks, forKey: "savedUserWeeks")
-        UserDefaults.standard.set(finalBTCPrice, forKey: "savedInitialBTCPriceUSD")
+        // Save data to UserDefaults
+        UserDefaults.standard.set(startingBalance,    forKey: "savedStartingBalance")
+        UserDefaults.standard.set(averageCostBasis,   forKey: "savedAverageCostBasis")
+        UserDefaults.standard.set(totalPeriods,       forKey: "savedUserPeriods")
+        UserDefaults.standard.set(chosenPeriodUnit.rawValue,
+                                  forKey: "savedPeriodUnit")
+        UserDefaults.standard.set(finalBTCPrice,      forKey: "savedInitialBTCPriceUSD")
         
         // Debug prints
-        print("// DEBUG: applySettingsToSim => currencyPreference=\(currencyPreference.rawValue)")
+        print("// DEBUG: applySettingsToSim => periodUnit=\(chosenPeriodUnit.rawValue)")
+        print("// DEBUG: totalPeriods=\(totalPeriods)")
+        print("// DEBUG: currencyPreference=\(currencyPreference.rawValue)")
         print("// DEBUG: startingBalance=\(startingBalance)")
         print("// DEBUG: contributionPerStep=\(contributionPerStep)")
         print("// DEBUG: threshold1=\(threshold1), withdraw1=\(withdraw1)")

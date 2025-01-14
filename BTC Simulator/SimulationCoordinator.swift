@@ -114,8 +114,16 @@ class SimulationCoordinator: ObservableObject {
             print("// DEBUG: userInputCAGR => \(userInputCAGR)%")
             print("// DEBUG: userInputVolatility => \(userInputVolatility)%")
 
-            let userWeeks = self.simSettings.userWeeks
-            
+            // If the user picked months, do NOT multiply by 4 here.
+            let finalWeeks: Int = {
+                if self.simSettings.periodUnit == .weeks {
+                    return self.simSettings.userPeriods
+                } else {
+                    // Now each loop iteration truly represents one month
+                    return self.simSettings.userPeriods
+                }
+            }()
+
             let userPriceUSDAsDecimal = Decimal(self.simSettings.initialBTCPriceUSD)
             let userPriceUSDAsDouble = NSDecimalNumber(decimal: userPriceUSDAsDecimal).doubleValue
 
@@ -126,7 +134,7 @@ class SimulationCoordinator: ObservableObject {
                 annualVolatility: userInputVolatility,
                 correlationWithSP500: 0.0,
                 exchangeRateEURUSD: 1.06,
-                userWeeks: userWeeks,
+                userWeeks: finalWeeks,
                 iterations: total,
                 initialBTCPriceUSD: userPriceUSDAsDouble,
                 isCancelled: { self.isCancelled },
@@ -356,10 +364,15 @@ class SimulationCoordinator: ObservableObject {
         }
     }
     
+    /// Adjusted to compute a finalWeeks value
     private func computeInputsHash() -> Int {
+        let finalWeeks = (simSettings.periodUnit == .weeks)
+            ? simSettings.userPeriods
+            : (simSettings.userPeriods * 4)
+        
         let combinedString = """
         \(inputManager.iterations)_\(inputManager.annualCAGR)_\(inputManager.annualVolatility)_\
-        \(simSettings.userWeeks)_\(simSettings.initialBTCPriceUSD)
+        \(finalWeeks)_\(simSettings.initialBTCPriceUSD)
         """
         return combinedString.hashValue
     }
@@ -379,8 +392,8 @@ class SimulationCoordinator: ObservableObject {
             if allAtWeek.isEmpty { continue }
             
             // Grab all the decimals
-            let allBTCPriceUSD = allAtWeek.map { $0.btcPriceUSD }
-            let allBTCPriceEUR = allAtWeek.map { $0.btcPriceEUR }
+            let allBTCPriceUSD       = allAtWeek.map { $0.btcPriceUSD }
+            let allBTCPriceEUR       = allAtWeek.map { $0.btcPriceEUR }
             let allPortfolioValueEUR = allAtWeek.map { $0.portfolioValueEUR }
             let allPortfolioValueUSD = allAtWeek.map { $0.portfolioValueUSD }
 

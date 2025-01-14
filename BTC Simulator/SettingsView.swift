@@ -95,31 +95,31 @@ struct SettingsView: View {
             // BULLISH FACTORS
             //====================================
             Section("Bullish Factors") {
+                // Halving — replaced halvingBumpForUI with halvingBump
                 FactorToggleRow(
                     iconName: "globe.europe.africa",
                     title: "Halving",
                     isOn: $simSettings.useHalving,
-                    sliderValue: $simSettings.halvingBumpForUI,
-                    sliderRange: 0.0...1.0,        // so 0.48 sits comfortably
+                    sliderValue: $simSettings.halvingBump, // was halvingBumpForUI
+                    sliderRange: 0.0...1.0,
                     defaultValue: 0.48,
                     parameterDescription: """
                         Occurs roughly every four years, reducing the block reward in half.
-                        This lowers new supply and often causes supply-demand imbalances.
                         Historically, halving events have coincided with substantial BTC price increases.
                         """,
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
                 )
-                .anchorPreference(
-                    key: TooltipAnchorKey.self,
-                    value: .center
-                ) { pt in
-                    guard activeFactor == "Halving" else { return [] }
-                    let desc = """
-                        Occurs roughly every four years, reducing the block reward in half.
-                        Historically, halving events have coincided with substantial BTC price increases.
-                        """
-                    return [ TooltipItem(title: "Halving", description: desc, anchor: pt) ]
+                .anchorPreference(key: TooltipAnchorKey.self, value: .center) { pt in
+                    if activeFactor == "Halving" {
+                        let desc = """
+                            Occurs roughly every four years, reducing the block reward in half.
+                            Historically, halving events have coincided with big BTC price increases.
+                            """
+                        return [ TooltipItem(title: "Halving", description: desc, anchor: pt) ]
+                    } else {
+                        return []
+                    }
                 }
                 
                 // Institutional Demand
@@ -128,7 +128,7 @@ struct SettingsView: View {
                     title: "Institutional Demand",
                     isOn: $simSettings.useInstitutionalDemand,
                     sliderValue: $simSettings.maxDemandBoost,
-                    sliderRange: 0.0...0.0024785082677343554, // double of 0.0012392541338671777
+                    sliderRange: 0.0...0.0024785082677343554,
                     defaultValue: 0.0012392541338671777,
                     parameterDescription: """
                 Large financial institutions and corporate treasuries entering the BTC market can drive prices up.
@@ -137,14 +137,14 @@ struct SettingsView: View {
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
                 )
-
+                
                 // Country Adoption
                 FactorToggleRow(
                     iconName: "flag.fill",
                     title: "Country Adoption",
                     isOn: $simSettings.useCountryAdoption,
                     sliderValue: $simSettings.maxCountryAdBoost,
-                    sliderRange: 0.0...0.0009419192839966337, // double of 0.00047095964199831683
+                    sliderRange: 0.0...0.0009419192839966337,
                     defaultValue: 0.00047095964199831683,
                     parameterDescription: """
                 Nations adopting BTC as legal tender or as part of their reserves can lead to massive demand.
@@ -153,14 +153,14 @@ struct SettingsView: View {
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
                 )
-
+                
                 // Regulatory Clarity
                 FactorToggleRow(
                     iconName: "checkmark.shield",
                     title: "Regulatory Clarity",
                     isOn: $simSettings.useRegulatoryClarity,
                     sliderValue: $simSettings.maxClarityBoost,
-                    sliderRange: 0.0...0.0033288047498949932, // double of 0.0016644023749474966
+                    sliderRange: 0.0...0.0033288047498949932,
                     defaultValue: 0.0016644023749474966,
                     parameterDescription: """
                 Clear, favourable regulations can reduce uncertainty and risk for investors.
@@ -169,14 +169,14 @@ struct SettingsView: View {
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
                 )
-
+                
                 // ETF Approval
                 FactorToggleRow(
                     iconName: "building.2.crop.circle",
                     title: "ETF Approval",
                     isOn: $simSettings.useEtfApproval,
                     sliderValue: $simSettings.maxEtfBoost,
-                    sliderRange: 0.0...0.0009093700408935548, // double of 0.0004546850204467774
+                    sliderRange: 0.0...0.0009093700408935548,
                     defaultValue: 0.0004546850204467774,
                     parameterDescription: """
                 Spot BTC ETFs allow traditional investors to gain exposure without holding actual BTC.
@@ -185,14 +185,14 @@ struct SettingsView: View {
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
                 )
-
+                
                 // Tech Breakthrough
                 FactorToggleRow(
                     iconName: "sparkles",
                     title: "Tech Breakthrough",
                     isOn: $simSettings.useTechBreakthrough,
                     sliderValue: $simSettings.maxTechBoost,
-                    sliderRange: 0.0...0.0008132791949127451, // double of 0.00040663959745637255
+                    sliderRange: 0.0...0.0008132791949127451,
                     defaultValue: 0.00040663959745637255,
                     parameterDescription: """
                 Major improvements in Bitcoin’s protocol or L2 networks (Lightning, etc.)
@@ -201,14 +201,14 @@ struct SettingsView: View {
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
                 )
-
+                
                 // Scarcity Events
                 FactorToggleRow(
                     iconName: "scalemass",
                     title: "Scarcity Events",
                     isOn: $simSettings.useScarcityEvents,
                     sliderValue: $simSettings.maxScarcityBoost,
-                    sliderRange: 0.0...0.0015936167868886078, // double of 0.0007968083934443039
+                    sliderRange: 0.0...0.0015936167868886078,
                     defaultValue: 0.0007968083934443039,
                     parameterDescription: """
                 Unusual events that reduce BTC supply—like large holders moving coins off exchanges—
@@ -217,14 +217,14 @@ struct SettingsView: View {
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
                 )
-
+                
                 // Global Macro Hedge
                 FactorToggleRow(
                     iconName: "globe.americas.fill",
                     title: "Global Macro Hedge",
                     isOn: $simSettings.useGlobalMacroHedge,
                     sliderValue: $simSettings.maxMacroBoost,
-                    sliderRange: 0.0...0.000838709145784378, // double of 0.000419354572892189
+                    sliderRange: 0.0...0.000838709145784378,
                     defaultValue: 0.000419354572892189,
                     parameterDescription: """
                 BTC’s “digital gold” narrative can be strong during uncertainty.
@@ -233,14 +233,14 @@ struct SettingsView: View {
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
                 )
-
+                
                 // Stablecoin Shift
                 FactorToggleRow(
                     iconName: "dollarsign.arrow.circlepath",
                     title: "Stablecoin Shift",
                     isOn: $simSettings.useStablecoinShift,
                     sliderValue: $simSettings.maxStablecoinBoost,
-                    sliderRange: 0.0...0.000809852472620355, // double of 0.0004049262363101775
+                    sliderRange: 0.0...0.000809852472620355,
                     defaultValue: 0.0004049262363101775,
                     parameterDescription: """
                 Sometimes large sums move from stablecoins directly into BTC.
@@ -249,14 +249,14 @@ struct SettingsView: View {
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
                 )
-
+                
                 // Demographic Adoption
                 FactorToggleRow(
                     iconName: "person.3.fill",
                     title: "Demographic Adoption",
                     isOn: $simSettings.useDemographicAdoption,
                     sliderValue: $simSettings.maxDemoBoost,
-                    sliderRange: 0.0...0.0026113669872283936, // double of 0.0013056834936141968
+                    sliderRange: 0.0...0.0026113669872283936,
                     defaultValue: 0.0013056834936141968,
                     parameterDescription: """
                 Younger, more tech-savvy generations often invest in BTC,
@@ -265,14 +265,14 @@ struct SettingsView: View {
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
                 )
-
+                
                 // Altcoin Flight
                 FactorToggleRow(
                     iconName: "bitcoinsign.circle.fill",
                     title: "Altcoin Flight",
                     isOn: $simSettings.useAltcoinFlight,
                     sliderValue: $simSettings.maxAltcoinBoost,
-                    sliderRange: 0.0...0.0005604388923606684, // double of 0.0002802194461803342
+                    sliderRange: 0.0...0.0005604388923606684,
                     defaultValue: 0.0002802194461803342,
                     parameterDescription: """
                 During altcoin uncertainty or crackdowns, capital can rotate into BTC,
@@ -281,14 +281,14 @@ struct SettingsView: View {
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
                 )
-
+                
                 // Adoption Factor
                 FactorToggleRow(
                     iconName: "arrow.up.right.circle.fill",
                     title: "Adoption Factor (Incremental Drift)",
                     isOn: $simSettings.useAdoptionFactor,
                     sliderValue: $simSettings.adoptionBaseFactor,
-                    sliderRange: 0.0...0.0019370198249816894, // double of 0.0009685099124908447
+                    sliderRange: 0.0...0.0019370198249816894,
                     defaultValue: 0.0009685099124908447,
                     parameterDescription: """
                 A slow, steady upward drift in BTC price from incremental adoption.
@@ -298,7 +298,7 @@ struct SettingsView: View {
                 )
             }
             .listRowBackground(Color(white: 0.15))
-
+            
             //====================================
             // BEARISH FACTORS
             //====================================
@@ -309,7 +309,7 @@ struct SettingsView: View {
                     title: "Regulatory Clampdown",
                     isOn: $simSettings.useRegClampdown,
                     sliderValue: $simSettings.maxClampDown,
-                    sliderRange: -0.002376651382446289...0.0, // double of -0.0011883256912231445
+                    sliderRange: -0.002376651382446289...0.0,
                     defaultValue: -0.0011883256912231445,
                     parameterDescription: """
                     Strict government regulations or bans can curb adoption,
@@ -318,14 +318,14 @@ struct SettingsView: View {
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
                 )
-
+                
                 // Competitor Coin
                 FactorToggleRow(
                     iconName: "bitcoinsign.circle",
                     title: "Competitor Coin",
                     isOn: $simSettings.useCompetitorCoin,
                     sliderValue: $simSettings.maxCompetitorBoost,
-                    sliderRange: -0.0022519826889038086...0.0, // double of -0.0011259913444519043
+                    sliderRange: -0.0022519826889038086...0.0,
                     defaultValue: -0.0011259913444519043,
                     parameterDescription: """
                     A rival cryptocurrency that promises superior tech or speed
@@ -334,14 +334,14 @@ struct SettingsView: View {
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
                 )
-
+                
                 // Security Breach
                 FactorToggleRow(
                     iconName: "lock.shield",
                     title: "Security Breach",
                     isOn: $simSettings.useSecurityBreach,
                     sliderValue: $simSettings.breachImpact,
-                    sliderRange: -0.0015225654668768184...0.0, // double of -0.0007612827334384092
+                    sliderRange: -0.0015225654668768184...0.0,
                     defaultValue: -0.0007612827334384092,
                     parameterDescription: """
                     A major hack or exploit targeting BTC or big exchanges
@@ -350,7 +350,7 @@ struct SettingsView: View {
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
                 )
-
+                
                 // Bubble Pop
                 FactorToggleRow(
                     iconName: "bubble.left.and.bubble.right.fill",
@@ -366,14 +366,14 @@ struct SettingsView: View {
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
                 )
-
+                
                 // Stablecoin Meltdown
                 FactorToggleRow(
                     iconName: "exclamationmark.triangle.fill",
                     title: "Stablecoin Meltdown",
                     isOn: $simSettings.useStablecoinMeltdown,
                     sliderValue: $simSettings.maxMeltdownDrop,
-                    sliderRange: -0.0014056092410835674...0.0, // double of -0.0007028046205417837
+                    sliderRange: -0.0014056092410835674...0.0,
                     defaultValue: -0.0007028046205417837,
                     parameterDescription: """
                     Major stablecoins de-pegging or collapsing can spark a crisis of confidence
@@ -382,14 +382,14 @@ struct SettingsView: View {
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
                 )
-
+                
                 // Black Swan Events
                 FactorToggleRow(
                     iconName: "tornado",
                     title: "Black Swan Events",
                     isOn: $simSettings.useBlackSwan,
                     sliderValue: $simSettings.blackSwanDrop,
-                    sliderRange: -0.0036822905567344966...0.0, // double of -0.0018411452783672483
+                    sliderRange: -0.0036822905567344966...0.0,
                     defaultValue: -0.0018411452783672483,
                     parameterDescription: """
                     Highly unpredictable disasters or wars can undermine all markets,
@@ -398,7 +398,7 @@ struct SettingsView: View {
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
                 )
-
+                
                 // Bear Market Conditions
                 FactorToggleRow(
                     iconName: "chart.bar.xaxis",
@@ -414,7 +414,7 @@ struct SettingsView: View {
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
                 )
-
+                
                 // Declining ARR / Maturing Market
                 FactorToggleRow(
                     iconName: "chart.line.downtrend.xyaxis",
@@ -430,7 +430,7 @@ struct SettingsView: View {
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
                 )
-
+                
                 // Recession / Macro Crash
                 FactorToggleRow(
                     iconName: "chart.line.downtrend.xyaxis.circle.fill",
@@ -448,7 +448,7 @@ struct SettingsView: View {
                 )
             }
             .listRowBackground(Color(white: 0.15))
-
+            
             //====================================
             // TOGGLE ALL FACTORS
             //====================================
@@ -479,7 +479,7 @@ struct SettingsView: View {
                     }
                     .foregroundColor(.white)
                     .listRowBackground(Color(white: 0.15))
-
+                
                 if simSettings.lockedRandomSeed {
                     Text("Current Seed (Locked): \(simSettings.seedValue)")
                         .font(.footnote)
@@ -500,28 +500,25 @@ struct SettingsView: View {
                 }
             }
             .listRowBackground(Color(white: 0.15))
-
+            
             //====================================
             // GROWTH MODEL TOGGLE
             //====================================
             Section("Growth Model") {
-                // IMPORTANT: use *exactly* the same name as in SimulationSettings
                 Toggle("Use Lognormal Growth", isOn: $simSettings.useLognormalGrowth)
                     .tint(.orange)
                     .foregroundColor(.white)
             }
             .listRowBackground(Color(white: 0.15))
-
+            
             //====================================
             // HISTORICAL SAMPLING
             //====================================
             Section("Historical Sampling") {
-                // 1) Use Historical Sampling
                 Toggle("Use Historical Sampling", isOn: $simSettings.useHistoricalSampling)
                     .tint(.orange)
                     .foregroundColor(.white)
-
-                // 2) Lock Historical Sampling (if you're still using it)
+                
                 Toggle("Lock Historical Sampling", isOn: $simSettings.lockHistoricalSampling)
                     .tint(.orange)
                     .foregroundColor(.white)
@@ -537,7 +534,7 @@ struct SettingsView: View {
                     .foregroundColor(.white)
             }
             .listRowBackground(Color(white: 0.15))
-
+            
             //====================================
             // RESTORE DEFAULTS
             //====================================
@@ -548,7 +545,7 @@ struct SettingsView: View {
                 .buttonStyle(PressableDestructiveButtonStyle())
             }
             .listRowBackground(Color(white: 0.15))
-
+            
             //====================================
             // ABOUT
             //====================================
@@ -558,7 +555,7 @@ struct SettingsView: View {
                 }
             }
             .listRowBackground(Color(white: 0.15))
-
+            
             //====================================
             // RESET CRITERIA
             //====================================
@@ -567,17 +564,17 @@ struct SettingsView: View {
                     showResetCriteriaConfirmation = true
                 }
                 .buttonStyle(PressableDestructiveButtonStyle())
-                .alert("Confirm Reset", isPresented: $showResetCriteriaConfirmation) {
+                .alert("Confirm Reset", isPresented: $showResetCriteriaConfirmation, actions: {
                     Button("Reset", role: .destructive) {
-                        // Reset all factor settings to the old midpoints, or your custom logic
+                        // Reset all factor settings
                         simSettings.restoreDefaults()
-                        // 2) Ensure "hasOnboarded" is false so onboarding reappears
+                        // Force onboarding again
                         didFinishOnboarding = false
                     }
                     Button("Cancel", role: .cancel) { }
-                } message: {
+                }, message: {
                     Text("All custom criteria will be restored to default. This cannot be undone.")
-                }
+                })
             }
             .listRowBackground(Color(white: 0.15))
         }
@@ -589,36 +586,28 @@ struct SettingsView: View {
         .navigationBarTitleDisplayMode(.large)
         .overlayPreferenceValue(TooltipAnchorKey.self) { allAnchors in
             GeometryReader { proxy in
-                guard let item = allAnchors.last else {
-                    return AnyView(EmptyView())
-                }
-                
-                let bubbleWidth: CGFloat = 240
-                let bubbleHeight: CGFloat = 220
-                let offset: CGFloat = 8
+                // We combine into a single expression with a ternary for "Halving" offset
+                if let item = allAnchors.last {
+                    let bubbleWidth: CGFloat = 240
+                    let bubbleHeight: CGFloat = 220
+                    let offset: CGFloat = 8
 
-                let anchorX = proxy[item.anchor].x
-                var anchorY = proxy[item.anchor].y
+                    let anchorX = proxy[item.anchor].x
+                    // *** REPLACE the 'if item.title=="Halving" { anchorY-=16 }' with a ternary: ***
+                    let baseY = proxy[item.anchor].y
+                    let anchorY = (item.title == "Halving") ? (baseY - 16) : baseY
+                    
+                    let spaceBelow = proxy.size.height - anchorY
+                    let arrowDirection: ArrowDirection = spaceBelow > (bubbleHeight + 40) ? .up : .down
 
-                // Nudge "Halving" tooltip up a bit
-                if item.title == "Halving" {
-                    anchorY -= 16
-                }
+                    let proposedX = anchorX - (bubbleWidth / 2)
+                    let clampedX = max(10, min(proposedX, proxy.size.width - bubbleWidth - 10))
 
-                let spaceBelow = proxy.size.height - anchorY
-                let arrowDirection: ArrowDirection = spaceBelow > (bubbleHeight + 40) ? .up : .down
+                    let proposedY = arrowDirection == .up
+                        ? (anchorY + offset)
+                        : (anchorY - offset - bubbleHeight)
+                    let clampedY = max(10, min(proposedY, proxy.size.height - bubbleHeight - 10))
 
-                // Clamp X
-                let proposedX = anchorX - (bubbleWidth / 2)
-                let clampedX = max(10, min(proposedX, proxy.size.width - bubbleWidth - 10))
-
-                // Clamp Y
-                let proposedY = arrowDirection == .up
-                    ? (anchorY + offset)
-                    : (anchorY - offset - bubbleHeight)
-                let clampedY = max(10, min(proposedY, proxy.size.height - bubbleHeight - 10))
-
-                return AnyView(
                     ZStack {
                         Color.black.opacity(0.3)
                             .ignoresSafeArea()
@@ -627,7 +616,7 @@ struct SettingsView: View {
                                     activeFactor = nil
                                 }
                             }
-
+                        
                         TooltipBubble(
                             text: item.description,
                             arrowDirection: arrowDirection
@@ -641,7 +630,9 @@ struct SettingsView: View {
                     }
                     .transition(.opacity)
                     .zIndex(999)
-                )
+                } else {
+                    EmptyView()
+                }
             }
         }
     }

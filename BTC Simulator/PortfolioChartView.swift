@@ -58,9 +58,16 @@ struct PortfolioChartView: View {
         let intTop    = Int(floor(log10(finalDomainMax)))
         let yTickValues = (intBottom...intTop).map { pow(10.0, Double($0)) }
 
-        // 7) Convert weeks -> years for X scale & choose stride
-        let totalWeeks = Double(simSettings.userWeeks)
-        let totalYears = totalWeeks / 52.0
+        // 7) Convert userPeriods into years, depending on whether user picked weeks or months
+        let totalUnits = Double(simSettings.userPeriods)
+        let totalYears: Double = {
+            if simSettings.periodUnit == .weeks {
+                return totalUnits / 52.0
+            } else {
+                return totalUnits / 12.0
+            }
+        }()
+
         let xStride = dynamicXStride(for: totalYears)
 
         return GeometryReader { geo in
@@ -93,7 +100,7 @@ struct PortfolioChartView: View {
                             AxisValueLabel {
                                 if let dblVal = axisValue.as(Double.self) {
                                     let exponent = Int(log10(dblVal))
-                                    // formatPowerOfTenLabel is also presumably declared elsewhere
+                                    // formatPowerOfTenLabel is presumably declared elsewhere
                                     Text(formatPowerOfTenLabel(exponent))
                                         .foregroundColor(.white)
                                 }
@@ -101,19 +108,19 @@ struct PortfolioChartView: View {
                         }
                     }
 
-                    // X-axis => months/years
+                    // X-axis => show months if totalYears <= 2, otherwise show years
                     .chartXAxis {
                         AxisMarks(values: Array(stride(from: 0.0, through: totalYears, by: xStride))) { axisValue in
                             AxisGridLine().foregroundStyle(.white.opacity(0.3))
                             AxisTick().foregroundStyle(.white.opacity(0.3))
                             AxisValueLabel {
                                 if let dblVal = axisValue.as(Double.self), dblVal > 0 {
-                                    // For short time spans, show months
                                     if totalYears <= 2.0 {
+                                        // Show months for short durations
                                         Text("\(Int(dblVal * 12))M")
                                             .foregroundColor(.white)
                                     } else {
-                                        // For longer, show years
+                                        // Otherwise show years
                                         Text("\(Int(dblVal))Y")
                                             .foregroundColor(.white)
                                     }

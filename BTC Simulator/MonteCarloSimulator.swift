@@ -125,7 +125,7 @@ func runOneFullSimulation(
     annualCAGR: Double,
     annualVolatility: Double,
     exchangeRateEURUSD: Double,
-    userWeeks: Int,
+    userWeeks: Int,       // Actually 'userPeriods' => # of weeks or months
     initialBTCPriceUSD: Double,
     seed: UInt64? = nil
 ) -> [SimulationData] {
@@ -156,6 +156,20 @@ func runOneFullSimulation(
         PrintOnce.didPrintStandardDeviation = true
     }
 
+    // -------------------------------
+    // NEW OR CHANGED:
+    // Decide if each iteration is 1 week or 1 month
+    let periodsPerYear = (settings.periodUnit == .weeks) ? 52.0 : 12.0
+    
+    // Convert annual CAGR to "per period"
+    let cagrDecimal = annualCAGR / 100.0
+    let logDrift    = cagrDecimal / periodsPerYear
+    
+    // Convert annualVolatility & standardDeviation to "per period"
+    let periodVol = (annualVolatility / 100.0) / sqrt(periodsPerYear)
+    let periodSD  = (parsedSD / 100.0) / sqrt(periodsPerYear)
+    // -------------------------------
+
     // Convert the USD price to EUR
     let firstEURPrice = initialBTCPriceUSD / exchangeRateEURUSD
     
@@ -170,14 +184,6 @@ func runOneFullSimulation(
 
     var previousBTCHoldings = userStartingBalanceBTC
     var previousBTCPriceUSD = initialBTCPriceUSD
-    
-    // Lognormal growth
-    let cagrDecimal = annualCAGR / 100.0
-    let logDrift    = cagrDecimal / 52.0
-
-    // Weekly volatility as fraction
-    let weeklyVol = (annualVolatility / 100.0) / sqrt(52.0)
-    let weeklySD  = (parsedSD / 100.0) / sqrt(52.0)
 
     // Initial portfolio
     let initialPortfolioEUR = userStartingBalanceBTC * firstEURPrice
@@ -205,39 +211,43 @@ func runOneFullSimulation(
     )
 
     // Main loop
+    // (Here 'week' is really "period"—one week or one month)
     for week in 2...userWeeks {
         let useHist = settings.useHistoricalSampling
         let useLog  = settings.useLognormalGrowth
         let lumpsum = (!useHist && !useLog)
 
-        // Lump sum => once per year
         if lumpsum {
-            if week % 52 == 0 {
+            // Lump sum => once per year
+            // e.g. if months => apply lumpsum in the 12th, 24th, 36th iteration
+            // if weeks => 52nd, 104th, 156th iteration, etc.
+            
+            if Double(week).truncatingRemainder(dividingBy: periodsPerYear) == 0 {
                 var lumpsumGrowth = cagrDecimal
 
                 if settings.useVolShocks && annualVolatility > 0.0 {
                     // Vol shock
                     let shockVol: Double
                     if useSeededRandom, var localRNG = seededGen {
-                        shockVol = seededRandomNormal(mean: 0, stdDev: weeklyVol, rng: &localRNG)
+                        shockVol = seededRandomNormal(mean: 0, stdDev: periodVol, rng: &localRNG)  // <-- changed weeklyVol => periodVol
                         seededGen = localRNG
                     } else {
-                        shockVol = randomNormal(mean: 0, standardDeviation: weeklyVol)
+                        shockVol = randomNormal(mean: 0, standardDeviation: periodVol)
                     }
 
                     // Additional standard deviation shock
                     var shockSD: Double = 0
-                    if weeklySD > 0 {
+                    if periodSD > 0 {
                         if useSeededRandom, var rng = seededGen {
-                            shockSD = seededRandomNormal(mean: 0, stdDev: weeklySD, rng: &rng)
+                            shockSD = seededRandomNormal(mean: 0, stdDev: periodSD, rng: &rng)    // <-- changed weeklySD => periodSD
                             seededGen = rng
                         } else {
-                            shockSD = randomNormal(mean: 0, standardDeviation: weeklySD)
+                            shockSD = randomNormal(mean: 0, standardDeviation: periodSD)
                         }
                         shockSD = max(min(shockSD, 2.0), -1.0)
                     }
 
-                    // Combine them => lumpsumGrowth = (1 + lumpsumGrowth) * e^(shockVol+shockSD) - 1
+                    // lumpsumGrowth = (1 + lumpsumGrowth) * e^(shockVol+shockSD) - 1
                     let combinedShocks = exp(shockVol + shockSD)
                     lumpsumGrowth = (1.0 + lumpsumGrowth) * combinedShocks - 1.0
                 }
@@ -249,44 +259,46 @@ func runOneFullSimulation(
             }
 
         } else {
-            // Weekly approach => random draws
-            var totalWeeklyReturn = 0.0
+            // "Random draws" approach => log + historical + volShocks
+            var totalReturn = 0.0
             if useHist {
-                totalWeeklyReturn += pickRandomReturn(from: historicalBTCWeeklyReturns)
+                totalReturn += pickRandomReturn(from: historicalBTCWeeklyReturns)
             }
             if useLog {
-                totalWeeklyReturn += logDrift
+                totalReturn += logDrift
             }
             if settings.useVolShocks {
                 // Vol shock
                 let shockVol: Double
                 if useSeededRandom, var localRNG = seededGen {
-                    shockVol = seededRandomNormal(mean: 0, stdDev: weeklyVol, rng: &localRNG)
+                    shockVol = seededRandomNormal(mean: 0, stdDev: periodVol, rng: &localRNG) // <-- changed
                     seededGen = localRNG
                 } else {
-                    shockVol = randomNormal(mean: 0, standardDeviation: weeklyVol)
+                    shockVol = randomNormal(mean: 0, standardDeviation: periodVol)
                 }
-                totalWeeklyReturn += shockVol
+                totalReturn += shockVol
 
                 // Additional standard deviation shock
-                if weeklySD > 0 {
+                if periodSD > 0 {
                     var shockSD: Double
                     if useSeededRandom, var rng = seededGen {
-                        shockSD = seededRandomNormal(mean: 0, stdDev: weeklySD, rng: &rng)
+                        shockSD = seededRandomNormal(mean: 0, stdDev: periodSD, rng: &rng)     // <-- changed
                         seededGen = rng
                     } else {
-                        shockSD = randomNormal(mean: 0, standardDeviation: weeklySD)
+                        shockSD = randomNormal(mean: 0, standardDeviation: periodSD)
                     }
                     shockSD = max(min(shockSD, 2.0), -1.0)
-                    totalWeeklyReturn += shockSD
+                    totalReturn += shockSD
                 }
             }
 
-            totalWeeklyReturn = applyFactorToggles(baseReturn: totalWeeklyReturn, week: week, settings: settings)
-            // Original code had 0.46 as a “shrink factor”
+            totalReturn = applyFactorToggles(baseReturn: totalReturn, week: week, settings: settings)
+            
+            // Original code had 0.46 as a "shrink factor"
             let baseShrinkFactor = 0.46
-            totalWeeklyReturn *= baseShrinkFactor
-            previousBTCPriceUSD *= exp(totalWeeklyReturn)
+            totalReturn *= baseShrinkFactor
+            
+            previousBTCPriceUSD *= exp(totalReturn)
         }
 
         // Don’t let price go below $1
@@ -294,7 +306,13 @@ func runOneFullSimulation(
         let currentBTCPriceEUR = previousBTCPriceUSD / exchangeRateEURUSD
 
         // Figure out typed contributions
-        let isFirstYear = (week <= 52)
+        // If user picks .months, then "week <= 52" doesn't make sense.
+        // Instead, let's say "first year" means the first 'periodsPerYear' iterations.
+        // (So if months => first 12; if weeks => first 52)
+        
+        // <-- NEW OR CHANGED:
+        let isFirstYear = Double(week) <= periodsPerYear
+        
         var typedContrib = 0.0
         if isFirstYear {
             if let firstYearContributionString = settings.inputManager?.firstYearContribution,
@@ -538,7 +556,7 @@ func runMonteCarloSimulationsWithProgress(
     // Sort runs by their final portfolio value
     var finalValues = allRuns.map { ($0.last?.portfolioValueEUR ?? Decimal.zero, $0) }
     finalValues.sort { $0.0 < $1.0 }
-
+    
     // The median run
     let medianRun = finalValues[finalValues.count / 2].1
     

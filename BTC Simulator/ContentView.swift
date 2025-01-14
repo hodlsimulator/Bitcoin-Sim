@@ -302,24 +302,24 @@ struct ContentView: View {
     @State private var showSnapshotsDebug = false
     
     init() {
-            let manager = PersistentInputManager()
-            let settings = SimulationSettings()
-            settings.inputManager = manager
-            let cache = ChartDataCache()
+        let manager = PersistentInputManager()
+        let settings = SimulationSettings()
+        settings.inputManager = manager
+        let cache = ChartDataCache()
 
-            let chartSel = ChartSelection()
-            let simCoord = SimulationCoordinator(
-                chartDataCache: cache,
-                simSettings: settings,
-                inputManager: manager,
-                chartSelection: chartSel
-            )
+        let chartSel = ChartSelection()
+        let simCoord = SimulationCoordinator(
+            chartDataCache: cache,
+            simSettings: settings,
+            inputManager: manager,
+            chartSelection: chartSel
+        )
 
-            _inputManager = StateObject(wrappedValue: manager)
-            _simSettings = StateObject(wrappedValue: settings)
-            _chartDataCache = StateObject(wrappedValue: cache)
-            _coordinator = StateObject(wrappedValue: simCoord)
-        }
+        _inputManager = StateObject(wrappedValue: manager)
+        _simSettings = StateObject(wrappedValue: settings)
+        _chartDataCache = StateObject(wrappedValue: cache)
+        _coordinator = StateObject(wrappedValue: simCoord)
+    }
 
     var body: some View {
         NavigationStack {
@@ -651,7 +651,7 @@ struct ContentView: View {
                     
                     // Column headers
                     HStack(spacing: 0) {
-                        Text("Week")
+                        Text(simSettings.periodUnit == .weeks ? "Week" : "Month")
                             .frame(width: 60, alignment: .leading)
                             .font(.headline)
                             .padding(.leading, 50)
@@ -697,24 +697,31 @@ struct ContentView: View {
                     
                     // Main data scroll
                     ScrollView(.vertical, showsIndicators: !hideScrollIndicators) {
+                        
+                        let displayedResults = coordinator.monteCarloResults
+                        
                         HStack(spacing: 0) {
-                            // Left column: Week numbers
+                            // Left column: Week or Month
                             VStack(spacing: 0) {
-                                ForEach(coordinator.monteCarloResults.indices, id: \.self) { index in
-                                    let result = coordinator.monteCarloResults[index]
+                                ForEach(displayedResults.indices, id: \.self) { index in
+                                    let result = displayedResults[index]
                                     let rowBackground = index.isMultiple(of: 2)
                                         ? Color(white: 0.10)
                                         : Color(white: 0.14)
                                     
-                                    Text("\(result.week)")
-                                        .frame(width: 70, alignment: .leading)
-                                        .padding(.leading, 50)
-                                        .padding(.vertical, 12)
-                                        .padding(.horizontal, 8)
-                                        .background(rowBackground)
-                                        .foregroundColor(.white)
-                                        .id("week-\(result.week)")
-                                        .background(RowOffsetReporter(week: result.week))
+                                    Text(
+                                        simSettings.periodUnit == .weeks
+                                        ? "\(result.week)"
+                                        : "\((result.week + 3) / 4)"  // rounding up to month index
+                                    )
+                                    .frame(width: 70, alignment: .leading)
+                                    .padding(.leading, 50)
+                                    .padding(.vertical, 12)
+                                    .padding(.horizontal, 8)
+                                    .background(rowBackground)
+                                    .foregroundColor(.white)
+                                    .id("week-\(result.week)")
+                                    .background(RowOffsetReporter(week: result.week))
                                 }
                             }
                             
@@ -723,8 +730,8 @@ struct ContentView: View {
                                 ForEach(0..<columns.count, id: \.self) { idx in
                                     ZStack {
                                         VStack(spacing: 0) {
-                                            ForEach(coordinator.monteCarloResults.indices, id: \.self) { rowIndex in
-                                                let rowResult = coordinator.monteCarloResults[rowIndex]
+                                            ForEach(displayedResults.indices, id: \.self) { rowIndex in
+                                                let rowResult = displayedResults[rowIndex]
                                                 let rowBackground = rowIndex.isMultiple(of: 2)
                                                     ? Color(white: 0.10)
                                                     : Color(white: 0.14)
@@ -772,10 +779,21 @@ struct ContentView: View {
                         .coordinateSpace(name: "scrollArea")
                         .onPreferenceChange(RowOffsetPreferenceKey.self) { offsets in
                             let targetY: CGFloat = 160
-                            let totalWeeks = simSettings.userWeeks
+                            
+                            // ---------------------------
+                            // Re-check finalWeeks for clamp
+                            let finalWeeks: Int = {
+                                if simSettings.periodUnit == .weeks {
+                                    return simSettings.userPeriods
+                                } else {
+                                    return simSettings.userPeriods * 4
+                                }
+                            }()
+                            // ---------------------------
+                            
                             // Filter out weeks outside our domain
                             let filtered = offsets.filter { (week, _) in
-                                week >= 0 && week <= totalWeeks
+                                week >= 0 && week <= finalWeeks
                             }
                             let mapped = filtered.mapValues { abs($0 - targetY) }
                             

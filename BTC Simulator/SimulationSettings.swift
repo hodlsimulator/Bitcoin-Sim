@@ -9,12 +9,18 @@ import SwiftUI
 
 /// A class for storing user toggles and results
 class SimulationSettings: ObservableObject {
-
+    
     var inputManager: PersistentInputManager? = nil
     
     // @AppStorage("useLognormalGrowth") var useLognormalGrowth: Bool = true
 
-    @Published var userWeeks: Int = 52
+    // MARK: - Weekly vs. Monthly
+    /// The user’s chosen period unit (weeks or months)
+    @Published var periodUnit: PeriodUnit = .weeks
+    
+    /// The total number of periods, e.g. 1040 for weeks, 240 for months
+    @Published var userPeriods: Int = 52
+
     @Published var initialBTCPriceUSD: Double = 58000.0
 
     // Onboarding
@@ -198,14 +204,6 @@ class SimulationSettings: ObservableObject {
         }
     }
 
-    /// This property is for UI display/editing.
-    /// Internally, `halvingBump` remains ~0.48.
-    // Keep it straightforward — no * 10
-    var halvingBumpForUI: Double {
-        get { halvingBump }     // just return it
-        set { halvingBump = newValue }
-    }
-    
     // Institutional Demand
     @Published var useInstitutionalDemand: Bool = true {
         didSet {
@@ -595,8 +593,14 @@ class SimulationSettings: ObservableObject {
         if let savedACB = defaults.object(forKey: "savedAverageCostBasis") as? Double {
             self.averageCostBasis = savedACB
         }
-        if let savedWeeks = defaults.object(forKey: "savedUserWeeks") as? Int {
-            self.userWeeks = savedWeeks
+
+        // Instead of userWeeks, load userPeriods
+        if let savedPeriods = defaults.object(forKey: "savedUserPeriods") as? Int {
+            self.userPeriods = savedPeriods
+        }
+        if let savedPeriodUnitRaw = defaults.string(forKey: "savedPeriodUnit"),
+           let savedPeriodUnit = PeriodUnit(rawValue: savedPeriodUnitRaw) {
+            self.periodUnit = savedPeriodUnit
         }
         if let savedBTCPrice = defaults.object(forKey: "savedInitialBTCPriceUSD") as? Double {
             self.initialBTCPriceUSD = savedBTCPrice
@@ -791,14 +795,18 @@ class SimulationSettings: ObservableObject {
         exchangeRateEURUSD: Double
     ) -> UInt64 {
         var hasher = Hasher()
-        hasher.combine(userWeeks)
+        
+        // Combine period settings
+        hasher.combine(periodUnit.rawValue)
+        hasher.combine(userPeriods)
+        
         hasher.combine(initialBTCPriceUSD)
         hasher.combine(startingBalance)
         hasher.combine(averageCostBasis)
         hasher.combine(lockedRandomSeed)
         hasher.combine(seedValue)
         hasher.combine(useRandomSeed)
-        hasher.combine(useHistoricalSampling)     // <-- Important for toggling historical sampling
+        hasher.combine(useHistoricalSampling)
         hasher.combine(useVolShocks)
         hasher.combine(annualCAGR)
         hasher.combine(annualVolatility)
@@ -866,6 +874,9 @@ class SimulationSettings: ObservableObject {
         
         // ...rest of the simulation logic...
         // e.g. build simulations, store results in lastRunResults, etc.
+        // You can do something like:
+        // let totalSteps = (periodUnit == .weeks) ? userPeriods : userPeriods
+        // Or interpret each "step" differently depending on unit.
     }
 
     // MARK: - Restore Defaults
@@ -1005,7 +1016,7 @@ class SimulationSettings: ObservableObject {
     // Prints out relevant toggles & settings once per run
     func printAllSettings() {
         print("=== FACTOR SETTINGS (once only) ===")
-        print("// DEBUG: SimulationSettings run => userWeeks=\(userWeeks), initialBTCPriceUSD=\(initialBTCPriceUSD)")
+        print("// DEBUG: SimulationSettings run => periodUnit=\(periodUnit.rawValue), userPeriods=\(userPeriods), initialBTCPriceUSD=\(initialBTCPriceUSD)")
         print("// DEBUG:   startingBalance=\(startingBalance), averageCostBasis=\(averageCostBasis)")
         print("// DEBUG:   lockedRandomSeed=\(lockedRandomSeed), seedValue=\(seedValue), useRandomSeed=\(useRandomSeed)")
         print("// DEBUG:   currencyPreference=\(currencyPreference.rawValue)")
@@ -1040,7 +1051,7 @@ class SimulationSettings: ObservableObject {
         print("// DEBUG:   useBearMarket=\(useBearMarket), bearWeeklyDrift=\(bearWeeklyDrift)")
         print("// DEBUG:   useMaturingMarket=\(useMaturingMarket), maxMaturingDrop=\(maxMaturingDrop)")
         print("// DEBUG:   useRecession=\(useRecession), maxRecessionDrop=\(maxRecessionDrop)")
-
+        
         // Existing line for historical lock
         print("// DEBUG: lockHistoricalSampling=\(lockHistoricalSampling)")
         print("// DEBUG: toggleAll=\(toggleAll), areAllFactorsEnabled=\(areAllFactorsEnabled)")
