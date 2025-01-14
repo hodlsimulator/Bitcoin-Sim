@@ -159,7 +159,10 @@ struct MonteCarloChartView: View {
     private let topOffset: CGFloat = 0
     
     /// Vertical "squish" factor (1.0 = no squish; e.g. 0.9 = 90% original height)
-    private let scaleY: CGFloat = 0.92
+    /// We'll conditionally disable it in landscape:
+    var verticalScale: CGFloat {
+        orientationObserver.isLandscape ? 1.0 : 0.92 // CHANGED
+    }
     
     var body: some View {
         
@@ -220,7 +223,6 @@ struct MonteCarloChartView: View {
                         simulationLines(simulations: simulations, simSettings: simSettings)
                         medianLines(simulations: simulations, simSettings: simSettings)
                     }
-                    // Important: DO NOT override .foregroundStyle here
                     .chartLegend(.hidden)
                     .chartXScale(domain: 0.0...totalYears, type: .linear)
                     .chartYScale(domain: domainMin...domainMax, type: .log)
@@ -261,7 +263,8 @@ struct MonteCarloChartView: View {
                     }
                     .frame(width: geo.size.width, height: geo.size.height)
                 }
-                .scaleEffect(x: 1.0, y: scaleY, anchor: .bottom)
+                // CHANGED: scaleEffect is now using verticalScale (1.0 in landscape)
+                .scaleEffect(x: 1.0, y: verticalScale, anchor: .bottom)
                 .offset(y: -topOffset)
             }
         }
@@ -269,7 +272,7 @@ struct MonteCarloChartView: View {
     }
 }
 
-// MARK: - Chart content with per-run color (already included above)
+// MARK: - Chart content with per-run color (already in your code)
 
 // MARK: - Format suffix on log scale
 
@@ -448,7 +451,8 @@ struct MonteCarloResultsView: View {
                         squishedLandscape = squishPortraitImage(portrait)
                     }
                 }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                // A slight delay for layout
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     isGeneratingLandscape = true
                     buildTrueLandscapeSnapshot { newSnapshot in
                         switch chartSelection.selectedChart {
@@ -480,12 +484,16 @@ struct MonteCarloResultsView: View {
                 if let freshLandscape = freshLandscapeSnapshot {
                     Image(uiImage: freshLandscape)
                         .resizable()
-                        .scaledToFit()
+                        .interpolation(.none)
+                        .antialiased(false)
+                        .aspectRatio(contentMode: .fill)
                     
                 } else if let squished = squishedLandscape {
                     Image(uiImage: squished)
                         .resizable()
-                        .scaledToFit()
+                        .interpolation(.none)
+                        .antialiased(false)
+                        .aspectRatio(contentMode: .fill)
                     
                 } else if let portrait = portraitSnapshot {
                     SquishedLandscapePlaceholderView(image: portrait)
@@ -529,36 +537,47 @@ struct MonteCarloResultsView: View {
         }
     }
     
-    // MARK: - Build Landscape Snapshots
+    // MARK: - Build Landscape Snapshots (UIHostingController approach)
+    // CHANGED: we'll render via a UIHostingController so the chart is fully laid out
+    // at the exact size we want, with no accidental scaling.
     private func buildTrueLandscapeSnapshot(completion: @escaping (UIImage) -> Void) {
-        // Multiply by UIScreen scale so it’s not rendered tiny on high-res
-        let scale = UIScreen.main.scale
-        let w = 800.0 * scale
-        let h = 400.0 * scale
-        
-        let wideChart: AnyView
+        let desiredSize = CGSize(width: 800, height: 400) // or match device if you prefer
+         
+        // We'll pick the correct chart
+        let chartToSnapshot: AnyView
         switch chartSelection.selectedChart {
         case .btcPrice:
-            wideChart = AnyView(
+            chartToSnapshot = AnyView(
                 MonteCarloChartView()
                     .environmentObject(orientationObserver)
                     .environmentObject(chartDataCache)
                     .environmentObject(simSettings)
-                    .frame(width: w, height: h)
+                    .frame(width: desiredSize.width, height: desiredSize.height)
                     .background(Color.black)
             )
         case .cumulativePortfolio:
-            wideChart = AnyView(
+            chartToSnapshot = AnyView(
                 PortfolioChartView()
                     .environmentObject(orientationObserver)
                     .environmentObject(chartDataCache)
                     .environmentObject(simSettings)
-                    .frame(width: w, height: h)
+                    .frame(width: desiredSize.width, height: desiredSize.height)
                     .background(Color.black)
             )
         }
         
-        completion(wideChart.snapshot())
+        // Wrap in a temporary UIHostingController
+        let hostingController = UIHostingController(rootView: chartToSnapshot)
+        hostingController.view.frame = CGRect(origin: .zero, size: desiredSize)
+        
+        // Render
+        let renderer = UIGraphicsImageRenderer(size: desiredSize)
+        let image = renderer.image { _ in
+            // drawHierarchy captures styling, though layer.render can look crisper sometimes:
+            hostingController.view.drawHierarchy(in: hostingController.view.bounds, afterScreenUpdates: true)
+        }
+        
+        completion(image)
     }
 }
 
