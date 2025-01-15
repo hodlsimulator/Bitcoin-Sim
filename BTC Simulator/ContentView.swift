@@ -622,6 +622,7 @@ struct ContentView: View {
                     
                     // -- Top bar --
                     HStack {
+                        // Back button
                         Button(action: {
                             print("// DEBUG: Back button tapped in simulationResultsView.")
                             UserDefaults.standard.set(lastViewedWeek, forKey: "lastViewedWeek")
@@ -632,16 +633,20 @@ struct ContentView: View {
                             Image(systemName: "chevron.left")
                                 .foregroundColor(.white)
                                 .imageScale(.large)
+                                .frame(width: 40, height: 40)
                         }
-                        
+                        .padding(.leading, 42)
+
                         Spacer()
-                        
+
+                        // Centre title
                         Text("Simulation Results")
                             .foregroundColor(.white)
                             .font(.headline)
-                            
+
                         Spacer()
-                        
+
+                        // Chart button
                         Button(action: {
                             print("// DEBUG: Chart button pressed.")
                             showHistograms = true
@@ -649,10 +654,11 @@ struct ContentView: View {
                             Image(systemName: "chart.line.uptrend.xyaxis")
                                 .foregroundColor(inputManager.generateGraphs ? .white : .gray)
                                 .imageScale(.large)
+                                .frame(width: 40, height: 40)
                         }
                         .disabled(!inputManager.generateGraphs)
+                        .padding(.trailing, 42)
                     }
-                    .padding(.horizontal, 55)
                     .padding(.vertical, 10)
                     .background(Color(white: 0.12))
                     

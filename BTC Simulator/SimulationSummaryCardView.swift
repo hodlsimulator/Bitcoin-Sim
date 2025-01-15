@@ -24,33 +24,33 @@ struct SimulationSummaryCardView: View {
                 // 1) BTC Price - right aligned
                 VStack(spacing: 4) {
                     Text("BTC Price")
-                        .font(.headline)
+                        .font(.title3)
                         .foregroundColor(.gray)
                     Text("\(currencySymbol)\(abbreviateValue(finalBTCPrice))")
                         .foregroundColor(.white)
-                        .font(.title3)
+                        .font(.title2)
                 }
                 .frame(width: columnWidth, alignment: .trailing)
                 
                 // 2) Portfolio - centre aligned
                 VStack(spacing: 4) {
                     Text("Portfolio")
-                        .font(.headline)
+                        .font(.title3)
                         .foregroundColor(.gray)
                     Text("\(currencySymbol)\(abbreviateValue(finalPortfolioValue))")
                         .foregroundColor(.white)
-                        .font(.title3)
+                        .font(.title2)
                 }
                 .frame(width: columnWidth, alignment: .center)
                 
                 // 3) Growth - left aligned
                 VStack(spacing: 4) {
                     Text("Growth")
-                        .font(.headline)
+                        .font(.title3)
                         .foregroundColor(.gray)
                     Text(formatGrowth(growthPercent))
                         .foregroundColor(.green)
-                        .font(.title3)
+                        .font(.title2)
                 }
                 .frame(width: columnWidth, alignment: .leading)
             }
