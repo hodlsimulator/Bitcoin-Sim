@@ -83,7 +83,7 @@ struct TipsData {
     static let usageTips: [String] = [
         // Original 32:
         "Tip: Drag the 3D spinner to adjust its speed. Give it a fling!",
-        "Tip: Double-tap the spinner to flip its rotation direction.",
+        // "Tip: Double-tap the spinner to flip its rotation direction.",
         "Tip: Scroll sideways in the results table to reveal extra columns.",
         "Tip: Lock the seed in Settings for repeatable outcomes.",
         "Tip: See ‘About’ for a peek at the simulation’s logic.",
@@ -116,7 +116,7 @@ struct TipsData {
         "Tip: Turn all factors off for a plain baseline simulation.",
         
         // New ~32:
-        "Tip: Triple-tap the spinner to pause its rotation entirely.",
+        // "Tip: Triple-tap the spinner to pause its rotation entirely.",
         "Tip: Swipe quickly on the results table to skip 10 rows at a time.",
         "Tip: Increase threshold 2 for fewer partial cash-outs.",
         "Tip: For an extreme bull scenario, turn on every bullish factor at once.",
@@ -133,8 +133,8 @@ struct TipsData {
         "Tip: Focus on best-case scenario by examining the 90th percentile run.",
         "Tip: Flip from weekly to monthly in Settings to reduce steps.",
         "Tip: If you’re short-term, reduce user periods for fewer data rows.",
-        "Tip: Press and hold the back arrow to quickly switch toggles.",
-        "Tip: Halving default bump is 0.48—change it if you have another guess.",
+        // "Tip: Press and hold the back arrow to quickly switch toggles.",
+        // "Tip: Halving default bump is 0.48—change it if you have another guess.",
         "Tip: If random seed is locked, you’ll see the same run each time.",
         "Tip: Consider black swan events if you fear big market shocks.",
         "Tip: Scarcity events can replicate exchange outflows or lost wallets.",
@@ -159,7 +159,9 @@ struct TipsData {
             tips.removeAll { tip in
                 tip.lowercased().contains("stablecoin meltdown") ||
                 tip.lowercased().contains("tether collapse") ||
-                tip.lowercased().contains("stablecoin collapses")
+                tip.lowercased().contains("stablecoin collapses") ||
+                tip.lowercased().contains("enabling or disabling stablecoin meltdown triggers")
+                
             }
         } else {
             // (1B) If meltdown is ON, remove “turn on stablecoin meltdown” references (if any)

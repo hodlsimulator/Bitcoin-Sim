@@ -104,66 +104,13 @@ struct BitcoinBShape: Shape {
 
 // MARK: - Combined official Bitcoin Logo
 struct OfficialBitcoinLogo: View {
-    /// The current rotation (in degrees) around the Y-axis.
-    @State private var angle: Double = 0
-    
-    /// Degrees per second (positive = one direction, negative = the other).
-    @State private var angleDelta: Double = 20
-    
-    /// Whether rotation is paused right now.
-    @State private var isPaused: Bool = false
-    
-    /// Used to detect 2-tap vs 3-tap without clashing gesture recognisers.
-    @State private var tapCount: Int = 0
-    @State private var lastTapTime = Date.distantPast
-
     var body: some View {
         ZStack {
-            // Orange circle
             BitcoinCircleShape()
                 .fill(Color.orange)
-            
-            // White “B”
             BitcoinBShape()
                 .fill(Color.white)
         }
         .frame(width: 120, height: 120)
-        
-        // Rotate the entire logo around the Y-axis (like a coin flip).
-        // Using perspective = 0 removes the “stretching” effect.
-        .rotation3DEffect(.degrees(angle), axis: (x: 0, y: 1, z: 0), perspective: 0)
-        
-        // Make the entire region tappable.
-        .contentShape(Rectangle())
-        
-        // Single tap handler — we check how many times user tapped in quick succession.
-        .onTapGesture {
-            let now = Date()
-            if now.timeIntervalSince(lastTapTime) < 0.3 {
-                tapCount += 1
-            } else {
-                tapCount = 1
-            }
-            lastTapTime = now
-            
-            if tapCount == 2 {
-                // Double-tap => flip rotation direction & unpause if needed
-                angleDelta = -angleDelta
-                isPaused = false
-                
-            } else if tapCount == 3 {
-                // Triple-tap => pause or unpause
-                isPaused.toggle()
-                tapCount = 0  // reset after triple-tap
-            }
-        }
-        
-        // Update angle ~60 times/sec as long as we're not paused.
-        .onReceive(Timer.publish(every: 1/60, on: .main, in: .common).autoconnect()) { _ in
-            guard !isPaused else { return }
-            angle += angleDelta * (1.0 / 60.0)
-            // We do NOT clamp or reset 'angle' to 0..360,
-            // so it keeps rotating smoothly without a “snap.”
-        }
     }
 }
