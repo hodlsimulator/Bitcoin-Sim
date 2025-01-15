@@ -635,6 +635,12 @@ struct ContentView: View {
                         
                         Spacer()
                         
+                        Text("Simulation Results")
+                            .foregroundColor(.white)
+                            .font(.headline)
+                            
+                        Spacer()
+                        
                         Button(action: {
                             print("// DEBUG: Chart button pressed.")
                             showHistograms = true

@@ -12,52 +12,57 @@ struct SimulationSummaryCardView: View {
     let finalPortfolioValue: Double
     let growthPercent: Double
     
-    // NEW
     let currencySymbol: String
     
     var body: some View {
-        HStack(spacing: 24) {
-            VStack(alignment: .leading) {
-                Text("BTC Final Price")
-                    .font(.headline)
-                    .foregroundColor(.gray)
-                Text("\(currencySymbol)\(abbreviateValue(finalBTCPrice))")
-                    .foregroundColor(.white)
-                    .font(.title3)
+        GeometryReader { geometry in
+            // Horizontal padding
+            let horizontalPadding: CGFloat = 16
+            
+            // Total width (minus left + right padding)
+            let totalWidth = geometry.size.width - (horizontalPadding * 2)
+            
+            // Each column is exactly 1/3 of total width
+            let columnWidth = totalWidth / 3
+            
+            HStack(spacing: 0) {
+                // 1) BTC Price - right aligned
+                VStack(spacing: 4) {
+                    Text("BTC Price")
+                        .font(.headline)
+                        .foregroundColor(.gray)
+                    Text("\(currencySymbol)\(abbreviateValue(finalBTCPrice))")
+                        .foregroundColor(.white)
+                        .font(.title3)
+                }
+                .frame(width: columnWidth, alignment: .trailing)
+                
+                // 2) Portfolio - centre aligned
+                VStack(spacing: 4) {
+                    Text("Portfolio")
+                        .font(.headline)
+                        .foregroundColor(.gray)
+                    Text("\(currencySymbol)\(abbreviateValue(finalPortfolioValue))")
+                        .foregroundColor(.white)
+                        .font(.title3)
+                }
+                .frame(width: columnWidth, alignment: .center)
+                
+                // 3) Growth - left aligned
+                VStack(spacing: 4) {
+                    Text("Growth")
+                        .font(.headline)
+                        .foregroundColor(.gray)
+                    Text(formatGrowth(growthPercent))
+                        .foregroundColor(.green)
+                        .font(.title3)
+                }
+                .frame(width: columnWidth, alignment: .leading)
             }
-            
-            Divider()
-                .frame(height: 40)
-                .background(Color.gray)
-            
-            VStack(alignment: .leading) {
-                Text("Portfolio")
-                    .font(.headline)
-                    .foregroundColor(.gray)
-                Text("\(currencySymbol)\(abbreviateValue(finalPortfolioValue))")
-                    .foregroundColor(.white)
-                    .font(.title3)
-            }
-            
-            Divider()
-                .frame(height: 40)
-                .background(Color.gray)
-            
-            VStack(alignment: .leading) {
-                Text("Growth")
-                    .font(.headline)
-                    .foregroundColor(.gray)
-                Text(formatGrowth(growthPercent))
-                    .foregroundColor(.green)
-                    .font(.title3)
-            }
+            .padding(.horizontal, horizontalPadding)
+            .padding(.vertical, 8) // Minimal vertical padding
         }
-        .padding()
-        // Removed the grey background
-        //.background(Color(white: 0.20))
-        .cornerRadius(10)
-        .padding(.horizontal)
-        .padding(.top, 8)
+        .frame(height: 80) // Fix height so GeometryReader doesn’t expand
     }
 }
 
