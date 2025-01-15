@@ -19,11 +19,11 @@ struct SimulationSummaryCardView: View {
         HStack(spacing: 24) {
             VStack(alignment: .leading) {
                 Text("BTC Final Price")
-                    .font(.subheadline)
+                    .font(.headline)
                     .foregroundColor(.gray)
                 Text("\(currencySymbol)\(abbreviateValue(finalBTCPrice))")
                     .foregroundColor(.white)
-                    .font(.headline)
+                    .font(.title3)
             }
             
             Divider()
@@ -32,11 +32,11 @@ struct SimulationSummaryCardView: View {
             
             VStack(alignment: .leading) {
                 Text("Portfolio")
-                    .font(.subheadline)
+                    .font(.headline)
                     .foregroundColor(.gray)
                 Text("\(currencySymbol)\(abbreviateValue(finalPortfolioValue))")
                     .foregroundColor(.white)
-                    .font(.headline)
+                    .font(.title3)
             }
             
             Divider()
@@ -45,15 +45,16 @@ struct SimulationSummaryCardView: View {
             
             VStack(alignment: .leading) {
                 Text("Growth")
-                    .font(.subheadline)
+                    .font(.headline)
                     .foregroundColor(.gray)
                 Text(formatGrowth(growthPercent))
                     .foregroundColor(.green)
-                    .font(.headline)
+                    .font(.title3)
             }
         }
         .padding()
-        .background(Color(white: 0.20))
+        // Removed the grey background
+        //.background(Color(white: 0.20))
         .cornerRadius(10)
         .padding(.horizontal)
         .padding(.top, 8)
@@ -62,7 +63,6 @@ struct SimulationSummaryCardView: View {
 
 // MARK: - Helper functions
 private func abbreviateValue(_ value: Double) -> String {
-    // e.g. 1,234 => "1.2K", 1,234,567 => "1.2M", etc
     let absVal = abs(value)
     let sign = (value < 0) ? "-" : ""
     
@@ -85,7 +85,6 @@ private func abbreviateValue(_ value: Double) -> String {
 }
 
 private func formatGrowth(_ value: Double) -> String {
-    // e.g. 135,330 => "135,330%"
     let formatter = NumberFormatter()
     formatter.numberStyle = .decimal
     formatter.maximumFractionDigits = 0
