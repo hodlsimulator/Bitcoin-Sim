@@ -38,8 +38,8 @@ struct OnboardingView: View {
     // Step 2: Which currency to display
     @State private var currencyPreference: PreferredCurrency = .usd
     
-    // Step 3: Starting Balance
-    @State private var startingBalance: Double = 0.0
+    // Step 3: Starting Balance (now defaults to 1,000)
+    @State private var startingBalance: Double = 1000.0
     @State private var startingBalanceCurrencyForBoth: PreferredCurrency = .usd
     
     // Step 4: Average BTC Purchase Price
@@ -49,8 +49,8 @@ struct OnboardingView: View {
     @State private var fetchedBTCPrice: String = "N/A"
     @State private var userBTCPrice: String = ""
     
-    // Step 6: Single contribution for the entire simulation
-    @State private var contributionPerStep: Double = 0.0
+    // Step 6: Single contribution for the entire simulation (defaults to 100)
+    @State private var contributionPerStep: Double = 100.0
     
     // Step 7: Withdrawals default to thresholds at 30k & 60k, zero withdraw
     @State private var threshold1: Double = 30000
@@ -312,6 +312,15 @@ struct OnboardingView: View {
     private func step6_Contributions() -> some View {
         let frequencyWord = (chosenPeriodUnit == .weeks) ? "weekly" : "monthly"
         
+        // Show currency symbols for default placeholders if user picked USD or EUR
+        let placeholderText: String = {
+            switch currencyPreference {
+            case .usd:  return "$100.0"
+            case .eur:  return "€100.0"
+            case .both: return "100.0"
+            }
+        }()
+        
         return VStack(spacing: 20) {
             if currencyPreference == .both {
                 Spacer().frame(height: 20)
@@ -329,7 +338,7 @@ struct OnboardingView: View {
                 HStack {
                     Text("\(frequencyWord.capitalized) Amount:")
                         .foregroundColor(.white)
-                    TextField("100.0", value: $contributionPerStep, format: .number)
+                    TextField(placeholderText, value: $contributionPerStep, format: .number)
                         .keyboardType(.decimalPad)
                         .padding(8)
                         .background(Color.white.opacity(0.15))
@@ -350,7 +359,7 @@ struct OnboardingView: View {
                 HStack {
                     Text("\(frequencyWord.capitalized) Amount:")
                         .foregroundColor(.white)
-                    TextField("100.0", value: $contributionPerStep, format: .number)
+                    TextField(placeholderText, value: $contributionPerStep, format: .number)
                         .keyboardType(.decimalPad)
                         .padding(8)
                         .background(Color.white.opacity(0.15))
