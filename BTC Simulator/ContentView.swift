@@ -649,6 +649,14 @@ struct ContentView: View {
                     .padding(.vertical, 10)
                     .background(Color(white: 0.12))
                     
+                    // ---- Add our new summary card below the top bar ----
+                    SimulationSummaryCardView(
+                        finalBTCPrice: 17_200_000,
+                        finalPortfolioValue: 1_600_000_000,
+                        growthPercent: 135_330
+                    )
+                    // -----------------------------------------------------
+                    
                     // Column headers
                     HStack(spacing: 0) {
                         Text(simSettings.periodUnit == .weeks ? "Week" : "Month")
@@ -709,7 +717,6 @@ struct ContentView: View {
                                         ? Color(white: 0.10)
                                         : Color(white: 0.14)
                                     
-                                    // FIX #1: remove (result.week + 3)/4
                                     Text("\(result.week)")
                                         .frame(width: 70, alignment: .leading)
                                         .padding(.leading, 50)
@@ -775,9 +782,9 @@ struct ContentView: View {
                         }
                         .coordinateSpace(name: "scrollArea")
                         .onPreferenceChange(RowOffsetPreferenceKey.self) { offsets in
-                            let targetY: CGFloat = 160
+                            // If the summary card is about 110–120px tall:
+                            let targetY: CGFloat = 160 + 120
                             
-                            // FIX #2: remove *4 from finalWeeks
                             let finalWeeks = simSettings.userPeriods
                             
                             // Filter out weeks outside our domain
