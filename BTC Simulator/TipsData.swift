@@ -77,4 +77,295 @@ struct TipsData {
         "Tip: Mix bullish and bearish toggles to mirror the market you expect.",
         "Tip: Turn all factors off for a plain baseline simulation."
     ]
+    
+    // Filter out tips referencing factors that are turned OFF
+    static func filteredLoadingTips(for settings: SimulationSettings) -> [String] {
+        var tips = loadingTips
+        
+        // (1) stablecoin meltdown references if it's OFF
+            if !settings.useStablecoinMeltdown {
+                tips.removeAll { tip in
+                    tip.lowercased().contains("stablecoin meltdown") ||
+                    tip.lowercased().contains("tether collapse")
+                }
+            } else {
+                // (1B) If meltdown is ON, remove “turn on stablecoin meltdown” references
+                tips.removeAll { tip in
+                    tip.lowercased().contains("test tether collapse by enabling")
+                }
+            }
+        // (2) stablecoin shift references
+        if !settings.useStablecoinShift {
+            tips.removeAll { tip in
+                tip.lowercased().contains("stablecoin shift") ||
+                tip.lowercased().contains("stablecoin inflows") ||
+                tip.lowercased().contains("stablecoin collapses")
+            }
+        }
+        // (3) halving references
+        if !settings.useHalving {
+            tips.removeAll { tip in
+                tip.lowercased().contains("halving")
+            }
+        }
+        // (4) bubble pop references
+        if !settings.useBubblePop {
+            tips.removeAll { tip in
+                tip.lowercased().contains("bubble") ||
+                tip.lowercased().contains("mania")
+            }
+        }
+        // (5) black swan references
+        if !settings.useBlackSwan {
+            tips.removeAll { tip in
+                tip.lowercased().contains("black swan")
+            }
+        }
+        // (6) country adoption references if it's OFF
+            if !settings.useCountryAdoption {
+                tips.removeAll { tip in
+                    tip.lowercased().contains("country adoption") ||
+                    tip.lowercased().contains("el salvador")
+                }
+            } else {
+                // (6B) If it's ON, remove “turn on” tips
+                tips.removeAll { tip in
+                    tip.lowercased().contains("want an el salvador moment") ||
+                    tip.lowercased().contains("turn on ‘country adoption’")
+                }
+            }
+        // (7) competitor coin references
+        if !settings.useCompetitorCoin {
+            tips.removeAll { tip in
+                tip.lowercased().contains("competitor coins")
+            }
+        }
+        // (8) security breach references
+        if !settings.useSecurityBreach {
+            tips.removeAll { tip in
+                tip.lowercased().contains("security breach") ||
+                tip.lowercased().contains("hacking scare")
+            }
+        }
+        // (9) institutional demand references
+        if !settings.useInstitutionalDemand {
+            tips.removeAll { tip in
+                tip.lowercased().contains("institutional demand")
+            }
+        }
+        // (10) reg clampdown references
+        if !settings.useRegClampdown {
+            tips.removeAll { tip in
+                tip.lowercased().contains("regulatory clampdown")
+            }
+        }
+        // (11) altcoin flight references
+        if !settings.useAltcoinFlight {
+            tips.removeAll { tip in
+                tip.lowercased().contains("altcoin flight")
+            }
+        }
+        // (12) global macro hedge references
+        if !settings.useGlobalMacroHedge {
+            tips.removeAll { tip in
+                tip.lowercased().contains("macro hedge")
+            }
+        }
+        // (13) scarcity events references
+        if !settings.useScarcityEvents {
+            tips.removeAll { tip in
+                tip.lowercased().contains("scarcity")
+            }
+        }
+        // (14) maturing market references
+        if !settings.useMaturingMarket {
+            tips.removeAll { tip in
+                tip.lowercased().contains("maturing market")
+            }
+        }
+        // (15) bear market references
+        if !settings.useBearMarket {
+            tips.removeAll { tip in
+                tip.lowercased().contains("bear market")
+            }
+        }
+        // (16) adoption factor references
+        if !settings.useAdoptionFactor && !settings.useDemographicAdoption {
+            tips.removeAll { tip in
+                tip.lowercased().contains("adoption")
+            }
+        }
+        // (17) recession references
+        if !settings.useRecession {
+            tips.removeAll { tip in
+                tip.lowercased().contains("recession")
+            }
+        }
+        // (18) random seed references
+        if settings.lockedRandomSeed {
+            tips.removeAll { tip in
+                tip.lowercased().contains("random seed")
+            }
+        }
+        // (19) vol shocks references
+        if !settings.useVolShocks {
+            tips.removeAll { tip in
+                tip.lowercased().contains("volatility changes") ||
+                tip.lowercased().contains("volatility change") ||
+                tip.lowercased().contains("randomising risk parameters")
+            }
+        }
+        // (20) demographic adoption references
+        if !settings.useDemographicAdoption {
+            tips.removeAll { tip in
+                tip.lowercased().contains("generational adoption")
+            }
+        }
+        // (21) historical sampling references
+        if !settings.useHistoricalSampling {
+            tips.removeAll { tip in
+                tip.lowercased().contains("gathering btc historical returns") ||
+                tip.lowercased().contains("reviewing historic btc performance data")
+            }
+        }
+        
+        return tips
+    }
+    
+    static func filteredUsageTips(for settings: SimulationSettings) -> [String] {
+        var tips = usageTips
+        
+        // (1) stablecoin meltdown references if it's OFF
+            if !settings.useStablecoinMeltdown {
+                tips.removeAll { tip in
+                    tip.lowercased().contains("stablecoin meltdown") ||
+                    tip.lowercased().contains("tether collapse")
+                }
+            } else {
+                // (1B) If meltdown is ON, remove “turn on stablecoin meltdown” references
+                tips.removeAll { tip in
+                    tip.lowercased().contains("test tether collapse by enabling")
+                }
+            }
+        // (2) stablecoin shift references
+        if !settings.useStablecoinShift {
+            tips.removeAll { tip in
+                tip.lowercased().contains("stablecoin shift")
+            }
+        }
+        // (3) halving references
+        if !settings.useHalving {
+            tips.removeAll { tip in
+                tip.lowercased().contains("halving")
+            }
+        }
+        // (4) bubble pop references
+        if !settings.useBubblePop {
+            tips.removeAll { tip in
+                tip.lowercased().contains("bubble pop")
+            }
+        }
+        // (5) black swan references
+        if !settings.useBlackSwan {
+            tips.removeAll { tip in
+                tip.lowercased().contains("black swan")
+            }
+        }
+        // (6) country adoption references if it's OFF
+            if !settings.useCountryAdoption {
+                tips.removeAll { tip in
+                    tip.lowercased().contains("country adoption") ||
+                    tip.lowercased().contains("el salvador")
+                }
+            } else {
+                // (6B) If it's ON, remove “turn on” tips
+                tips.removeAll { tip in
+                    tip.lowercased().contains("want an el salvador moment") ||
+                    tip.lowercased().contains("turn on ‘country adoption’")
+                }
+            }
+        // (7) competitor coin references
+        if !settings.useCompetitorCoin {
+            tips.removeAll { tip in
+                tip.lowercased().contains("competitor coin")
+            }
+        }
+        // (8) security breach references
+        if !settings.useSecurityBreach {
+            tips.removeAll { tip in
+                tip.lowercased().contains("security breach") ||
+                tip.lowercased().contains("hacking scare")
+            }
+        }
+        // (9) institutional demand references
+        if !settings.useInstitutionalDemand {
+            tips.removeAll { tip in
+                tip.lowercased().contains("institutional demand")
+            }
+        }
+        // (10) reg clampdown references
+        if !settings.useRegClampdown {
+            tips.removeAll { tip in
+                tip.lowercased().contains("regulatory clampdown")
+            }
+        }
+        // (11) altcoin flight references
+        if !settings.useAltcoinFlight {
+            tips.removeAll { tip in
+                tip.lowercased().contains("altcoin flight")
+            }
+        }
+        // (12) global macro hedge references
+        if !settings.useGlobalMacroHedge {
+            tips.removeAll { tip in
+                tip.lowercased().contains("macro hedge")
+            }
+        }
+        // (13) scarcity events references
+        if !settings.useScarcityEvents {
+            tips.removeAll { tip in
+                tip.lowercased().contains("scarcity event")
+            }
+        }
+        // (14) maturing market references
+        if !settings.useMaturingMarket {
+            tips.removeAll { tip in
+                tip.lowercased().contains("maturing market")
+            }
+        }
+        // (15) bear market references
+        if !settings.useBearMarket {
+            tips.removeAll { tip in
+                tip.lowercased().contains("bear market")
+            }
+        }
+        // (16) adoption factor references
+        if !settings.useAdoptionFactor && !settings.useDemographicAdoption {
+            tips.removeAll { tip in
+                tip.lowercased().contains("adoption")
+            }
+        }
+        // (17) recession references
+        if !settings.useRecession {
+            tips.removeAll { tip in
+                tip.lowercased().contains("recession")
+            }
+        }
+        // (18) random seed references
+        if settings.lockedRandomSeed {
+            tips.removeAll { tip in
+                tip.lowercased().contains("random seed")
+            }
+        }
+        // (19) vol shocks references (optional)
+        if !settings.useVolShocks {
+            tips.removeAll { tip in
+                tip.lowercased().contains("volatility")
+            }
+        }
+        // (20) same idea if needed for demographic adoption
+        // e.g. remove tips referencing generational shifts, if they exist in usage tips
+        
+        return tips
+    }
 }

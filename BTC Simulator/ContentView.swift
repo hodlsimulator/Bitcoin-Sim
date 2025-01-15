@@ -237,8 +237,8 @@ struct ContentView: View {
     @State private var hideScrollIndicators = true
     
     // No more local arrays. Use the new file’s data:
-    private var loadingTips: [String] { TipsData.loadingTips }
-    private var usageTips: [String] { TipsData.usageTips }
+    private var loadingTips: [String] { TipsData.filteredLoadingTips(for: simSettings) }
+    private var usageTips: [String] { TipsData.filteredUsageTips(for: simSettings) }
     
     // Columns in the table view (depending on the user’s currency preference):
     private var columns: [(String, PartialKeyPath<SimulationData>)] {
