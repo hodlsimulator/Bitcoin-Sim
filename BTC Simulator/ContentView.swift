@@ -403,8 +403,9 @@ struct ContentView: View {
                 Spacer().frame(height: 60)
                 
                 Text("HODL Simulator")
-                    .font(.system(size: 34, weight: .bold))
+                    .font(.custom("AvenirNext-Heavy", size: 36))
                     .foregroundColor(.white)
+                    .shadow(color: Color.white.opacity(0.6), radius: 6, x: 0, y: 0)
                 
                 Text("Set your simulation parameters")
                     .font(.callout)
