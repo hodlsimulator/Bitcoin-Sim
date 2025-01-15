@@ -873,8 +873,17 @@ struct ContentView: View {
         }
         
         // 1) Convert from Decimal to Double
-        let finalBTC = NSDecimalNumber(decimal: lastRow.btcPriceUSD).doubleValue
-        let finalPortfolio = NSDecimalNumber(decimal: lastRow.portfolioValueUSD).doubleValue
+        let finalBTC = simSettings.currencyPreference == .eur
+            ? NSDecimalNumber(decimal: lastRow.btcPriceEUR).doubleValue
+            : NSDecimalNumber(decimal: lastRow.btcPriceUSD).doubleValue
+
+        let finalPortfolio: Double
+        if simSettings.currencyPreference == .eur {
+            // Either grab the EUR property or do a USD-EUR conversion
+            finalPortfolio = NSDecimalNumber(decimal: lastRow.portfolioValueEUR).doubleValue
+        } else {
+            finalPortfolio = NSDecimalNumber(decimal: lastRow.portfolioValueUSD).doubleValue
+        }
         
         // 2) Sum all contributions
         let totalContributions = coordinator.monteCarloResults.reduce(0.0) { partialSum, row in
