@@ -37,7 +37,7 @@ struct TooltipAnchorKey: PreferenceKey {
 struct SettingsView: View {
     @EnvironmentObject var simSettings: SimulationSettings
     
-    /// 1) Use @AppStorage to tie directly to the "hasOnboarded" key.
+    /// Ties directly to the "hasOnboarded" key for re-triggering onboarding.
     @AppStorage("hasOnboarded") private var didFinishOnboarding = false
     
     /// Whether to show a confirmation alert before resetting criteria.
@@ -95,12 +95,11 @@ struct SettingsView: View {
             // BULLISH FACTORS
             //====================================
             Section("Bullish Factors") {
-                // Halving — replaced halvingBumpForUI with halvingBump
                 FactorToggleRow(
                     iconName: "globe.europe.africa",
                     title: "Halving",
                     isOn: $simSettings.useHalving,
-                    sliderValue: $simSettings.halvingBump, // was halvingBumpForUI
+                    sliderValue: $simSettings.halvingBump,
                     sliderRange: 0.0...1.0,
                     defaultValue: 0.48,
                     parameterDescription: """
@@ -122,7 +121,6 @@ struct SettingsView: View {
                     }
                 }
                 
-                // Institutional Demand
                 FactorToggleRow(
                     iconName: "building.columns.fill",
                     title: "Institutional Demand",
@@ -138,7 +136,6 @@ struct SettingsView: View {
                     onTitleTap: toggleFactor
                 )
                 
-                // Country Adoption
                 FactorToggleRow(
                     iconName: "flag.fill",
                     title: "Country Adoption",
@@ -154,7 +151,6 @@ struct SettingsView: View {
                     onTitleTap: toggleFactor
                 )
                 
-                // Regulatory Clarity
                 FactorToggleRow(
                     iconName: "checkmark.shield",
                     title: "Regulatory Clarity",
@@ -170,7 +166,6 @@ struct SettingsView: View {
                     onTitleTap: toggleFactor
                 )
                 
-                // ETF Approval
                 FactorToggleRow(
                     iconName: "building.2.crop.circle",
                     title: "ETF Approval",
@@ -186,7 +181,6 @@ struct SettingsView: View {
                     onTitleTap: toggleFactor
                 )
                 
-                // Tech Breakthrough
                 FactorToggleRow(
                     iconName: "sparkles",
                     title: "Tech Breakthrough",
@@ -202,7 +196,6 @@ struct SettingsView: View {
                     onTitleTap: toggleFactor
                 )
                 
-                // Scarcity Events
                 FactorToggleRow(
                     iconName: "scalemass",
                     title: "Scarcity Events",
@@ -218,7 +211,6 @@ struct SettingsView: View {
                     onTitleTap: toggleFactor
                 )
                 
-                // Global Macro Hedge
                 FactorToggleRow(
                     iconName: "globe.americas.fill",
                     title: "Global Macro Hedge",
@@ -234,7 +226,6 @@ struct SettingsView: View {
                     onTitleTap: toggleFactor
                 )
                 
-                // Stablecoin Shift
                 FactorToggleRow(
                     iconName: "dollarsign.arrow.circlepath",
                     title: "Stablecoin Shift",
@@ -250,7 +241,6 @@ struct SettingsView: View {
                     onTitleTap: toggleFactor
                 )
                 
-                // Demographic Adoption
                 FactorToggleRow(
                     iconName: "person.3.fill",
                     title: "Demographic Adoption",
@@ -266,7 +256,6 @@ struct SettingsView: View {
                     onTitleTap: toggleFactor
                 )
                 
-                // Altcoin Flight
                 FactorToggleRow(
                     iconName: "bitcoinsign.circle.fill",
                     title: "Altcoin Flight",
@@ -282,7 +271,6 @@ struct SettingsView: View {
                     onTitleTap: toggleFactor
                 )
                 
-                // Adoption Factor
                 FactorToggleRow(
                     iconName: "arrow.up.right.circle.fill",
                     title: "Adoption Factor (Incremental Drift)",
@@ -303,7 +291,6 @@ struct SettingsView: View {
             // BEARISH FACTORS
             //====================================
             Section("Bearish Factors") {
-                // Regulatory Clampdown
                 FactorToggleRow(
                     iconName: "hand.raised.slash",
                     title: "Regulatory Clampdown",
@@ -319,7 +306,6 @@ struct SettingsView: View {
                     onTitleTap: toggleFactor
                 )
                 
-                // Competitor Coin
                 FactorToggleRow(
                     iconName: "bitcoinsign.circle",
                     title: "Competitor Coin",
@@ -335,7 +321,6 @@ struct SettingsView: View {
                     onTitleTap: toggleFactor
                 )
                 
-                // Security Breach
                 FactorToggleRow(
                     iconName: "lock.shield",
                     title: "Security Breach",
@@ -351,7 +336,6 @@ struct SettingsView: View {
                     onTitleTap: toggleFactor
                 )
                 
-                // Bubble Pop
                 FactorToggleRow(
                     iconName: "bubble.left.and.bubble.right.fill",
                     title: "Bubble Pop",
@@ -367,7 +351,6 @@ struct SettingsView: View {
                     onTitleTap: toggleFactor
                 )
                 
-                // Stablecoin Meltdown
                 FactorToggleRow(
                     iconName: "exclamationmark.triangle.fill",
                     title: "Stablecoin Meltdown",
@@ -383,7 +366,6 @@ struct SettingsView: View {
                     onTitleTap: toggleFactor
                 )
                 
-                // Black Swan Events
                 FactorToggleRow(
                     iconName: "tornado",
                     title: "Black Swan Events",
@@ -399,7 +381,6 @@ struct SettingsView: View {
                     onTitleTap: toggleFactor
                 )
                 
-                // Bear Market Conditions
                 FactorToggleRow(
                     iconName: "chart.bar.xaxis",
                     title: "Bear Market Conditions",
@@ -415,7 +396,6 @@ struct SettingsView: View {
                     onTitleTap: toggleFactor
                 )
                 
-                // Declining ARR / Maturing Market
                 FactorToggleRow(
                     iconName: "chart.line.downtrend.xyaxis",
                     title: "Declining ARR / Maturing Market",
@@ -431,7 +411,6 @@ struct SettingsView: View {
                     onTitleTap: toggleFactor
                 )
                 
-                // Recession / Macro Crash
                 FactorToggleRow(
                     iconName: "chart.line.downtrend.xyaxis.circle.fill",
                     title: "Recession / Macro Crash",
@@ -452,86 +431,104 @@ struct SettingsView: View {
             //====================================
             // TOGGLE ALL FACTORS
             //====================================
-            Section("Toggle All Factors") {
+            Section {
                 Toggle("Toggle All Factors", isOn: $simSettings.toggleAll)
                     .tint(.orange)
                     .foregroundColor(.white)
+            } header: {
+                Text("Toggle All Factors")
+            } footer: {
+                Text("Switch all bullish and bearish factors on or off at once.")
+                    .foregroundColor(.secondary)
             }
             .listRowBackground(Color(white: 0.15))
             
             //====================================
             // RANDOM SEED
             //====================================
-            Section("Random Seed") {
+            Section {
                 Toggle("Lock Random Seed", isOn: $simSettings.lockedRandomSeed)
                     .tint(.orange)
                     .onChange(of: simSettings.lockedRandomSeed) { locked in
                         if locked {
-                            // Generate a new seed & fix it
                             let newSeed = UInt64.random(in: 0..<UInt64.max)
                             simSettings.seedValue = newSeed
                             simSettings.useRandomSeed = false
                         } else {
-                            // Unlock the seed
                             simSettings.seedValue = 0
                             simSettings.useRandomSeed = true
                         }
                     }
                     .foregroundColor(.white)
-                    .listRowBackground(Color(white: 0.15))
                 
                 if simSettings.lockedRandomSeed {
                     Text("Current Seed (Locked): \(simSettings.seedValue)")
                         .font(.footnote)
                         .foregroundColor(.white)
-                        .listRowBackground(Color(white: 0.15))
                 } else {
                     if simSettings.lastUsedSeed == 0 {
                         Text("Current Seed: (no run yet)")
                             .font(.footnote)
                             .foregroundColor(.white)
-                            .listRowBackground(Color(white: 0.15))
                     } else {
                         Text("Current Seed (Unlocked): \(simSettings.lastUsedSeed)")
                             .font(.footnote)
                             .foregroundColor(.white)
-                            .listRowBackground(Color(white: 0.15))
                     }
                 }
+            } header: {
+                Text("Random Seed")
+            } footer: {
+                Text("Locking this seed gives consistent simulation results. Unlock for new randomness each run.")
+                    .foregroundColor(.secondary)
             }
             .listRowBackground(Color(white: 0.15))
             
             //====================================
             // GROWTH MODEL TOGGLE
             //====================================
-            Section("Growth Model") {
+            Section {
                 Toggle("Use Lognormal Growth", isOn: $simSettings.useLognormalGrowth)
                     .tint(.orange)
                     .foregroundColor(.white)
+            } header: {
+                Text("Growth Model")
+            } footer: {
+                Text("Uses a lognormal model for Bitcoin’s price growth distribution.")
+                    .foregroundColor(.secondary)
             }
             .listRowBackground(Color(white: 0.15))
             
             //====================================
             // HISTORICAL SAMPLING
             //====================================
-            Section("Historical Sampling") {
+            Section {
                 Toggle("Use Historical Sampling", isOn: $simSettings.useHistoricalSampling)
                     .tint(.orange)
                     .foregroundColor(.white)
-                
                 Toggle("Lock Historical Sampling", isOn: $simSettings.lockHistoricalSampling)
                     .tint(.orange)
                     .foregroundColor(.white)
+            } header: {
+                Text("Historical Sampling")
+            } footer: {
+                Text("Samples real-world BTC returns. Locking ensures the same historical data window each run.")
+                    .foregroundColor(.secondary)
             }
             .listRowBackground(Color(white: 0.15))
             
             //====================================
             // VOLATILITY
             //====================================
-            Section("Volatility") {
+            Section {
                 Toggle("Use Volatility Shocks", isOn: $simSettings.useVolShocks)
                     .tint(.orange)
                     .foregroundColor(.white)
+            } header: {
+                Text("Volatility")
+            } footer: {
+                Text("Enables random volatility spikes during simulations.")
+                    .foregroundColor(.secondary)
             }
             .listRowBackground(Color(white: 0.15))
             
@@ -543,6 +540,9 @@ struct SettingsView: View {
                     simSettings.restoreDefaults()
                 }
                 .buttonStyle(PressableDestructiveButtonStyle())
+            } footer: {
+                Text("Sets all simulation parameters back to their original defaults.")
+                    .foregroundColor(.secondary)
             }
             .listRowBackground(Color(white: 0.15))
             
@@ -553,13 +553,15 @@ struct SettingsView: View {
                 NavigationLink("About") {
                     AboutView()
                 }
+            } header: {
+                Text("About")
             }
             .listRowBackground(Color(white: 0.15))
             
             //====================================
             // RESET CRITERIA
             //====================================
-            Section("Reset Criteria") {
+            Section {
                 Button("Reset All Criteria") {
                     showResetCriteriaConfirmation = true
                 }
@@ -575,6 +577,11 @@ struct SettingsView: View {
                 }, message: {
                     Text("All custom criteria will be restored to default. This cannot be undone.")
                 })
+            } header: {
+                Text("Reset Criteria")
+            } footer: {
+                Text("Completely clears custom settings and restarts the onboarding flow.")
+                    .foregroundColor(.secondary)
             }
             .listRowBackground(Color(white: 0.15))
         }
@@ -586,14 +593,12 @@ struct SettingsView: View {
         .navigationBarTitleDisplayMode(.large)
         .overlayPreferenceValue(TooltipAnchorKey.self) { allAnchors in
             GeometryReader { proxy in
-                // We combine into a single expression with a ternary for "Halving" offset
                 if let item = allAnchors.last {
                     let bubbleWidth: CGFloat = 240
                     let bubbleHeight: CGFloat = 220
                     let offset: CGFloat = 8
 
                     let anchorX = proxy[item.anchor].x
-                    // *** REPLACE the 'if item.title=="Halving" { anchorY-=16 }' with a ternary: ***
                     let baseY = proxy[item.anchor].y
                     let anchorY = (item.title == "Halving") ? (baseY - 16) : baseY
                     

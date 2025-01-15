@@ -12,39 +12,38 @@ struct SimulationSummaryCardView: View {
     let finalPortfolioValue: Double
     let growthPercent: Double
     
+    // NEW
+    let currencySymbol: String
+    
     var body: some View {
         HStack(spacing: 24) {
-            
-            // Column 1
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading) {
                 Text("BTC Final Price")
                     .font(.subheadline)
                     .foregroundColor(.gray)
-                Text("$\(abbreviateValue(finalBTCPrice))")
+                Text("\(currencySymbol)\(abbreviateValue(finalBTCPrice))")
                     .foregroundColor(.white)
                     .font(.headline)
             }
             
             Divider()
-                .frame(height: 35)
-                .background(Color(white: 0.4))  // a bit subtler than .gray
+                .frame(height: 40)
+                .background(Color.gray)
             
-            // Column 2
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading) {
                 Text("Portfolio")
                     .font(.subheadline)
                     .foregroundColor(.gray)
-                Text("$\(abbreviateValue(finalPortfolioValue))")
+                Text("\(currencySymbol)\(abbreviateValue(finalPortfolioValue))")
                     .foregroundColor(.white)
                     .font(.headline)
             }
             
             Divider()
-                .frame(height: 35)
-                .background(Color(white: 0.4))
+                .frame(height: 40)
+                .background(Color.gray)
             
-            // Column 3
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading) {
                 Text("Growth")
                     .font(.subheadline)
                     .foregroundColor(.gray)
@@ -53,11 +52,9 @@ struct SimulationSummaryCardView: View {
                     .font(.headline)
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color(white: 0.15)) // slightly darker than 0.20
-        .cornerRadius(8)                // smaller radius
-        .shadow(color: Color.black.opacity(0.3), radius: 3, x: 0, y: 2)
+        .padding()
+        .background(Color(white: 0.20))
+        .cornerRadius(10)
         .padding(.horizontal)
         .padding(.top, 8)
     }

@@ -650,12 +650,13 @@ struct ContentView: View {
                     .background(Color(white: 0.12))
                     
                     // -- Calculate & show Summary Card --
-                    let (finalBTCPrice, finalPortfolioValue, growthPercent) = calculateSummaryValues()
+                    let (finalBTCPrice, finalPortfolioValue, growthPercent, currencySymbol) = calculateSummaryValues()
                     
                     SimulationSummaryCardView(
                         finalBTCPrice: finalBTCPrice,
                         finalPortfolioValue: finalPortfolioValue,
-                        growthPercent: growthPercent
+                        growthPercent: growthPercent,
+                        currencySymbol: currencySymbol
                     )
                     // -------------------------------------
                     
@@ -865,9 +866,10 @@ struct ContentView: View {
     }
 
     // MARK: - Calculate final BTC price, portfolio, growth (accounting for contributions)
-    private func calculateSummaryValues() -> (Double, Double, Double) {
+    private func calculateSummaryValues() -> (Double, Double, Double, String) {
         guard let lastRow = coordinator.monteCarloResults.last else {
-            return (0, 0, 0)
+            // Return zeros and a default symbol
+            return (0, 0, 0, "$")
         }
         
         // 1) Convert from Decimal to Double
@@ -879,14 +881,16 @@ struct ContentView: View {
             partialSum + row.contributionUSD
         }
         
-        // 3) (final - totalContributions) / totalContributions * 100
-        //    If totalContributions is zero, we skip the calculation.
+        // 3) Calculate growth % = ((final - totalContributions) / totalContributions) * 100
         var growth = 0.0
         if totalContributions > 0 {
             growth = (finalPortfolio - totalContributions) / totalContributions * 100.0
         }
         
-        return (finalBTC, finalPortfolio, growth)
+        // 4) Decide which currency symbol to show
+        let symbol = (simSettings.currencyPreference == .eur) ? "€" : "$"
+        
+        return (finalBTC, finalPortfolio, growth, symbol)
     }
     
     // MARK: - Next arrow to show results
