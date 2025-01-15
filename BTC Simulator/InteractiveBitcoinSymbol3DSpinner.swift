@@ -10,7 +10,7 @@ import UIKit  // If needed for UIImage or other UIKit code
 
 struct InteractiveBitcoinSymbol3DSpinner: View {
     @State private var rotationX: Double = 0
-    @State private var rotationY: Double = -90
+    @State private var rotationY: Double = -40
     @State private var rotationZ: Double = 0
     @State private var spinSpeed: Double = 10
     @State private var lastUpdate = Date()
