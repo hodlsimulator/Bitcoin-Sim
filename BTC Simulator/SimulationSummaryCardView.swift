@@ -16,13 +16,8 @@ struct SimulationSummaryCardView: View {
     
     var body: some View {
         GeometryReader { geometry in
-            // Horizontal padding
             let horizontalPadding: CGFloat = 16
-            
-            // Total width (minus left + right padding)
             let totalWidth = geometry.size.width - (horizontalPadding * 2)
-            
-            // Each column is exactly 1/3 of total width
             let columnWidth = totalWidth / 3
             
             HStack(spacing: 0) {
@@ -60,9 +55,9 @@ struct SimulationSummaryCardView: View {
                 .frame(width: columnWidth, alignment: .leading)
             }
             .padding(.horizontal, horizontalPadding)
-            .padding(.vertical, 8) // Minimal vertical padding
+            .padding(.vertical, 8)
         }
-        .frame(height: 80) // Fix height so GeometryReader doesn’t expand
+        .frame(height: 80)
     }
 }
 
@@ -74,19 +69,27 @@ private func abbreviateValue(_ value: Double) -> String {
     switch absVal {
     case 1_000_000_000_000...:
         let trillions = absVal / 1_000_000_000_000
-        return "\(sign)\(String(format: "%.1f", trillions))T"
+        return "\(sign)\(formatDecimalNoTrailingZeros(trillions))T"
     case 1_000_000_000...:
         let billions = absVal / 1_000_000_000
-        return "\(sign)\(String(format: "%.1f", billions))B"
+        return "\(sign)\(formatDecimalNoTrailingZeros(billions))B"
     case 1_000_000...:
         let millions = absVal / 1_000_000
-        return "\(sign)\(String(format: "%.1f", millions))M"
+        return "\(sign)\(formatDecimalNoTrailingZeros(millions))M"
     case 1_000...:
         let thousands = absVal / 1_000
-        return "\(sign)\(String(format: "%.1f", thousands))K"
+        return "\(sign)\(formatDecimalNoTrailingZeros(thousands))K"
     default:
-        return "\(sign)\(String(format: "%.0f", absVal))"
+        return "\(sign)\(formatDecimalNoTrailingZeros(absVal))"
     }
+}
+
+private func formatDecimalNoTrailingZeros(_ value: Double) -> String {
+    let formatter = NumberFormatter()
+    formatter.minimumFractionDigits = 0
+    formatter.maximumFractionDigits = 1
+    // e.g. 17.0 -> "17", 15.5 -> "15.5"
+    return formatter.string(from: NSNumber(value: value)) ?? "\(value)"
 }
 
 private func formatGrowth(_ value: Double) -> String {
