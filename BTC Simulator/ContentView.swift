@@ -618,7 +618,8 @@ struct ContentView: View {
                     .edgesIgnoringSafeArea(.bottom)
                 
                 VStack(spacing: 0) {
-                    // Top bar
+                    
+                    // -- Top bar --
                     HStack {
                         Button(action: {
                             print("// DEBUG: Back button tapped in simulationResultsView.")
@@ -634,7 +635,6 @@ struct ContentView: View {
                         
                         Spacer()
                         
-                        // Grey out the Charts button if inputManager.generateGraphs == false
                         Button(action: {
                             print("// DEBUG: Chart button pressed.")
                             showHistograms = true
@@ -649,15 +649,17 @@ struct ContentView: View {
                     .padding(.vertical, 10)
                     .background(Color(white: 0.12))
                     
-                    // ---- Add our new summary card below the top bar ----
-                    SimulationSummaryCardView(
-                        finalBTCPrice: 17_200_000,
-                        finalPortfolioValue: 1_600_000_000,
-                        growthPercent: 135_330
-                    )
-                    // -----------------------------------------------------
+                    // -- Calculate & show Summary Card --
+                    let (finalBTCPrice, finalPortfolioValue, growthPercent) = calculateSummaryValues()
                     
-                    // Column headers
+                    SimulationSummaryCardView(
+                        finalBTCPrice: finalBTCPrice,
+                        finalPortfolioValue: finalPortfolioValue,
+                        growthPercent: growthPercent
+                    )
+                    // -------------------------------------
+                    
+                    // -- Column headers --
                     HStack(spacing: 0) {
                         Text(simSettings.periodUnit == .weeks ? "Week" : "Month")
                             .frame(width: 60, alignment: .leading)
@@ -676,7 +678,6 @@ struct ContentView: View {
                                 .foregroundColor(.orange)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             
-                            // Invisible left-right areas to swipe columns
                             GeometryReader { geometry in
                                 HStack(spacing: 0) {
                                     Color.clear
@@ -703,13 +704,13 @@ struct ContentView: View {
                     }
                     .background(Color.black)
                     
-                    // Main data scroll
+                    // -- Main data scroll --
                     ScrollView(.vertical, showsIndicators: !hideScrollIndicators) {
                         
                         let displayedResults = coordinator.monteCarloResults
                         
                         HStack(spacing: 0) {
-                            // Left column: Week or Month
+                            // Left column
                             VStack(spacing: 0) {
                                 ForEach(displayedResults.indices, id: \.self) { index in
                                     let result = displayedResults[index]
@@ -717,6 +718,7 @@ struct ContentView: View {
                                         ? Color(white: 0.10)
                                         : Color(white: 0.14)
                                     
+                                    // FIX #1 removed
                                     Text("\(result.week)")
                                         .frame(width: 70, alignment: .leading)
                                         .padding(.leading, 50)
@@ -729,7 +731,7 @@ struct ContentView: View {
                                 }
                             }
                             
-                            // Right column: Data in pages
+                            // Right column (pages)
                             TabView(selection: $currentPage) {
                                 ForEach(0..<columns.count, id: \.self) { idx in
                                     ZStack {
@@ -751,7 +753,6 @@ struct ContentView: View {
                                                     .background(RowOffsetReporter(week: rowResult.week))
                                             }
                                         }
-                                        // Invisible left-right “swipe” areas
                                         GeometryReader { geometry in
                                             HStack(spacing: 0) {
                                                 Color.clear
@@ -782,12 +783,9 @@ struct ContentView: View {
                         }
                         .coordinateSpace(name: "scrollArea")
                         .onPreferenceChange(RowOffsetPreferenceKey.self) { offsets in
-                            // If the summary card is about 110–120px tall:
                             let targetY: CGFloat = 160 + 120
-                            
                             let finalWeeks = simSettings.userPeriods
                             
-                            // Filter out weeks outside our domain
                             let filtered = offsets.filter { (week, _) in
                                 week >= 0 && week <= finalWeeks
                             }
@@ -816,7 +814,6 @@ struct ContentView: View {
                                 return Color(white: 0.12)
                             }
                         )
-                        // Detect dragging to show/hide scroll indicators
                         .simultaneousGesture(
                             DragGesture(minimumDistance: 0)
                                 .onChanged { _ in
@@ -846,7 +843,7 @@ struct ContentView: View {
                     UserDefaults.standard.set(currentPage, forKey: "lastViewedPage")
                 }
                 
-                // A button to jump to bottom if needed
+                // -- Jump to bottom button --
                 if !isAtBottom {
                     VStack {
                         Spacer()
@@ -865,6 +862,31 @@ struct ContentView: View {
                 }
             }
         }
+    }
+
+    // MARK: - Calculate final BTC price, portfolio, growth (accounting for contributions)
+    private func calculateSummaryValues() -> (Double, Double, Double) {
+        guard let lastRow = coordinator.monteCarloResults.last else {
+            return (0, 0, 0)
+        }
+        
+        // 1) Convert from Decimal to Double
+        let finalBTC = NSDecimalNumber(decimal: lastRow.btcPriceUSD).doubleValue
+        let finalPortfolio = NSDecimalNumber(decimal: lastRow.portfolioValueUSD).doubleValue
+        
+        // 2) Sum all contributions
+        let totalContributions = coordinator.monteCarloResults.reduce(0.0) { partialSum, row in
+            partialSum + row.contributionUSD
+        }
+        
+        // 3) (final - totalContributions) / totalContributions * 100
+        //    If totalContributions is zero, we skip the calculation.
+        var growth = 0.0
+        if totalContributions > 0 {
+            growth = (finalPortfolio - totalContributions) / totalContributions * 100.0
+        }
+        
+        return (finalBTC, finalPortfolio, growth)
     }
     
     // MARK: - Next arrow to show results

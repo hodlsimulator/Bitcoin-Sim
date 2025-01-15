@@ -8,17 +8,15 @@
 import SwiftUI
 
 struct SimulationSummaryCardView: View {
-    
-    /// We expect to get the final numbers from ContentView (or a coordinator).
-    /// You can either pass them directly or pass a coordinator.
-    /// Here, I'm just passing in three final numeric values:
     let finalBTCPrice: Double
     let finalPortfolioValue: Double
     let growthPercent: Double
     
     var body: some View {
         HStack(spacing: 24) {
-            VStack(alignment: .leading) {
+            
+            // Column 1
+            VStack(alignment: .leading, spacing: 2) {
                 Text("BTC Final Price")
                     .font(.subheadline)
                     .foregroundColor(.gray)
@@ -28,10 +26,11 @@ struct SimulationSummaryCardView: View {
             }
             
             Divider()
-                .frame(height: 40)
-                .background(Color.gray)
+                .frame(height: 35)
+                .background(Color(white: 0.4))  // a bit subtler than .gray
             
-            VStack(alignment: .leading) {
+            // Column 2
+            VStack(alignment: .leading, spacing: 2) {
                 Text("Portfolio")
                     .font(.subheadline)
                     .foregroundColor(.gray)
@@ -41,10 +40,11 @@ struct SimulationSummaryCardView: View {
             }
             
             Divider()
-                .frame(height: 40)
-                .background(Color.gray)
+                .frame(height: 35)
+                .background(Color(white: 0.4))
             
-            VStack(alignment: .leading) {
+            // Column 3
+            VStack(alignment: .leading, spacing: 2) {
                 Text("Growth")
                     .font(.subheadline)
                     .foregroundColor(.gray)
@@ -53,9 +53,11 @@ struct SimulationSummaryCardView: View {
                     .font(.headline)
             }
         }
-        .padding()
-        .background(Color(white: 0.20))
-        .cornerRadius(10)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(Color(white: 0.15)) // slightly darker than 0.20
+        .cornerRadius(8)                // smaller radius
+        .shadow(color: Color.black.opacity(0.3), radius: 3, x: 0, y: 2)
         .padding(.horizontal)
         .padding(.top, 8)
     }
