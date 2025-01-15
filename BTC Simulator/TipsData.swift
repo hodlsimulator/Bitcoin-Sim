@@ -154,7 +154,7 @@ struct TipsData {
     static func filteredLoadingTips(for settings: SimulationSettings) -> [String] {
         var tips = loadingTips
         
-        // (1) stablecoin meltdown references if it's OFF
+        // (1) stablecoin meltdown references
         if !settings.useStablecoinMeltdown {
             tips.removeAll { tip in
                 tip.lowercased().contains("stablecoin meltdown") ||
@@ -167,6 +167,7 @@ struct TipsData {
                 tip.lowercased().contains("test tether collapse by enabling")
             }
         }
+        
         // (2) stablecoin shift references
         if !settings.useStablecoinShift {
             tips.removeAll { tip in
@@ -175,12 +176,14 @@ struct TipsData {
                 tip.lowercased().contains("stablecoin collapses")
             }
         }
+        
         // (3) halving references
         if !settings.useHalving {
             tips.removeAll { tip in
                 tip.lowercased().contains("halving")
             }
         }
+        
         // (4) bubble pop references
         if !settings.useBubblePop {
             tips.removeAll { tip in
@@ -188,13 +191,15 @@ struct TipsData {
                 tip.lowercased().contains("mania")
             }
         }
+        
         // (5) black swan references
         if !settings.useBlackSwan {
             tips.removeAll { tip in
                 tip.lowercased().contains("black swan")
             }
         }
-        // (6) country adoption references if it's OFF
+        
+        // (6) country adoption references
         if !settings.useCountryAdoption {
             tips.removeAll { tip in
                 tip.lowercased().contains("country-level adoption") ||
@@ -208,6 +213,7 @@ struct TipsData {
                 tip.lowercased().contains("turn on ‘country adoption’")
             }
         }
+        
         // (7) competitor coin references
         if !settings.useCompetitorCoin {
             tips.removeAll { tip in
@@ -215,6 +221,7 @@ struct TipsData {
                 tip.lowercased().contains("competitor coins")
             }
         }
+        
         // (8) security breach references
         if !settings.useSecurityBreach {
             tips.removeAll { tip in
@@ -223,6 +230,7 @@ struct TipsData {
                 tip.lowercased().contains("mt. gox")
             }
         }
+        
         // (9) institutional demand references
         if !settings.useInstitutionalDemand {
             tips.removeAll { tip in
@@ -230,6 +238,7 @@ struct TipsData {
                 tip.lowercased().contains("fomo")
             }
         }
+        
         // (10) reg clampdown references
         if !settings.useRegClampdown {
             tips.removeAll { tip in
@@ -237,6 +246,7 @@ struct TipsData {
                 tip.lowercased().contains("reg clampdown")
             }
         }
+        
         // (11) altcoin flight references
         if !settings.useAltcoinFlight {
             tips.removeAll { tip in
@@ -244,18 +254,21 @@ struct TipsData {
                 tip.lowercased().contains("capital rotates back to btc")
             }
         }
+        
         // (12) global macro hedge references
         if !settings.useGlobalMacroHedge {
             tips.removeAll { tip in
                 tip.lowercased().contains("macro hedge")
             }
         }
+        
         // (13) scarcity events references
         if !settings.useScarcityEvents {
             tips.removeAll { tip in
                 tip.lowercased().contains("scarcity")
             }
         }
+        
         // (14) maturing market references
         if !settings.useMaturingMarket {
             tips.removeAll { tip in
@@ -263,12 +276,14 @@ struct TipsData {
                 tip.lowercased().contains("slower growth")
             }
         }
+        
         // (15) bear market references
         if !settings.useBearMarket {
             tips.removeAll { tip in
                 tip.lowercased().contains("bear market")
             }
         }
+        
         // (16) adoption factor references
         if !settings.useAdoptionFactor && !settings.useDemographicAdoption {
             tips.removeAll { tip in
@@ -277,18 +292,21 @@ struct TipsData {
                 tip.lowercased().contains("demographic switchover")
             }
         }
+        
         // (17) recession references
         if !settings.useRecession {
             tips.removeAll { tip in
                 tip.lowercased().contains("recession")
             }
         }
+        
         // (18) random seed references
         if settings.lockedRandomSeed {
             tips.removeAll { tip in
                 tip.lowercased().contains("random seed")
             }
         }
+        
         // (19) vol shocks references
         if !settings.useVolShocks {
             tips.removeAll { tip in
@@ -298,6 +316,7 @@ struct TipsData {
                 tip.lowercased().contains("volatility spike")
             }
         }
+        
         // (20) historical sampling references
         if !settings.useHistoricalSampling {
             tips.removeAll { tip in
@@ -308,13 +327,37 @@ struct TipsData {
             }
         }
         
+        // (21) regulatory clarity references
+        if !settings.useRegulatoryClarity {
+            tips.removeAll { tip in
+                tip.lowercased().contains("regulatory clarity")
+            }
+        }
+        
+        // (22) etf approval references
+        if !settings.useEtfApproval {
+            tips.removeAll { tip in
+                tip.lowercased().contains("etf approval") ||
+                tip.lowercased().contains("etf approvals")
+            }
+        }
+        
+        // (23) tech breakthroughs references
+        if !settings.useTechBreakthrough {
+            tips.removeAll { tip in
+                tip.lowercased().contains("tech breakthrough") ||
+                tip.lowercased().contains("lightning expansions") ||
+                tip.lowercased().contains("taproot")
+            }
+        }
+        
         return tips
     }
     
     static func filteredUsageTips(for settings: SimulationSettings) -> [String] {
         var tips = usageTips
         
-        // (1) stablecoin meltdown references if it's OFF
+        // (1) stablecoin meltdown references
         if !settings.useStablecoinMeltdown {
             tips.removeAll { tip in
                 tip.lowercased().contains("stablecoin meltdown") ||
@@ -326,6 +369,7 @@ struct TipsData {
                 tip.lowercased().contains("test tether collapse by enabling")
             }
         }
+        
         // (2) stablecoin shift references
         if !settings.useStablecoinShift {
             tips.removeAll { tip in
@@ -333,12 +377,14 @@ struct TipsData {
                 tip.lowercased().contains("meltdown + shift toggles")
             }
         }
+        
         // (3) halving references
         if !settings.useHalving {
             tips.removeAll { tip in
                 tip.lowercased().contains("halving")
             }
         }
+        
         // (4) bubble pop references
         if !settings.useBubblePop {
             tips.removeAll { tip in
@@ -347,13 +393,15 @@ struct TipsData {
                 tip.lowercased().contains("mania that suddenly disappears")
             }
         }
+        
         // (5) black swan references
         if !settings.useBlackSwan {
             tips.removeAll { tip in
                 tip.lowercased().contains("black swan")
             }
         }
-        // (6) country adoption references if it's OFF
+        
+        // (6) country adoption references
         if !settings.useCountryAdoption {
             tips.removeAll { tip in
                 tip.lowercased().contains("country adoption") ||
@@ -366,12 +414,14 @@ struct TipsData {
                 tip.lowercased().contains("turn on ‘country adoption’")
             }
         }
+        
         // (7) competitor coin references
         if !settings.useCompetitorCoin {
             tips.removeAll { tip in
                 tip.lowercased().contains("competitor coin")
             }
         }
+        
         // (8) security breach references
         if !settings.useSecurityBreach {
             tips.removeAll { tip in
@@ -380,12 +430,14 @@ struct TipsData {
                 tip.lowercased().contains("mt. gox")
             }
         }
+        
         // (9) institutional demand references
         if !settings.useInstitutionalDemand {
             tips.removeAll { tip in
                 tip.lowercased().contains("institutional demand")
             }
         }
+        
         // (10) reg clampdown references
         if !settings.useRegClampdown {
             tips.removeAll { tip in
@@ -393,30 +445,35 @@ struct TipsData {
                 tip.lowercased().contains("regulatory clampdown")
             }
         }
+        
         // (11) altcoin flight references
         if !settings.useAltcoinFlight {
             tips.removeAll { tip in
                 tip.lowercased().contains("altcoin flight")
             }
         }
+        
         // (12) global macro hedge references
         if !settings.useGlobalMacroHedge {
             tips.removeAll { tip in
                 tip.lowercased().contains("macro hedge")
             }
         }
+        
         // (13) scarcity events references
         if !settings.useScarcityEvents {
             tips.removeAll { tip in
                 tip.lowercased().contains("scarcity event")
             }
         }
+        
         // (14) maturing market references
         if !settings.useMaturingMarket {
             tips.removeAll { tip in
                 tip.lowercased().contains("maturing market")
             }
         }
+        
         // (15) bear market references
         if !settings.useBearMarket {
             tips.removeAll { tip in
@@ -424,6 +481,7 @@ struct TipsData {
                 tip.lowercased().contains("2018’s drawdowns")
             }
         }
+        
         // (16) adoption factor references
         if !settings.useAdoptionFactor && !settings.useDemographicAdoption {
             tips.removeAll { tip in
@@ -432,12 +490,14 @@ struct TipsData {
                 tip.lowercased().contains("adoption")  // covers references to 'adoption' generally
             }
         }
+        
         // (17) recession references
         if !settings.useRecession {
             tips.removeAll { tip in
                 tip.lowercased().contains("recession")
             }
         }
+        
         // (18) random seed references
         if settings.lockedRandomSeed {
             tips.removeAll { tip in
@@ -445,14 +505,40 @@ struct TipsData {
                 tip.lowercased().contains("unlock the seed each run")
             }
         }
-        // (19) vol shocks references (optional)
+        
+        // (19) vol shocks references
         if !settings.useVolShocks {
             tips.removeAll { tip in
                 tip.lowercased().contains("volatility")
             }
         }
-        // (20) If you need extra checks for historical sampling references, add them here:
-        // e.g. remove tips referencing historical data if useHistoricalSampling is off, etc.
+        
+        // (20) if needed, remove historical references here (not shown, but you could do similar):
+        // e.g. if !settings.useHistoricalSampling { ... }
+        
+        // (21) regulatory clarity references
+        if !settings.useRegulatoryClarity {
+            tips.removeAll { tip in
+                tip.lowercased().contains("regulatory clarity")
+            }
+        }
+        
+        // (22) etf approval references
+        if !settings.useEtfApproval {
+            tips.removeAll { tip in
+                tip.lowercased().contains("etf approval") ||
+                tip.lowercased().contains("etf approvals")
+            }
+        }
+        
+        // (23) tech breakthroughs references
+        if !settings.useTechBreakthrough {
+            tips.removeAll { tip in
+                tip.lowercased().contains("tech breakthrough") ||
+                tip.lowercased().contains("lightning expansions") ||
+                tip.lowercased().contains("taproot")
+            }
+        }
         
         return tips
     }
