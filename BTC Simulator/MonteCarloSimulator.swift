@@ -125,86 +125,46 @@ var historicalBTCWeeklyReturns: [Double] = []
 var sp500WeeklyReturns: [Double] = []
 var weightedBTCWeeklyReturns: [Double] = []
 
-/// Core function that always runs "weekly steps" (even if the user selected months).
-///
-/// * If `periodUnit == .weeks`, we do `totalWeeks = userWeeks`.
-/// * If `periodUnit == .months`, we do `totalWeeks = Int(round(Double(userWeeks) * 4.3333))`.
-///   That means e.g. 240 months => ~1040 weeks behind the scenes.
-/// After building the full weekly results, if the user wanted months, we resample it back
-/// to 240 monthly points.
 func runOneFullSimulation(
     settings: SimulationSettings,
     annualCAGR: Double,
     annualVolatility: Double,
     exchangeRateEURUSD: Double,
-    userWeeks: Int,       // Could be 1040 if weeks, or 240 if months
+    userWeeks: Int,          // If .weeks => e.g. 1040, if .months => e.g. 240
     initialBTCPriceUSD: Double,
     seed: UInt64? = nil
 ) -> [SimulationData] {
     
-    // 1) Convert months → weeks if needed
-    let isActuallyMonths = (settings.periodUnit == .months)
-    let doublePeriods = Double(userWeeks) // e.g. 240 if months
-    var totalWeeklySteps = userWeeks // e.g. 1040 if weeks
-    if isActuallyMonths {
-        // e.g. 240 months => ~ 240 * 4.3333 = ~1040
-        let approxWeeks = doublePeriods * weeksPerMonthApprox
-        totalWeeklySteps = Int(round(approxWeeks))
+    // (1) If .months => convert months → approximate # of weeks behind the scenes
+    var totalSteps = userWeeks
+    if settings.periodUnit == .months {
+        // e.g. 240 months => ~ 240 * 4.333 => 1040
+        let approx = Double(userWeeks) * weeksPerMonthApprox
+        totalSteps = Int(round(approx))
     }
-
-    // We store each "weekly step" in an array
-    var weeklyResults = runWeeklySimulation(
+    
+    // (2) Just call our runWeeklySimulation with lumpsum or random draws
+    // plus the monthly “accumulator” approach if .months is chosen.
+    let finalData = runWeeklySimulation(
         settings: settings,
         annualCAGR: annualCAGR,
         annualVolatility: annualVolatility,
         exchangeRateEURUSD: exchangeRateEURUSD,
-        totalWeeklySteps: totalWeeklySteps,
+        totalWeeklySteps: totalSteps,
         initialBTCPriceUSD: initialBTCPriceUSD
     )
-
-    // If user wanted weeks, just return weeklyResults
-    if !isActuallyMonths {
-        return weeklyResults
-    }
-
-    // Otherwise, the user asked for months => resample the weekly array
-    // to produce "userWeeks" points, i.e. 240 monthly data points.
-    // For each month M = 1..240 => pick the snapshot from weekly data
-    // at index = round(M * 4.3333).
     
-    var monthlyResults: [SimulationData] = []
-    for monthIndex in 1...userWeeks {
-        let approxWeek = Double(monthIndex) * weeksPerMonthApprox
-        let bestWeekIndex = Int(round(approxWeek))
-        let safeIndex = max(1, min(bestWeekIndex, weeklyResults.count))
-        
-        let snap = weeklyResults[safeIndex - 1]
-
-        let monthData = SimulationData(
-            week: monthIndex,
-            startingBTC: snap.startingBTC,
-            netBTCHoldings: snap.netBTCHoldings,
-            btcPriceUSD: snap.btcPriceUSD,
-            btcPriceEUR: snap.btcPriceEUR,
-            portfolioValueEUR: snap.portfolioValueEUR,
-            portfolioValueUSD: snap.portfolioValueUSD,
-            contributionEUR: snap.contributionEUR,
-            contributionUSD: snap.contributionUSD,
-            transactionFeeEUR: snap.transactionFeeEUR,
-            transactionFeeUSD: snap.transactionFeeUSD,
-            netContributionBTC: snap.netContributionBTC,
-            withdrawalEUR: snap.withdrawalEUR,
-            withdrawalUSD: snap.withdrawalUSD
-        )
-        monthlyResults.append(monthData)
-    }
-
-    return monthlyResults
+    // (3) Because the function below returns:
+    //     - weekly array if .weeks
+    //     - monthly array if .months
+    // we can just return finalData with no further resample.
+    return finalData
 }
 
-/// A helper that does the full weekly logic over totalWeeklySteps.
-/// This is the same approach you'd normally do for weekly simulation:
-/// lumpsum once a year (check step % 52 == 0), random draws each week, etc.
+/// This function does the actual “weekly” loop. But if `periodUnit == .months`,
+/// we deposit once per month (via an accumulator) and store each deposit
+/// iteration in `monthlyResults`. Then we only return monthlyResults in that scenario.
+/// If `.weeks`, we deposit every iteration and return the full array of weekly results.
 private func runWeeklySimulation(
     settings: SimulationSettings,
     annualCAGR: Double,
@@ -213,7 +173,7 @@ private func runWeeklySimulation(
     totalWeeklySteps: Int,
     initialBTCPriceUSD: Double
 ) -> [SimulationData] {
-
+    
     struct PrintOnce {
         static var didPrintFactorSettings: Bool = false
         static var didPrintStandardDeviation: Bool = false
@@ -222,15 +182,14 @@ private func runWeeklySimulation(
     // Print factor settings once
     if !PrintOnce.didPrintFactorSettings {
         print("=== FACTOR SETTINGS (once only) ===")
-        settings.printAllSettings()
+        settings.printAllSettings()  // e.g. toggles for halving, etc.
         PrintOnce.didPrintFactorSettings = true
     }
 
     // Get user-specified or default standard deviation
     let parsedSD: Double
-    if let standardDeviationString = settings.inputManager?.standardDeviation,
-       let sdValue = Double(standardDeviationString) {
-        parsedSD = sdValue
+    if let sdStr = settings.inputManager?.standardDeviation, let val = Double(sdStr) {
+        parsedSD = val
     } else {
         parsedSD = 15.0
     }
@@ -240,41 +199,45 @@ private func runWeeklySimulation(
         PrintOnce.didPrintStandardDeviation = true
     }
 
-    let periodVol = (annualVolatility / 100.0) / sqrt(52.0)   // always treat as weekly
-    let periodSD  = (parsedSD        / 100.0) / sqrt(52.0)    // always treat as weekly
-
+    let periodVol = (annualVolatility / 100.0) / sqrt(52.0)
+    let periodSD  = (parsedSD        / 100.0) / sqrt(52.0)
     let cagrDecimal = annualCAGR / 100.0
-
-    // Convert the USD price to EUR
-    let firstEURPrice = initialBTCPriceUSD / exchangeRateEURUSD
     
-    // Convert user’s starting balance to BTC, based on currency
-    let userStartingBalanceBTC: Double
+    // Convert USD price to EUR
+    let firstEURPrice = initialBTCPriceUSD / exchangeRateEURUSD
+
+    // Convert user’s starting balance to BTC
+    let userStartingBTC: Double
     switch settings.currencyPreference {
     case .usd:
-        userStartingBalanceBTC = settings.startingBalance / initialBTCPriceUSD
+        userStartingBTC = settings.startingBalance / initialBTCPriceUSD
     case .eur, .both:
-        userStartingBalanceBTC = settings.startingBalance / firstEURPrice
+        userStartingBTC = settings.startingBalance / firstEURPrice
     }
+    
+    var prevBTCHoldings   = userStartingBTC
+    var prevBTCPriceUSD   = initialBTCPriceUSD
+    let initialPortEUR    = userStartingBTC * firstEURPrice
+    let initialPortUSD    = userStartingBTC * initialBTCPriceUSD
 
-    var previousBTCHoldings = userStartingBalanceBTC
-    var previousBTCPriceUSD = initialBTCPriceUSD
+    // We'll track “monthly” with an accumulator if .months is chosen
+    var monthAccumulator = 0.0
 
-    // Initial portfolio
-    let initialPortfolioEUR = userStartingBalanceBTC * firstEURPrice
-    let initialPortfolioUSD = userStartingBalanceBTC * initialBTCPriceUSD
+    // For full “weekly” results
+    var weeklyResults = [SimulationData]()
+    // For “monthly” results if .months
+    var monthlyResults = [SimulationData]()
 
-    // Weekly results array
-    var weeklyResults: [SimulationData] = []
+    // seed data at week=1
     weeklyResults.append(
         SimulationData(
             week: 1,
             startingBTC: 0.0,
-            netBTCHoldings: userStartingBalanceBTC,
+            netBTCHoldings: userStartingBTC,
             btcPriceUSD: Decimal(initialBTCPriceUSD),
             btcPriceEUR: Decimal(firstEURPrice),
-            portfolioValueEUR: Decimal(initialPortfolioEUR),
-            portfolioValueUSD: Decimal(initialPortfolioUSD),
+            portfolioValueEUR: Decimal(initialPortEUR),
+            portfolioValueUSD: Decimal(initialPortUSD),
             contributionEUR: 0.0,
             contributionUSD: 0.0,
             transactionFeeEUR: 0.0,
@@ -285,67 +248,60 @@ private func runWeeklySimulation(
         )
     )
 
-    for currentWeek in 2...totalWeeklySteps {
-        let useHist = settings.useHistoricalSampling
-        let useLog  = settings.useLognormalGrowth
-        let lumpsum = (!useHist && !useLog)
+    // Gather user’s typed input for contributions
+    let firstYearVal  = (settings.inputManager?.firstYearContribution   as NSString?)?.doubleValue ?? 0.0
+    let secondYearVal = (settings.inputManager?.subsequentContribution as NSString?)?.doubleValue ?? 0.0
 
+    // Main weekly loop
+    for currentWeek in 2...totalWeeklySteps {
+        let lumpsum = (!settings.useHistoricalSampling && !settings.useLognormalGrowth)
+
+        // 1) Price update
         if lumpsum {
-            // Lumpsum approach => once per year => if currentWeek % 52 == 0
+            // once per year => if currentWeek % 52 == 0
             if Double(currentWeek).truncatingRemainder(dividingBy: 52.0) == 0 {
                 var lumpsumGrowth = cagrDecimal
-                // Add vol shocks if on
-                if settings.useVolShocks && annualVolatility > 0.0 {
+                if settings.useVolShocks && annualVolatility > 0 {
+                    // shockVol
                     let shockVol: Double
-                    if useSeededRandom, var localRNG = seededGen {
-                        shockVol = seededRandomNormal(mean: 0, stdDev: periodVol, rng: &localRNG)
-                        seededGen = localRNG
+                    if useSeededRandom, var rng = seededGen {
+                        shockVol = seededRandomNormal(mean: 0, stdDev: periodVol, rng: &rng)
+                        seededGen = rng
                     } else {
                         shockVol = randomNormal(mean: 0, standardDeviation: periodVol)
                     }
-                    
                     var shockSD: Double = 0
                     if periodSD > 0 {
-                        if useSeededRandom, var rng = seededGen {
-                            shockSD = seededRandomNormal(mean: 0, stdDev: periodSD, rng: &rng)
-                            seededGen = rng
+                        if useSeededRandom, var rng2 = seededGen {
+                            shockSD = seededRandomNormal(mean: 0, stdDev: periodSD, rng: &rng2)
+                            seededGen = rng2
                         } else {
                             shockSD = randomNormal(mean: 0, standardDeviation: periodSD)
                         }
                         shockSD = max(min(shockSD, 2.0), -1.0)
                     }
-
                     let combinedShocks = exp(shockVol + shockSD)
                     lumpsumGrowth = (1.0 + lumpsumGrowth) * combinedShocks - 1.0
                 }
-                
                 lumpsumGrowth = applyFactorToggles(baseReturn: lumpsumGrowth, week: currentWeek, settings: settings)
                 let factor = lumpsumAdjustFactor(settings: settings, annualVolatility: annualVolatility)
                 lumpsumGrowth *= factor
-                previousBTCPriceUSD *= (1.0 + lumpsumGrowth)
+                prevBTCPriceUSD *= (1.0 + lumpsumGrowth)
             }
-
         } else {
-            // "Random draws" approach => user toggled historical or lognormal
+            // "random draws" => historical or lognormal
             var totalReturn = 0.0
-            
-            // If historical is on => pick random from historical array
-            if useHist {
+            if settings.useHistoricalSampling {
                 totalReturn += pickRandomReturn(from: historicalBTCWeeklyReturns)
             }
-            
-            // If lognormal is on => add weekly drift
-            // (We treat log drift as cagrDecimal/52 for weekly)
-            if useLog {
+            if settings.useLognormalGrowth {
                 totalReturn += (cagrDecimal / 52.0)
             }
-            
-            // If vol shocks on => add shockVol + shockSD
             if settings.useVolShocks {
                 let shockVol: Double
-                if useSeededRandom, var localRNG = seededGen {
-                    shockVol = seededRandomNormal(mean: 0, stdDev: periodVol, rng: &localRNG)
-                    seededGen = localRNG
+                if useSeededRandom, var rng = seededGen {
+                    shockVol = seededRandomNormal(mean: 0, stdDev: periodVol, rng: &rng)
+                    seededGen = rng
                 } else {
                     shockVol = randomNormal(mean: 0, standardDeviation: periodVol)
                 }
@@ -353,9 +309,9 @@ private func runWeeklySimulation(
 
                 if periodSD > 0 {
                     var shockSD: Double
-                    if useSeededRandom, var rng = seededGen {
-                        shockSD = seededRandomNormal(mean: 0, stdDev: periodSD, rng: &rng)
-                        seededGen = rng
+                    if useSeededRandom, var rng2 = seededGen {
+                        shockSD = seededRandomNormal(mean: 0, stdDev: periodSD, rng: &rng2)
+                        seededGen = rng2
                     } else {
                         shockSD = randomNormal(mean: 0, standardDeviation: periodSD)
                     }
@@ -363,49 +319,47 @@ private func runWeeklySimulation(
                     totalReturn += shockSD
                 }
             }
-
             totalReturn = applyFactorToggles(baseReturn: totalReturn, week: currentWeek, settings: settings)
-            
-            // Original code had 0.46 as a "shrink factor" for the random draws
-            let baseShrinkFactor = 0.46
-            totalReturn *= baseShrinkFactor
-            
-            previousBTCPriceUSD *= exp(totalReturn)
+            // Original shrink factor
+            totalReturn *= 0.46
+            prevBTCPriceUSD *= exp(totalReturn)
         }
 
-        // Don’t let price go below $1
-        previousBTCPriceUSD = max(1.0, previousBTCPriceUSD)
-        let currentBTCPriceEUR = previousBTCPriceUSD / exchangeRateEURUSD
+        // don't let price < $1
+        prevBTCPriceUSD = max(1.0, prevBTCPriceUSD)
+        let currentBTCPriceEUR = prevBTCPriceUSD / exchangeRateEURUSD
 
-        // “First year” means weeks <= 52
-        let isFirstYear = Double(currentWeek) <= 52.0
-        
+        // 2) Contribution logic
         var typedContrib = 0.0
-        if isFirstYear {
-            if let firstYearContributionString = settings.inputManager?.firstYearContribution,
-               let val = Double(firstYearContributionString) {
-                typedContrib = val
-            }
+        let isFirstYear = Double(currentWeek) <= 52.0
+
+        if settings.periodUnit == .weeks {
+            // deposit each iteration
+            typedContrib = isFirstYear ? firstYearVal : secondYearVal
+
         } else {
-            if let subsequentContributionString = settings.inputManager?.subsequentContribution,
-               let val = Double(subsequentContributionString) {
-                typedContrib = val
+            // .months => aggregator approach
+            monthAccumulator += (1.0 / weeksPerMonthApprox)
+
+            if monthAccumulator >= 1.0 {
+                typedContrib = isFirstYear ? firstYearVal : secondYearVal
+                monthAccumulator -= 1.0
             }
         }
 
-        // Currency preference
-        var typedContribUSD: Double = 0.0
-        var typedContribEUR: Double = 0.0
-        var netBTC             = 0.0
-        var feeUSD: Double     = 0.0
-        var feeEUR: Double     = 0.0
+        // Convert typedContrib => BTC
+        var typedContribUSD = 0.0
+        var typedContribEUR = 0.0
+        var feeUSD = 0.0
+        var feeEUR = 0.0
+        var netBTC = 0.0
 
         switch settings.currencyPreference {
         case .usd:
             typedContribUSD = typedContrib
             feeUSD = typedContribUSD * 0.006
             let netUSD = typedContribUSD - feeUSD
-            netBTC = netUSD / previousBTCPriceUSD
+            netBTC = netUSD / prevBTCPriceUSD
 
         case .eur:
             typedContribEUR = typedContrib
@@ -423,60 +377,75 @@ private func runWeeklySimulation(
                 typedContribUSD = typedContrib
                 feeUSD = typedContribUSD * 0.006
                 let netUSD = typedContribUSD - feeUSD
-                netBTC = netUSD / previousBTCPriceUSD
+                netBTC = netUSD / prevBTCPriceUSD
             }
         }
 
-        // Check thresholds
-        let hypotheticalHoldings = previousBTCHoldings + netBTC
+        // 3) Withdrawals
+        let hypotheticalHoldings = prevBTCHoldings + netBTC
         let hypotheticalValueEUR  = hypotheticalHoldings * currentBTCPriceEUR
-        var withdrawalEUR         = 0.0
-        
+        var withdrawalEUR = 0.0
+
         if hypotheticalValueEUR > (settings.inputManager?.threshold2 ?? 0.0) {
             withdrawalEUR = settings.inputManager?.withdrawAmount2 ?? 0.0
         } else if hypotheticalValueEUR > (settings.inputManager?.threshold1 ?? 0.0) {
             withdrawalEUR = settings.inputManager?.withdrawAmount1 ?? 0.0
         }
 
-        // Subtract withdrawal
         let withdrawalBTC = withdrawalEUR / currentBTCPriceEUR
         let finalHoldings = max(0.0, hypotheticalHoldings - withdrawalBTC)
 
-        // Final portfolio
+        // 4) Final portfolio
         let portfolioEUR = finalHoldings * currentBTCPriceEUR
-        let portfolioUSD = finalHoldings * previousBTCPriceUSD
-        
-        // Net contribution
+        let portfolioUSD = finalHoldings * prevBTCPriceUSD
+
         let netContribUSD = typedContribUSD - feeUSD
         let netContribEUR = typedContribEUR - feeEUR
 
-        // Append simulation data
-        weeklyResults.append(
-            SimulationData(
-                week: currentWeek,
-                startingBTC: previousBTCHoldings,
-                netBTCHoldings: finalHoldings,
-                btcPriceUSD: Decimal(previousBTCPriceUSD),
-                btcPriceEUR: Decimal(currentBTCPriceEUR),
-                portfolioValueEUR: Decimal(portfolioEUR),
-                portfolioValueUSD: Decimal(portfolioUSD),
-                
-                contributionEUR: netContribEUR,
-                contributionUSD: netContribUSD,
-                
-                transactionFeeEUR: feeEUR,
-                transactionFeeUSD: feeUSD,
-                netContributionBTC: netBTC,
-                withdrawalEUR: withdrawalEUR,
-                withdrawalUSD: withdrawalEUR / exchangeRateEURUSD
-            )
+        // Build the record for this iteration
+        let thisWeekData = SimulationData(
+            week: currentWeek,
+            startingBTC:  prevBTCHoldings,
+            netBTCHoldings: finalHoldings,
+            btcPriceUSD: Decimal(prevBTCPriceUSD),
+            btcPriceEUR: Decimal(currentBTCPriceEUR),
+            portfolioValueEUR: Decimal(portfolioEUR),
+            portfolioValueUSD: Decimal(portfolioUSD),
+            
+            contributionEUR: netContribEUR,
+            contributionUSD: netContribUSD,
+            
+            transactionFeeEUR: feeEUR,
+            transactionFeeUSD: feeUSD,
+            netContributionBTC: netBTC,
+            withdrawalEUR: withdrawalEUR,
+            withdrawalUSD: withdrawalEUR / exchangeRateEURUSD
         )
+        
+        // Store in weekly array
+        weeklyResults.append(thisWeekData)
 
-        // Update for next iteration
-        previousBTCHoldings = finalHoldings
+        // If .months is chosen AND we just triggered a deposit => store monthly snapshot
+        if settings.periodUnit == .months, typedContrib > 0 {
+            print("// DEBUG => capturing monthly snapshot at week=\(currentWeek), portfolio=\(portfolioUSD)")
+            monthlyResults.append(thisWeekData)
+        }
+
+        // update BTC holdings for next iteration
+        prevBTCHoldings = finalHoldings
     }
 
-    return weeklyResults
+    // Finally:
+    // If the user picked .weeks, return the full weekly array.
+    // If .months, return the monthly snapshot array.
+    // => So you only see lines that actually had a deposit.
+    if settings.periodUnit == .weeks {
+        return weeklyResults
+    } else {
+        // This ensures your UI sees exactly those points
+        // where a monthly deposit occurred, avoiding "partial months".
+        return monthlyResults
+    }
 }
 
 private func applyFactorToggles(
