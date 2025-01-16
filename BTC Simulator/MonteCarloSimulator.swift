@@ -417,7 +417,7 @@ private func runWeeklySimulation(
             if currentFloor >= monthIndex && monthIndex > 0 {
                 // Save monthly snapshot
                 let monthData = SimulationData(
-                    week: monthIndex, // store monthIndex in 'week'
+                    week: monthIndex,
                     startingBTC: thisWeekData.startingBTC,
                     netBTCHoldings: thisWeekData.netBTCHoldings,
                     btcPriceUSD: thisWeekData.btcPriceUSD,
@@ -436,6 +436,34 @@ private func runWeeklySimulation(
                 )
                 if monthlyResults.last?.week != monthIndex {
                     monthlyResults.append(monthData)
+                }
+            }
+            
+            // Force a final row if we've reached the end of the loop
+            // and not yet appended the final "month 240" snapshot
+            if currentWeek == totalWeeklySteps && monthIndex < settings.userPeriods {
+                let forcedMonth = settings.userPeriods
+                let lastWeekly = thisWeekData
+                let finalMonthData = SimulationData(
+                    week: forcedMonth, // e.g., 240
+                    startingBTC: lastWeekly.startingBTC,
+                    netBTCHoldings: lastWeekly.netBTCHoldings,
+                    btcPriceUSD: lastWeekly.btcPriceUSD,
+                    btcPriceEUR: lastWeekly.btcPriceEUR,
+                    portfolioValueEUR: lastWeekly.portfolioValueEUR,
+                    portfolioValueUSD: lastWeekly.portfolioValueUSD,
+                    
+                    contributionEUR: lastWeekly.contributionEUR,
+                    contributionUSD: lastWeekly.contributionUSD,
+                    
+                    transactionFeeEUR: lastWeekly.transactionFeeEUR,
+                    transactionFeeUSD: lastWeekly.transactionFeeUSD,
+                    netContributionBTC: lastWeekly.netContributionBTC,
+                    withdrawalEUR: lastWeekly.withdrawalEUR,
+                    withdrawalUSD: lastWeekly.withdrawalUSD
+                )
+                if monthlyResults.last?.week != forcedMonth {
+                    monthlyResults.append(finalMonthData)
                 }
             }
         }
