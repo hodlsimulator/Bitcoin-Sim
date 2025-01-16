@@ -1076,10 +1076,17 @@ struct ContentView: View {
             case \SimulationData.btcPriceUSD,
                  \SimulationData.btcPriceEUR,
                  \SimulationData.portfolioValueEUR,
-                 \SimulationData.portfolioValueUSD,
-                 \SimulationData.contributionEUR,
-                 \SimulationData.transactionFeeEUR,
-                 \SimulationData.withdrawalEUR:
+                 \SimulationData.portfolioValueUSD:
+                return doubleVal.formattedCurrency()
+
+            case \SimulationData.contributionEUR,
+                 \SimulationData.contributionUSD:
+                return doubleVal.withThousandsSeparator(decimalPlaces: 2)
+
+            case \SimulationData.transactionFeeEUR,
+                 \SimulationData.transactionFeeUSD,
+                 \SimulationData.withdrawalEUR,
+                 \SimulationData.withdrawalUSD:
                 return doubleVal.formattedCurrency()
             default:
                 return String(format: "%.2f", doubleVal)

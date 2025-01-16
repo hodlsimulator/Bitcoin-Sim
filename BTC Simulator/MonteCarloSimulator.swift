@@ -8,6 +8,17 @@
 import Foundation
 import SwiftUI
 
+// A helper extension to format your numbers with thousands separators.
+extension Double {
+    func withThousandsSeparator(decimalPlaces: Int = 2) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.groupingSeparator = ","
+        formatter.maximumFractionDigits = decimalPlaces
+        return formatter.string(from: NSNumber(value: self)) ?? "\(self)"
+    }
+}
+
 private let halvingWeeks    = [210, 420, 630, 840]
 private let blackSwanWeeks  = [150, 500]
 
@@ -284,11 +295,11 @@ private func runWeeklySimulation(
         //----------------------------------------------------------------------
         var typedDeposit = 0.0
         
-        // Combine the user’s normal deposit + the startingBalance in week 1
         let isFirstWeek  = (currentWeek == 1)
         let isFirstYear  = (Double(currentWeek) <= 52.0)
         
         if settings.periodUnit == .weeks {
+            // Weekly approach
             if isFirstWeek {
                 typedDeposit = settings.startingBalance
             }
@@ -300,13 +311,12 @@ private func runWeeklySimulation(
             let newFloor = Int(floor(monthAccumulator))
             if newFloor > monthIndex {
                 monthIndex = newFloor
-                
-                // In the first “monthly boundary,” also deposit the startingBalance
+                // <-- HERE: Only the starting balance for the first month
                 if monthIndex == 1 {
-                    typedDeposit += settings.startingBalance
+                    typedDeposit += settings.startingBalance // <-- HERE
+                } else {
+                    typedDeposit += (isFirstYear ? firstYearVal : secondYearVal)
                 }
-                // Then add normal deposit
-                typedDeposit += (isFirstYear ? firstYearVal : secondYearVal)
             }
         }
         

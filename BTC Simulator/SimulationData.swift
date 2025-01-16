@@ -7,6 +7,18 @@
 
 import Foundation
 
+// 1) Double extension for thousands separators
+fileprivate extension Double {
+    func formattedWithSeparator(minDecimals: Int = 2, maxDecimals: Int = 2) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.groupingSeparator = ","
+        formatter.minimumFractionDigits = minDecimals
+        formatter.maximumFractionDigits = maxDecimals
+        return formatter.string(from: NSNumber(value: self)) ?? "\(self)"
+    }
+}
+
 struct SimulationData: Identifiable {
     var id: Int { week }
 
@@ -36,6 +48,14 @@ struct SimulationData: Identifiable {
     // Withdrawals in both currencies
     let withdrawalEUR: Double
     let withdrawalUSD: Double
+
+    // 2) Computed properties for thousands-separated contributions
+    var formattedContributionEUR: String {
+        contributionEUR.formattedWithSeparator()
+    }
+    var formattedContributionUSD: String {
+        contributionUSD.formattedWithSeparator()
+    }
 
     static let placeholder = SimulationData(
         week: 0,
