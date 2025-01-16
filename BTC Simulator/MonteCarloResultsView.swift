@@ -227,9 +227,19 @@ struct MonteCarloChartView: View {
                     .chartXScale(domain: 0.0...totalYears, type: .linear)
                     .chartYScale(domain: domainMin...domainMax, type: .log)
                     .chartPlotStyle { plotArea in
-                        plotArea
-                            .padding(.top, 0)
-                            .padding(.bottom, 20)
+                        if orientationObserver.isLandscape {
+                            plotArea
+                                .padding(.leading, -12)
+                                .padding(.trailing, 0)
+                                .padding(.top, 0)
+                                .padding(.bottom, 20)
+                        } else {
+                            plotArea
+                                .padding(.leading, -5)
+                                .padding(.trailing, 0)
+                                .padding(.top, 0)
+                                .padding(.bottom, 20)
+                        }
                     }
                     .chartYAxis {
                         AxisMarks(position: .leading, values: yTickValues) { axisValue in
