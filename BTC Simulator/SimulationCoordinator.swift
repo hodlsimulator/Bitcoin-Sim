@@ -124,8 +124,7 @@ class SimulationCoordinator: ObservableObject {
                 }
             }()
 
-            let userPriceUSDAsDecimal = Decimal(self.simSettings.initialBTCPriceUSD)
-            let userPriceUSDAsDouble = NSDecimalNumber(decimal: userPriceUSDAsDecimal).doubleValue
+            let userPriceUSDAsDouble = NSDecimalNumber(decimal: Decimal(self.simSettings.initialBTCPriceUSD)).doubleValue
 
             // Run the simulations
             let (_, allIterations) = runMonteCarloSimulationsWithProgress(
@@ -165,7 +164,6 @@ class SimulationCoordinator: ObservableObject {
                 let midIndex = firstRun.count / 2
                 print("// DEBUG: partial sample from first run => week1 => BTC=\(firstRun[0].btcPriceUSD), portfolio=\(firstRun[0].portfolioValueEUR)")
                 print("                         => week\(midIndex) => BTC=\(firstRun[midIndex].btcPriceUSD), portfolio=\(firstRun[midIndex].portfolioValueEUR)")
-                // ADDED: Print last week so logs match UI
                 if let lastItem = firstRun.last {
                     print("// DEBUG: partial sample from first run => last => BTC=\(lastItem.btcPriceUSD), portfolio=\(lastItem.portfolioValueEUR)")
                 }
@@ -177,7 +175,7 @@ class SimulationCoordinator: ObservableObject {
                     self.isChartBuilding = true
                     print("// DEBUG: Simulation finished => isChartBuilding=true now.")
                     
-                    // Grabbing just for 10th/median/90th percentile reference
+                    // Grab 10th, median, 90th
                     let tenthIndex     = max(0, Int(Double(sortedRuns.count - 1) * 0.10))
                     let medianIndex    = sortedRuns.count / 2
                     let ninetiethIndex = min(sortedRuns.count - 1, Int(Double(sortedRuns.count - 1) * 0.90))
@@ -186,10 +184,10 @@ class SimulationCoordinator: ObservableObject {
                     let medianRun    = sortedRuns[medianIndex].1
                     let ninetiethRun = sortedRuns[ninetiethIndex].1
                     
-                    // The composite line used by the UI
+                    // Build the median line
                     let medianLineData = self.computeMedianSimulationData(allIterations: allIterations)
                     
-                    // Decide which currency (USD or EUR) to show in logs
+                    // Decide which currency to log
                     let medianBTCFinal: Decimal
                     let medianPortfolioFinal: Decimal
                     let tenthPortfolioFinal: Decimal
@@ -199,22 +197,19 @@ class SimulationCoordinator: ObservableObject {
                     case .usd:
                         medianBTCFinal       = medianLineData.last?.btcPriceUSD       ?? 0
                         medianPortfolioFinal = medianLineData.last?.portfolioValueUSD ?? 0
-                        
                         tenthPortfolioFinal     = tenthRun.last?.portfolioValueUSD     ?? 0
                         ninetiethPortfolioFinal = ninetiethRun.last?.portfolioValueUSD ?? 0
                         
                     case .eur:
                         medianBTCFinal       = medianLineData.last?.btcPriceEUR       ?? 0
                         medianPortfolioFinal = medianLineData.last?.portfolioValueEUR ?? 0
-                        
                         tenthPortfolioFinal     = tenthRun.last?.portfolioValueEUR     ?? 0
                         ninetiethPortfolioFinal = ninetiethRun.last?.portfolioValueEUR ?? 0
                         
                     case .both:
-                        // Example: default to USD for logging if "Both" is selected
+                        // Default to USD for logging if "Both"
                         medianBTCFinal       = medianLineData.last?.btcPriceUSD       ?? 0
                         medianPortfolioFinal = medianLineData.last?.portfolioValueUSD ?? 0
-                        
                         tenthPortfolioFinal     = tenthRun.last?.portfolioValueUSD     ?? 0
                         ninetiethPortfolioFinal = ninetiethRun.last?.portfolioValueUSD ?? 0
                     }
@@ -223,15 +218,17 @@ class SimulationCoordinator: ObservableObject {
                     print("// DEBUG: Ninetieth final portfolio => \(ninetiethPortfolioFinal)")
                     print("// DEBUG: medianLineData => \(medianLineData.count) weeks. Final BTC => \(medianBTCFinal), final portfolio => \(medianPortfolioFinal)")
                     
-                    // Store data
+                    // Store them so the UI can switch percentiles if desired
                     self.tenthPercentileResults = tenthRun
                     self.medianResults = medianLineData
                     self.ninetiethPercentileResults = ninetiethRun
+
+                    // *** CRUCIAL STEP: The table & summary card will now match the median line ***
                     self.monteCarloResults = medianLineData
                     self.selectedPercentile = .median
                     self.allSimData = allIterations
                     
-                    // Convert runs for BTC chart and Portfolio
+                    // Convert for charts
                     let allSimsAsWeekPoints = self.convertAllSimsToWeekPoints()
                     let allSimsAsPortfolioPoints = self.convertAllSimsToPortfolioWeekPoints()
                     
@@ -247,7 +244,7 @@ class SimulationCoordinator: ObservableObject {
                     self.chartDataCache.chartSnapshotPortfolio = nil
                     self.chartDataCache.chartSnapshotPortfolioLandscape = nil
                     
-                    // Store runs
+                    // Save runs in the chartDataCache
                     self.chartDataCache.allRuns = allSimsAsWeekPoints
                     self.chartDataCache.portfolioRuns = allSimsAsPortfolioPoints
                     self.chartDataCache.storedInputsHash = newHash
@@ -267,7 +264,7 @@ class SimulationCoordinator: ObservableObject {
                     let oldSelection = self.chartSelection.selectedChart
                     print("// CHANGED: oldSelection => \(oldSelection)")
 
-                    // ADDED OR MODIFIED: Only build snapshots if generateGraphs == true
+                    // Only build chart snapshots if generateGraphs == true
                     if !generateGraphs {
                         print("// DEBUG: Skipping chart building because generateGraphs == false.")
                         self.isChartBuilding = false
@@ -275,12 +272,13 @@ class SimulationCoordinator: ObservableObject {
                         return
                     }
                     
+                    // Build charts on the main thread
                     DispatchQueue.main.async {
                         if self.isCancelled {
                             self.isChartBuilding = false
                             return
                         }
-                        // Temporarily force BTC chart, then build
+                        // Temporarily force BTC chart
                         self.chartSelection.selectedChart = .btcPrice
                         print("// DEBUG: building chartView (BTC portrait) for layout pass.")
                         
@@ -300,7 +298,7 @@ class SimulationCoordinator: ObservableObject {
                             print("// DEBUG: BTC portrait snapshot => setting chartDataCache.chartSnapshot.")
                             self.chartDataCache.chartSnapshot = btcSnapshot
                             
-                            // Now do the same for Portfolio
+                            // Do the same for Portfolio
                             print("// DEBUG: building chartView (Portfolio portrait) for layout pass.")
                             self.chartSelection.selectedChart = .cumulativePortfolio
                             
@@ -354,11 +352,18 @@ class SimulationCoordinator: ObservableObject {
         }
     }
     
-    /// Convert `[[SimulationData]]` to `[SimulationRun]` but use portfolioValueEUR
     func convertAllSimsToPortfolioWeekPoints() -> [SimulationRun] {
         allSimData.map { singleRun -> SimulationRun in
             let wpoints = singleRun.map { row in
-                WeekPoint(week: row.week, value: row.portfolioValueEUR)
+
+                // If user picked USD, use row.portfolioValueUSD
+                // If user picked EUR, use row.portfolioValueEUR
+                // Or if "Both", maybe default to USD for chart
+                let chosenPortfolio = (simSettings.currencyPreference == .eur)
+                    ? row.portfolioValueEUR
+                    : row.portfolioValueUSD
+
+                return WeekPoint(week: row.week, value: chosenPortfolio)
             }
             return SimulationRun(points: wpoints)
         }
