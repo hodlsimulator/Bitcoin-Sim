@@ -8,7 +8,7 @@
 import Foundation
 import SwiftUI
 
-// A helper extension to format your numbers with thousands separators.
+// A helper extension to format numbers with commas.
 extension Double {
     func withThousandsSeparator(decimalPlaces: Int = 2) -> String {
         let formatter = NumberFormatter()
@@ -19,8 +19,14 @@ extension Double {
     }
 }
 
-private let halvingWeeks    = [210, 420, 630, 840]
-private let blackSwanWeeks  = [150, 500]
+// ──────────────────────────────────────────────────────────────────────────
+// Instead of static arrays, we’ll randomly decide in which weeks halving and
+// black swan events appear. The chance is smaller if the total horizon is short.
+// ──────────────────────────────────────────────────────────────────────────
+
+// Probability thresholds (tweak as you like)
+private let halvingIntervalGuess = 210.0  // On average, 210 weeks
+private let blackSwanIntervalGuess = 400.0 // On average, 400 weeks
 
 private let useWeightedSampling = false
 private var useSeededRandom = false
@@ -60,6 +66,31 @@ fileprivate func seededRandomNormal<G: RandomNumberGenerator>(
     let u2 = Double(rng.next()) / Double(UInt64.max)
     let z0 = sqrt(-2.0 * log(u1)) * cos(2.0 * .pi * u2)
     return z0 * stdDev + mean
+}
+
+/// Basic normal distribution generator (unseeded)
+private func randomNormal(mean: Double, standardDeviation: Double) -> Double {
+    let u1 = Double.random(in: 0..<1)
+    let u2 = Double.random(in: 0..<1)
+    let z0 = sqrt(-2.0 * log(u1)) * cos(2.0 * .pi * u2)
+    return z0 * standardDeviation + mean
+}
+
+/// Randomly decide how many halving events happen and in which weeks
+func generateRandomEventWeeks(totalWeeks: Int, intervalGuess: Double) -> [Int] {
+    // Expect ~ totalWeeks / intervalGuess events
+    let expectedCount = Double(totalWeeks) / intervalGuess
+    let eventCount = Int(round(expectedCount))
+    
+    // If there are no events expected for a short horizon,
+    // we still give it a small chance. We'll do up to eventCount
+    // but might skip all if totalWeeks is super short.
+    var eventWeeks: [Int] = []
+    for _ in 0..<eventCount {
+        let randomWeek = Int.random(in: 1...totalWeeks)
+        eventWeeks.append(randomWeek)
+    }
+    return eventWeeks.sorted()
 }
 
 /// Instead of a fixed “shrinkFactor = 0.46”, we do a small percent cut per toggle.
@@ -119,7 +150,6 @@ private func lumpsumAdjustFactor(
     
     // Don’t drop below 80%
     factor = max(factor, 0.80)
-    
     return factor
 }
 
@@ -146,41 +176,41 @@ func runOneFullSimulation(
     seed: UInt64? = nil
 ) -> [SimulationData] {
     
-    // (1) If .months => convert months → approximate # of weeks behind the scenes
+    // (1) If .months => convert months → approximate # of weeks
     var totalSteps = userWeeks
     if settings.periodUnit == .months {
         let approx = Double(userWeeks) * weeksPerMonthApprox
         totalSteps = Int(round(approx))
     }
-    
-    // (2) Just call our runWeeklySimulation with lumpsum or random draws
-    // plus the monthly “accumulator” approach if .months is chosen.
+
+    // (2) Generate random weeks for halving & black swan
+    let randomHalvingWeeks = generateRandomEventWeeks(totalWeeks: totalSteps, intervalGuess: halvingIntervalGuess)
+    let randomBlackSwanWeeks = generateRandomEventWeeks(totalWeeks: totalSteps, intervalGuess: blackSwanIntervalGuess)
+
+    // (3) Just call our runWeeklySimulation
     let finalData = runWeeklySimulation(
         settings: settings,
         annualCAGR: annualCAGR,
         annualVolatility: annualVolatility,
         exchangeRateEURUSD: exchangeRateEURUSD,
         totalWeeklySteps: totalSteps,
-        initialBTCPriceUSD: initialBTCPriceUSD
+        initialBTCPriceUSD: initialBTCPriceUSD,
+        halvingWeeks: randomHalvingWeeks,
+        blackSwanWeeks: randomBlackSwanWeeks
     )
-    
-    // (3) Because the function below returns:
-    //     - weekly array if .weeks
-    //     - monthly array if .months
-    // we can just return finalData with no further resample.
     return finalData
 }
 
 /// The function that runs weekly logic.
-/// - If `.weeks`, we deposit each iteration.
-/// - If `.months`, we deposit once we cross each monthly boundary, **including** the very first boundary for the starting balance.
 private func runWeeklySimulation(
     settings: SimulationSettings,
     annualCAGR: Double,
     annualVolatility: Double,
     exchangeRateEURUSD: Double,
     totalWeeklySteps: Int,
-    initialBTCPriceUSD: Double
+    initialBTCPriceUSD: Double,
+    halvingWeeks: [Int],
+    blackSwanWeeks: [Int]
 ) -> [SimulationData] {
     
     struct PrintOnce {
@@ -195,7 +225,7 @@ private func runWeeklySimulation(
         PrintOnce.didPrintFactorSettings = true
     }
 
-    // 2) Read standard deviation
+    // 2) Read standard deviation from user, else default
     let parsedSD: Double
     if let sdStr = settings.inputManager?.standardDeviation, let val = Double(sdStr) {
         parsedSD = val
@@ -224,20 +254,11 @@ private func runWeeklySimulation(
     var weeklyResults  = [SimulationData]()
     var monthlyResults = [SimulationData]()
     
-    // ─────────────────────────────────────────────────────────────────
-    // (A) We no longer deposit outside the loop – we do it inside the loop
-    //     so the startingBalance also appears in the first month's contribution.
-    // ─────────────────────────────────────────────────────────────────
-    
-    // ─────────────────────────────────────────────────────────────
     // (B) Normal weekly/monthly contributions
-    // ─────────────────────────────────────────────────────────────
     let firstYearVal  = (settings.inputManager?.firstYearContribution   as NSString?)?.doubleValue ?? 0.0
     let secondYearVal = (settings.inputManager?.subsequentContribution as NSString?)?.doubleValue ?? 0.0
     
-    // ─────────────────────────────────────────────────────────────
-    // (C) Main loop: weeks 1..N
-    // ─────────────────────────────────────────────────────────────
+    // (C) Main loop
     for currentWeek in 1...totalWeeklySteps {
         
         //----------------------------------------------------------------------
@@ -258,7 +279,14 @@ private func runWeeklySimulation(
                     let combinedShocks = exp(shockVol + shockSD)
                     lumpsumGrowth = (1.0 + lumpsumGrowth) * combinedShocks - 1.0
                 }
-                lumpsumGrowth = applyFactorToggles(baseReturn: lumpsumGrowth, week: currentWeek, settings: settings)
+                // Apply bullish/bearish toggles
+                lumpsumGrowth = applyFactorToggles(
+                    baseReturn: lumpsumGrowth,
+                    week: currentWeek,
+                    settings: settings,
+                    halvingWeeks: halvingWeeks,
+                    blackSwanWeeks: blackSwanWeeks
+                )
                 let factor = lumpsumAdjustFactor(settings: settings, annualVolatility: annualVolatility)
                 lumpsumGrowth *= factor
                 prevBTCPriceUSD *= (1.0 + lumpsumGrowth)
@@ -281,13 +309,23 @@ private func runWeeklySimulation(
                     totalReturn += shockSD
                 }
             }
-            totalReturn = applyFactorToggles(baseReturn: totalReturn, week: currentWeek, settings: settings)
+            // Apply toggles
+            totalReturn = applyFactorToggles(
+                baseReturn: totalReturn,
+                week: currentWeek,
+                settings: settings,
+                halvingWeeks: halvingWeeks,
+                blackSwanWeeks: blackSwanWeeks
+            )
+            // Additional scaling (legacy factor in your code)
             totalReturn *= 0.46
             prevBTCPriceUSD *= exp(totalReturn)
         }
         
         // Price floor
-        if prevBTCPriceUSD < 1.0 { prevBTCPriceUSD = 1.0 }
+        if prevBTCPriceUSD < 1.0 {
+            prevBTCPriceUSD = 1.0
+        }
         let currentBTCPriceEUR = prevBTCPriceUSD / exchangeRateEURUSD
         
         //----------------------------------------------------------------------
@@ -299,21 +337,20 @@ private func runWeeklySimulation(
         let isFirstYear  = (Double(currentWeek) <= 52.0)
         
         if settings.periodUnit == .weeks {
-            // Weekly approach
+            // Weekly
             if isFirstWeek {
                 typedDeposit = settings.startingBalance
             }
             typedDeposit += (isFirstYear ? firstYearVal : secondYearVal)
             
         } else {
-            // monthly approach
+            // Monthly
             monthAccumulator += 1.0 / weeksPerMonthApprox
             let newFloor = Int(floor(monthAccumulator))
             if newFloor > monthIndex {
                 monthIndex = newFloor
-                // <-- HERE: Only the starting balance for the first month
                 if monthIndex == 1 {
-                    typedDeposit += settings.startingBalance // <-- HERE
+                    typedDeposit += settings.startingBalance
                 } else {
                     typedDeposit += (isFirstYear ? firstYearVal : secondYearVal)
                 }
@@ -378,7 +415,7 @@ private func runWeeklySimulation(
         if settings.periodUnit == .months {
             let currentFloor = Int(floor(monthAccumulator))
             if currentFloor >= monthIndex && monthIndex > 0 {
-                // Save this monthly snapshot
+                // Save monthly snapshot
                 let monthData = SimulationData(
                     week: monthIndex, // store monthIndex in 'week'
                     startingBTC: thisWeekData.startingBTC,
@@ -417,10 +454,7 @@ private func runWeeklySimulation(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────
-// computeNetDeposit => Deduct fees from typedDeposit, show net deposit in
-//                     .contribution, and convert net to BTC
-// ─────────────────────────────────────────────────────────────────────────
+// MARK: - Net Deposit
 private func computeNetDeposit(
     typedDeposit: Double,
     settings: SimulationSettings,
@@ -465,16 +499,21 @@ private func computeNetDeposit(
     }
 }
 
+// MARK: - Factor Toggles
 private func applyFactorToggles(
     baseReturn: Double,
     week: Int,
-    settings: SimulationSettings
+    settings: SimulationSettings,
+    halvingWeeks: [Int],
+    blackSwanWeeks: [Int]
 ) -> Double {
     var r = baseReturn
     
-    if settings.useHalving, halvingWeeks.contains(week) {
+    // If the user toggled "useHalving", add halvingBump if 'week' is in halvingWeeks
+    if settings.useHalving && halvingWeeks.contains(week) {
         r += settings.halvingBump
     }
+    // Then do the other bullish toggles
     if settings.useInstitutionalDemand {
         r += settings.maxDemandBoost
     }
@@ -509,6 +548,7 @@ private func applyFactorToggles(
         r += settings.adoptionBaseFactor
     }
     
+    // Bearish toggles
     if settings.useRegClampdown {
         r += settings.maxClampDown
     }
@@ -524,7 +564,8 @@ private func applyFactorToggles(
     if settings.useStablecoinMeltdown {
         r += settings.maxMeltdownDrop
     }
-    if settings.useBlackSwan {
+    // If the user toggled "useBlackSwan", subtract blackSwanDrop if 'week' is in blackSwanWeeks
+    if settings.useBlackSwan && blackSwanWeeks.contains(week) {
         r += settings.blackSwanDrop
     }
     if settings.useBearMarket {
@@ -551,7 +592,7 @@ fileprivate func pickRandomReturn(from arr: [Double]) -> Double {
     }
 }
 
-/// The main multi-run function, but behind the scenes we do "weeks" even if the user wants months.
+/// The main multi-run function
 func runMonteCarloSimulationsWithProgress(
     settings: SimulationSettings,
     annualCAGR: Double,
@@ -577,7 +618,7 @@ func runMonteCarloSimulationsWithProgress(
             break
         }
         
-        Thread.sleep(forTimeInterval: 0.01) // just to simulate some processing time
+        Thread.sleep(forTimeInterval: 0.01) // simulate some processing time
         
         let simRun = runOneFullSimulation(
             settings: settings,
@@ -612,11 +653,4 @@ func runMonteCarloSimulationsWithProgress(
     print("// DEBUG: loop ended => built \(allRuns.count) runs. Returning median & allRuns.")
     return (medianRun, allRuns)
 }
-
-/// Basic normal distribution generator (unseeded)
-private func randomNormal(mean: Double, standardDeviation: Double) -> Double {
-    let u1 = Double.random(in: 0..<1)
-    let u2 = Double.random(in: 0..<1)
-    let z0 = sqrt(-2.0 * log(u1)) * cos(2.0 * .pi * u2)
-    return z0 * standardDeviation + mean
-}
+    
