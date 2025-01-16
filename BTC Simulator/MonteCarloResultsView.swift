@@ -150,6 +150,9 @@ func formatSuffix(_ value: Decimal) -> String {
 
 // MARK: - BTC Chart Subview
 
+import SwiftUI
+import Charts
+
 struct MonteCarloChartView: View {
     @EnvironmentObject var orientationObserver: OrientationObserver
     @EnvironmentObject var chartDataCache: ChartDataCache
@@ -273,6 +276,8 @@ struct MonteCarloChartView: View {
                     }
                     .frame(width: geo.size.width, height: geo.size.height)
                 }
+                // Shift everything down 20 points in landscape, or 0 in portrait
+                .padding(.top, orientationObserver.isLandscape ? 20 : 0)
                 // CHANGED: scaleEffect is now using verticalScale (1.0 in landscape)
                 .scaleEffect(x: 1.0, y: verticalScale, anchor: .bottom)
                 .offset(y: -topOffset)
@@ -280,7 +285,7 @@ struct MonteCarloChartView: View {
         }
         .navigationBarHidden(false)
     }
-}
+}   
 
 // MARK: - Chart content with per-run color (already in your code)
 
