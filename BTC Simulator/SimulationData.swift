@@ -10,7 +10,7 @@ import Foundation
 struct SimulationData: Identifiable {
     var id: Int { week }
 
-    let week: Int
+    var week: Int
     let startingBTC: Double
     let netBTCHoldings: Double
 
