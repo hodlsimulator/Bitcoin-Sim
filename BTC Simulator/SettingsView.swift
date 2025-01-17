@@ -98,10 +98,11 @@ struct SettingsView: View {
                 FactorToggleRow(
                     iconName: "globe.europe.africa",
                     title: "Halving",
-                    isOn: $simSettings.useHalving,
-                    sliderValue: $simSettings.halvingBump,
+                    // Use the unified properties:
+                    isOn: $simSettings.useHalvingUnified,
+                    sliderValue: $simSettings.halvingBumpUnified,
                     sliderRange: 0.0...1.0,
-                    defaultValue: 0.48,
+                    defaultValue: 0.48,  // if you want separate defaults, do: simSettings.periodUnit == .weeks ? 0.48 : 0.45
                     parameterDescription: """
                         Occurs roughly every four years, reducing the block reward in half.
                         Historically, halving events have coincided with substantial BTC price increases.
@@ -124,8 +125,8 @@ struct SettingsView: View {
                 FactorToggleRow(
                     iconName: "building.columns.fill",
                     title: "Institutional Demand",
-                    isOn: $simSettings.useInstitutionalDemand,
-                    sliderValue: $simSettings.maxDemandBoost,
+                    isOn: $simSettings.useInstitutionalDemandUnified,
+                    sliderValue: $simSettings.maxDemandBoostUnified,
                     sliderRange: 0.0...0.0024785082677343554,
                     defaultValue: 0.0012392541338671777,
                     parameterDescription: """
@@ -139,8 +140,8 @@ struct SettingsView: View {
                 FactorToggleRow(
                     iconName: "flag.fill",
                     title: "Country Adoption",
-                    isOn: $simSettings.useCountryAdoption,
-                    sliderValue: $simSettings.maxCountryAdBoost,
+                    isOn: $simSettings.useCountryAdoptionUnified,
+                    sliderValue: $simSettings.maxCountryAdBoostUnified,
                     sliderRange: 0.0...0.0009419192839966337,
                     defaultValue: 0.00047095964199831683,
                     parameterDescription: """
@@ -154,8 +155,8 @@ struct SettingsView: View {
                 FactorToggleRow(
                     iconName: "checkmark.shield",
                     title: "Regulatory Clarity",
-                    isOn: $simSettings.useRegulatoryClarity,
-                    sliderValue: $simSettings.maxClarityBoost,
+                    isOn: $simSettings.useRegulatoryClarityUnified,
+                    sliderValue: $simSettings.maxClarityBoostUnified,
                     sliderRange: 0.0...0.0033288047498949932,
                     defaultValue: 0.0016644023749474966,
                     parameterDescription: """
@@ -169,8 +170,8 @@ struct SettingsView: View {
                 FactorToggleRow(
                     iconName: "building.2.crop.circle",
                     title: "ETF Approval",
-                    isOn: $simSettings.useEtfApproval,
-                    sliderValue: $simSettings.maxEtfBoost,
+                    isOn: $simSettings.useEtfApprovalUnified,
+                    sliderValue: $simSettings.maxEtfBoostUnified,
                     sliderRange: 0.0...0.0009093700408935548,
                     defaultValue: 0.0004546850204467774,
                     parameterDescription: """
@@ -184,8 +185,8 @@ struct SettingsView: View {
                 FactorToggleRow(
                     iconName: "sparkles",
                     title: "Tech Breakthrough",
-                    isOn: $simSettings.useTechBreakthrough,
-                    sliderValue: $simSettings.maxTechBoost,
+                    isOn: $simSettings.useTechBreakthroughUnified,
+                    sliderValue: $simSettings.maxTechBoostUnified,
                     sliderRange: 0.0...0.0008132791949127451,
                     defaultValue: 0.00040663959745637255,
                     parameterDescription: """
@@ -199,8 +200,8 @@ struct SettingsView: View {
                 FactorToggleRow(
                     iconName: "scalemass",
                     title: "Scarcity Events",
-                    isOn: $simSettings.useScarcityEvents,
-                    sliderValue: $simSettings.maxScarcityBoost,
+                    isOn: $simSettings.useScarcityEventsUnified,
+                    sliderValue: $simSettings.maxScarcityBoostUnified,
                     sliderRange: 0.0...0.0015936167868886078,
                     defaultValue: 0.0007968083934443039,
                     parameterDescription: """
@@ -214,8 +215,8 @@ struct SettingsView: View {
                 FactorToggleRow(
                     iconName: "globe.americas.fill",
                     title: "Global Macro Hedge",
-                    isOn: $simSettings.useGlobalMacroHedge,
-                    sliderValue: $simSettings.maxMacroBoost,
+                    isOn: $simSettings.useGlobalMacroHedgeUnified,
+                    sliderValue: $simSettings.maxMacroBoostUnified,
                     sliderRange: 0.0...0.000838709145784378,
                     defaultValue: 0.000419354572892189,
                     parameterDescription: """
@@ -229,8 +230,8 @@ struct SettingsView: View {
                 FactorToggleRow(
                     iconName: "dollarsign.arrow.circlepath",
                     title: "Stablecoin Shift",
-                    isOn: $simSettings.useStablecoinShift,
-                    sliderValue: $simSettings.maxStablecoinBoost,
+                    isOn: $simSettings.useStablecoinShiftUnified,
+                    sliderValue: $simSettings.maxStablecoinBoostUnified,
                     sliderRange: 0.0...0.000809852472620355,
                     defaultValue: 0.0004049262363101775,
                     parameterDescription: """
@@ -244,8 +245,8 @@ struct SettingsView: View {
                 FactorToggleRow(
                     iconName: "person.3.fill",
                     title: "Demographic Adoption",
-                    isOn: $simSettings.useDemographicAdoption,
-                    sliderValue: $simSettings.maxDemoBoost,
+                    isOn: $simSettings.useDemographicAdoptionUnified,
+                    sliderValue: $simSettings.maxDemoBoostUnified,
                     sliderRange: 0.0...0.0026113669872283936,
                     defaultValue: 0.0013056834936141968,
                     parameterDescription: """
@@ -259,8 +260,8 @@ struct SettingsView: View {
                 FactorToggleRow(
                     iconName: "bitcoinsign.circle.fill",
                     title: "Altcoin Flight",
-                    isOn: $simSettings.useAltcoinFlight,
-                    sliderValue: $simSettings.maxAltcoinBoost,
+                    isOn: $simSettings.useAltcoinFlightUnified,
+                    sliderValue: $simSettings.maxAltcoinBoostUnified,
                     sliderRange: 0.0...0.0005604388923606684,
                     defaultValue: 0.0002802194461803342,
                     parameterDescription: """
@@ -274,8 +275,8 @@ struct SettingsView: View {
                 FactorToggleRow(
                     iconName: "arrow.up.right.circle.fill",
                     title: "Adoption Factor (Incremental Drift)",
-                    isOn: $simSettings.useAdoptionFactor,
-                    sliderValue: $simSettings.adoptionBaseFactor,
+                    isOn: $simSettings.useAdoptionFactorUnified,
+                    sliderValue: $simSettings.adoptionBaseFactorUnified,
                     sliderRange: 0.0...0.0019370198249816894,
                     defaultValue: 0.0009685099124908447,
                     parameterDescription: """
@@ -294,8 +295,8 @@ struct SettingsView: View {
                 FactorToggleRow(
                     iconName: "hand.raised.slash",
                     title: "Regulatory Clampdown",
-                    isOn: $simSettings.useRegClampdown,
-                    sliderValue: $simSettings.maxClampDown,
+                    isOn: $simSettings.useRegClampdownUnified,
+                    sliderValue: $simSettings.maxClampDownUnified,
                     sliderRange: -0.002376651382446289...0.0,
                     defaultValue: -0.0011883256912231445,
                     parameterDescription: """
@@ -309,8 +310,8 @@ struct SettingsView: View {
                 FactorToggleRow(
                     iconName: "bitcoinsign.circle",
                     title: "Competitor Coin",
-                    isOn: $simSettings.useCompetitorCoin,
-                    sliderValue: $simSettings.maxCompetitorBoost,
+                    isOn: $simSettings.useCompetitorCoinUnified,
+                    sliderValue: $simSettings.maxCompetitorBoostUnified,
                     sliderRange: -0.0022519826889038086...0.0,
                     defaultValue: -0.0011259913444519043,
                     parameterDescription: """
@@ -324,8 +325,8 @@ struct SettingsView: View {
                 FactorToggleRow(
                     iconName: "lock.shield",
                     title: "Security Breach",
-                    isOn: $simSettings.useSecurityBreach,
-                    sliderValue: $simSettings.breachImpact,
+                    isOn: $simSettings.useSecurityBreachUnified,
+                    sliderValue: $simSettings.breachImpactUnified,
                     sliderRange: -0.0015225654668768184...0.0,
                     defaultValue: -0.0007612827334384092,
                     parameterDescription: """
@@ -339,8 +340,8 @@ struct SettingsView: View {
                 FactorToggleRow(
                     iconName: "bubble.left.and.bubble.right.fill",
                     title: "Bubble Pop",
-                    isOn: $simSettings.useBubblePop,
-                    sliderValue: $simSettings.maxPopDrop,
+                    isOn: $simSettings.useBubblePopUnified,
+                    sliderValue: $simSettings.maxPopDropUnified,
                     sliderRange: -0.002511013746261597...0.0,
                     defaultValue: -0.0012555068731307985,
                     parameterDescription: """
@@ -354,8 +355,8 @@ struct SettingsView: View {
                 FactorToggleRow(
                     iconName: "exclamationmark.triangle.fill",
                     title: "Stablecoin Meltdown",
-                    isOn: $simSettings.useStablecoinMeltdown,
-                    sliderValue: $simSettings.maxMeltdownDrop,
+                    isOn: $simSettings.useStablecoinMeltdownUnified,
+                    sliderValue: $simSettings.maxMeltdownDropUnified,
                     sliderRange: -0.0014056092410835674...0.0,
                     defaultValue: -0.0007028046205417837,
                     parameterDescription: """
@@ -369,8 +370,8 @@ struct SettingsView: View {
                 FactorToggleRow(
                     iconName: "tornado",
                     title: "Black Swan Events",
-                    isOn: $simSettings.useBlackSwan,
-                    sliderValue: $simSettings.blackSwanDrop,
+                    isOn: $simSettings.useBlackSwanUnified,
+                    sliderValue: $simSettings.blackSwanDropUnified,
                     sliderRange: -0.0036822905567344966...0.0,
                     defaultValue: -0.0018411452783672483,
                     parameterDescription: """
@@ -384,8 +385,8 @@ struct SettingsView: View {
                 FactorToggleRow(
                     iconName: "chart.bar.xaxis",
                     title: "Bear Market Conditions",
-                    isOn: $simSettings.useBearMarket,
-                    sliderValue: $simSettings.bearWeeklyDrift,
+                    isOn: $simSettings.useBearMarketUnified,
+                    sliderValue: $simSettings.bearWeeklyDriftUnified,
                     sliderRange: -0.0014390611648559538...0.0,
                     defaultValue: -0.0007195305824279769,
                     parameterDescription: """
@@ -399,11 +400,11 @@ struct SettingsView: View {
                 FactorToggleRow(
                     iconName: "chart.line.downtrend.xyaxis",
                     title: "Declining ARR / Maturing Market",
-                    isOn: $simSettings.useMaturingMarket,
-                    sliderValue: $simSettings.maxMaturingDrop,
+                    isOn: $simSettings.useMaturingMarketUnified,
+                    sliderValue: $simSettings.maxMaturingDropUnified,
                     // Symmetrical range around -0.004:
                     sliderRange: -0.0046 ... -0.0034,
-                    // Default (starting) value = -0.004 (slightly stronger negative)
+                    // Default (starting) value = -0.004
                     defaultValue: -0.004,
                     parameterDescription: """
                     As BTC matures, growth rates slow, leading to smaller returns
@@ -416,8 +417,8 @@ struct SettingsView: View {
                 FactorToggleRow(
                     iconName: "chart.line.downtrend.xyaxis.circle.fill",
                     title: "Recession / Macro Crash",
-                    isOn: $simSettings.useRecession,
-                    sliderValue: $simSettings.maxRecessionDrop,
+                    isOn: $simSettings.useRecessionUnified,
+                    sliderValue: $simSettings.maxRecessionDropUnified,
                     sliderRange: -0.0029016160964965826...0.0,
                     defaultValue: -0.0014508080482482913,
                     parameterDescription: """
