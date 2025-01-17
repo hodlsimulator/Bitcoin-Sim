@@ -43,10 +43,11 @@ class SimulationSettings: ObservableObject {
     @Published var lastRunResults: [SimulationData] = []
     @Published var allRuns: [[SimulationData]] = []
     
-    private var isInitialized = false
+    var isInitialized = false
 
     @Published var toggleAll = false {
         didSet {
+            print(">> toggleAll changed to \(toggleAll). isInitialized=\(isInitialized)")
             if isInitialized {
                 if isUpdating { return }
                 isUpdating = true
@@ -102,7 +103,7 @@ class SimulationSettings: ObservableObject {
         }
     }
 
-    private func syncToggleAllState() {
+    func syncToggleAllState() {
         if !isUpdating {
             isUpdating = true
             let allFactorsEnabled =
@@ -180,7 +181,7 @@ class SimulationSettings: ObservableObject {
     }
     @Published var lastUsedSeed: UInt64 = 0
 
-    private var isUpdating = false
+    var isUpdating = false
 
     // -----------------------------
     // MARK: - BULLISH FACTORS
@@ -189,6 +190,7 @@ class SimulationSettings: ObservableObject {
     // Halving
     @Published var useHalving: Bool = true {
         didSet {
+            print(">> useHalving changed to \(useHalving). isInitialized=\(isInitialized)")
             if isInitialized {
                 UserDefaults.standard.set(useHalving, forKey: "useHalving")
                 syncToggleAllState()
@@ -207,6 +209,7 @@ class SimulationSettings: ObservableObject {
     // Institutional Demand
     @Published var useInstitutionalDemand: Bool = true {
         didSet {
+            print(">> useInstitutionalDemand changed to \(useInstitutionalDemand). isInitialized=\(isInitialized)")
             if isInitialized {
                 UserDefaults.standard.set(useInstitutionalDemand, forKey: "useInstitutionalDemand")
                 syncToggleAllState()
@@ -224,6 +227,7 @@ class SimulationSettings: ObservableObject {
     // Country Adoption
     @Published var useCountryAdoption: Bool = true {
         didSet {
+            print(">> useCountryAdoption changed to \(useCountryAdoption). isInitialized=\(isInitialized)")
             if isInitialized {
                 UserDefaults.standard.set(useCountryAdoption, forKey: "useCountryAdoption")
                 syncToggleAllState()
@@ -241,6 +245,7 @@ class SimulationSettings: ObservableObject {
     // Regulatory Clarity
     @Published var useRegulatoryClarity: Bool = true {
         didSet {
+            print(">> useRegulatoryClarity changed to \(useRegulatoryClarity). isInitialized=\(isInitialized)")
             if isInitialized {
                 UserDefaults.standard.set(useRegulatoryClarity, forKey: "useRegulatoryClarity")
                 syncToggleAllState()
@@ -258,6 +263,7 @@ class SimulationSettings: ObservableObject {
     // ETF Approval
     @Published var useEtfApproval: Bool = true {
         didSet {
+            print(">> useEtfApproval changed to \(useEtfApproval). isInitialized=\(isInitialized)")
             if isInitialized {
                 UserDefaults.standard.set(useEtfApproval, forKey: "useEtfApproval")
                 syncToggleAllState()
@@ -275,6 +281,7 @@ class SimulationSettings: ObservableObject {
     // Tech Breakthrough
     @Published var useTechBreakthrough: Bool = true {
         didSet {
+            print(">> useTechBreakthrough changed to \(useTechBreakthrough). isInitialized=\(isInitialized)")
             if isInitialized {
                 UserDefaults.standard.set(useTechBreakthrough, forKey: "useTechBreakthrough")
                 syncToggleAllState()
@@ -292,6 +299,7 @@ class SimulationSettings: ObservableObject {
     // Scarcity Events
     @Published var useScarcityEvents: Bool = true {
         didSet {
+            print(">> useScarcityEvents changed to \(useScarcityEvents). isInitialized=\(isInitialized)")
             if isInitialized {
                 UserDefaults.standard.set(useScarcityEvents, forKey: "useScarcityEvents")
                 syncToggleAllState()
@@ -309,6 +317,7 @@ class SimulationSettings: ObservableObject {
     // Global Macro Hedge
     @Published var useGlobalMacroHedge: Bool = true {
         didSet {
+            print(">> useGlobalMacroHedge changed to \(useGlobalMacroHedge). isInitialized=\(isInitialized)")
             if isInitialized {
                 UserDefaults.standard.set(useGlobalMacroHedge, forKey: "useGlobalMacroHedge")
                 syncToggleAllState()
@@ -326,6 +335,7 @@ class SimulationSettings: ObservableObject {
     // Stablecoin Shift
     @Published var useStablecoinShift: Bool = true {
         didSet {
+            print(">> useStablecoinShift changed to \(useStablecoinShift). isInitialized=\(isInitialized)")
             if isInitialized {
                 UserDefaults.standard.set(useStablecoinShift, forKey: "useStablecoinShift")
                 syncToggleAllState()
@@ -343,6 +353,7 @@ class SimulationSettings: ObservableObject {
     // Demographic Adoption
     @Published var useDemographicAdoption: Bool = true {
         didSet {
+            print(">> useDemographicAdoption changed to \(useDemographicAdoption). isInitialized=\(isInitialized)")
             if isInitialized {
                 UserDefaults.standard.set(useDemographicAdoption, forKey: "useDemographicAdoption")
                 syncToggleAllState()
@@ -360,6 +371,7 @@ class SimulationSettings: ObservableObject {
     // Altcoin Flight
     @Published var useAltcoinFlight: Bool = true {
         didSet {
+            print(">> useAltcoinFlight changed to \(useAltcoinFlight). isInitialized=\(isInitialized)")
             if isInitialized {
                 UserDefaults.standard.set(useAltcoinFlight, forKey: "useAltcoinFlight")
                 syncToggleAllState()
@@ -377,6 +389,7 @@ class SimulationSettings: ObservableObject {
     // Adoption Factor
     @Published var useAdoptionFactor: Bool = true {
         didSet {
+            print(">> useAdoptionFactor changed to \(useAdoptionFactor). isInitialized=\(isInitialized)")
             if isInitialized {
                 UserDefaults.standard.set(useAdoptionFactor, forKey: "useAdoptionFactor")
                 syncToggleAllState()
@@ -396,6 +409,7 @@ class SimulationSettings: ObservableObject {
     // -----------------------------
     @Published var useRegClampdown: Bool = true {
         didSet {
+            print(">> useRegClampdown changed to \(useRegClampdown). isInitialized=\(isInitialized)")
             if isInitialized {
                 UserDefaults.standard.set(useRegClampdown, forKey: "useRegClampdown")
                 syncToggleAllState()
@@ -412,6 +426,7 @@ class SimulationSettings: ObservableObject {
 
     @Published var useCompetitorCoin: Bool = true {
         didSet {
+            print(">> useCompetitorCoin changed to \(useCompetitorCoin). isInitialized=\(isInitialized)")
             if isInitialized {
                 UserDefaults.standard.set(useCompetitorCoin, forKey: "useCompetitorCoin")
                 syncToggleAllState()
@@ -428,6 +443,7 @@ class SimulationSettings: ObservableObject {
 
     @Published var useSecurityBreach: Bool = true {
         didSet {
+            print(">> useSecurityBreach changed to \(useSecurityBreach). isInitialized=\(isInitialized)")
             if isInitialized {
                 UserDefaults.standard.set(useSecurityBreach, forKey: "useSecurityBreach")
                 syncToggleAllState()
@@ -444,6 +460,7 @@ class SimulationSettings: ObservableObject {
 
     @Published var useBubblePop: Bool = true {
         didSet {
+            print(">> useBubblePop changed to \(useBubblePop). isInitialized=\(isInitialized)")
             if isInitialized {
                 UserDefaults.standard.set(useBubblePop, forKey: "useBubblePop")
                 syncToggleAllState()
@@ -460,6 +477,7 @@ class SimulationSettings: ObservableObject {
 
     @Published var useStablecoinMeltdown: Bool = true {
         didSet {
+            print(">> useStablecoinMeltdown changed to \(useStablecoinMeltdown). isInitialized=\(isInitialized)")
             if isInitialized {
                 UserDefaults.standard.set(useStablecoinMeltdown, forKey: "useStablecoinMeltdown")
                 syncToggleAllState()
@@ -476,6 +494,7 @@ class SimulationSettings: ObservableObject {
 
     @Published var useBlackSwan: Bool = true {
         didSet {
+            print(">> useBlackSwan changed to \(useBlackSwan). isInitialized=\(isInitialized)")
             if isInitialized {
                 UserDefaults.standard.set(useBlackSwan, forKey: "useBlackSwan")
                 syncToggleAllState()
@@ -492,6 +511,7 @@ class SimulationSettings: ObservableObject {
 
     @Published var useBearMarket: Bool = true {
         didSet {
+            print(">> useBearMarket changed to \(useBearMarket). isInitialized=\(isInitialized)")
             if isInitialized {
                 UserDefaults.standard.set(useBearMarket, forKey: "useBearMarket")
                 syncToggleAllState()
@@ -508,6 +528,7 @@ class SimulationSettings: ObservableObject {
 
     @Published var useMaturingMarket: Bool = true {
         didSet {
+            print(">> useMaturingMarket changed to \(useMaturingMarket). isInitialized=\(isInitialized)")
             if isInitialized {
                 UserDefaults.standard.set(useMaturingMarket, forKey: "useMaturingMarket")
                 syncToggleAllState()
@@ -524,6 +545,7 @@ class SimulationSettings: ObservableObject {
 
     @Published var useRecession: Bool = true {
         didSet {
+            print(">> useRecession changed to \(useRecession). isInitialized=\(isInitialized)")
             if isInitialized {
                 UserDefaults.standard.set(useRecession, forKey: "useRecession")
                 syncToggleAllState()
@@ -574,221 +596,12 @@ class SimulationSettings: ObservableObject {
     }
     // -----------------------------
 
-    // MARK: - Init
     init() {
-        let defaults = UserDefaults.standard
-
-        // (A) Load any stored boolean for useLognormalGrowth (if it exists)
-        if defaults.object(forKey: "useLognormalGrowth") != nil {
-            useLognormalGrowth = defaults.bool(forKey: "useLognormalGrowth")
-        } else {
-            // If there's no stored value, default to true
-            useLognormalGrowth = true
-        }
-        
-        // Onboarding data
-        if let savedBal = defaults.object(forKey: "savedStartingBalance") as? Double {
-            self.startingBalance = savedBal
-        }
-        if let savedACB = defaults.object(forKey: "savedAverageCostBasis") as? Double {
-            self.averageCostBasis = savedACB
-        }
-
-        // Instead of userWeeks, load userPeriods
-        if let savedPeriods = defaults.object(forKey: "savedUserPeriods") as? Int {
-            self.userPeriods = savedPeriods
-        }
-        if let savedPeriodUnitRaw = defaults.string(forKey: "savedPeriodUnit"),
-           let savedPeriodUnit = PeriodUnit(rawValue: savedPeriodUnitRaw) {
-            self.periodUnit = savedPeriodUnit
-        }
-        if let savedBTCPrice = defaults.object(forKey: "savedInitialBTCPriceUSD") as? Double {
-            self.initialBTCPriceUSD = savedBTCPrice
-        }
-
-        // (NEW) Currency preference
-        if let storedPrefRaw = defaults.string(forKey: "currencyPreference"),
-           let storedPref = PreferredCurrency(rawValue: storedPrefRaw) {
-            self.currencyPreference = storedPref
-        } else {
-            self.currencyPreference = .eur
-        }
-
-        // Random seed
-        self.lockedRandomSeed = defaults.bool(forKey: "lockedRandomSeed")
-        if let storedSeed = defaults.object(forKey: "seedValue") as? UInt64 {
-            self.seedValue = storedSeed
-        }
-        let storedUseRandom = defaults.object(forKey: "useRandomSeed") as? Bool ?? true
-        self.useRandomSeed = storedUseRandom
-        
-        if defaults.object(forKey: "useHistoricalSampling") != nil {
-            useHistoricalSampling = defaults.bool(forKey: "useHistoricalSampling")
-        }
-        if defaults.object(forKey: "useVolShocks") != nil {
-            useVolShocks = defaults.bool(forKey: "useVolShocks")
-        }
-
-        // BULLISH FACTORS
-        if let storedHalving = defaults.object(forKey: "useHalving") as? Bool {
-            self.useHalving = storedHalving
-        }
-        if defaults.object(forKey: "halvingBump") != nil {
-            self.halvingBump = defaults.double(forKey: "halvingBump")
-        }
-
-        if let storedInstitutional = defaults.object(forKey: "useInstitutionalDemand") as? Bool {
-            self.useInstitutionalDemand = storedInstitutional
-        }
-        if defaults.object(forKey: "maxDemandBoost") != nil {
-            self.maxDemandBoost = defaults.double(forKey: "maxDemandBoost")
-        }
-
-        if let storedCountry = defaults.object(forKey: "useCountryAdoption") as? Bool {
-            self.useCountryAdoption = storedCountry
-        }
-        if defaults.object(forKey: "maxCountryAdBoost") != nil {
-            self.maxCountryAdBoost = defaults.double(forKey: "maxCountryAdBoost")
-        }
-
-        if let storedRegClarity = defaults.object(forKey: "useRegulatoryClarity") as? Bool {
-            self.useRegulatoryClarity = storedRegClarity
-        }
-        if defaults.object(forKey: "maxClarityBoost") != nil {
-            self.maxClarityBoost = defaults.double(forKey: "maxClarityBoost")
-        }
-
-        if let storedEtf = defaults.object(forKey: "useEtfApproval") as? Bool {
-            self.useEtfApproval = storedEtf
-        }
-        if defaults.object(forKey: "maxEtfBoost") != nil {
-            self.maxEtfBoost = defaults.double(forKey: "maxEtfBoost")
-        }
-
-        if let storedTech = defaults.object(forKey: "useTechBreakthrough") as? Bool {
-            self.useTechBreakthrough = storedTech
-        }
-        if defaults.object(forKey: "maxTechBoost") != nil {
-            self.maxTechBoost = defaults.double(forKey: "maxTechBoost")
-        }
-
-        if let storedScarcity = defaults.object(forKey: "useScarcityEvents") as? Bool {
-            self.useScarcityEvents = storedScarcity
-        }
-        if defaults.object(forKey: "maxScarcityBoost") != nil {
-            self.maxScarcityBoost = defaults.double(forKey: "maxScarcityBoost")
-        }
-
-        if let storedMacro = defaults.object(forKey: "useGlobalMacroHedge") as? Bool {
-            self.useGlobalMacroHedge = storedMacro
-        }
-        if defaults.object(forKey: "maxMacroBoost") != nil {
-            self.maxMacroBoost = defaults.double(forKey: "maxMacroBoost")
-        }
-
-        if let storedStableShift = defaults.object(forKey: "useStablecoinShift") as? Bool {
-            self.useStablecoinShift = storedStableShift
-        }
-        if defaults.object(forKey: "maxStablecoinBoost") != nil {
-            self.maxStablecoinBoost = defaults.double(forKey: "maxStablecoinBoost")
-        }
-
-        if let storedDemo = defaults.object(forKey: "useDemographicAdoption") as? Bool {
-            self.useDemographicAdoption = storedDemo
-        }
-        if defaults.object(forKey: "maxDemoBoost") != nil {
-            self.maxDemoBoost = defaults.double(forKey: "maxDemoBoost")
-        }
-
-        if let storedAltcoinFlight = defaults.object(forKey: "useAltcoinFlight") as? Bool {
-            self.useAltcoinFlight = storedAltcoinFlight
-        }
-        if defaults.object(forKey: "maxAltcoinBoost") != nil {
-            self.maxAltcoinBoost = defaults.double(forKey: "maxAltcoinBoost")
-        }
-
-        if let storedAdoption = defaults.object(forKey: "useAdoptionFactor") as? Bool {
-            self.useAdoptionFactor = storedAdoption
-        }
-        if defaults.object(forKey: "adoptionBaseFactor") != nil {
-            self.adoptionBaseFactor = defaults.double(forKey: "adoptionBaseFactor")
-        }
-
-        // BEARISH FACTORS
-        if let storedRegClamp = defaults.object(forKey: "useRegClampdown") as? Bool {
-            self.useRegClampdown = storedRegClamp
-        }
-        if defaults.object(forKey: "maxClampDown") != nil {
-            self.maxClampDown = defaults.double(forKey: "maxClampDown")
-        }
-
-        if let storedCompetitor = defaults.object(forKey: "useCompetitorCoin") as? Bool {
-            self.useCompetitorCoin = storedCompetitor
-        }
-        if defaults.object(forKey: "maxCompetitorBoost") != nil {
-            self.maxCompetitorBoost = defaults.double(forKey: "maxCompetitorBoost")
-        }
-
-        if let storedSecBreach = defaults.object(forKey: "useSecurityBreach") as? Bool {
-            self.useSecurityBreach = storedSecBreach
-        }
-        if defaults.object(forKey: "breachImpact") != nil {
-            self.breachImpact = defaults.double(forKey: "breachImpact")
-        }
-
-        if let storedBubblePop = defaults.object(forKey: "useBubblePop") as? Bool {
-            self.useBubblePop = storedBubblePop
-        }
-        if defaults.object(forKey: "maxPopDrop") != nil {
-            self.maxPopDrop = defaults.double(forKey: "maxPopDrop")
-        }
-
-        if let storedStableMeltdown = defaults.object(forKey: "useStablecoinMeltdown") as? Bool {
-            self.useStablecoinMeltdown = storedStableMeltdown
-        }
-        if defaults.object(forKey: "maxMeltdownDrop") != nil {
-            self.maxMeltdownDrop = defaults.double(forKey: "maxMeltdownDrop")
-        }
-
-        if let storedSwan = defaults.object(forKey: "useBlackSwan") as? Bool {
-            self.useBlackSwan = storedSwan
-        }
-        if defaults.object(forKey: "blackSwanDrop") != nil {
-            self.blackSwanDrop = defaults.double(forKey: "blackSwanDrop")
-        }
-
-        if let storedBearMkt = defaults.object(forKey: "useBearMarket") as? Bool {
-            self.useBearMarket = storedBearMkt
-        }
-        if defaults.object(forKey: "bearWeeklyDrift") != nil {
-            self.bearWeeklyDrift = defaults.double(forKey: "bearWeeklyDrift")
-        }
-
-        if let storedMaturing = defaults.object(forKey: "useMaturingMarket") as? Bool {
-            self.useMaturingMarket = storedMaturing
-        }
-        if defaults.object(forKey: "maxMaturingDrop") != nil {
-            self.maxMaturingDrop = defaults.double(forKey: "maxMaturingDrop")
-        }
-
-        if let storedRecession = defaults.object(forKey: "useRecession") as? Bool {
-            self.useRecession = storedRecession
-        }
-        if defaults.object(forKey: "maxRecessionDrop") != nil {
-            self.maxRecessionDrop = defaults.double(forKey: "maxRecessionDrop")
-        }
-
-        // Load our NEW lockHistoricalSampling toggle from defaults
-        if let savedLockSampling = defaults.object(forKey: "lockHistoricalSampling") as? Bool {
-            self.lockHistoricalSampling = savedLockSampling
-        }
-
-        isInitialized = true
-        syncToggleAllState()
+        // do nothing, or do something minimal if you really need to
     }
 
     // NEW: We'll compute a hash of the relevant toggles, so the simulation detects changes
-    private func computeInputsHash(
+    func computeInputsHash(
         annualCAGR: Double,
         annualVolatility: Double,
         iterations: Int,
@@ -855,28 +668,11 @@ class SimulationSettings: ObservableObject {
             iterations: iterations,
             exchangeRateEURUSD: exchangeRateEURUSD
         )
-
-        // 2) Compare with old hash (if you have one stored). For example:
-        //    If you have something like chartDataCache.storedInputsHash:
-        /*
-        if let oldHash = chartDataCache.storedInputsHash, oldHash == newHash {
-            print("// DEBUG: No input changes => skipping new run.")
-            return
-        } else {
-            chartDataCache.storedInputsHash = newHash
-        }
-        */
-
+        
         // For demonstration, just print the hash comparison:
         print("// DEBUG: runSimulation() => newHash = \(newHash), storedInputsHash = nil or unknown if you’re not storing it.")
         
         printAllSettings()
-        
-        // ...rest of the simulation logic...
-        // e.g. build simulations, store results in lastRunResults, etc.
-        // You can do something like:
-        // let totalSteps = (periodUnit == .weeks) ? userPeriods : userPeriods
-        // Or interpret each "step" differently depending on unit.
     }
 
     // MARK: - Restore Defaults

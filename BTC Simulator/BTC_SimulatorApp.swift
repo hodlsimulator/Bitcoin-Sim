@@ -2,8 +2,6 @@
 //  BTC_SimulatorApp.swift
 //  BTC Simulator
 //
-//  Created by . . on 28/11/2024.
-//
 
 import SwiftUI
 
@@ -15,12 +13,35 @@ class ChartSelection: ObservableObject {
 struct BTCMonteCarloApp: App {
     @AppStorage("hasOnboarded") private var didFinishOnboarding = false
 
-    @StateObject private var inputManager = PersistentInputManager()
-    @StateObject private var simSettings = SimulationSettings()
-    @StateObject private var chartDataCache = ChartDataCache()
-    @StateObject private var appViewModel = AppViewModel()
+    @StateObject private var appViewModel: AppViewModel
+    @StateObject private var inputManager: PersistentInputManager
+    @StateObject private var simSettings: SimulationSettings
+    @StateObject private var chartDataCache: ChartDataCache
+    @StateObject private var chartSelection: ChartSelection
+    @StateObject private var coordinator: SimulationCoordinator
 
-    @StateObject private var chartSelection = ChartSelection()
+    init() {
+        // 1) Create all objects locally
+        let newAppViewModel = AppViewModel()
+        let newInputManager = PersistentInputManager()
+        let newSimSettings = SimulationSettings(loadDefaults: true)
+        let newChartDataCache = ChartDataCache()
+        let newChartSelection = ChartSelection()
+        let newCoordinator = SimulationCoordinator(
+            chartDataCache: newChartDataCache,
+            simSettings: newSimSettings,
+            inputManager: newInputManager,
+            chartSelection: newChartSelection
+        )
+
+        // 2) Assign them to our @StateObject wrappers
+        _appViewModel = StateObject(wrappedValue: newAppViewModel)
+        _inputManager = StateObject(wrappedValue: newInputManager)
+        _simSettings = StateObject(wrappedValue: newSimSettings)
+        _chartDataCache = StateObject(wrappedValue: newChartDataCache)
+        _chartSelection = StateObject(wrappedValue: newChartSelection)
+        _coordinator = StateObject(wrappedValue: newCoordinator)
+    }
 
     var body: some Scene {
         WindowGroup {
@@ -44,8 +65,9 @@ struct BTCMonteCarloApp: App {
                             .environmentObject(inputManager)
                             .environmentObject(simSettings)
                             .environmentObject(chartDataCache)
-                            .environmentObject(appViewModel)
                             .environmentObject(chartSelection)
+                            .environmentObject(coordinator)
+                            .environmentObject(appViewModel)
                     }
                     .preferredColorScheme(.dark)
                 } else {
@@ -54,8 +76,9 @@ struct BTCMonteCarloApp: App {
                             .environmentObject(inputManager)
                             .environmentObject(simSettings)
                             .environmentObject(chartDataCache)
-                            .environmentObject(appViewModel)
                             .environmentObject(chartSelection)
+                            .environmentObject(coordinator)
+                            .environmentObject(appViewModel)
                     }
                     .preferredColorScheme(.dark)
                 }

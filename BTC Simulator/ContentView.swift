@@ -206,11 +206,6 @@ class ChartDataCache: ObservableObject {
 
 // MARK: - ContentView
 struct ContentView: View {
-    @StateObject var inputManager: PersistentInputManager
-    @StateObject var simSettings: SimulationSettings
-    @StateObject var chartDataCache: ChartDataCache
-    @StateObject var coordinator: SimulationCoordinator
-    
     // Track old values so we can invalidate the chart if changed
     @State private var oldIterationsValue: String = ""
     @State private var oldAnnualCAGRValue: String = ""
@@ -301,26 +296,11 @@ struct ContentView: View {
     @State private var showSnapshotView = false
     @State private var showSnapshotsDebug = false
     
-    init() {
-        let manager = PersistentInputManager()
-        let settings = SimulationSettings()
-        settings.inputManager = manager
-        let cache = ChartDataCache()
-
-        let chartSel = ChartSelection()
-        let simCoord = SimulationCoordinator(
-            chartDataCache: cache,
-            simSettings: settings,
-            inputManager: manager,
-            chartSelection: chartSel
-        )
-
-        _inputManager = StateObject(wrappedValue: manager)
-        _simSettings = StateObject(wrappedValue: settings)
-        _chartDataCache = StateObject(wrappedValue: cache)
-        _coordinator = StateObject(wrappedValue: simCoord)
-    }
-
+    @EnvironmentObject var simSettings: SimulationSettings
+    @EnvironmentObject var inputManager: PersistentInputManager
+    @EnvironmentObject var chartDataCache: ChartDataCache
+    @EnvironmentObject var coordinator: SimulationCoordinator
+    
     var body: some View {
         NavigationStack {
             ZStack {
