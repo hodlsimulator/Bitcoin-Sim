@@ -13,6 +13,10 @@ class SimulationSettings: ObservableObject {
     // Hardcoded default constants (instance level)
     private static let defaultHalvingBumpWeekly = 0.48
     private static let defaultHalvingBumpMonthly = 0.58
+    private static let defaultMaxDemandBoostWeekly = 0.0012392541338671777
+    private static let defaultMaxDemandBoostMonthly = 0.0012392541338671777
+    private static let defaultMaxCountryAdBoostWeekly = 0.00047095964199831683
+    private static let defaultMaxCountryAdBoostMonthly = 0.00047095964199831683
 
     init() {
     }
@@ -246,14 +250,8 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxDemandBoost: Double = 0.0012392541338671777 {
-        didSet {
-            if isInitialized {
-                UserDefaults.standard.set(maxDemandBoost, forKey: "maxDemandBoost")
-            }
-        }
-    }
-    // Weekly
+
+    // WEEKLY
     @Published var useInstitutionalDemandWeekly: Bool = true {
         didSet {
             if isInitialized {
@@ -261,14 +259,15 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxDemandBoostWeekly: Double = 0.0012392541338671777 {
+    @Published var maxDemandBoostWeekly: Double = SimulationSettings.defaultMaxDemandBoostWeekly {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxDemandBoostWeekly, forKey: "maxDemandBoostWeekly")
             }
         }
     }
-    // Monthly
+
+    // MONTHLY
     @Published var useInstitutionalDemandMonthly: Bool = true {
         didSet {
             if isInitialized {
@@ -276,7 +275,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxDemandBoostMonthly: Double = 0.0012392541338671777 {
+    @Published var maxDemandBoostMonthly: Double = SimulationSettings.defaultMaxDemandBoostMonthly {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxDemandBoostMonthly, forKey: "maxDemandBoostMonthly")
@@ -293,14 +292,8 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxCountryAdBoost: Double = 0.00047095964199831683 {
-        didSet {
-            if isInitialized {
-                UserDefaults.standard.set(maxCountryAdBoost, forKey: "maxCountryAdBoost")
-            }
-        }
-    }
-    // Weekly
+
+    // WEEKLY
     @Published var useCountryAdoptionWeekly: Bool = true {
         didSet {
             if isInitialized {
@@ -308,14 +301,15 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxCountryAdBoostWeekly: Double = 0.00047095964199831683 {
+    @Published var maxCountryAdBoostWeekly: Double = SimulationSettings.defaultMaxCountryAdBoostWeekly {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxCountryAdBoostWeekly, forKey: "maxCountryAdBoostWeekly")
             }
         }
     }
-    // Monthly
+
+    // MONTHLY
     @Published var useCountryAdoptionMonthly: Bool = true {
         didSet {
             if isInitialized {
@@ -323,7 +317,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxCountryAdBoostMonthly: Double = 0.00047095964199831683 {
+    @Published var maxCountryAdBoostMonthly: Double = SimulationSettings.defaultMaxCountryAdBoostMonthly {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxCountryAdBoostMonthly, forKey: "maxCountryAdBoostMonthly")
@@ -1567,18 +1561,22 @@ class SimulationSettings: ObservableObject {
         halvingBumpMonthly = SimulationSettings.defaultHalvingBumpMonthly
 
         useInstitutionalDemand = true
-        maxDemandBoost = 0.0012392541338671777
+            
+        // Weekly
         useInstitutionalDemandWeekly = true
-        maxDemandBoostWeekly = 0.0012392541338671777
+        maxDemandBoostWeekly = SimulationSettings.defaultMaxDemandBoostWeekly
+        
+        // Monthly
         useInstitutionalDemandMonthly = true
-        maxDemandBoostMonthly = 0.0012392541338671777
+        maxDemandBoostMonthly = SimulationSettings.defaultMaxDemandBoostMonthly
 
         useCountryAdoption = true
-        maxCountryAdBoost = 0.00047095964199831683
+            
         useCountryAdoptionWeekly = true
-        maxCountryAdBoostWeekly = 0.00047095964199831683
+        maxCountryAdBoostWeekly = SimulationSettings.defaultMaxCountryAdBoostWeekly
+        
         useCountryAdoptionMonthly = true
-        maxCountryAdBoostMonthly = 0.00047095964199831683
+        maxCountryAdBoostMonthly = SimulationSettings.defaultMaxCountryAdBoostMonthly
 
         useRegulatoryClarity = true
         maxClarityBoost = 0.0016644023749474966
