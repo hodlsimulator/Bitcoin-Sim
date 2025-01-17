@@ -110,12 +110,19 @@ private func randomNormal(mean: Double, standardDeviation: Double) -> Double {
 // ──────────────────────────────────────────────────────────────────────────
 // 4) Dampening outliers function
 // ──────────────────────────────────────────────────────────────────────────
-func dampenArctan(_ rawReturn: Double) -> Double {
-    // Decreased factor to '0.5' for stronger flattening:
-    let factor = 0.5
+func dampenArctanWeekly(_ rawReturn: Double) -> Double {
+    // Maybe we want stronger dampening for weekly
+    let factor = 0.6
     let scaled = rawReturn * factor
     let flattened = (2.0 / Double.pi) * atan(scaled)
-    // Multiply by 0.5 for an extra reduction:
+    return flattened * 0.5
+}
+
+func dampenArctanMonthly(_ rawReturn: Double) -> Double {
+    // Maybe we want a mild dampening for monthly
+    let factor = 0.7
+    let scaled = rawReturn * factor
+    let flattened = (2.0 / Double.pi) * atan(scaled)
     return flattened * 0.5
 }
 
@@ -367,8 +374,8 @@ private func runMonthlySimulation(
             if settings.useHistoricalSampling {
                 // (1) pick the monthly sample
                 var monthlySample = pickRandomReturn(from: historicalBTCMonthlyReturns)
-                // (2) dampen it
-                monthlySample = dampenArctan(monthlySample)
+                // (2) dampen it with the monthly function
+                monthlySample = dampenArctanMonthly(monthlySample)
                 // (3) convert from simple % to log
                 totalReturn += log(1.0 + monthlySample)
             }
@@ -542,8 +549,8 @@ private func runWeeklySimulation(
             if settings.useHistoricalSampling {
                 // (1) pick a weekly sample
                 var weeklySample = pickRandomReturn(from: historicalBTCWeeklyReturns)
-                // (2) dampen outliers
-                weeklySample = dampenArctan(weeklySample)
+                // (2) dampen outliers with the weekly function
+                weeklySample = dampenArctanWeekly(weeklySample)
                 // (3) add to totalReturn
                 totalReturn += weeklySample
             }
