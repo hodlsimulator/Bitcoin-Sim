@@ -232,13 +232,13 @@ struct MonteCarloChartView: View {
                     .chartPlotStyle { plotArea in
                         if orientationObserver.isLandscape {
                             plotArea
-                                .padding(.leading, -12)
+                                .padding(.leading, 0)
                                 .padding(.trailing, 0)
                                 .padding(.top, 0)
                                 .padding(.bottom, 20)
                         } else {
                             plotArea
-                                .padding(.leading, -5)
+                                .padding(.leading, 0)
                                 .padding(.trailing, 0)
                                 .padding(.top, 0)
                                 .padding(.bottom, 20)

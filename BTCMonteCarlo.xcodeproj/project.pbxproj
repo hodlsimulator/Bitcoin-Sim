@@ -11,6 +11,10 @@
 		E12CCD8F2CF823610059931D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E12CCD8E2CF823610059931D /* Assets.xcassets */; };
 		E12CCD922CF823610059931D /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E12CCD912CF823610059931D /* Preview Assets.xcassets */; };
 		E14D23F52D37425D007CC11A /* SimulationSummaryCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14D23F42D374258007CC11A /* SimulationSummaryCardView.swift */; };
+		E14D23FA2D3A2260007CC11A /* S&P 500 Historical Data Monthly.csv in Resources */ = {isa = PBXBuildFile; fileRef = E14D23F82D3A2260007CC11A /* S&P 500 Historical Data Monthly.csv */; };
+		E14D23FC2D3A2260007CC11A /* Bitcoin Historical Data Weekly.csv in Resources */ = {isa = PBXBuildFile; fileRef = E14D23F72D3A2260007CC11A /* Bitcoin Historical Data Weekly.csv */; };
+		E14D23FD2D3A2260007CC11A /* S&P 500 Historical Data Weekly.csv in Resources */ = {isa = PBXBuildFile; fileRef = E14D23F92D3A2260007CC11A /* S&P 500 Historical Data Weekly.csv */; };
+		E14D23FF2D3A251F007CC11A /* Bitcoin Historical Data Monthly.csv in Resources */ = {isa = PBXBuildFile; fileRef = E14D23FE2D3A251F007CC11A /* Bitcoin Historical Data Monthly.csv */; };
 		E166A8AA2CF855B00003F518 /* CSVLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = E166A8A92CF855B00003F518 /* CSVLoader.swift */; };
 		E166A8AC2CF855B60003F518 /* DoubleExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = E166A8AB2CF855B60003F518 /* DoubleExtensions.swift */; };
 		E166A8AE2CF855BF0003F518 /* MonteCarloSimulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = E166A8AD2CF855BF0003F518 /* MonteCarloSimulator.swift */; };
@@ -39,8 +43,6 @@
 		E191AD632D1B0C9400020DBE /* CSVLoaderSP500.swift in Sources */ = {isa = PBXBuildFile; fileRef = E191AD622D1B0C9100020DBE /* CSVLoaderSP500.swift */; };
 		E191AD652D1B0D5700020DBE /* CSVParsingUtilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = E191AD642D1B0D5200020DBE /* CSVParsingUtilities.swift */; };
 		E191AD672D1B764400020DBE /* CSVLoaderBTC.swift in Sources */ = {isa = PBXBuildFile; fileRef = E191AD662D1B763E00020DBE /* CSVLoaderBTC.swift */; };
-		E191AD702D1B8B1A00020DBE /* Bitcoin Historical Data.csv in Resources */ = {isa = PBXBuildFile; fileRef = E191AD6E2D1B8B1A00020DBE /* Bitcoin Historical Data.csv */; };
-		E191AD712D1B8B1A00020DBE /* SP500 Historical Data.csv in Resources */ = {isa = PBXBuildFile; fileRef = E191AD6F2D1B8B1A00020DBE /* SP500 Historical Data.csv */; };
 		E1A1E51F2D2A7364008F7658 /* PortfolioChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A1E51E2D2A7362008F7658 /* PortfolioChartView.swift */; };
 		E1A1E5272D2E371D008F7658 /* TipsData.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A1E5262D2E371B008F7658 /* TipsData.swift */; };
 		E1A1E5292D2E38FA008F7658 /* CheckboxToggleStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A1E5282D2E38F9008F7658 /* CheckboxToggleStyle.swift */; };
@@ -59,6 +61,10 @@
 		E12CCD8E2CF823610059931D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		E12CCD912CF823610059931D /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		E14D23F42D374258007CC11A /* SimulationSummaryCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulationSummaryCardView.swift; sourceTree = "<group>"; };
+		E14D23F72D3A2260007CC11A /* Bitcoin Historical Data Weekly.csv */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Bitcoin Historical Data Weekly.csv"; sourceTree = "<group>"; };
+		E14D23F82D3A2260007CC11A /* S&P 500 Historical Data Monthly.csv */ = {isa = PBXFileReference; lastKnownFileType = text; path = "S&P 500 Historical Data Monthly.csv"; sourceTree = "<group>"; };
+		E14D23F92D3A2260007CC11A /* S&P 500 Historical Data Weekly.csv */ = {isa = PBXFileReference; lastKnownFileType = text; path = "S&P 500 Historical Data Weekly.csv"; sourceTree = "<group>"; };
+		E14D23FE2D3A251F007CC11A /* Bitcoin Historical Data Monthly.csv */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Bitcoin Historical Data Monthly.csv"; sourceTree = "<group>"; };
 		E166A8A92CF855B00003F518 /* CSVLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVLoader.swift; sourceTree = "<group>"; };
 		E166A8AB2CF855B60003F518 /* DoubleExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoubleExtensions.swift; sourceTree = "<group>"; };
 		E166A8AD2CF855BF0003F518 /* MonteCarloSimulator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonteCarloSimulator.swift; sourceTree = "<group>"; };
@@ -87,8 +93,6 @@
 		E191AD622D1B0C9100020DBE /* CSVLoaderSP500.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVLoaderSP500.swift; sourceTree = "<group>"; };
 		E191AD642D1B0D5200020DBE /* CSVParsingUtilities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVParsingUtilities.swift; sourceTree = "<group>"; };
 		E191AD662D1B763E00020DBE /* CSVLoaderBTC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVLoaderBTC.swift; sourceTree = "<group>"; };
-		E191AD6E2D1B8B1A00020DBE /* Bitcoin Historical Data.csv */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Bitcoin Historical Data.csv"; sourceTree = "<group>"; };
-		E191AD6F2D1B8B1A00020DBE /* SP500 Historical Data.csv */ = {isa = PBXFileReference; lastKnownFileType = text; path = "SP500 Historical Data.csv"; sourceTree = "<group>"; };
 		E1A1E51E2D2A7362008F7658 /* PortfolioChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioChartView.swift; sourceTree = "<group>"; };
 		E1A1E5262D2E371B008F7658 /* TipsData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TipsData.swift; sourceTree = "<group>"; };
 		E1A1E5282D2E38F9008F7658 /* CheckboxToggleStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckboxToggleStyle.swift; sourceTree = "<group>"; };
@@ -177,8 +181,10 @@
 				E1A1E5262D2E371B008F7658 /* TipsData.swift */,
 				E1883F412D1E43D7007AA90B /* VisualEffectBlur.swift */,
 				E1C543B92D22839F005E416D /* YearlyPercentileData.swift */,
-				E191AD6E2D1B8B1A00020DBE /* Bitcoin Historical Data.csv */,
-				E191AD6F2D1B8B1A00020DBE /* SP500 Historical Data.csv */,
+				E14D23FE2D3A251F007CC11A /* Bitcoin Historical Data Monthly.csv */,
+				E14D23F72D3A2260007CC11A /* Bitcoin Historical Data Weekly.csv */,
+				E14D23F82D3A2260007CC11A /* S&P 500 Historical Data Monthly.csv */,
+				E14D23F92D3A2260007CC11A /* S&P 500 Historical Data Weekly.csv */,
 				E12CCD8E2CF823610059931D /* Assets.xcassets */,
 				E12CCD902CF823610059931D /* Preview Content */,
 			);
@@ -292,10 +298,12 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				E191AD702D1B8B1A00020DBE /* Bitcoin Historical Data.csv in Resources */,
-				E191AD712D1B8B1A00020DBE /* SP500 Historical Data.csv in Resources */,
 				E166A8B42CF8659D0003F518 /* BTC20YearProjection.csv in Resources */,
+				E14D23FF2D3A251F007CC11A /* Bitcoin Historical Data Monthly.csv in Resources */,
 				E12CCD922CF823610059931D /* Preview Assets.xcassets in Resources */,
+				E14D23FA2D3A2260007CC11A /* S&P 500 Historical Data Monthly.csv in Resources */,
+				E14D23FC2D3A2260007CC11A /* Bitcoin Historical Data Weekly.csv in Resources */,
+				E14D23FD2D3A2260007CC11A /* S&P 500 Historical Data Weekly.csv in Resources */,
 				E12CCD8F2CF823610059931D /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

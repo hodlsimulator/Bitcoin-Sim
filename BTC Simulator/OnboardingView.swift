@@ -35,33 +35,33 @@ struct OnboardingView: View {
     // Step 1: How many total periods
     @State private var totalPeriods: Int = 1040
     
-    // Step 2: Which currency to display
+    // Step 2: Which currency
     @State private var currencyPreference: PreferredCurrency = .usd
     
-    // Step 3: Starting Balance (now defaults to 1,000)
-    @State private var startingBalance: Double = 1000.0
+    // Step 3: Starting Balance
+    // Instead of Double, store it as a string:
+    @State private var startingBalanceText: String = "1,000"
     @State private var startingBalanceCurrencyForBoth: PreferredCurrency = .usd
     
     // Step 4: Average BTC Purchase Price
     @State private var averageCostBasis: Double = 58000
     
-    // Step 5: BTC Price (fetched or typed)
+    // Step 5: BTC Price
     @State private var fetchedBTCPrice: String = "N/A"
     @State private var userBTCPrice: String = ""
     
-    // Step 6: Single contribution for the entire simulation (defaults to 100)
+    // Step 6: Single contribution
     @State private var contributionPerStep: Double = 100.0
     
-    // Step 7: Withdrawals default to thresholds at 30k & 60k, zero withdraw
+    // Step 7: Withdrawals
     @State private var threshold1: Double = 30000
     @State private var withdraw1: Double = 0.0
     @State private var threshold2: Double = 60000
     @State private var withdraw2: Double = 0.0
     
-    // MARK: - Button positioning
-    private let bottomPaddingNext: CGFloat       = 260   // steps 0..7
-    private let bottomPaddingFinish: CGFloat     = 150   // step 8 if not both
-    private let bottomPaddingFinishBoth: CGFloat = 110   // step 8 if both
+    private let bottomPaddingNext: CGFloat       = 260
+    private let bottomPaddingFinish: CGFloat     = 150
+    private let bottomPaddingFinishBoth: CGFloat = 110
     
     private var bottomPaddingForStep: CGFloat {
         if currentStep != 8 {
@@ -73,6 +73,24 @@ struct OnboardingView: View {
                 return bottomPaddingFinish
             }
         }
+    }
+    
+    // A simple formatter to re‐format “live”
+    private let currencyFormatter: NumberFormatter = {
+        let nf = NumberFormatter()
+        nf.numberStyle = .decimal
+        nf.usesGroupingSeparator = true
+        nf.minimumFractionDigits = 0
+        nf.maximumFractionDigits = 2
+        nf.locale = Locale(identifier: "en_US") // or whatever locale you want
+        return nf
+    }()
+    
+    // Convert the user’s typed string into a Double
+    // If parsing fails, we treat it as zero
+    private var startingBalanceDouble: Double {
+        let digitsOnly = startingBalanceText.replacingOccurrences(of: "[^0-9.]", with: "", options: .regularExpression)
+        return Double(digitsOnly) ?? 0
     }
     
     var body: some View {
@@ -252,7 +270,8 @@ struct OnboardingView: View {
                     .font(.headline)
             }
             
-            TextField("e.g. 1000.0", value: $startingBalance, format: .number)
+            // Bind to a String, then reformat on every change
+            TextField("e.g. 1,000", text: $startingBalanceText)
                 .keyboardType(.decimalPad)
                 .padding(8)
                 .background(Color.white.opacity(0.15))
@@ -260,6 +279,28 @@ struct OnboardingView: View {
                 .foregroundColor(.white)
                 .frame(width: 200)
                 .multilineTextAlignment(.center)
+                .onChange(of: startingBalanceText) { newValue in
+                    // Strip out non-digit characters except the decimal
+                    let digitsOnly = newValue.replacingOccurrences(
+                        of: "[^0-9.]",
+                        with: "",
+                        options: .regularExpression
+                    )
+                    // Convert to number
+                    if let doubleVal = Double(digitsOnly) {
+                        // Then re-format using your currencyFormatter
+                        if let formatted = currencyFormatter.string(from: NSNumber(value: doubleVal)) {
+                            if formatted != startingBalanceText {
+                                startingBalanceText = formatted
+                            }
+                        }
+                    } else {
+                        // If invalid, just revert to empty or "0"
+                        if newValue != "" {
+                            startingBalanceText = ""
+                        }
+                    }
+                }
         }
     }
     
@@ -288,7 +329,6 @@ struct OnboardingView: View {
     // MARK: - Step 5
     private func step5_BTCPriceInput() -> some View {
         VStack(spacing: 16) {
-            // Show fetched price in whichever currency was chosen
             let currencyLabelForBTCPrice = (currencyPreference == .eur) ? "EUR" : "USD"
             
             Text("Fetched BTC Price (\(currencyLabelForBTCPrice)): \(fetchedBTCPrice)")
@@ -312,7 +352,6 @@ struct OnboardingView: View {
     private func step6_Contributions() -> some View {
         let frequencyWord = (chosenPeriodUnit == .weeks) ? "weekly" : "monthly"
         
-        // Show currency symbols for default placeholders if user picked USD or EUR
         let placeholderText: String = {
             switch currencyPreference {
             case .usd:  return "$100.0"
@@ -370,8 +409,6 @@ struct OnboardingView: View {
             }
         }
         .onAppear {
-            // If "Both" was chosen, default the contribution currency
-            // to whichever was used for the starting balance
             if currencyPreference == .both {
                 simSettings.contributionCurrencyWhenBoth = startingBalanceCurrencyForBoth
             }
@@ -444,7 +481,7 @@ struct OnboardingView: View {
                 if currencyPreference == .both {
                     Text("Starting Bal typed in: \(startingBalanceCurrencyForBoth.rawValue)")
                 }
-                Text("Starting Bal: \(startingBalance, specifier: "%.2f")")
+                Text("Starting Bal: \(startingBalanceDouble, specifier: "%.2f")")
                 
                 Text("Avg. Cost Basis: \(averageCostBasis, specifier: "%.2f") \(currencyPreference == .eur ? "EUR" : "USD")")
                 Text("BTC Price: \(finalBTCPrice, specifier: "%.2f") \(currencyPreference == .eur ? "EUR" : "USD")")
@@ -474,19 +511,14 @@ struct OnboardingView: View {
     
     // MARK: - Apply settings
     private func applySettingsToSim() {
-        // Store the user’s chosen period unit (weeks or months)
         simSettings.periodUnit = chosenPeriodUnit
-        
-        // Save the raw totalPeriods directly
         simSettings.userPeriods = totalPeriods
-        
-        // Keep everything else the same
         simSettings.initialBTCPriceUSD = finalBTCPrice
         
         if currencyPreference == .both {
             simSettings.startingBalanceCurrencyWhenBoth = startingBalanceCurrencyForBoth
         }
-        simSettings.startingBalance = startingBalance
+        simSettings.startingBalance = startingBalanceDouble
         simSettings.averageCostBasis = averageCostBasis
         
         simSettings.currencyPreference = currencyPreference
@@ -503,19 +535,16 @@ struct OnboardingView: View {
         inputManager.threshold2 = threshold2
         inputManager.withdrawAmount2 = withdraw2
         
-        // Save data to UserDefaults
-        UserDefaults.standard.set(startingBalance,    forKey: "savedStartingBalance")
-        UserDefaults.standard.set(averageCostBasis,   forKey: "savedAverageCostBasis")
-        UserDefaults.standard.set(totalPeriods,       forKey: "savedUserPeriods")
-        UserDefaults.standard.set(chosenPeriodUnit.rawValue,
-                                  forKey: "savedPeriodUnit")
-        UserDefaults.standard.set(finalBTCPrice,      forKey: "savedInitialBTCPriceUSD")
+        UserDefaults.standard.set(startingBalanceDouble,    forKey: "savedStartingBalance")
+        UserDefaults.standard.set(averageCostBasis,         forKey: "savedAverageCostBasis")
+        UserDefaults.standard.set(totalPeriods,             forKey: "savedUserPeriods")
+        UserDefaults.standard.set(chosenPeriodUnit.rawValue,forKey: "savedPeriodUnit")
+        UserDefaults.standard.set(finalBTCPrice,            forKey: "savedInitialBTCPriceUSD")
         
-        // Debug prints
         print("// DEBUG: applySettingsToSim => periodUnit=\(chosenPeriodUnit.rawValue)")
         print("// DEBUG: totalPeriods=\(totalPeriods)")
         print("// DEBUG: currencyPreference=\(currencyPreference.rawValue)")
-        print("// DEBUG: startingBalance=\(startingBalance)")
+        print("// DEBUG: startingBalance=\(startingBalanceDouble)")
         print("// DEBUG: contributionPerStep=\(contributionPerStep)")
         print("// DEBUG: threshold1=\(threshold1), withdraw1=\(withdraw1)")
         print("// DEBUG: threshold2=\(threshold2), withdraw2=\(withdraw2)")
@@ -523,7 +552,6 @@ struct OnboardingView: View {
     
     // MARK: - finalBTCPrice
     private var finalBTCPrice: Double {
-        // This value is in whichever currency is currently fetched
         if let typedVal = Double(userBTCPrice), typedVal > 0 {
             return typedVal
         }
@@ -535,8 +563,6 @@ struct OnboardingView: View {
     
     // MARK: - Networking
     private func fetchBTCPriceFromAPI() async {
-        // Pick which currency to fetch based on user selection
-        // If "Both" or "USD" => fetch USD. If "EUR" => fetch EUR
         let currencyToFetch = (currencyPreference == .eur) ? "eur" : "usd"
         let urlString = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=\(currencyToFetch)"
         
@@ -559,8 +585,6 @@ struct OnboardingView: View {
         }
     }
     
-    // If the user hasn't changed the default averageCostBasis,
-    // update it to the fetched price so it displays by default
     private func updateAverageCostBasisIfNeeded() {
         guard averageCostBasis == 58000, let fetchedVal = Double(fetchedBTCPrice) else { return }
         averageCostBasis = fetchedVal
