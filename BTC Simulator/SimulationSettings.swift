@@ -10,14 +10,101 @@ import SwiftUI
 /// A class for storing user toggles and results
 class SimulationSettings: ObservableObject {
     
-    // Hardcoded default constants (instance level)
-    private static let defaultHalvingBumpWeekly = 0.48
-    private static let defaultHalvingBumpMonthly = 0.58
-    private static let defaultMaxDemandBoostWeekly = 0.0012392541338671777
-    private static let defaultMaxDemandBoostMonthly = 0.0012392541338671777
-    private static let defaultMaxCountryAdBoostWeekly = 0.00047095964199831683
-    private static let defaultMaxCountryAdBoostMonthly = 0.00047095964199831683
+    // MARK: - Hardcoded Default Constants for Weekly vs. Monthly Factors
 
+    // -----------------------------
+    // BULLISH FACTORS
+    // -----------------------------
+
+    // Halving
+    private static let defaultHalvingBumpWeekly   = 0.48
+    private static let defaultHalvingBumpMonthly  = 0.58
+
+    // Institutional Demand
+    private static let defaultMaxDemandBoostWeekly   = 0.0012392541338671777
+    private static let defaultMaxDemandBoostMonthly  = 0.0012392541338671777
+
+    // Country Adoption
+    private static let defaultMaxCountryAdBoostWeekly   = 0.00047095964199831683
+    private static let defaultMaxCountryAdBoostMonthly  = 0.00047095964199831683
+
+    // Regulatory Clarity
+    private static let defaultMaxClarityBoostWeekly   = 0.0016644023749474966
+    private static let defaultMaxClarityBoostMonthly  = 0.0016644023749474966
+
+    // ETF Approval
+    private static let defaultMaxEtfBoostWeekly   = 0.0004546850204467774
+    private static let defaultMaxEtfBoostMonthly  = 0.0004546850204467774
+
+    // Tech Breakthrough
+    private static let defaultMaxTechBoostWeekly   = 0.00040663959745637255
+    private static let defaultMaxTechBoostMonthly  = 0.00040663959745637255
+
+    // Scarcity Events
+    private static let defaultMaxScarcityBoostWeekly   = 0.0007968083934443039
+    private static let defaultMaxScarcityBoostMonthly  = 0.0007968083934443039
+
+    // Global Macro Hedge
+    private static let defaultMaxMacroBoostWeekly   = 0.000419354572892189
+    private static let defaultMaxMacroBoostMonthly  = 0.000419354572892189
+
+    // Stablecoin Shift
+    private static let defaultMaxStablecoinBoostWeekly   = 0.0004049262363101775
+    private static let defaultMaxStablecoinBoostMonthly  = 0.0004049262363101775
+
+    // Demographic Adoption
+    private static let defaultMaxDemoBoostWeekly   = 0.0013056834936141968
+    private static let defaultMaxDemoBoostMonthly  = 0.0013056834936141968
+
+    // Altcoin Flight
+    private static let defaultMaxAltcoinBoostWeekly   = 0.0002802194461803342
+    private static let defaultMaxAltcoinBoostMonthly  = 0.0002802194461803342
+
+    // Adoption Factor
+    private static let defaultAdoptionBaseFactorWeekly   = 0.0009685099124908447
+    private static let defaultAdoptionBaseFactorMonthly  = 0.0009685099124908447
+
+
+    // -----------------------------
+    // BEARISH FACTORS
+    // -----------------------------
+
+    // Regulatory Clampdown
+    private static let defaultMaxClampDownWeekly   = -0.0011883256912231445
+    private static let defaultMaxClampDownMonthly  = -0.0011883256912231445
+
+    // Competitor Coin
+    private static let defaultMaxCompetitorBoostWeekly   = -0.0011259913444519043
+    private static let defaultMaxCompetitorBoostMonthly  = -0.0011259913444519043
+
+    // Security Breach
+    private static let defaultBreachImpactWeekly   = -0.0007612827334384092
+    private static let defaultBreachImpactMonthly  = -0.0007612827334384092
+
+    // Bubble Pop
+    private static let defaultMaxPopDropWeekly   = -0.0012555068731307985
+    private static let defaultMaxPopDropMonthly  = -0.0012555068731307985
+
+    // Stablecoin Meltdown
+    private static let defaultMaxMeltdownDropWeekly   = -0.0007028046205417837
+    private static let defaultMaxMeltdownDropMonthly  = -0.0007028046205417837
+
+    // Black Swan
+    private static let defaultBlackSwanDropWeekly   = -0.0018411452783672483
+    private static let defaultBlackSwanDropMonthly  = -0.0018411452783672483
+
+    // Bear Market
+    private static let defaultBearWeeklyDriftWeekly   = -0.0007195305824279769
+    private static let defaultBearWeeklyDriftMonthly  = -0.0007195305824279769
+
+    // Maturing Market
+    private static let defaultMaxMaturingDropWeekly   = -0.004
+    private static let defaultMaxMaturingDropMonthly  = -0.004
+
+    // Recession
+    private static let defaultMaxRecessionDropWeekly   = -0.0014508080482482913
+    private static let defaultMaxRecessionDropMonthly  = -0.0014508080482482913
+    
     init() {
     }
     
@@ -334,14 +421,8 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxClarityBoost: Double = 0.0016644023749474966 {
-        didSet {
-            if isInitialized {
-                UserDefaults.standard.set(maxClarityBoost, forKey: "maxClarityBoost")
-            }
-        }
-    }
-    // Weekly
+
+    // WEEKLY
     @Published var useRegulatoryClarityWeekly: Bool = true {
         didSet {
             if isInitialized {
@@ -349,14 +430,15 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxClarityBoostWeekly: Double = 0.0016644023749474966 {
+    @Published var maxClarityBoostWeekly: Double = SimulationSettings.defaultMaxClarityBoostWeekly {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxClarityBoostWeekly, forKey: "maxClarityBoostWeekly")
             }
         }
     }
-    // Monthly
+
+    // MONTHLY
     @Published var useRegulatoryClarityMonthly: Bool = true {
         didSet {
             if isInitialized {
@@ -364,7 +446,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxClarityBoostMonthly: Double = 0.0016644023749474966 {
+    @Published var maxClarityBoostMonthly: Double = SimulationSettings.defaultMaxClarityBoostMonthly {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxClarityBoostMonthly, forKey: "maxClarityBoostMonthly")
@@ -381,14 +463,8 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxEtfBoost: Double = 0.0004546850204467774 {
-        didSet {
-            if isInitialized {
-                UserDefaults.standard.set(maxEtfBoost, forKey: "maxEtfBoost")
-            }
-        }
-    }
-    // Weekly
+
+    // WEEKLY
     @Published var useEtfApprovalWeekly: Bool = true {
         didSet {
             if isInitialized {
@@ -396,14 +472,15 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxEtfBoostWeekly: Double = 0.0004546850204467774 {
+    @Published var maxEtfBoostWeekly: Double = SimulationSettings.defaultMaxEtfBoostWeekly {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxEtfBoostWeekly, forKey: "maxEtfBoostWeekly")
             }
         }
     }
-    // Monthly
+
+    // MONTHLY
     @Published var useEtfApprovalMonthly: Bool = true {
         didSet {
             if isInitialized {
@@ -411,7 +488,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxEtfBoostMonthly: Double = 0.0004546850204467774 {
+    @Published var maxEtfBoostMonthly: Double = SimulationSettings.defaultMaxEtfBoostMonthly {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxEtfBoostMonthly, forKey: "maxEtfBoostMonthly")
@@ -428,14 +505,8 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxTechBoost: Double = 0.00040663959745637255 {
-        didSet {
-            if isInitialized {
-                UserDefaults.standard.set(maxTechBoost, forKey: "maxTechBoost")
-            }
-        }
-    }
-    // Weekly
+
+    // WEEKLY
     @Published var useTechBreakthroughWeekly: Bool = true {
         didSet {
             if isInitialized {
@@ -443,14 +514,15 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxTechBoostWeekly: Double = 0.00040663959745637255 {
+    @Published var maxTechBoostWeekly: Double = SimulationSettings.defaultMaxTechBoostWeekly {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxTechBoostWeekly, forKey: "maxTechBoostWeekly")
             }
         }
     }
-    // Monthly
+
+    // MONTHLY
     @Published var useTechBreakthroughMonthly: Bool = true {
         didSet {
             if isInitialized {
@@ -458,7 +530,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxTechBoostMonthly: Double = 0.00040663959745637255 {
+    @Published var maxTechBoostMonthly: Double = SimulationSettings.defaultMaxTechBoostMonthly {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxTechBoostMonthly, forKey: "maxTechBoostMonthly")
@@ -475,14 +547,8 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxScarcityBoost: Double = 0.0007968083934443039 {
-        didSet {
-            if isInitialized {
-                UserDefaults.standard.set(maxScarcityBoost, forKey: "maxScarcityBoost")
-            }
-        }
-    }
-    // Weekly
+
+    // WEEKLY
     @Published var useScarcityEventsWeekly: Bool = true {
         didSet {
             if isInitialized {
@@ -490,14 +556,15 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxScarcityBoostWeekly: Double = 0.0007968083934443039 {
+    @Published var maxScarcityBoostWeekly: Double = SimulationSettings.defaultMaxScarcityBoostWeekly {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxScarcityBoostWeekly, forKey: "maxScarcityBoostWeekly")
             }
         }
     }
-    // Monthly
+
+    // MONTHLY
     @Published var useScarcityEventsMonthly: Bool = true {
         didSet {
             if isInitialized {
@@ -505,7 +572,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxScarcityBoostMonthly: Double = 0.0007968083934443039 {
+    @Published var maxScarcityBoostMonthly: Double = SimulationSettings.defaultMaxScarcityBoostMonthly {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxScarcityBoostMonthly, forKey: "maxScarcityBoostMonthly")
@@ -522,14 +589,8 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxMacroBoost: Double = 0.000419354572892189 {
-        didSet {
-            if isInitialized {
-                UserDefaults.standard.set(maxMacroBoost, forKey: "maxMacroBoost")
-            }
-        }
-    }
-    // Weekly
+
+    // WEEKLY
     @Published var useGlobalMacroHedgeWeekly: Bool = true {
         didSet {
             if isInitialized {
@@ -537,14 +598,15 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxMacroBoostWeekly: Double = 0.000419354572892189 {
+    @Published var maxMacroBoostWeekly: Double = SimulationSettings.defaultMaxMacroBoostWeekly {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxMacroBoostWeekly, forKey: "maxMacroBoostWeekly")
             }
         }
     }
-    // Monthly
+
+    // MONTHLY
     @Published var useGlobalMacroHedgeMonthly: Bool = true {
         didSet {
             if isInitialized {
@@ -552,7 +614,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxMacroBoostMonthly: Double = 0.000419354572892189 {
+    @Published var maxMacroBoostMonthly: Double = SimulationSettings.defaultMaxMacroBoostMonthly {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxMacroBoostMonthly, forKey: "maxMacroBoostMonthly")
@@ -569,14 +631,8 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxStablecoinBoost: Double = 0.0004049262363101775 {
-        didSet {
-            if isInitialized {
-                UserDefaults.standard.set(maxStablecoinBoost, forKey: "maxStablecoinBoost")
-            }
-        }
-    }
-    // Weekly
+
+    // WEEKLY
     @Published var useStablecoinShiftWeekly: Bool = true {
         didSet {
             if isInitialized {
@@ -584,14 +640,15 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxStablecoinBoostWeekly: Double = 0.0004049262363101775 {
+    @Published var maxStablecoinBoostWeekly: Double = SimulationSettings.defaultMaxStablecoinBoostWeekly {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxStablecoinBoostWeekly, forKey: "maxStablecoinBoostWeekly")
             }
         }
     }
-    // Monthly
+
+    // MONTHLY
     @Published var useStablecoinShiftMonthly: Bool = true {
         didSet {
             if isInitialized {
@@ -599,7 +656,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxStablecoinBoostMonthly: Double = 0.0004049262363101775 {
+    @Published var maxStablecoinBoostMonthly: Double = SimulationSettings.defaultMaxStablecoinBoostMonthly {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxStablecoinBoostMonthly, forKey: "maxStablecoinBoostMonthly")
@@ -616,14 +673,8 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxDemoBoost: Double = 0.0013056834936141968 {
-        didSet {
-            if isInitialized {
-                UserDefaults.standard.set(maxDemoBoost, forKey: "maxDemoBoost")
-            }
-        }
-    }
-    // Weekly
+
+    // WEEKLY
     @Published var useDemographicAdoptionWeekly: Bool = true {
         didSet {
             if isInitialized {
@@ -631,14 +682,15 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxDemoBoostWeekly: Double = 0.0013056834936141968 {
+    @Published var maxDemoBoostWeekly: Double = SimulationSettings.defaultMaxDemoBoostWeekly {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxDemoBoostWeekly, forKey: "maxDemoBoostWeekly")
             }
         }
     }
-    // Monthly
+
+    // MONTHLY
     @Published var useDemographicAdoptionMonthly: Bool = true {
         didSet {
             if isInitialized {
@@ -646,7 +698,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxDemoBoostMonthly: Double = 0.0013056834936141968 {
+    @Published var maxDemoBoostMonthly: Double = SimulationSettings.defaultMaxDemoBoostMonthly {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxDemoBoostMonthly, forKey: "maxDemoBoostMonthly")
@@ -663,14 +715,8 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxAltcoinBoost: Double = 0.0002802194461803342 {
-        didSet {
-            if isInitialized {
-                UserDefaults.standard.set(maxAltcoinBoost, forKey: "maxAltcoinBoost")
-            }
-        }
-    }
-    // Weekly
+
+    // WEEKLY
     @Published var useAltcoinFlightWeekly: Bool = true {
         didSet {
             if isInitialized {
@@ -678,14 +724,15 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxAltcoinBoostWeekly: Double = 0.0002802194461803342 {
+    @Published var maxAltcoinBoostWeekly: Double = SimulationSettings.defaultMaxAltcoinBoostWeekly {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxAltcoinBoostWeekly, forKey: "maxAltcoinBoostWeekly")
             }
         }
     }
-    // Monthly
+
+    // MONTHLY
     @Published var useAltcoinFlightMonthly: Bool = true {
         didSet {
             if isInitialized {
@@ -693,7 +740,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxAltcoinBoostMonthly: Double = 0.0002802194461803342 {
+    @Published var maxAltcoinBoostMonthly: Double = SimulationSettings.defaultMaxAltcoinBoostMonthly {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxAltcoinBoostMonthly, forKey: "maxAltcoinBoostMonthly")
@@ -710,14 +757,8 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var adoptionBaseFactor: Double = 0.0009685099124908447 {
-        didSet {
-            if isInitialized {
-                UserDefaults.standard.set(adoptionBaseFactor, forKey: "adoptionBaseFactor")
-            }
-        }
-    }
-    // Weekly
+
+    // WEEKLY
     @Published var useAdoptionFactorWeekly: Bool = true {
         didSet {
             if isInitialized {
@@ -725,14 +766,15 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var adoptionBaseFactorWeekly: Double = 0.0009685099124908447 {
+    @Published var adoptionBaseFactorWeekly: Double = SimulationSettings.defaultAdoptionBaseFactorWeekly {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(adoptionBaseFactorWeekly, forKey: "adoptionBaseFactorWeekly")
             }
         }
     }
-    // Monthly
+
+    // MONTHLY
     @Published var useAdoptionFactorMonthly: Bool = true {
         didSet {
             if isInitialized {
@@ -740,7 +782,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var adoptionBaseFactorMonthly: Double = 0.0009685099124908447 {
+    @Published var adoptionBaseFactorMonthly: Double = SimulationSettings.defaultAdoptionBaseFactorMonthly {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(adoptionBaseFactorMonthly, forKey: "adoptionBaseFactorMonthly")
@@ -748,9 +790,7 @@ class SimulationSettings: ObservableObject {
         }
     }
 
-    // -----------------------------
-    // MARK: - BEARISH FACTORS
-    // -----------------------------
+    // Regulatory Clampdown
     @Published var useRegClampdown: Bool = true {
         didSet {
             if isInitialized {
@@ -759,14 +799,8 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxClampDown: Double = -0.0011883256912231445 {
-        didSet {
-            if isInitialized {
-                UserDefaults.standard.set(maxClampDown, forKey: "maxClampDown")
-            }
-        }
-    }
-    // Weekly
+
+    // WEEKLY
     @Published var useRegClampdownWeekly: Bool = true {
         didSet {
             if isInitialized {
@@ -774,14 +808,15 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxClampDownWeekly: Double = -0.0011883256912231445 {
+    @Published var maxClampDownWeekly: Double = SimulationSettings.defaultMaxClampDownWeekly {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxClampDownWeekly, forKey: "maxClampDownWeekly")
             }
         }
     }
-    // Monthly
+
+    // MONTHLY
     @Published var useRegClampdownMonthly: Bool = true {
         didSet {
             if isInitialized {
@@ -789,7 +824,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxClampDownMonthly: Double = -0.0011883256912231445 {
+    @Published var maxClampDownMonthly: Double = SimulationSettings.defaultMaxClampDownMonthly {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxClampDownMonthly, forKey: "maxClampDownMonthly")
@@ -797,6 +832,7 @@ class SimulationSettings: ObservableObject {
         }
     }
 
+    // Competitor Coin
     @Published var useCompetitorCoin: Bool = true {
         didSet {
             if isInitialized {
@@ -805,14 +841,8 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxCompetitorBoost: Double = -0.0011259913444519043 {
-        didSet {
-            if isInitialized {
-                UserDefaults.standard.set(maxCompetitorBoost, forKey: "maxCompetitorBoost")
-            }
-        }
-    }
-    // Weekly
+
+    // WEEKLY
     @Published var useCompetitorCoinWeekly: Bool = true {
         didSet {
             if isInitialized {
@@ -820,14 +850,15 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxCompetitorBoostWeekly: Double = -0.0011259913444519043 {
+    @Published var maxCompetitorBoostWeekly: Double = SimulationSettings.defaultMaxCompetitorBoostWeekly {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxCompetitorBoostWeekly, forKey: "maxCompetitorBoostWeekly")
             }
         }
     }
-    // Monthly
+
+    // MONTHLY
     @Published var useCompetitorCoinMonthly: Bool = true {
         didSet {
             if isInitialized {
@@ -835,7 +866,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxCompetitorBoostMonthly: Double = -0.0011259913444519043 {
+    @Published var maxCompetitorBoostMonthly: Double = SimulationSettings.defaultMaxCompetitorBoostMonthly {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxCompetitorBoostMonthly, forKey: "maxCompetitorBoostMonthly")
@@ -843,6 +874,7 @@ class SimulationSettings: ObservableObject {
         }
     }
 
+    // Security Breach
     @Published var useSecurityBreach: Bool = true {
         didSet {
             if isInitialized {
@@ -851,14 +883,8 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var breachImpact: Double = -0.0007612827334384092 {
-        didSet {
-            if isInitialized {
-                UserDefaults.standard.set(breachImpact, forKey: "breachImpact")
-            }
-        }
-    }
-    // Weekly
+
+    // WEEKLY
     @Published var useSecurityBreachWeekly: Bool = true {
         didSet {
             if isInitialized {
@@ -866,14 +892,15 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var breachImpactWeekly: Double = -0.0007612827334384092 {
+    @Published var breachImpactWeekly: Double = SimulationSettings.defaultBreachImpactWeekly {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(breachImpactWeekly, forKey: "breachImpactWeekly")
             }
         }
     }
-    // Monthly
+
+    // MONTHLY
     @Published var useSecurityBreachMonthly: Bool = true {
         didSet {
             if isInitialized {
@@ -881,7 +908,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var breachImpactMonthly: Double = -0.0007612827334384092 {
+    @Published var breachImpactMonthly: Double = SimulationSettings.defaultBreachImpactMonthly {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(breachImpactMonthly, forKey: "breachImpactMonthly")
@@ -889,6 +916,7 @@ class SimulationSettings: ObservableObject {
         }
     }
 
+    // Bubble Pop
     @Published var useBubblePop: Bool = true {
         didSet {
             if isInitialized {
@@ -897,14 +925,8 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxPopDrop: Double = -0.0012555068731307985 {
-        didSet {
-            if isInitialized {
-                UserDefaults.standard.set(maxPopDrop, forKey: "maxPopDrop")
-            }
-        }
-    }
-    // Weekly
+
+    // WEEKLY
     @Published var useBubblePopWeekly: Bool = true {
         didSet {
             if isInitialized {
@@ -912,14 +934,15 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxPopDropWeekly: Double = -0.0012555068731307985 {
+    @Published var maxPopDropWeekly: Double = SimulationSettings.defaultMaxPopDropWeekly {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxPopDropWeekly, forKey: "maxPopDropWeekly")
             }
         }
     }
-    // Monthly
+
+    // MONTHLY
     @Published var useBubblePopMonthly: Bool = true {
         didSet {
             if isInitialized {
@@ -927,7 +950,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxPopDropMonthly: Double = -0.0012555068731307985 {
+    @Published var maxPopDropMonthly: Double = SimulationSettings.defaultMaxPopDropMonthly {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxPopDropMonthly, forKey: "maxPopDropMonthly")
@@ -935,6 +958,7 @@ class SimulationSettings: ObservableObject {
         }
     }
 
+    // Stablecoin Meltdown
     @Published var useStablecoinMeltdown: Bool = true {
         didSet {
             if isInitialized {
@@ -943,14 +967,8 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxMeltdownDrop: Double = -0.0007028046205417837 {
-        didSet {
-            if isInitialized {
-                UserDefaults.standard.set(maxMeltdownDrop, forKey: "maxMeltdownDrop")
-            }
-        }
-    }
-    // Weekly
+
+    // WEEKLY
     @Published var useStablecoinMeltdownWeekly: Bool = true {
         didSet {
             if isInitialized {
@@ -958,14 +976,15 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxMeltdownDropWeekly: Double = -0.0007028046205417837 {
+    @Published var maxMeltdownDropWeekly: Double = SimulationSettings.defaultMaxMeltdownDropWeekly {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxMeltdownDropWeekly, forKey: "maxMeltdownDropWeekly")
             }
         }
     }
-    // Monthly
+
+    // MONTHLY
     @Published var useStablecoinMeltdownMonthly: Bool = true {
         didSet {
             if isInitialized {
@@ -973,7 +992,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxMeltdownDropMonthly: Double = -0.0007028046205417837 {
+    @Published var maxMeltdownDropMonthly: Double = SimulationSettings.defaultMaxMeltdownDropMonthly {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxMeltdownDropMonthly, forKey: "maxMeltdownDropMonthly")
@@ -981,6 +1000,7 @@ class SimulationSettings: ObservableObject {
         }
     }
 
+    // Black Swan
     @Published var useBlackSwan: Bool = true {
         didSet {
             if isInitialized {
@@ -989,14 +1009,8 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var blackSwanDrop: Double = -0.0018411452783672483 {
-        didSet {
-            if isInitialized {
-                UserDefaults.standard.set(blackSwanDrop, forKey: "blackSwanDrop")
-            }
-        }
-    }
-    // Weekly
+
+    // WEEKLY
     @Published var useBlackSwanWeekly: Bool = true {
         didSet {
             if isInitialized {
@@ -1004,14 +1018,15 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var blackSwanDropWeekly: Double = -0.0018411452783672483 {
+    @Published var blackSwanDropWeekly: Double = SimulationSettings.defaultBlackSwanDropWeekly {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(blackSwanDropWeekly, forKey: "blackSwanDropWeekly")
             }
         }
     }
-    // Monthly
+
+    // MONTHLY
     @Published var useBlackSwanMonthly: Bool = true {
         didSet {
             if isInitialized {
@@ -1019,7 +1034,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var blackSwanDropMonthly: Double = -0.0018411452783672483 {
+    @Published var blackSwanDropMonthly: Double = SimulationSettings.defaultBlackSwanDropMonthly {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(blackSwanDropMonthly, forKey: "blackSwanDropMonthly")
@@ -1027,6 +1042,7 @@ class SimulationSettings: ObservableObject {
         }
     }
 
+    // Bear Market
     @Published var useBearMarket: Bool = true {
         didSet {
             if isInitialized {
@@ -1035,14 +1051,8 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var bearWeeklyDrift: Double = -0.0007195305824279769 {
-        didSet {
-            if isInitialized {
-                UserDefaults.standard.set(bearWeeklyDrift, forKey: "bearWeeklyDrift")
-            }
-        }
-    }
-    // Weekly
+
+    // WEEKLY
     @Published var useBearMarketWeekly: Bool = true {
         didSet {
             if isInitialized {
@@ -1050,14 +1060,15 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var bearWeeklyDriftWeekly: Double = -0.0007195305824279769 {
+    @Published var bearWeeklyDriftWeekly: Double = SimulationSettings.defaultBearWeeklyDriftWeekly {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(bearWeeklyDriftWeekly, forKey: "bearWeeklyDriftWeekly")
             }
         }
     }
-    // Monthly
+
+    // MONTHLY
     @Published var useBearMarketMonthly: Bool = true {
         didSet {
             if isInitialized {
@@ -1065,7 +1076,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var bearWeeklyDriftMonthly: Double = -0.0007195305824279769 {
+    @Published var bearWeeklyDriftMonthly: Double = SimulationSettings.defaultBearWeeklyDriftMonthly {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(bearWeeklyDriftMonthly, forKey: "bearWeeklyDriftMonthly")
@@ -1073,6 +1084,7 @@ class SimulationSettings: ObservableObject {
         }
     }
 
+    // Maturing Market
     @Published var useMaturingMarket: Bool = true {
         didSet {
             if isInitialized {
@@ -1081,14 +1093,8 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxMaturingDrop: Double = -0.004 {
-        didSet {
-            if isInitialized {
-                UserDefaults.standard.set(maxMaturingDrop, forKey: "maxMaturingDrop")
-            }
-        }
-    }
-    // Weekly
+
+    // WEEKLY
     @Published var useMaturingMarketWeekly: Bool = true {
         didSet {
             if isInitialized {
@@ -1096,14 +1102,15 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxMaturingDropWeekly: Double = -0.004 {
+    @Published var maxMaturingDropWeekly: Double = SimulationSettings.defaultMaxMaturingDropWeekly {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxMaturingDropWeekly, forKey: "maxMaturingDropWeekly")
             }
         }
     }
-    // Monthly
+
+    // MONTHLY
     @Published var useMaturingMarketMonthly: Bool = true {
         didSet {
             if isInitialized {
@@ -1111,7 +1118,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxMaturingDropMonthly: Double = -0.004 {
+    @Published var maxMaturingDropMonthly: Double = SimulationSettings.defaultMaxMaturingDropMonthly {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxMaturingDropMonthly, forKey: "maxMaturingDropMonthly")
@@ -1119,6 +1126,7 @@ class SimulationSettings: ObservableObject {
         }
     }
 
+    // Recession
     @Published var useRecession: Bool = true {
         didSet {
             if isInitialized {
@@ -1127,14 +1135,8 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxRecessionDrop: Double = -0.0014508080482482913 {
-        didSet {
-            if isInitialized {
-                UserDefaults.standard.set(maxRecessionDrop, forKey: "maxRecessionDrop")
-            }
-        }
-    }
-    // Weekly
+
+    // WEEKLY
     @Published var useRecessionWeekly: Bool = true {
         didSet {
             if isInitialized {
@@ -1142,14 +1144,15 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxRecessionDropWeekly: Double = -0.0014508080482482913 {
+    @Published var maxRecessionDropWeekly: Double = SimulationSettings.defaultMaxRecessionDropWeekly {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxRecessionDropWeekly, forKey: "maxRecessionDropWeekly")
             }
         }
     }
-    // Monthly
+
+    // MONTHLY
     @Published var useRecessionMonthly: Bool = true {
         didSet {
             if isInitialized {
@@ -1157,7 +1160,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxRecessionDropMonthly: Double = -0.0014508080482482913 {
+    @Published var maxRecessionDropMonthly: Double = SimulationSettings.defaultMaxRecessionDropMonthly {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxRecessionDropMonthly, forKey: "maxRecessionDropMonthly")
@@ -1579,130 +1582,148 @@ class SimulationSettings: ObservableObject {
         maxCountryAdBoostMonthly = SimulationSettings.defaultMaxCountryAdBoostMonthly
 
         useRegulatoryClarity = true
-        maxClarityBoost = 0.0016644023749474966
+            
         useRegulatoryClarityWeekly = true
-        maxClarityBoostWeekly = 0.0016644023749474966
+        maxClarityBoostWeekly = SimulationSettings.defaultMaxClarityBoostWeekly
+        
         useRegulatoryClarityMonthly = true
-        maxClarityBoostMonthly = 0.0016644023749474966
+        maxClarityBoostMonthly = SimulationSettings.defaultMaxClarityBoostMonthly
 
         useEtfApproval = true
-        maxEtfBoost = 0.0004546850204467774
-        useEtfApprovalWeekly = true
-        maxEtfBoostWeekly = 0.0004546850204467774
-        useEtfApprovalMonthly = true
-        maxEtfBoostMonthly = 0.0004546850204467774
 
+        useEtfApprovalWeekly = true
+        maxEtfBoostWeekly = SimulationSettings.defaultMaxEtfBoostWeekly
+
+        useEtfApprovalMonthly = true
+        maxEtfBoostMonthly = SimulationSettings.defaultMaxEtfBoostMonthly
+    
         useTechBreakthrough = true
-        maxTechBoost = 0.00040663959745637255
+
         useTechBreakthroughWeekly = true
-        maxTechBoostWeekly = 0.00040663959745637255
+        maxTechBoostWeekly = SimulationSettings.defaultMaxTechBoostWeekly
+
         useTechBreakthroughMonthly = true
-        maxTechBoostMonthly = 0.00040663959745637255
+        maxTechBoostMonthly = SimulationSettings.defaultMaxTechBoostMonthly
 
         useScarcityEvents = true
-        maxScarcityBoost = 0.0007968083934443039
+
         useScarcityEventsWeekly = true
-        maxScarcityBoostWeekly = 0.0007968083934443039
+        maxScarcityBoostWeekly = SimulationSettings.defaultMaxScarcityBoostWeekly
+
         useScarcityEventsMonthly = true
-        maxScarcityBoostMonthly = 0.0007968083934443039
+        maxScarcityBoostMonthly = SimulationSettings.defaultMaxScarcityBoostMonthly
 
         useGlobalMacroHedge = true
-        maxMacroBoost = 0.000419354572892189
+
         useGlobalMacroHedgeWeekly = true
-        maxMacroBoostWeekly = 0.000419354572892189
+        maxMacroBoostWeekly = SimulationSettings.defaultMaxMacroBoostWeekly
+
         useGlobalMacroHedgeMonthly = true
-        maxMacroBoostMonthly = 0.000419354572892189
+        maxMacroBoostMonthly = SimulationSettings.defaultMaxMacroBoostMonthly
 
         useStablecoinShift = true
-        maxStablecoinBoost = 0.0004049262363101775
+
         useStablecoinShiftWeekly = true
-        maxStablecoinBoostWeekly = 0.0004049262363101775
+        maxStablecoinBoostWeekly = SimulationSettings.defaultMaxStablecoinBoostWeekly
+
         useStablecoinShiftMonthly = true
-        maxStablecoinBoostMonthly = 0.0004049262363101775
+        maxStablecoinBoostMonthly = SimulationSettings.defaultMaxStablecoinBoostMonthly
 
         useDemographicAdoption = true
-        maxDemoBoost = 0.0013056834936141968
-        useDemographicAdoptionWeekly = true
-        maxDemoBoostWeekly = 0.0013056834936141968
-        useDemographicAdoptionMonthly = true
-        maxDemoBoostMonthly = 0.0013056834936141968
 
+        useDemographicAdoptionWeekly = true
+        maxDemoBoostWeekly = SimulationSettings.defaultMaxDemoBoostWeekly
+
+        useDemographicAdoptionMonthly = true
+        maxDemoBoostMonthly = SimulationSettings.defaultMaxDemoBoostMonthly
+    
         useAltcoinFlight = true
-        maxAltcoinBoost = 0.0002802194461803342
+            
         useAltcoinFlightWeekly = true
-        maxAltcoinBoostWeekly = 0.0002802194461803342
+        maxAltcoinBoostWeekly = SimulationSettings.defaultMaxAltcoinBoostWeekly
+        
         useAltcoinFlightMonthly = true
-        maxAltcoinBoostMonthly = 0.0002802194461803342
+        maxAltcoinBoostMonthly = SimulationSettings.defaultMaxAltcoinBoostMonthly
 
         useAdoptionFactor = true
-        adoptionBaseFactor = 0.0009685099124908447
+            
         useAdoptionFactorWeekly = true
-        adoptionBaseFactorWeekly = 0.0009685099124908447
+        adoptionBaseFactorWeekly = SimulationSettings.defaultAdoptionBaseFactorWeekly
+        
         useAdoptionFactorMonthly = true
-        adoptionBaseFactorMonthly = 0.0009685099124908447
+        adoptionBaseFactorMonthly = SimulationSettings.defaultAdoptionBaseFactorMonthly
 
         useRegClampdown = true
-        maxClampDown = -0.0011883256912231445
+            
         useRegClampdownWeekly = true
-        maxClampDownWeekly = -0.0011883256912231445
+        maxClampDownWeekly = SimulationSettings.defaultMaxClampDownWeekly
+        
         useRegClampdownMonthly = true
-        maxClampDownMonthly = -0.0011883256912231445
+        maxClampDownMonthly = SimulationSettings.defaultMaxClampDownMonthly
 
         useCompetitorCoin = true
-        maxCompetitorBoost = -0.0011259913444519043
+            
         useCompetitorCoinWeekly = true
-        maxCompetitorBoostWeekly = -0.0011259913444519043
+        maxCompetitorBoostWeekly = SimulationSettings.defaultMaxCompetitorBoostWeekly
+        
         useCompetitorCoinMonthly = true
-        maxCompetitorBoostMonthly = -0.0011259913444519043
+        maxCompetitorBoostMonthly = SimulationSettings.defaultMaxCompetitorBoostMonthly
 
         useSecurityBreach = true
-        breachImpact = -0.0007612827334384092
+            
         useSecurityBreachWeekly = true
-        breachImpactWeekly = -0.0007612827334384092
+        breachImpactWeekly = SimulationSettings.defaultBreachImpactWeekly
+
         useSecurityBreachMonthly = true
-        breachImpactMonthly = -0.0007612827334384092
+        breachImpactMonthly = SimulationSettings.defaultBreachImpactMonthly
 
         useBubblePop = true
-        maxPopDrop = -0.0012555068731307985
+            
         useBubblePopWeekly = true
-        maxPopDropWeekly = -0.0012555068731307985
+        maxPopDropWeekly = SimulationSettings.defaultMaxPopDropWeekly
+        
         useBubblePopMonthly = true
-        maxPopDropMonthly = -0.0012555068731307985
+        maxPopDropMonthly = SimulationSettings.defaultMaxPopDropMonthly
 
         useStablecoinMeltdown = true
-        maxMeltdownDrop = -0.0007028046205417837
+
         useStablecoinMeltdownWeekly = true
-        maxMeltdownDropWeekly = -0.0007028046205417837
+        maxMeltdownDropWeekly = SimulationSettings.defaultMaxMeltdownDropWeekly
+
         useStablecoinMeltdownMonthly = true
-        maxMeltdownDropMonthly = -0.0007028046205417837
+        maxMeltdownDropMonthly = SimulationSettings.defaultMaxMeltdownDropMonthly
 
         useBlackSwan = true
-        blackSwanDrop = -0.0018411452783672483
+            
         useBlackSwanWeekly = true
-        blackSwanDropWeekly = -0.0018411452783672483
+        blackSwanDropWeekly = SimulationSettings.defaultBlackSwanDropWeekly
+
         useBlackSwanMonthly = true
-        blackSwanDropMonthly = -0.0018411452783672483
+        blackSwanDropMonthly = SimulationSettings.defaultBlackSwanDropMonthly
 
         useBearMarket = true
-        bearWeeklyDrift = -0.0007195305824279769
+
         useBearMarketWeekly = true
-        bearWeeklyDriftWeekly = -0.0007195305824279769
+        bearWeeklyDriftWeekly = SimulationSettings.defaultBearWeeklyDriftWeekly
+
         useBearMarketMonthly = true
-        bearWeeklyDriftMonthly = -0.0007195305824279769
+        bearWeeklyDriftMonthly = SimulationSettings.defaultBearWeeklyDriftMonthly
 
         useMaturingMarket = true
-        maxMaturingDrop = -0.004
+
         useMaturingMarketWeekly = true
-        maxMaturingDropWeekly = -0.004
+        maxMaturingDropWeekly = SimulationSettings.defaultMaxMaturingDropWeekly
+
         useMaturingMarketMonthly = true
-        maxMaturingDropMonthly = -0.004
+        maxMaturingDropMonthly = SimulationSettings.defaultMaxMaturingDropMonthly
 
         useRecession = true
-        maxRecessionDrop = -0.0014508080482482913
+
         useRecessionWeekly = true
-        maxRecessionDropWeekly = -0.0014508080482482913
+        maxRecessionDropWeekly = SimulationSettings.defaultMaxRecessionDropWeekly
+
         useRecessionMonthly = true
-        maxRecessionDropMonthly = -0.0014508080482482913
+        maxRecessionDropMonthly = SimulationSettings.defaultMaxRecessionDropMonthly
 
         // Enable everything
         toggleAll = true
