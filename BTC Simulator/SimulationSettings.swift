@@ -286,51 +286,50 @@ class SimulationSettings: ObservableObject {
     // -----------------------------
 
     // Halving
-        @Published var useHalving: Bool = true {
-            didSet {
-                if isInitialized {
-                    UserDefaults.standard.set(useHalving, forKey: "useHalving")
-                    syncToggleAllState()
-                }
+    @Published var useHalving: Bool = true {
+        didSet {
+            if isInitialized {
+                UserDefaults.standard.set(useHalving, forKey: "useHalving")
+                syncToggleAllState()
             }
         }
+    }
 
-        // WEEKLY
-        @Published var useHalvingWeekly: Bool = true {
-            didSet {
-                if isInitialized {
-                    UserDefaults.standard.set(useHalvingWeekly, forKey: "useHalvingWeekly")
-                }
+    // WEEKLY
+    @Published var useHalvingWeekly: Bool = true {
+        didSet {
+            if isInitialized {
+                UserDefaults.standard.set(useHalvingWeekly, forKey: "useHalvingWeekly")
             }
         }
-        @Published var halvingBumpWeekly: Double = SimulationSettings.defaultHalvingBumpWeekly {
-            didSet {
-                if isInitialized {
-                    UserDefaults.standard.set(halvingBumpWeekly, forKey: "halvingBumpWeekly")
-                }
+    }
+    @Published var halvingBumpWeekly: Double = SimulationSettings.defaultHalvingBumpWeekly {
+        didSet {
+            if isInitialized {
+                UserDefaults.standard.set(halvingBumpWeekly, forKey: "halvingBumpWeekly")
             }
         }
+    }
 
-        // MONTHLY
-        @Published var useHalvingMonthly: Bool = true {
-            didSet {
-                if isInitialized {
-                    UserDefaults.standard.set(useHalvingMonthly, forKey: "useHalvingMonthly")
-                }
+    // MONTHLY
+    @Published var useHalvingMonthly: Bool = true {
+        didSet {
+            if isInitialized {
+                UserDefaults.standard.set(useHalvingMonthly, forKey: "useHalvingMonthly")
             }
         }
-        @Published var halvingBumpMonthly: Double = SimulationSettings.defaultHalvingBumpMonthly {
-            didSet {
-                if isInitialized {
-                    UserDefaults.standard.set(halvingBumpMonthly, forKey: "halvingBumpMonthly")
-                }
+    }
+    @Published var halvingBumpMonthly: Double = SimulationSettings.defaultHalvingBumpMonthly {
+        didSet {
+            if isInitialized {
+                UserDefaults.standard.set(halvingBumpMonthly, forKey: "halvingBumpMonthly")
             }
         }
+    }
 
     // Institutional Demand
     @Published var useInstitutionalDemand: Bool = true {
         didSet {
-            print(">> useInstitutionalDemand changed to \(useInstitutionalDemand). isInitialized=\(isInitialized)")
             if isInitialized {
                 UserDefaults.standard.set(useInstitutionalDemand, forKey: "useInstitutionalDemand")
                 syncToggleAllState()
