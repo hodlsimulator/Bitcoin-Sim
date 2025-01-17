@@ -514,7 +514,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var maxMaturingDrop: Double = -0.001255506277084352 {
+    @Published var maxMaturingDrop: Double = -0.0022 {
         didSet {
             if isInitialized {
                 UserDefaults.standard.set(maxMaturingDrop, forKey: "maxMaturingDrop")
@@ -1001,7 +1001,7 @@ class SimulationSettings: ObservableObject {
         bearWeeklyDrift = -0.0007195305824279769
 
         useMaturingMarket = true
-        maxMaturingDrop = -0.001255506277084352
+        maxMaturingDrop = -0.0022
 
         useRecession = true
         maxRecessionDrop = -0.0014508080482482913
