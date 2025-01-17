@@ -10,6 +10,13 @@ import SwiftUI
 /// A class for storing user toggles and results
 class SimulationSettings: ObservableObject {
     
+    // Hardcoded default constants (instance level)
+    private static let defaultHalvingBumpWeekly = 0.48
+    private static let defaultHalvingBumpMonthly = 0.58
+
+    init() {
+    }
+    
     var inputManager: PersistentInputManager? = nil
     
     // @AppStorage("useLognormalGrowth") var useLognormalGrowth: Bool = true
@@ -188,51 +195,46 @@ class SimulationSettings: ObservableObject {
     // -----------------------------
 
     // Halving
-    @Published var useHalving: Bool = true {
-        didSet {
-            if isInitialized {
-                UserDefaults.standard.set(useHalving, forKey: "useHalving")
-                syncToggleAllState()
+        @Published var useHalving: Bool = true {
+            didSet {
+                if isInitialized {
+                    UserDefaults.standard.set(useHalving, forKey: "useHalving")
+                    syncToggleAllState()
+                }
             }
         }
-    }
-    @Published var halvingBump: Double = 0.47967220152334283 {
-        didSet {
-            if isInitialized {
-                UserDefaults.standard.set(halvingBump, forKey: "halvingBump")
+
+        // WEEKLY
+        @Published var useHalvingWeekly: Bool = true {
+            didSet {
+                if isInitialized {
+                    UserDefaults.standard.set(useHalvingWeekly, forKey: "useHalvingWeekly")
+                }
             }
         }
-    }
-    // Weekly
-    @Published var useHalvingWeekly: Bool = true {
-        didSet {
-            if isInitialized {
-                UserDefaults.standard.set(useHalvingWeekly, forKey: "useHalvingWeekly")
+        @Published var halvingBumpWeekly: Double = SimulationSettings.defaultHalvingBumpWeekly {
+            didSet {
+                if isInitialized {
+                    UserDefaults.standard.set(halvingBumpWeekly, forKey: "halvingBumpWeekly")
+                }
             }
         }
-    }
-    @Published var halvingBumpWeekly: Double = 0.47967220152334283 {
-        didSet {
-            if isInitialized {
-                UserDefaults.standard.set(halvingBumpWeekly, forKey: "halvingBumpWeekly")
+
+        // MONTHLY
+        @Published var useHalvingMonthly: Bool = true {
+            didSet {
+                if isInitialized {
+                    UserDefaults.standard.set(useHalvingMonthly, forKey: "useHalvingMonthly")
+                }
             }
         }
-    }
-    // Monthly
-    @Published var useHalvingMonthly: Bool = true {
-        didSet {
-            if isInitialized {
-                UserDefaults.standard.set(useHalvingMonthly, forKey: "useHalvingMonthly")
+        @Published var halvingBumpMonthly: Double = SimulationSettings.defaultHalvingBumpMonthly {
+            didSet {
+                if isInitialized {
+                    UserDefaults.standard.set(halvingBumpMonthly, forKey: "halvingBumpMonthly")
+                }
             }
         }
-    }
-    @Published var halvingBumpMonthly: Double = 0.47967220152334283 {
-        didSet {
-            if isInitialized {
-                UserDefaults.standard.set(halvingBumpMonthly, forKey: "halvingBumpMonthly")
-            }
-        }
-    }
 
     // Institutional Demand
     @Published var useInstitutionalDemand: Bool = true {
@@ -1205,10 +1207,6 @@ class SimulationSettings: ObservableObject {
     }
     // -----------------------------
 
-    init() {
-        // do nothing, or do something minimal if you really need to
-    }
-
     // NEW: We'll compute a hash of the relevant toggles, so the simulation detects changes
     func computeInputsHash(
         annualCAGR: Double,
@@ -1561,11 +1559,12 @@ class SimulationSettings: ObservableObject {
     
         // Reassign them to the NEW defaults:
         useHalving = true
-        halvingBump = 0.47967220152334283
+                
         useHalvingWeekly = true
-        halvingBumpWeekly = 0.47967220152334283
+        halvingBumpWeekly = SimulationSettings.defaultHalvingBumpWeekly
+
         useHalvingMonthly = true
-        halvingBumpMonthly = 0.47967220152334283
+        halvingBumpMonthly = SimulationSettings.defaultHalvingBumpMonthly
 
         useInstitutionalDemand = true
         maxDemandBoost = 0.0012392541338671777
