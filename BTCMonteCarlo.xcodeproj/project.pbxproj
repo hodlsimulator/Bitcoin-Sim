@@ -15,6 +15,7 @@
 		E14D23FC2D3A2260007CC11A /* Bitcoin Historical Data Weekly.csv in Resources */ = {isa = PBXBuildFile; fileRef = E14D23F72D3A2260007CC11A /* Bitcoin Historical Data Weekly.csv */; };
 		E14D23FD2D3A2260007CC11A /* S&P 500 Historical Data Weekly.csv in Resources */ = {isa = PBXBuildFile; fileRef = E14D23F92D3A2260007CC11A /* S&P 500 Historical Data Weekly.csv */; };
 		E14D23FF2D3A251F007CC11A /* Bitcoin Historical Data Monthly.csv in Resources */ = {isa = PBXBuildFile; fileRef = E14D23FE2D3A251F007CC11A /* Bitcoin Historical Data Monthly.csv */; };
+		E14D24092D3A677F007CC11A /* SettingsPrinter.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14D24082D3A677D007CC11A /* SettingsPrinter.swift */; };
 		E166A8AA2CF855B00003F518 /* CSVLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = E166A8A92CF855B00003F518 /* CSVLoader.swift */; };
 		E166A8AC2CF855B60003F518 /* DoubleExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = E166A8AB2CF855B60003F518 /* DoubleExtensions.swift */; };
 		E166A8AE2CF855BF0003F518 /* MonteCarloSimulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = E166A8AD2CF855BF0003F518 /* MonteCarloSimulator.swift */; };
@@ -65,6 +66,7 @@
 		E14D23F82D3A2260007CC11A /* S&P 500 Historical Data Monthly.csv */ = {isa = PBXFileReference; lastKnownFileType = text; path = "S&P 500 Historical Data Monthly.csv"; sourceTree = "<group>"; };
 		E14D23F92D3A2260007CC11A /* S&P 500 Historical Data Weekly.csv */ = {isa = PBXFileReference; lastKnownFileType = text; path = "S&P 500 Historical Data Weekly.csv"; sourceTree = "<group>"; };
 		E14D23FE2D3A251F007CC11A /* Bitcoin Historical Data Monthly.csv */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Bitcoin Historical Data Monthly.csv"; sourceTree = "<group>"; };
+		E14D24082D3A677D007CC11A /* SettingsPrinter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsPrinter.swift; sourceTree = "<group>"; };
 		E166A8A92CF855B00003F518 /* CSVLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVLoader.swift; sourceTree = "<group>"; };
 		E166A8AB2CF855B60003F518 /* DoubleExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoubleExtensions.swift; sourceTree = "<group>"; };
 		E166A8AD2CF855BF0003F518 /* MonteCarloSimulator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonteCarloSimulator.swift; sourceTree = "<group>"; };
@@ -171,6 +173,7 @@
 				E1883F3B2D1DDC75007AA90B /* ParametersFormView.swift */,
 				E1A1E51E2D2A7362008F7658 /* PortfolioChartView.swift */,
 				E1A1E52E2D2E3A3E008F7658 /* RowOffsetHelpers.swift */,
+				E14D24082D3A677D007CC11A /* SettingsPrinter.swift */,
 				E1883F372D1DD4C5007AA90B /* SettingsView.swift */,
 				E17B2F212D26A9F000ECE087 /* SimulationCoordinator.swift */,
 				E166A8AF2CF855C20003F518 /* SimulationData.swift */,
@@ -355,6 +358,7 @@
 				E1883F3E2D1E0D7A007AA90B /* ActiveField.swift in Sources */,
 				E1A1E52B2D2E3975008F7658 /* InteractiveBitcoinSymbol3DSpinner.swift in Sources */,
 				E1883F3A2D1DD94F007AA90B /* SimulationSettings.swift in Sources */,
+				E14D24092D3A677F007CC11A /* SettingsPrinter.swift in Sources */,
 				E1883F422D1E43DB007AA90B /* VisualEffectBlur.swift in Sources */,
 				E166A8AE2CF855BF0003F518 /* MonteCarloSimulator.swift in Sources */,
 				E1CFF0272D30D07A00D9D044 /* ChartBuilders.swift in Sources */,
