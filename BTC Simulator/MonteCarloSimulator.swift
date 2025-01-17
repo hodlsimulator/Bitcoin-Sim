@@ -242,72 +242,74 @@ private func applyFactorToggles(
 ) -> Double {
     var r = baseReturn
     
-    // If user toggled "useHalving", add halvingBump if 'week' is in halvingWeeks
+    // Halving: we keep useHalving as the on/off toggle,
+    // but use halvingBumpUnified for the numeric effect.
     if settings.useHalving && halvingWeeks.contains(week) {
-        r += settings.halvingBump
+        r += settings.halvingBumpUnified
     }
+    
     // Bullish toggles
     if settings.useInstitutionalDemand {
-        r += settings.maxDemandBoost
+        r += settings.maxDemandBoostUnified
     }
     if settings.useCountryAdoption {
-        r += settings.maxCountryAdBoost
+        r += settings.maxCountryAdBoostUnified
     }
     if settings.useRegulatoryClarity {
-        r += settings.maxClarityBoost
+        r += settings.maxClarityBoostUnified
     }
     if settings.useEtfApproval {
-        r += settings.maxEtfBoost
+        r += settings.maxEtfBoostUnified
     }
     if settings.useTechBreakthrough {
-        r += settings.maxTechBoost
+        r += settings.maxTechBoostUnified
     }
     if settings.useScarcityEvents {
-        r += settings.maxScarcityBoost
+        r += settings.maxScarcityBoostUnified
     }
     if settings.useGlobalMacroHedge {
-        r += settings.maxMacroBoost
+        r += settings.maxMacroBoostUnified
     }
     if settings.useStablecoinShift {
-        r += settings.maxStablecoinBoost
+        r += settings.maxStablecoinBoostUnified
     }
     if settings.useDemographicAdoption {
-        r += settings.maxDemoBoost
+        r += settings.maxDemoBoostUnified
     }
     if settings.useAltcoinFlight {
-        r += settings.maxAltcoinBoost
+        r += settings.maxAltcoinBoostUnified
     }
     if settings.useAdoptionFactor {
-        r += settings.adoptionBaseFactor
+        r += settings.adoptionBaseFactorUnified
     }
     
     // Bearish toggles
     if settings.useRegClampdown {
-        r += settings.maxClampDown
+        r += settings.maxClampDownUnified
     }
     if settings.useCompetitorCoin {
-        r += settings.maxCompetitorBoost
+        r += settings.maxCompetitorBoostUnified
     }
     if settings.useSecurityBreach {
-        r += settings.breachImpact
+        r += settings.breachImpactUnified
     }
     if settings.useBubblePop {
-        r += settings.maxPopDrop
+        r += settings.maxPopDropUnified
     }
     if settings.useStablecoinMeltdown {
-        r += settings.maxMeltdownDrop
+        r += settings.maxMeltdownDropUnified
     }
     if settings.useBlackSwan && blackSwanWeeks.contains(week) {
-        r += settings.blackSwanDrop
+        r += settings.blackSwanDropUnified
     }
     if settings.useBearMarket {
-        r += settings.bearWeeklyDrift
+        r += settings.bearWeeklyDriftUnified
     }
     if settings.useMaturingMarket {
-        r += settings.maxMaturingDrop
+        r += settings.maxMaturingDropUnified
     }
     if settings.useRecession {
-        r += settings.maxRecessionDrop
+        r += settings.maxRecessionDropUnified
     }
     
     return r
