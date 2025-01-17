@@ -120,7 +120,7 @@ func dampenArctanWeekly(_ rawReturn: Double) -> Double {
 
 func dampenArctanMonthly(_ rawReturn: Double) -> Double {
     // Maybe we want a mild dampening for monthly
-    let factor = 0.7
+    let factor = 0.8    
     let scaled = rawReturn * factor
     let flattened = (2.0 / Double.pi) * atan(scaled)
     return flattened * 0.5

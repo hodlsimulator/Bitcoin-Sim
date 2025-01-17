@@ -401,10 +401,10 @@ struct SettingsView: View {
                     title: "Declining ARR / Maturing Market",
                     isOn: $simSettings.useMaturingMarket,
                     sliderValue: $simSettings.maxMaturingDrop,
-                    // Symmetrical range around -0.0022:
-                    sliderRange: -0.0026 ... -0.0018,
-                    // Default (starting) value = -0.0022
-                    defaultValue: -0.0022,
+                    // Symmetrical range around -0.004:
+                    sliderRange: -0.0046 ... -0.0034,
+                    // Default (starting) value = -0.004 (slightly stronger negative)
+                    defaultValue: -0.004,
                     parameterDescription: """
                     As BTC matures, growth rates slow, leading to smaller returns
                     and reduced speculative enthusiasm.
