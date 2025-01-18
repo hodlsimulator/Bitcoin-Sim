@@ -913,6 +913,8 @@ class SimulationSettings: ObservableObject {
                 if toggleAll {
                     toggleAll = false
                 }
+                // NEW: re-check if all toggles are on => toggleAll becomes true if so
+                syncToggleAllState()
             }
         }
     }
@@ -940,6 +942,7 @@ class SimulationSettings: ObservableObject {
                 if toggleAll {
                     toggleAll = false
                 }
+                syncToggleAllState()
             }
         }
     }
@@ -978,6 +981,7 @@ class SimulationSettings: ObservableObject {
                 if toggleAll {
                     toggleAll = false
                 }
+                syncToggleAllState()
             }
         }
     }
@@ -1005,6 +1009,7 @@ class SimulationSettings: ObservableObject {
                 if toggleAll {
                     toggleAll = false
                 }
+                syncToggleAllState()
             }
         }
     }
@@ -1043,6 +1048,7 @@ class SimulationSettings: ObservableObject {
                 if toggleAll {
                     toggleAll = false
                 }
+                syncToggleAllState()
             }
         }
     }
@@ -1070,6 +1076,7 @@ class SimulationSettings: ObservableObject {
                 if toggleAll {
                     toggleAll = false
                 }
+                syncToggleAllState()
             }
         }
     }
@@ -1108,6 +1115,7 @@ class SimulationSettings: ObservableObject {
                 if toggleAll {
                     toggleAll = false
                 }
+                syncToggleAllState()
             }
         }
     }
@@ -1135,6 +1143,7 @@ class SimulationSettings: ObservableObject {
                 if toggleAll {
                     toggleAll = false
                 }
+                syncToggleAllState()
             }
         }
     }
@@ -1173,6 +1182,7 @@ class SimulationSettings: ObservableObject {
                 if toggleAll {
                     toggleAll = false
                 }
+                syncToggleAllState()
             }
         }
     }
@@ -1200,6 +1210,7 @@ class SimulationSettings: ObservableObject {
                 if toggleAll {
                     toggleAll = false
                 }
+                syncToggleAllState()
             }
         }
     }
@@ -1238,6 +1249,7 @@ class SimulationSettings: ObservableObject {
                 if toggleAll {
                     toggleAll = false
                 }
+                syncToggleAllState()
             }
         }
     }
@@ -1265,6 +1277,7 @@ class SimulationSettings: ObservableObject {
                 if toggleAll {
                     toggleAll = false
                 }
+                syncToggleAllState()
             }
         }
     }
@@ -1303,6 +1316,7 @@ class SimulationSettings: ObservableObject {
                 if toggleAll {
                     toggleAll = false
                 }
+                syncToggleAllState()
             }
         }
     }
@@ -1330,6 +1344,7 @@ class SimulationSettings: ObservableObject {
                 if toggleAll {
                     toggleAll = false
                 }
+                syncToggleAllState()
             }
         }
     }
@@ -1368,6 +1383,7 @@ class SimulationSettings: ObservableObject {
                 if toggleAll {
                     toggleAll = false
                 }
+                syncToggleAllState()
             }
         }
     }
@@ -1395,6 +1411,7 @@ class SimulationSettings: ObservableObject {
                 if toggleAll {
                     toggleAll = false
                 }
+                syncToggleAllState()
             }
         }
     }
@@ -1433,6 +1450,7 @@ class SimulationSettings: ObservableObject {
                 if toggleAll {
                     toggleAll = false
                 }
+                syncToggleAllState()
             }
         }
     }
@@ -1460,6 +1478,7 @@ class SimulationSettings: ObservableObject {
                 if toggleAll {
                     toggleAll = false
                 }
+                syncToggleAllState()
             }
         }
     }
@@ -1498,6 +1517,7 @@ class SimulationSettings: ObservableObject {
                 if toggleAll {
                     toggleAll = false
                 }
+                syncToggleAllState()
             }
         }
     }
@@ -1525,6 +1545,7 @@ class SimulationSettings: ObservableObject {
                 if toggleAll {
                     toggleAll = false
                 }
+                syncToggleAllState()
             }
         }
     }
@@ -1563,6 +1584,7 @@ class SimulationSettings: ObservableObject {
                 if toggleAll {
                     toggleAll = false
                 }
+                syncToggleAllState()
             }
         }
     }
@@ -1590,6 +1612,7 @@ class SimulationSettings: ObservableObject {
                 if toggleAll {
                     toggleAll = false
                 }
+                syncToggleAllState()
             }
         }
     }
@@ -1628,6 +1651,7 @@ class SimulationSettings: ObservableObject {
                 if toggleAll {
                     toggleAll = false
                 }
+                syncToggleAllState()
             }
         }
     }
@@ -1655,6 +1679,7 @@ class SimulationSettings: ObservableObject {
                 if toggleAll {
                     toggleAll = false
                 }
+                syncToggleAllState()
             }
         }
     }
@@ -1678,6 +1703,13 @@ class SimulationSettings: ObservableObject {
             guard oldValue != useRegClampdown else { return }
 
             UserDefaults.standard.set(useRegClampdown, forKey: "useRegClampdown")
+            
+            // If parent is off, turn children off
+            if !useRegClampdown {
+                useRegClampdownWeekly = false
+                useRegClampdownMonthly = false
+            }
+
             if !isUpdating {
                 syncToggleAllState()
             }
@@ -1690,18 +1722,18 @@ class SimulationSettings: ObservableObject {
             if isInitialized && !isUpdating && oldValue != useRegClampdownWeekly {
                 UserDefaults.standard.set(useRegClampdownWeekly, forKey: "useRegClampdownWeekly")
                 
-                // Turn parent ON if weekly just got enabled;
-                // Turn parent OFF if weekly is disabled and monthly is also off
                 if useRegClampdownWeekly {
                     useRegClampdown = true
                 } else if !useRegClampdownMonthly {
                     useRegClampdown = false
                 }
                 
-                // Break toggleAll if it was on
+                // If toggleAll was on, turn it off
                 if toggleAll {
                     toggleAll = false
                 }
+                // **Now check if all factors are on => re-enable toggleAll**
+                syncToggleAllState()
             }
         }
     }
@@ -1729,6 +1761,7 @@ class SimulationSettings: ObservableObject {
                 if toggleAll {
                     toggleAll = false
                 }
+                syncToggleAllState()
             }
         }
     }
@@ -1749,6 +1782,12 @@ class SimulationSettings: ObservableObject {
             guard oldValue != useCompetitorCoin else { return }
 
             UserDefaults.standard.set(useCompetitorCoin, forKey: "useCompetitorCoin")
+            
+            if !useCompetitorCoin {
+                useCompetitorCoinWeekly = false
+                useCompetitorCoinMonthly = false
+            }
+
             if !isUpdating {
                 syncToggleAllState()
             }
@@ -1770,6 +1809,7 @@ class SimulationSettings: ObservableObject {
                 if toggleAll {
                     toggleAll = false
                 }
+                syncToggleAllState()
             }
         }
     }
@@ -1797,6 +1837,7 @@ class SimulationSettings: ObservableObject {
                 if toggleAll {
                     toggleAll = false
                 }
+                syncToggleAllState()
             }
         }
     }
@@ -1817,6 +1858,11 @@ class SimulationSettings: ObservableObject {
             guard oldValue != useSecurityBreach else { return }
 
             UserDefaults.standard.set(useSecurityBreach, forKey: "useSecurityBreach")
+            if !useSecurityBreach {
+                useSecurityBreachWeekly = false
+                useSecurityBreachMonthly = false
+            }
+
             if !isUpdating {
                 syncToggleAllState()
             }
@@ -1838,6 +1884,7 @@ class SimulationSettings: ObservableObject {
                 if toggleAll {
                     toggleAll = false
                 }
+                syncToggleAllState()
             }
         }
     }
@@ -1865,6 +1912,7 @@ class SimulationSettings: ObservableObject {
                 if toggleAll {
                     toggleAll = false
                 }
+                syncToggleAllState()
             }
         }
     }
@@ -1885,6 +1933,11 @@ class SimulationSettings: ObservableObject {
             guard oldValue != useBubblePop else { return }
 
             UserDefaults.standard.set(useBubblePop, forKey: "useBubblePop")
+            if !useBubblePop {
+                useBubblePopWeekly = false
+                useBubblePopMonthly = false
+            }
+
             if !isUpdating {
                 syncToggleAllState()
             }
@@ -1906,6 +1959,7 @@ class SimulationSettings: ObservableObject {
                 if toggleAll {
                     toggleAll = false
                 }
+                syncToggleAllState()
             }
         }
     }
@@ -1933,6 +1987,7 @@ class SimulationSettings: ObservableObject {
                 if toggleAll {
                     toggleAll = false
                 }
+                syncToggleAllState()
             }
         }
     }
@@ -1953,6 +2008,11 @@ class SimulationSettings: ObservableObject {
             guard oldValue != useStablecoinMeltdown else { return }
 
             UserDefaults.standard.set(useStablecoinMeltdown, forKey: "useStablecoinMeltdown")
+            if !useStablecoinMeltdown {
+                useStablecoinMeltdownWeekly = false
+                useStablecoinMeltdownMonthly = false
+            }
+
             if !isUpdating {
                 syncToggleAllState()
             }
@@ -1974,6 +2034,7 @@ class SimulationSettings: ObservableObject {
                 if toggleAll {
                     toggleAll = false
                 }
+                syncToggleAllState()
             }
         }
     }
@@ -2001,6 +2062,7 @@ class SimulationSettings: ObservableObject {
                 if toggleAll {
                     toggleAll = false
                 }
+                syncToggleAllState()
             }
         }
     }
@@ -2021,6 +2083,11 @@ class SimulationSettings: ObservableObject {
             guard oldValue != useBlackSwan else { return }
 
             UserDefaults.standard.set(useBlackSwan, forKey: "useBlackSwan")
+            if !useBlackSwan {
+                useBlackSwanWeekly = false
+                useBlackSwanMonthly = false
+            }
+
             if !isUpdating {
                 syncToggleAllState()
             }
@@ -2042,6 +2109,7 @@ class SimulationSettings: ObservableObject {
                 if toggleAll {
                     toggleAll = false
                 }
+                syncToggleAllState()
             }
         }
     }
@@ -2069,6 +2137,7 @@ class SimulationSettings: ObservableObject {
                 if toggleAll {
                     toggleAll = false
                 }
+                syncToggleAllState()
             }
         }
     }
@@ -2089,6 +2158,11 @@ class SimulationSettings: ObservableObject {
             guard oldValue != useBearMarket else { return }
 
             UserDefaults.standard.set(useBearMarket, forKey: "useBearMarket")
+            if !useBearMarket {
+                useBearMarketWeekly = false
+                useBearMarketMonthly = false
+            }
+
             if !isUpdating {
                 syncToggleAllState()
             }
@@ -2110,6 +2184,7 @@ class SimulationSettings: ObservableObject {
                 if toggleAll {
                     toggleAll = false
                 }
+                syncToggleAllState()
             }
         }
     }
@@ -2137,6 +2212,7 @@ class SimulationSettings: ObservableObject {
                 if toggleAll {
                     toggleAll = false
                 }
+                syncToggleAllState()
             }
         }
     }
@@ -2157,6 +2233,11 @@ class SimulationSettings: ObservableObject {
             guard oldValue != useMaturingMarket else { return }
 
             UserDefaults.standard.set(useMaturingMarket, forKey: "useMaturingMarket")
+            if !useMaturingMarket {
+                useMaturingMarketWeekly = false
+                useMaturingMarketMonthly = false
+            }
+
             if !isUpdating {
                 syncToggleAllState()
             }
@@ -2178,6 +2259,7 @@ class SimulationSettings: ObservableObject {
                 if toggleAll {
                     toggleAll = false
                 }
+                syncToggleAllState()
             }
         }
     }
@@ -2205,6 +2287,7 @@ class SimulationSettings: ObservableObject {
                 if toggleAll {
                     toggleAll = false
                 }
+                syncToggleAllState()
             }
         }
     }
@@ -2225,6 +2308,11 @@ class SimulationSettings: ObservableObject {
             guard oldValue != useRecession else { return }
 
             UserDefaults.standard.set(useRecession, forKey: "useRecession")
+            if !useRecession {
+                useRecessionWeekly = false
+                useRecessionMonthly = false
+            }
+
             if !isUpdating {
                 syncToggleAllState()
             }
@@ -2246,6 +2334,8 @@ class SimulationSettings: ObservableObject {
                 if toggleAll {
                     toggleAll = false
                 }
+                // **Re-check if everything is ON => toggleAll = true**
+                syncToggleAllState()
             }
         }
     }
@@ -2273,6 +2363,7 @@ class SimulationSettings: ObservableObject {
                 if toggleAll {
                     toggleAll = false
                 }
+                syncToggleAllState()
             }
         }
     }
