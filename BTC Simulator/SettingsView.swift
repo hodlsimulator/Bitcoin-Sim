@@ -565,9 +565,18 @@ struct SettingsView: View {
             // TOGGLE ALL FACTORS
             //====================================
             Section {
-                Toggle("Toggle All Factors", isOn: $simSettings.toggleAll)
-                    .tint(.orange)
-                    .foregroundColor(.white)
+                Toggle("Toggle All Factors",
+                       isOn: Binding<Bool>(
+                           get: { simSettings.toggleAll },
+                           set: { newValue in
+                               // When the user toggles in the UI, set the flag
+                               simSettings.userIsActuallyTogglingAll = true
+                               simSettings.toggleAll = newValue
+                           }
+                       )
+                )
+                .tint(.orange)
+                .foregroundColor(.white)
             } header: {
                 Text("Toggle All Factors")
             } footer: {
