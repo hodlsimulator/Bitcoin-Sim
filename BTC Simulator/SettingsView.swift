@@ -100,16 +100,16 @@ struct SettingsView: View {
                     title: "Halving",
                     isOn: $simSettings.useHalvingUnified,
                     sliderValue: $simSettings.halvingBumpUnified,
-
-                    // e.g.: Weekly range is 0...1, Monthly range 0...1.2 (just as a made-up example)
+                    
+                    // ±50% around weekly=0.48 => range 0.24...0.72
+                    // ±50% around monthly=0.58 => range 0.29...0.87
                     sliderRange: simSettings.periodUnit == .weeks
-                        ? 0.0...1.0
-                        : 0.0...1.2,
-                    // Midpoint defaults
+                        ? 0.24...0.72
+                        : 0.29...0.87,
                     defaultValue: simSettings.periodUnit == .weeks
-                        ? 0.48  // your weekly default
-                        : 0.58, // your monthly default
-
+                        ? 0.48
+                        : 0.58,
+                    
                     parameterDescription: """
                         Occurs roughly every four years, reducing the block reward in half.
                         Historically, halving events have coincided with substantial BTC price increases.
@@ -118,7 +118,6 @@ struct SettingsView: View {
                     onTitleTap: toggleFactor
                 )
                 .anchorPreference(key: TooltipAnchorKey.self, value: .center) { pt in
-                    // Preserve the original tooltip logic
                     if activeFactor == "Halving" {
                         let desc = """
                             Occurs roughly every four years, reducing the block reward in half.
@@ -136,14 +135,13 @@ struct SettingsView: View {
                     isOn: $simSettings.useInstitutionalDemandUnified,
                     sliderValue: $simSettings.maxDemandBoostUnified,
 
-                    // Suppose weekly range is 0...0.0024, monthly is 0...0.0048
+                    // default ~0.001239 => ±50% => 0.00062...0.00186
                     sliderRange: simSettings.periodUnit == .weeks
-                        ? 0.0...0.0024
-                        : 0.0...0.0048,
-                    // Place the “default” near your actual default
+                        ? 0.00062...0.00186
+                        : 0.00062...0.00186,
                     defaultValue: simSettings.periodUnit == .weeks
-                        ? 0.0012   // ~ midpoint
-                        : 0.0024,  // ~ midpoint for double
+                        ? 0.001239
+                        : 0.001239,
 
                     parameterDescription: """
                     Large financial institutions and corporate treasuries entering the BTC market can drive prices up.
@@ -159,12 +157,13 @@ struct SettingsView: View {
                     isOn: $simSettings.useCountryAdoptionUnified,
                     sliderValue: $simSettings.maxCountryAdBoostUnified,
 
+                    // default ~0.00047096 => ±50% => 0.00023548...0.00070644
                     sliderRange: simSettings.periodUnit == .weeks
-                        ? 0.0...0.00047
-                        : 0.0...0.00094,  // example doubling
+                        ? 0.00023548...0.00070644
+                        : 0.00023548...0.00070644,
                     defaultValue: simSettings.periodUnit == .weeks
-                        ? 0.000235
-                        : 0.00047,
+                        ? 0.00047096
+                        : 0.00047096,
 
                     parameterDescription: """
                     Nations adopting BTC as legal tender or as part of their reserves can lead to massive demand.
@@ -180,11 +179,12 @@ struct SettingsView: View {
                     isOn: $simSettings.useRegulatoryClarityUnified,
                     sliderValue: $simSettings.maxClarityBoostUnified,
 
+                    // default ~0.0016644 => ±50% => 0.0008322...0.0024966
                     sliderRange: simSettings.periodUnit == .weeks
-                        ? 0.0...0.0016644
-                        : 0.0...0.0033288,
+                        ? 0.0008322...0.0024966
+                        : 0.0008322...0.0024966,
                     defaultValue: simSettings.periodUnit == .weeks
-                        ? 0.0008322
+                        ? 0.0016644
                         : 0.0016644,
 
                     parameterDescription: """
@@ -201,12 +201,13 @@ struct SettingsView: View {
                     isOn: $simSettings.useEtfApprovalUnified,
                     sliderValue: $simSettings.maxEtfBoostUnified,
 
+                    // default ~0.000454685 => ±50% => 0.00022734...0.00068203
                     sliderRange: simSettings.periodUnit == .weeks
-                        ? 0.0...0.0004547
-                        : 0.0...0.0009094,
+                        ? 0.00022734...0.00068203
+                        : 0.00022734...0.00068203,
                     defaultValue: simSettings.periodUnit == .weeks
-                        ? 0.0002273
-                        : 0.0004547,
+                        ? 0.00045468
+                        : 0.00045468,
 
                     parameterDescription: """
                     Spot BTC ETFs allow traditional investors to gain exposure without holding actual BTC.
@@ -222,11 +223,12 @@ struct SettingsView: View {
                     isOn: $simSettings.useTechBreakthroughUnified,
                     sliderValue: $simSettings.maxTechBoostUnified,
 
+                    // default ~0.00040664 => ±50% => 0.00020332...0.00060996
                     sliderRange: simSettings.periodUnit == .weeks
-                        ? 0.0...0.00040664
-                        : 0.0...0.00081328,
+                        ? 0.00020332...0.00060996
+                        : 0.00020332...0.00060996,
                     defaultValue: simSettings.periodUnit == .weeks
-                        ? 0.00020332
+                        ? 0.00040664
                         : 0.00040664,
 
                     parameterDescription: """
@@ -243,11 +245,12 @@ struct SettingsView: View {
                     isOn: $simSettings.useScarcityEventsUnified,
                     sliderValue: $simSettings.maxScarcityBoostUnified,
 
+                    // default ~0.0007968 => ±50% => 0.0003984...0.0011952
                     sliderRange: simSettings.periodUnit == .weeks
-                        ? 0.0...0.0007968
-                        : 0.0...0.0015936,
+                        ? 0.0003984...0.0011952
+                        : 0.0003984...0.0011952,
                     defaultValue: simSettings.periodUnit == .weeks
-                        ? 0.0003984
+                        ? 0.0007968
                         : 0.0007968,
 
                     parameterDescription: """
@@ -264,11 +267,12 @@ struct SettingsView: View {
                     isOn: $simSettings.useGlobalMacroHedgeUnified,
                     sliderValue: $simSettings.maxMacroBoostUnified,
 
+                    // default ~0.00041935 => ±50% => 0.00020968...0.00062904
                     sliderRange: simSettings.periodUnit == .weeks
-                        ? 0.0...0.00041935
-                        : 0.0...0.0008387,
+                        ? 0.00020968...0.00062904
+                        : 0.00020968...0.00062904,
                     defaultValue: simSettings.periodUnit == .weeks
-                        ? 0.000209675
+                        ? 0.00041935
                         : 0.00041935,
 
                     parameterDescription: """
@@ -285,11 +289,12 @@ struct SettingsView: View {
                     isOn: $simSettings.useStablecoinShiftUnified,
                     sliderValue: $simSettings.maxStablecoinBoostUnified,
 
+                    // default ~0.00040493 => ±50% => 0.00020246...0.00060739
                     sliderRange: simSettings.periodUnit == .weeks
-                        ? 0.0...0.00040493
-                        : 0.0...0.00080985,
+                        ? 0.00020246...0.00060739
+                        : 0.00020246...0.00060739,
                     defaultValue: simSettings.periodUnit == .weeks
-                        ? 0.00020246
+                        ? 0.00040493
                         : 0.00040493,
 
                     parameterDescription: """
@@ -306,11 +311,12 @@ struct SettingsView: View {
                     isOn: $simSettings.useDemographicAdoptionUnified,
                     sliderValue: $simSettings.maxDemoBoostUnified,
 
+                    // default ~0.00130568 => ±50% => 0.00065284...0.00195852
                     sliderRange: simSettings.periodUnit == .weeks
-                        ? 0.0...0.00130568
-                        : 0.0...0.00261136,
+                        ? 0.00065284...0.00195852
+                        : 0.00065284...0.00195852,
                     defaultValue: simSettings.periodUnit == .weeks
-                        ? 0.00065284
+                        ? 0.00130568
                         : 0.00130568,
 
                     parameterDescription: """
@@ -327,11 +333,12 @@ struct SettingsView: View {
                     isOn: $simSettings.useAltcoinFlightUnified,
                     sliderValue: $simSettings.maxAltcoinBoostUnified,
 
+                    // default ~0.00028022 => ±50% => 0.00014011...0.00042033
                     sliderRange: simSettings.periodUnit == .weeks
-                        ? 0.0...0.00028022
-                        : 0.0...0.00056044,
+                        ? 0.00014011...0.00042033
+                        : 0.00014011...0.00042033,
                     defaultValue: simSettings.periodUnit == .weeks
-                        ? 0.00014011
+                        ? 0.00028022
                         : 0.00028022,
 
                     parameterDescription: """
@@ -348,11 +355,12 @@ struct SettingsView: View {
                     isOn: $simSettings.useAdoptionFactorUnified,
                     sliderValue: $simSettings.adoptionBaseFactorUnified,
 
+                    // default ~0.00096851 => ±50% => 0.00048425...0.00145276
                     sliderRange: simSettings.periodUnit == .weeks
-                        ? 0.0...0.00096851
-                        : 0.0...0.00193702,
+                        ? 0.00048425...0.00145276
+                        : 0.00048425...0.00145276,
                     defaultValue: simSettings.periodUnit == .weeks
-                        ? 0.000484255
+                        ? 0.00096851
                         : 0.00096851,
 
                     parameterDescription: """
@@ -374,13 +382,13 @@ struct SettingsView: View {
                     isOn: $simSettings.useRegClampdownUnified,
                     sliderValue: $simSettings.maxClampDownUnified,
                     
-                    // Example ranges & midpoints
+                    // default ~-0.00118833 => ±50% => range -0.00178249 ... -0.00059416
                     sliderRange: simSettings.periodUnit == .weeks
-                        ? -0.002376651382446289 ... 0.0
-                        : -0.004753302764892578 ... 0.0,  // doubled as an example
+                        ? -0.00178249 ... -0.00059416
+                        : -0.00178249 ... -0.00059416,
                     defaultValue: simSettings.periodUnit == .weeks
-                        ? -0.0011883256912231445
-                        : -0.002376651382446289,
+                        ? -0.00118833
+                        : -0.00118833,
                     
                     parameterDescription: """
                     Strict government regulations or bans can curb adoption,
@@ -396,12 +404,13 @@ struct SettingsView: View {
                     isOn: $simSettings.useCompetitorCoinUnified,
                     sliderValue: $simSettings.maxCompetitorBoostUnified,
                     
+                    // default ~-0.00112599 => ±50% => range -0.00168899 ... -0.00056299
                     sliderRange: simSettings.periodUnit == .weeks
-                        ? -0.0022519826889038086 ... 0.0
-                        : -0.004503965377807617  ... 0.0, // doubled
+                        ? -0.00168899 ... -0.00056299
+                        : -0.00168899 ... -0.00056299,
                     defaultValue: simSettings.periodUnit == .weeks
-                        ? -0.0011259913444519043
-                        : -0.0022519826889038086,
+                        ? -0.00112599
+                        : -0.00112599,
                     
                     parameterDescription: """
                     A rival cryptocurrency that promises superior tech or speed
@@ -417,12 +426,13 @@ struct SettingsView: View {
                     isOn: $simSettings.useSecurityBreachUnified,
                     sliderValue: $simSettings.breachImpactUnified,
                     
+                    // default ~-0.00076128 => ±50% => range -0.00114192 ... -0.00038064
                     sliderRange: simSettings.periodUnit == .weeks
-                        ? -0.0015225654668768184 ... 0.0
-                        : -0.0030451309337536368 ... 0.0, // doubled
+                        ? -0.00114192 ... -0.00038064
+                        : -0.00114192 ... -0.00038064,
                     defaultValue: simSettings.periodUnit == .weeks
-                        ? -0.0007612827334384092
-                        : -0.0015225654668768184,
+                        ? -0.00076128
+                        : -0.00076128,
                     
                     parameterDescription: """
                     A major hack or exploit targeting BTC or big exchanges
@@ -438,12 +448,13 @@ struct SettingsView: View {
                     isOn: $simSettings.useBubblePopUnified,
                     sliderValue: $simSettings.maxPopDropUnified,
                     
+                    // default ~-0.00125551 => ±50% => range -0.00188326 ... -0.00062775
                     sliderRange: simSettings.periodUnit == .weeks
-                        ? -0.002511013746261597 ... 0.0
-                        : -0.005022027492523194 ... 0.0, // doubled
+                        ? -0.00188326 ... -0.00062775
+                        : -0.00188326 ... -0.00062775,
                     defaultValue: simSettings.periodUnit == .weeks
-                        ? -0.0012555068731307985
-                        : -0.002511013746261597,
+                        ? -0.00125551
+                        : -0.00125551,
                     
                     parameterDescription: """
                     Speculative bubbles can burst, causing a rapid and sharp crash
@@ -459,12 +470,13 @@ struct SettingsView: View {
                     isOn: $simSettings.useStablecoinMeltdownUnified,
                     sliderValue: $simSettings.maxMeltdownDropUnified,
                     
+                    // default ~-0.00070280 => ±50% => range -0.00105421 ... -0.00035140
                     sliderRange: simSettings.periodUnit == .weeks
-                        ? -0.0014056092410835674 ... 0.0
-                        : -0.0028112184821671348 ... 0.0, // doubled
+                        ? -0.00105421 ... -0.00035140
+                        : -0.00105421 ... -0.00035140,
                     defaultValue: simSettings.periodUnit == .weeks
-                        ? -0.0007028046205417837
-                        : -0.0014056092410835674,
+                        ? -0.00070280
+                        : -0.00070280,
                     
                     parameterDescription: """
                     Major stablecoins de-pegging or collapsing can spark a crisis of confidence
@@ -480,12 +492,13 @@ struct SettingsView: View {
                     isOn: $simSettings.useBlackSwanUnified,
                     sliderValue: $simSettings.blackSwanDropUnified,
                     
+                    // default ~-0.00184115 => ±50% => range -0.00276172 ... -0.00092057
                     sliderRange: simSettings.periodUnit == .weeks
-                        ? -0.0036822905567344966 ... 0.0
-                        : -0.0073645811134689932 ... 0.0, // doubled
+                        ? -0.00276172 ... -0.00092057
+                        : -0.00276172 ... -0.00092057,
                     defaultValue: simSettings.periodUnit == .weeks
-                        ? -0.0018411452783672483
-                        : -0.0036822905567344966,
+                        ? -0.00184115
+                        : -0.00184115,
                     
                     parameterDescription: """
                     Highly unpredictable disasters or wars can undermine all markets,
@@ -501,12 +514,13 @@ struct SettingsView: View {
                     isOn: $simSettings.useBearMarketUnified,
                     sliderValue: $simSettings.bearWeeklyDriftUnified,
                     
+                    // default ~-0.00071953 => ±50% => range -0.00107930 ... -0.00035977
                     sliderRange: simSettings.periodUnit == .weeks
-                        ? -0.0014390611648559538 ... 0.0
-                        : -0.0028781223297119076 ... 0.0, // doubled
+                        ? -0.00107930 ... -0.00035977
+                        : -0.00107930 ... -0.00035977,
                     defaultValue: simSettings.periodUnit == .weeks
-                        ? -0.0007195305824279769
-                        : -0.0014390611648559538,
+                        ? -0.00071953
+                        : -0.00071953,
                     
                     parameterDescription: """
                     Prolonged negativity in crypto can produce a steady downward trend,
@@ -522,13 +536,13 @@ struct SettingsView: View {
                     isOn: $simSettings.useMaturingMarketUnified,
                     sliderValue: $simSettings.maxMaturingDropUnified,
                     
-                    // Original symmetrical range around -0.004 was -0.0046 ... -0.0034
+                    // default -0.004 => ±50% => range -0.006 ... -0.002
                     sliderRange: simSettings.periodUnit == .weeks
-                        ? -0.0046 ... -0.0034
-                        : -0.0092 ... -0.0068, // doubled as an example
+                        ? -0.006 ... -0.002
+                        : -0.006 ... -0.002,
                     defaultValue: simSettings.periodUnit == .weeks
                         ? -0.004
-                        : -0.008,  // midpoint of the doubled range
+                        : -0.004,
                     
                     parameterDescription: """
                     As BTC matures, growth rates slow, leading to smaller returns
@@ -544,12 +558,13 @@ struct SettingsView: View {
                     isOn: $simSettings.useRecessionUnified,
                     sliderValue: $simSettings.maxRecessionDropUnified,
                     
+                    // default ~-0.00145081 => ±50% => range -0.00217621 ... -0.00072540
                     sliderRange: simSettings.periodUnit == .weeks
-                        ? -0.0029016160964965826 ... 0.0
-                        : -0.0058032321929931652 ... 0.0, // doubled
+                        ? -0.00217621 ... -0.00072540
+                        : -0.00217621 ... -0.00072540,
                     defaultValue: simSettings.periodUnit == .weeks
-                        ? -0.0014508080482482913
-                        : -0.0029016160964965826,
+                        ? -0.00145081
+                        : -0.00145081,
                     
                     parameterDescription: """
                     Global economic downturns reduce risk appetite,
