@@ -554,6 +554,9 @@ class SimulationSettings: ObservableObject {
 
         // Done loading from UserDefaults
         isUpdating = false
+        
+        finalizeToggleStateAfterLoad()
+        
         isInitialized = true
 
         // Optional final sync to set toggleAll properly
@@ -2862,5 +2865,64 @@ class SimulationSettings: ObservableObject {
 
         // Reset lockHistoricalSampling
         lockHistoricalSampling = false
+    }
+    
+    /// After finishing our initial UserDefaults load (when `isUpdating` is false),
+    /// call this to sync parent toggles based on their child weekly/monthly toggles.
+    /// If either weekly or monthly is `true`, the parent becomes `true`; otherwise `false`.
+    private func finalizeToggleStateAfterLoad() {
+        
+        // -----------------------------
+        // BULLISH
+        // -----------------------------
+        // Halving
+        useHalving = (useHalvingWeekly || useHalvingMonthly)
+        // Institutional Demand
+        useInstitutionalDemand = (useInstitutionalDemandWeekly || useInstitutionalDemandMonthly)
+        // Country Adoption
+        useCountryAdoption = (useCountryAdoptionWeekly || useCountryAdoptionMonthly)
+        // Regulatory Clarity
+        useRegulatoryClarity = (useRegulatoryClarityWeekly || useRegulatoryClarityMonthly)
+        // ETF Approval
+        useEtfApproval = (useEtfApprovalWeekly || useEtfApprovalMonthly)
+        // Tech Breakthrough
+        useTechBreakthrough = (useTechBreakthroughWeekly || useTechBreakthroughMonthly)
+        // Scarcity Events
+        useScarcityEvents = (useScarcityEventsWeekly || useScarcityEventsMonthly)
+        // Global Macro Hedge
+        useGlobalMacroHedge = (useGlobalMacroHedgeWeekly || useGlobalMacroHedgeMonthly)
+        // Stablecoin Shift
+        useStablecoinShift = (useStablecoinShiftWeekly || useStablecoinShiftMonthly)
+        // Demographic Adoption
+        useDemographicAdoption = (useDemographicAdoptionWeekly || useDemographicAdoptionMonthly)
+        // Altcoin Flight
+        useAltcoinFlight = (useAltcoinFlightWeekly || useAltcoinFlightMonthly)
+        // Adoption Factor
+        useAdoptionFactor = (useAdoptionFactorWeekly || useAdoptionFactorMonthly)
+        
+        // -----------------------------
+        // BEARISH
+        // -----------------------------
+        // Regulatory Clampdown
+        useRegClampdown = (useRegClampdownWeekly || useRegClampdownMonthly)
+        // Competitor Coin
+        useCompetitorCoin = (useCompetitorCoinWeekly || useCompetitorCoinMonthly)
+        // Security Breach
+        useSecurityBreach = (useSecurityBreachWeekly || useSecurityBreachMonthly)
+        // Bubble Pop
+        useBubblePop = (useBubblePopWeekly || useBubblePopMonthly)
+        // Stablecoin Meltdown
+        useStablecoinMeltdown = (useStablecoinMeltdownWeekly || useStablecoinMeltdownMonthly)
+        // Black Swan
+        useBlackSwan = (useBlackSwanWeekly || useBlackSwanMonthly)
+        // Bear Market
+        useBearMarket = (useBearMarketWeekly || useBearMarketMonthly)
+        // Maturing Market
+        useMaturingMarket = (useMaturingMarketWeekly || useMaturingMarketMonthly)
+        // Recession
+        useRecession = (useRecessionWeekly || useRecessionMonthly)
+        
+        // Finally, let’s sync the master toggle if needed
+        syncToggleAllState()
     }
 }
