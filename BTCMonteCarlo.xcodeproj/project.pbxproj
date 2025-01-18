@@ -18,6 +18,7 @@
 		E14D24092D3A677F007CC11A /* SettingsPrinter.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14D24082D3A677D007CC11A /* SettingsPrinter.swift */; };
 		E14D240B2D3A698A007CC11A /* SimulationSettingsInit.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14D240A2D3A6988007CC11A /* SimulationSettingsInit.swift */; };
 		E14D24112D3A9525007CC11A /* SimulationSettings+UnifiedFactors.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14D24102D3A9524007CC11A /* SimulationSettings+UnifiedFactors.swift */; };
+		E14D24152D3B3BEA007CC11A /* TestBearishFactorsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14D24142D3B3BE8007CC11A /* TestBearishFactorsView.swift */; };
 		E166A8AA2CF855B00003F518 /* CSVLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = E166A8A92CF855B00003F518 /* CSVLoader.swift */; };
 		E166A8AC2CF855B60003F518 /* DoubleExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = E166A8AB2CF855B60003F518 /* DoubleExtensions.swift */; };
 		E166A8AE2CF855BF0003F518 /* MonteCarloSimulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = E166A8AD2CF855BF0003F518 /* MonteCarloSimulator.swift */; };
@@ -71,6 +72,7 @@
 		E14D24082D3A677D007CC11A /* SettingsPrinter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsPrinter.swift; sourceTree = "<group>"; };
 		E14D240A2D3A6988007CC11A /* SimulationSettingsInit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulationSettingsInit.swift; sourceTree = "<group>"; };
 		E14D24102D3A9524007CC11A /* SimulationSettings+UnifiedFactors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SimulationSettings+UnifiedFactors.swift"; sourceTree = "<group>"; };
+		E14D24142D3B3BE8007CC11A /* TestBearishFactorsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestBearishFactorsView.swift; sourceTree = "<group>"; };
 		E166A8A92CF855B00003F518 /* CSVLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVLoader.swift; sourceTree = "<group>"; };
 		E166A8AB2CF855B60003F518 /* DoubleExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoubleExtensions.swift; sourceTree = "<group>"; };
 		E166A8AD2CF855BF0003F518 /* MonteCarloSimulator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonteCarloSimulator.swift; sourceTree = "<group>"; };
@@ -187,6 +189,7 @@
 				E14D23F42D374258007CC11A /* SimulationSummaryCardView.swift */,
 				E17B2F232D26DF4F00ECE087 /* SnapshotsDebugView.swift */,
 				E1A1E52C2D2E39E3008F7658 /* SnapshotExtensions.swift */,
+				E14D24142D3B3BE8007CC11A /* TestBearishFactorsView.swift */,
 				E1A1E5262D2E371B008F7658 /* TipsData.swift */,
 				E1883F412D1E43D7007AA90B /* VisualEffectBlur.swift */,
 				E1C543B92D22839F005E416D /* YearlyPercentileData.swift */,
@@ -356,6 +359,7 @@
 				E18C2BE12D259248006E7438 /* ChartSnapshotView.swift in Sources */,
 				E166A8AA2CF855B00003F518 /* CSVLoader.swift in Sources */,
 				E1A1E52D2D2E39E4008F7658 /* SnapshotExtensions.swift in Sources */,
+				E14D24152D3B3BEA007CC11A /* TestBearishFactorsView.swift in Sources */,
 				E1A1E51F2D2A7364008F7658 /* PortfolioChartView.swift in Sources */,
 				E1883F442D1E69B9007AA90B /* FactorToggleRow.swift in Sources */,
 				E17B2F242D26DF5200ECE087 /* SnapshotsDebugView.swift in Sources */,
