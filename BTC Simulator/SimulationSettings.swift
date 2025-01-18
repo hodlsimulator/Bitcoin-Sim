@@ -106,6 +106,455 @@ class SimulationSettings: ObservableObject {
     private static let defaultMaxRecessionDropMonthly  = -0.0014508080482482913
     
     init() {
+        let defaults = UserDefaults.standard
+        // Temporarily prevent didSet logic from firing while we load from UserDefaults
+        isUpdating = true
+
+        // ------------------------------------------------
+        // Basic Settings
+        // ------------------------------------------------
+
+        if let storedPeriodUnit = defaults.string(forKey: "periodUnit"),
+           let loadedPeriodUnit = PeriodUnit(rawValue: storedPeriodUnit) {
+            periodUnit = loadedPeriodUnit
+        }
+        if defaults.object(forKey: "userPeriods") != nil {
+            userPeriods = defaults.integer(forKey: "userPeriods")
+        }
+        if defaults.object(forKey: "initialBTCPriceUSD") != nil {
+            initialBTCPriceUSD = defaults.double(forKey: "initialBTCPriceUSD")
+        }
+        if defaults.object(forKey: "startingBalance") != nil {
+            startingBalance = defaults.double(forKey: "startingBalance")
+        }
+        if defaults.object(forKey: "averageCostBasis") != nil {
+            averageCostBasis = defaults.double(forKey: "averageCostBasis")
+        }
+
+        if let currencyString = defaults.string(forKey: "currencyPreference"),
+           let loadedCurrency = PreferredCurrency(rawValue: currencyString) {
+            currencyPreference = loadedCurrency
+        }
+        // These two are used only if you have logic to save them:
+        // if let ccwbString = defaults.string(forKey: "contributionCurrencyWhenBoth"),
+        //    let ccwbEnum = PreferredCurrency(rawValue: ccwbString) {
+        //    contributionCurrencyWhenBoth = ccwbEnum
+        // }
+        // if let sbcwbString = defaults.string(forKey: "startingBalanceCurrencyWhenBoth"),
+        //    let sbcwbEnum = PreferredCurrency(rawValue: sbcwbString) {
+        //    startingBalanceCurrencyWhenBoth = sbcwbEnum
+        // }
+
+        // ------------------------------------------------
+        // Master Toggle
+        // ------------------------------------------------
+        if defaults.object(forKey: "toggleAll") != nil {
+            toggleAll = defaults.bool(forKey: "toggleAll")
+        }
+
+        // ------------------------------------------------
+        // Seeds & Sampling
+        // ------------------------------------------------
+        if defaults.object(forKey: "useLognormalGrowth") != nil {
+            useLognormalGrowth = defaults.bool(forKey: "useLognormalGrowth")
+        }
+        if defaults.object(forKey: "lockedRandomSeed") != nil {
+            lockedRandomSeed = defaults.bool(forKey: "lockedRandomSeed")
+        }
+        let rawSeed = defaults.integer(forKey: "seedValue")
+        if rawSeed >= 0 {
+            seedValue = UInt64(rawSeed)
+        } else {
+            // Fallback to zero or any default you prefer
+            seedValue = 0
+        }
+        if defaults.object(forKey: "useRandomSeed") != nil {
+            useRandomSeed = defaults.bool(forKey: "useRandomSeed")
+        }
+        if defaults.object(forKey: "useHistoricalSampling") != nil {
+            useHistoricalSampling = defaults.bool(forKey: "useHistoricalSampling")
+        }
+        if defaults.object(forKey: "useVolShocks") != nil {
+            useVolShocks = defaults.bool(forKey: "useVolShocks")
+        }
+        if defaults.object(forKey: "lastUsedSeed") != nil {
+            lastUsedSeed = UInt64(defaults.integer(forKey: "lastUsedSeed"))
+        }
+        if defaults.object(forKey: "lockHistoricalSampling") != nil {
+            lockHistoricalSampling = defaults.bool(forKey: "lockHistoricalSampling")
+        }
+
+        // ------------------------------------------------
+        // BULLISH FACTORS
+        // ------------------------------------------------
+
+        // Halving
+        if defaults.object(forKey: "useHalving") != nil {
+            useHalving = defaults.bool(forKey: "useHalving")
+        }
+        if defaults.object(forKey: "useHalvingWeekly") != nil {
+            useHalvingWeekly = defaults.bool(forKey: "useHalvingWeekly")
+        }
+        if defaults.object(forKey: "useHalvingMonthly") != nil {
+            useHalvingMonthly = defaults.bool(forKey: "useHalvingMonthly")
+        }
+        if defaults.object(forKey: "halvingBumpWeekly") != nil {
+            halvingBumpWeekly = defaults.double(forKey: "halvingBumpWeekly")
+        }
+        if defaults.object(forKey: "halvingBumpMonthly") != nil {
+            halvingBumpMonthly = defaults.double(forKey: "halvingBumpMonthly")
+        }
+
+        // Institutional Demand
+        if defaults.object(forKey: "useInstitutionalDemand") != nil {
+            useInstitutionalDemand = defaults.bool(forKey: "useInstitutionalDemand")
+        }
+        if defaults.object(forKey: "useInstitutionalDemandWeekly") != nil {
+            useInstitutionalDemandWeekly = defaults.bool(forKey: "useInstitutionalDemandWeekly")
+        }
+        if defaults.object(forKey: "useInstitutionalDemandMonthly") != nil {
+            useInstitutionalDemandMonthly = defaults.bool(forKey: "useInstitutionalDemandMonthly")
+        }
+        if defaults.object(forKey: "maxDemandBoostWeekly") != nil {
+            maxDemandBoostWeekly = defaults.double(forKey: "maxDemandBoostWeekly")
+        }
+        if defaults.object(forKey: "maxDemandBoostMonthly") != nil {
+            maxDemandBoostMonthly = defaults.double(forKey: "maxDemandBoostMonthly")
+        }
+
+        // Country Adoption
+        if defaults.object(forKey: "useCountryAdoption") != nil {
+            useCountryAdoption = defaults.bool(forKey: "useCountryAdoption")
+        }
+        if defaults.object(forKey: "useCountryAdoptionWeekly") != nil {
+            useCountryAdoptionWeekly = defaults.bool(forKey: "useCountryAdoptionWeekly")
+        }
+        if defaults.object(forKey: "useCountryAdoptionMonthly") != nil {
+            useCountryAdoptionMonthly = defaults.bool(forKey: "useCountryAdoptionMonthly")
+        }
+        if defaults.object(forKey: "maxCountryAdBoostWeekly") != nil {
+            maxCountryAdBoostWeekly = defaults.double(forKey: "maxCountryAdBoostWeekly")
+        }
+        if defaults.object(forKey: "maxCountryAdBoostMonthly") != nil {
+            maxCountryAdBoostMonthly = defaults.double(forKey: "maxCountryAdBoostMonthly")
+        }
+
+        // Regulatory Clarity
+        if defaults.object(forKey: "useRegulatoryClarity") != nil {
+            useRegulatoryClarity = defaults.bool(forKey: "useRegulatoryClarity")
+        }
+        if defaults.object(forKey: "useRegulatoryClarityWeekly") != nil {
+            useRegulatoryClarityWeekly = defaults.bool(forKey: "useRegulatoryClarityWeekly")
+        }
+        if defaults.object(forKey: "useRegulatoryClarityMonthly") != nil {
+            useRegulatoryClarityMonthly = defaults.bool(forKey: "useRegulatoryClarityMonthly")
+        }
+        if defaults.object(forKey: "maxClarityBoostWeekly") != nil {
+            maxClarityBoostWeekly = defaults.double(forKey: "maxClarityBoostWeekly")
+        }
+        if defaults.object(forKey: "maxClarityBoostMonthly") != nil {
+            maxClarityBoostMonthly = defaults.double(forKey: "maxClarityBoostMonthly")
+        }
+
+        // ETF Approval
+        if defaults.object(forKey: "useEtfApproval") != nil {
+            useEtfApproval = defaults.bool(forKey: "useEtfApproval")
+        }
+        if defaults.object(forKey: "useEtfApprovalWeekly") != nil {
+            useEtfApprovalWeekly = defaults.bool(forKey: "useEtfApprovalWeekly")
+        }
+        if defaults.object(forKey: "useEtfApprovalMonthly") != nil {
+            useEtfApprovalMonthly = defaults.bool(forKey: "useEtfApprovalMonthly")
+        }
+        if defaults.object(forKey: "maxEtfBoostWeekly") != nil {
+            maxEtfBoostWeekly = defaults.double(forKey: "maxEtfBoostWeekly")
+        }
+        if defaults.object(forKey: "maxEtfBoostMonthly") != nil {
+            maxEtfBoostMonthly = defaults.double(forKey: "maxEtfBoostMonthly")
+        }
+
+        // Tech Breakthrough
+        if defaults.object(forKey: "useTechBreakthrough") != nil {
+            useTechBreakthrough = defaults.bool(forKey: "useTechBreakthrough")
+        }
+        if defaults.object(forKey: "useTechBreakthroughWeekly") != nil {
+            useTechBreakthroughWeekly = defaults.bool(forKey: "useTechBreakthroughWeekly")
+        }
+        if defaults.object(forKey: "useTechBreakthroughMonthly") != nil {
+            useTechBreakthroughMonthly = defaults.bool(forKey: "useTechBreakthroughMonthly")
+        }
+        if defaults.object(forKey: "maxTechBoostWeekly") != nil {
+            maxTechBoostWeekly = defaults.double(forKey: "maxTechBoostWeekly")
+        }
+        if defaults.object(forKey: "maxTechBoostMonthly") != nil {
+            maxTechBoostMonthly = defaults.double(forKey: "maxTechBoostMonthly")
+        }
+
+        // Scarcity Events
+        if defaults.object(forKey: "useScarcityEvents") != nil {
+            useScarcityEvents = defaults.bool(forKey: "useScarcityEvents")
+        }
+        if defaults.object(forKey: "useScarcityEventsWeekly") != nil {
+            useScarcityEventsWeekly = defaults.bool(forKey: "useScarcityEventsWeekly")
+        }
+        if defaults.object(forKey: "useScarcityEventsMonthly") != nil {
+            useScarcityEventsMonthly = defaults.bool(forKey: "useScarcityEventsMonthly")
+        }
+        if defaults.object(forKey: "maxScarcityBoostWeekly") != nil {
+            maxScarcityBoostWeekly = defaults.double(forKey: "maxScarcityBoostWeekly")
+        }
+        if defaults.object(forKey: "maxScarcityBoostMonthly") != nil {
+            maxScarcityBoostMonthly = defaults.double(forKey: "maxScarcityBoostMonthly")
+        }
+
+        // Global Macro Hedge
+        if defaults.object(forKey: "useGlobalMacroHedge") != nil {
+            useGlobalMacroHedge = defaults.bool(forKey: "useGlobalMacroHedge")
+        }
+        if defaults.object(forKey: "useGlobalMacroHedgeWeekly") != nil {
+            useGlobalMacroHedgeWeekly = defaults.bool(forKey: "useGlobalMacroHedgeWeekly")
+        }
+        if defaults.object(forKey: "useGlobalMacroHedgeMonthly") != nil {
+            useGlobalMacroHedgeMonthly = defaults.bool(forKey: "useGlobalMacroHedgeMonthly")
+        }
+        if defaults.object(forKey: "maxMacroBoostWeekly") != nil {
+            maxMacroBoostWeekly = defaults.double(forKey: "maxMacroBoostWeekly")
+        }
+        if defaults.object(forKey: "maxMacroBoostMonthly") != nil {
+            maxMacroBoostMonthly = defaults.double(forKey: "maxMacroBoostMonthly")
+        }
+
+        // Stablecoin Shift
+        if defaults.object(forKey: "useStablecoinShift") != nil {
+            useStablecoinShift = defaults.bool(forKey: "useStablecoinShift")
+        }
+        if defaults.object(forKey: "useStablecoinShiftWeekly") != nil {
+            useStablecoinShiftWeekly = defaults.bool(forKey: "useStablecoinShiftWeekly")
+        }
+        if defaults.object(forKey: "useStablecoinShiftMonthly") != nil {
+            useStablecoinShiftMonthly = defaults.bool(forKey: "useStablecoinShiftMonthly")
+        }
+        if defaults.object(forKey: "maxStablecoinBoostWeekly") != nil {
+            maxStablecoinBoostWeekly = defaults.double(forKey: "maxStablecoinBoostWeekly")
+        }
+        if defaults.object(forKey: "maxStablecoinBoostMonthly") != nil {
+            maxStablecoinBoostMonthly = defaults.double(forKey: "maxStablecoinBoostMonthly")
+        }
+
+        // Demographic Adoption
+        if defaults.object(forKey: "useDemographicAdoption") != nil {
+            useDemographicAdoption = defaults.bool(forKey: "useDemographicAdoption")
+        }
+        if defaults.object(forKey: "useDemographicAdoptionWeekly") != nil {
+            useDemographicAdoptionWeekly = defaults.bool(forKey: "useDemographicAdoptionWeekly")
+        }
+        if defaults.object(forKey: "useDemographicAdoptionMonthly") != nil {
+            useDemographicAdoptionMonthly = defaults.bool(forKey: "useDemographicAdoptionMonthly")
+        }
+        if defaults.object(forKey: "maxDemoBoostWeekly") != nil {
+            maxDemoBoostWeekly = defaults.double(forKey: "maxDemoBoostWeekly")
+        }
+        if defaults.object(forKey: "maxDemoBoostMonthly") != nil {
+            maxDemoBoostMonthly = defaults.double(forKey: "maxDemoBoostMonthly")
+        }
+
+        // Altcoin Flight
+        if defaults.object(forKey: "useAltcoinFlight") != nil {
+            useAltcoinFlight = defaults.bool(forKey: "useAltcoinFlight")
+        }
+        if defaults.object(forKey: "useAltcoinFlightWeekly") != nil {
+            useAltcoinFlightWeekly = defaults.bool(forKey: "useAltcoinFlightWeekly")
+        }
+        if defaults.object(forKey: "useAltcoinFlightMonthly") != nil {
+            useAltcoinFlightMonthly = defaults.bool(forKey: "useAltcoinFlightMonthly")
+        }
+        if defaults.object(forKey: "maxAltcoinBoostWeekly") != nil {
+            maxAltcoinBoostWeekly = defaults.double(forKey: "maxAltcoinBoostWeekly")
+        }
+        if defaults.object(forKey: "maxAltcoinBoostMonthly") != nil {
+            maxAltcoinBoostMonthly = defaults.double(forKey: "maxAltcoinBoostMonthly")
+        }
+
+        // Adoption Factor
+        if defaults.object(forKey: "useAdoptionFactor") != nil {
+            useAdoptionFactor = defaults.bool(forKey: "useAdoptionFactor")
+        }
+        if defaults.object(forKey: "useAdoptionFactorWeekly") != nil {
+            useAdoptionFactorWeekly = defaults.bool(forKey: "useAdoptionFactorWeekly")
+        }
+        if defaults.object(forKey: "useAdoptionFactorMonthly") != nil {
+            useAdoptionFactorMonthly = defaults.bool(forKey: "useAdoptionFactorMonthly")
+        }
+        if defaults.object(forKey: "adoptionBaseFactorWeekly") != nil {
+            adoptionBaseFactorWeekly = defaults.double(forKey: "adoptionBaseFactorWeekly")
+        }
+        if defaults.object(forKey: "adoptionBaseFactorMonthly") != nil {
+            adoptionBaseFactorMonthly = defaults.double(forKey: "adoptionBaseFactorMonthly")
+        }
+
+        // ------------------------------------------------
+        // BEARISH FACTORS
+        // ------------------------------------------------
+
+        // Regulatory Clampdown
+        if defaults.object(forKey: "useRegClampdown") != nil {
+            useRegClampdown = defaults.bool(forKey: "useRegClampdown")
+        }
+        if defaults.object(forKey: "useRegClampdownWeekly") != nil {
+            useRegClampdownWeekly = defaults.bool(forKey: "useRegClampdownWeekly")
+        }
+        if defaults.object(forKey: "useRegClampdownMonthly") != nil {
+            useRegClampdownMonthly = defaults.bool(forKey: "useRegClampdownMonthly")
+        }
+        if defaults.object(forKey: "maxClampDownWeekly") != nil {
+            maxClampDownWeekly = defaults.double(forKey: "maxClampDownWeekly")
+        }
+        if defaults.object(forKey: "maxClampDownMonthly") != nil {
+            maxClampDownMonthly = defaults.double(forKey: "maxClampDownMonthly")
+        }
+
+        // Competitor Coin
+        if defaults.object(forKey: "useCompetitorCoin") != nil {
+            useCompetitorCoin = defaults.bool(forKey: "useCompetitorCoin")
+        }
+        if defaults.object(forKey: "useCompetitorCoinWeekly") != nil {
+            useCompetitorCoinWeekly = defaults.bool(forKey: "useCompetitorCoinWeekly")
+        }
+        if defaults.object(forKey: "useCompetitorCoinMonthly") != nil {
+            useCompetitorCoinMonthly = defaults.bool(forKey: "useCompetitorCoinMonthly")
+        }
+        if defaults.object(forKey: "maxCompetitorBoostWeekly") != nil {
+            maxCompetitorBoostWeekly = defaults.double(forKey: "maxCompetitorBoostWeekly")
+        }
+        if defaults.object(forKey: "maxCompetitorBoostMonthly") != nil {
+            maxCompetitorBoostMonthly = defaults.double(forKey: "maxCompetitorBoostMonthly")
+        }
+
+        // Security Breach
+        if defaults.object(forKey: "useSecurityBreach") != nil {
+            useSecurityBreach = defaults.bool(forKey: "useSecurityBreach")
+        }
+        if defaults.object(forKey: "useSecurityBreachWeekly") != nil {
+            useSecurityBreachWeekly = defaults.bool(forKey: "useSecurityBreachWeekly")
+        }
+        if defaults.object(forKey: "useSecurityBreachMonthly") != nil {
+            useSecurityBreachMonthly = defaults.bool(forKey: "useSecurityBreachMonthly")
+        }
+        if defaults.object(forKey: "breachImpactWeekly") != nil {
+            breachImpactWeekly = defaults.double(forKey: "breachImpactWeekly")
+        }
+        if defaults.object(forKey: "breachImpactMonthly") != nil {
+            breachImpactMonthly = defaults.double(forKey: "breachImpactMonthly")
+        }
+
+        // Bubble Pop
+        if defaults.object(forKey: "useBubblePop") != nil {
+            useBubblePop = defaults.bool(forKey: "useBubblePop")
+        }
+        if defaults.object(forKey: "useBubblePopWeekly") != nil {
+            useBubblePopWeekly = defaults.bool(forKey: "useBubblePopWeekly")
+        }
+        if defaults.object(forKey: "useBubblePopMonthly") != nil {
+            useBubblePopMonthly = defaults.bool(forKey: "useBubblePopMonthly")
+        }
+        if defaults.object(forKey: "maxPopDropWeekly") != nil {
+            maxPopDropWeekly = defaults.double(forKey: "maxPopDropWeekly")
+        }
+        if defaults.object(forKey: "maxPopDropMonthly") != nil {
+            maxPopDropMonthly = defaults.double(forKey: "maxPopDropMonthly")
+        }
+
+        // Stablecoin Meltdown
+        if defaults.object(forKey: "useStablecoinMeltdown") != nil {
+            useStablecoinMeltdown = defaults.bool(forKey: "useStablecoinMeltdown")
+        }
+        if defaults.object(forKey: "useStablecoinMeltdownWeekly") != nil {
+            useStablecoinMeltdownWeekly = defaults.bool(forKey: "useStablecoinMeltdownWeekly")
+        }
+        if defaults.object(forKey: "useStablecoinMeltdownMonthly") != nil {
+            useStablecoinMeltdownMonthly = defaults.bool(forKey: "useStablecoinMeltdownMonthly")
+        }
+        if defaults.object(forKey: "maxMeltdownDropWeekly") != nil {
+            maxMeltdownDropWeekly = defaults.double(forKey: "maxMeltdownDropWeekly")
+        }
+        if defaults.object(forKey: "maxMeltdownDropMonthly") != nil {
+            maxMeltdownDropMonthly = defaults.double(forKey: "maxMeltdownDropMonthly")
+        }
+
+        // Black Swan
+        if defaults.object(forKey: "useBlackSwan") != nil {
+            useBlackSwan = defaults.bool(forKey: "useBlackSwan")
+        }
+        if defaults.object(forKey: "useBlackSwanWeekly") != nil {
+            useBlackSwanWeekly = defaults.bool(forKey: "useBlackSwanWeekly")
+        }
+        if defaults.object(forKey: "useBlackSwanMonthly") != nil {
+            useBlackSwanMonthly = defaults.bool(forKey: "useBlackSwanMonthly")
+        }
+        if defaults.object(forKey: "blackSwanDropWeekly") != nil {
+            blackSwanDropWeekly = defaults.double(forKey: "blackSwanDropWeekly")
+        }
+        if defaults.object(forKey: "blackSwanDropMonthly") != nil {
+            blackSwanDropMonthly = defaults.double(forKey: "blackSwanDropMonthly")
+        }
+
+        // Bear Market
+        if defaults.object(forKey: "useBearMarket") != nil {
+            useBearMarket = defaults.bool(forKey: "useBearMarket")
+        }
+        if defaults.object(forKey: "useBearMarketWeekly") != nil {
+            useBearMarketWeekly = defaults.bool(forKey: "useBearMarketWeekly")
+        }
+        if defaults.object(forKey: "useBearMarketMonthly") != nil {
+            useBearMarketMonthly = defaults.bool(forKey: "useBearMarketMonthly")
+        }
+        if defaults.object(forKey: "bearWeeklyDriftWeekly") != nil {
+            bearWeeklyDriftWeekly = defaults.double(forKey: "bearWeeklyDriftWeekly")
+        }
+        if defaults.object(forKey: "bearWeeklyDriftMonthly") != nil {
+            bearWeeklyDriftMonthly = defaults.double(forKey: "bearWeeklyDriftMonthly")
+        }
+
+        // Maturing Market
+        if defaults.object(forKey: "useMaturingMarket") != nil {
+            useMaturingMarket = defaults.bool(forKey: "useMaturingMarket")
+        }
+        if defaults.object(forKey: "useMaturingMarketWeekly") != nil {
+            useMaturingMarketWeekly = defaults.bool(forKey: "useMaturingMarketWeekly")
+        }
+        if defaults.object(forKey: "useMaturingMarketMonthly") != nil {
+            useMaturingMarketMonthly = defaults.bool(forKey: "useMaturingMarketMonthly")
+        }
+        if defaults.object(forKey: "maxMaturingDropWeekly") != nil {
+            maxMaturingDropWeekly = defaults.double(forKey: "maxMaturingDropWeekly")
+        }
+        if defaults.object(forKey: "maxMaturingDropMonthly") != nil {
+            maxMaturingDropMonthly = defaults.double(forKey: "maxMaturingDropMonthly")
+        }
+
+        // Recession
+        if defaults.object(forKey: "useRecession") != nil {
+            useRecession = defaults.bool(forKey: "useRecession")
+        }
+        if defaults.object(forKey: "useRecessionWeekly") != nil {
+            useRecessionWeekly = defaults.bool(forKey: "useRecessionWeekly")
+        }
+        if defaults.object(forKey: "useRecessionMonthly") != nil {
+            useRecessionMonthly = defaults.bool(forKey: "useRecessionMonthly")
+        }
+        if defaults.object(forKey: "maxRecessionDropWeekly") != nil {
+            maxRecessionDropWeekly = defaults.double(forKey: "maxRecessionDropWeekly")
+        }
+        if defaults.object(forKey: "maxRecessionDropMonthly") != nil {
+            maxRecessionDropMonthly = defaults.double(forKey: "maxRecessionDropMonthly")
+        }
+
+        // Done loading from UserDefaults
+        isUpdating = false
+        isInitialized = true
+
+        // Optional final sync to set toggleAll properly
+        syncToggleAllState()
     }
     
     var inputManager: PersistentInputManager? = nil
