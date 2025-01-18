@@ -241,75 +241,205 @@ private func applyFactorToggles(
     blackSwanWeeks: [Int]
 ) -> Double {
     var r = baseReturn
+    let isWeekly = (settings.periodUnit == .weeks)
     
-    // Halving: we keep useHalving as the on/off toggle,
-    // but use halvingBumpUnified for the numeric effect.
-    if settings.useHalving && halvingWeeks.contains(week) {
-        r += settings.halvingBumpUnified
+    // Halving
+    if settings.useHalving {
+        // Only add halving bump if we match the current week/month
+        if isWeekly && settings.useHalvingWeekly && halvingWeeks.contains(week) {
+            r += settings.halvingBumpWeekly
+        } else if !isWeekly && settings.useHalvingMonthly && halvingWeeks.contains(week) {
+            r += settings.halvingBumpMonthly
+        }
     }
     
-    // Bullish toggles
+    // ──────────────────────────────────────────────────────────────────────────
+    // BULLISH FACTORS
+    // ──────────────────────────────────────────────────────────────────────────
+    
+    // Institutional Demand
     if settings.useInstitutionalDemand {
-        r += settings.maxDemandBoostUnified
-    }
-    if settings.useCountryAdoption {
-        r += settings.maxCountryAdBoostUnified
-    }
-    if settings.useRegulatoryClarity {
-        r += settings.maxClarityBoostUnified
-    }
-    if settings.useEtfApproval {
-        r += settings.maxEtfBoostUnified
-    }
-    if settings.useTechBreakthrough {
-        r += settings.maxTechBoostUnified
-    }
-    if settings.useScarcityEvents {
-        r += settings.maxScarcityBoostUnified
-    }
-    if settings.useGlobalMacroHedge {
-        r += settings.maxMacroBoostUnified
-    }
-    if settings.useStablecoinShift {
-        r += settings.maxStablecoinBoostUnified
-    }
-    if settings.useDemographicAdoption {
-        r += settings.maxDemoBoostUnified
-    }
-    if settings.useAltcoinFlight {
-        r += settings.maxAltcoinBoostUnified
-    }
-    if settings.useAdoptionFactor {
-        r += settings.adoptionBaseFactorUnified
+        if isWeekly && settings.useInstitutionalDemandWeekly {
+            r += settings.maxDemandBoostWeekly
+        } else if !isWeekly && settings.useInstitutionalDemandMonthly {
+            r += settings.maxDemandBoostMonthly
+        }
     }
     
-    // Bearish toggles
+    // Country Adoption
+    if settings.useCountryAdoption {
+        if isWeekly && settings.useCountryAdoptionWeekly {
+            r += settings.maxCountryAdBoostWeekly
+        } else if !isWeekly && settings.useCountryAdoptionMonthly {
+            r += settings.maxCountryAdBoostMonthly
+        }
+    }
+    
+    // Regulatory Clarity
+    if settings.useRegulatoryClarity {
+        if isWeekly && settings.useRegulatoryClarityWeekly {
+            r += settings.maxClarityBoostWeekly
+        } else if !isWeekly && settings.useRegulatoryClarityMonthly {
+            r += settings.maxClarityBoostMonthly
+        }
+    }
+    
+    // ETF Approval
+    if settings.useEtfApproval {
+        if isWeekly && settings.useEtfApprovalWeekly {
+            r += settings.maxEtfBoostWeekly
+        } else if !isWeekly && settings.useEtfApprovalMonthly {
+            r += settings.maxEtfBoostMonthly
+        }
+    }
+    
+    // Tech Breakthrough
+    if settings.useTechBreakthrough {
+        if isWeekly && settings.useTechBreakthroughWeekly {
+            r += settings.maxTechBoostWeekly
+        } else if !isWeekly && settings.useTechBreakthroughMonthly {
+            r += settings.maxTechBoostMonthly
+        }
+    }
+    
+    // Scarcity Events
+    if settings.useScarcityEvents {
+        if isWeekly && settings.useScarcityEventsWeekly {
+            r += settings.maxScarcityBoostWeekly
+        } else if !isWeekly && settings.useScarcityEventsMonthly {
+            r += settings.maxScarcityBoostMonthly
+        }
+    }
+    
+    // Global Macro Hedge
+    if settings.useGlobalMacroHedge {
+        if isWeekly && settings.useGlobalMacroHedgeWeekly {
+            r += settings.maxMacroBoostWeekly
+        } else if !isWeekly && settings.useGlobalMacroHedgeMonthly {
+            r += settings.maxMacroBoostMonthly
+        }
+    }
+    
+    // Stablecoin Shift
+    if settings.useStablecoinShift {
+        if isWeekly && settings.useStablecoinShiftWeekly {
+            r += settings.maxStablecoinBoostWeekly
+        } else if !isWeekly && settings.useStablecoinShiftMonthly {
+            r += settings.maxStablecoinBoostMonthly
+        }
+    }
+    
+    // Demographic Adoption
+    if settings.useDemographicAdoption {
+        if isWeekly && settings.useDemographicAdoptionWeekly {
+            r += settings.maxDemoBoostWeekly
+        } else if !isWeekly && settings.useDemographicAdoptionMonthly {
+            r += settings.maxDemoBoostMonthly
+        }
+    }
+    
+    // Altcoin Flight
+    if settings.useAltcoinFlight {
+        if isWeekly && settings.useAltcoinFlightWeekly {
+            r += settings.maxAltcoinBoostWeekly
+        } else if !isWeekly && settings.useAltcoinFlightMonthly {
+            r += settings.maxAltcoinBoostMonthly
+        }
+    }
+    
+    // Adoption Factor
+    if settings.useAdoptionFactor {
+        if isWeekly && settings.useAdoptionFactorWeekly {
+            r += settings.adoptionBaseFactorWeekly
+        } else if !isWeekly && settings.useAdoptionFactorMonthly {
+            r += settings.adoptionBaseFactorMonthly
+        }
+    }
+    
+    // ──────────────────────────────────────────────────────────────────────────
+    // BEARISH FACTORS
+    // ──────────────────────────────────────────────────────────────────────────
+    
+    // Regulatory Clampdown
     if settings.useRegClampdown {
-        r += settings.maxClampDownUnified
+        if isWeekly && settings.useRegClampdownWeekly {
+            r += settings.maxClampDownWeekly
+        } else if !isWeekly && settings.useRegClampdownMonthly {
+            r += settings.maxClampDownMonthly
+        }
     }
+    
+    // Competitor Coin
     if settings.useCompetitorCoin {
-        r += settings.maxCompetitorBoostUnified
+        if isWeekly && settings.useCompetitorCoinWeekly {
+            r += settings.maxCompetitorBoostWeekly
+        } else if !isWeekly && settings.useCompetitorCoinMonthly {
+            r += settings.maxCompetitorBoostMonthly
+        }
     }
+    
+    // Security Breach
     if settings.useSecurityBreach {
-        r += settings.breachImpactUnified
+        if isWeekly && settings.useSecurityBreachWeekly {
+            r += settings.breachImpactWeekly
+        } else if !isWeekly && settings.useSecurityBreachMonthly {
+            r += settings.breachImpactMonthly
+        }
     }
+    
+    // Bubble Pop
     if settings.useBubblePop {
-        r += settings.maxPopDropUnified
+        if isWeekly && settings.useBubblePopWeekly {
+            r += settings.maxPopDropWeekly
+        } else if !isWeekly && settings.useBubblePopMonthly {
+            r += settings.maxPopDropMonthly
+        }
     }
+    
+    // Stablecoin Meltdown
     if settings.useStablecoinMeltdown {
-        r += settings.maxMeltdownDropUnified
+        if isWeekly && settings.useStablecoinMeltdownWeekly {
+            r += settings.maxMeltdownDropWeekly
+        } else if !isWeekly && settings.useStablecoinMeltdownMonthly {
+            r += settings.maxMeltdownDropMonthly
+        }
     }
-    if settings.useBlackSwan && blackSwanWeeks.contains(week) {
-        r += settings.blackSwanDropUnified
+    
+    // Black Swan
+    if settings.useBlackSwan {
+        // Only trigger black swan if the random event array includes the current index
+        if isWeekly && settings.useBlackSwanWeekly && blackSwanWeeks.contains(week) {
+            r += settings.blackSwanDropWeekly
+        } else if !isWeekly && settings.useBlackSwanMonthly && blackSwanWeeks.contains(week) {
+            r += settings.blackSwanDropMonthly
+        }
     }
+    
+    // Bear Market
     if settings.useBearMarket {
-        r += settings.bearWeeklyDriftUnified
+        if isWeekly && settings.useBearMarketWeekly {
+            r += settings.bearWeeklyDriftWeekly
+        } else if !isWeekly && settings.useBearMarketMonthly {
+            r += settings.bearWeeklyDriftMonthly
+        }
     }
+    
+    // Maturing Market
     if settings.useMaturingMarket {
-        r += settings.maxMaturingDropUnified
+        if isWeekly && settings.useMaturingMarketWeekly {
+            r += settings.maxMaturingDropWeekly
+        } else if !isWeekly && settings.useMaturingMarketMonthly {
+            r += settings.maxMaturingDropMonthly
+        }
     }
+    
+    // Recession
     if settings.useRecession {
-        r += settings.maxRecessionDropUnified
+        if isWeekly && settings.useRecessionWeekly {
+            r += settings.maxRecessionDropWeekly
+        } else if !isWeekly && settings.useRecessionMonthly {
+            r += settings.maxRecessionDropMonthly
+        }
     }
     
     return r
