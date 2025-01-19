@@ -1061,7 +1061,7 @@ struct ContentView: View {
 
             case \SimulationData.contributionEUR,
                  \SimulationData.contributionUSD:
-                return doubleVal.withThousandsSeparator(decimalPlaces: 2)
+                return doubleVal.formattedCurrency()
 
             case \SimulationData.transactionFeeEUR,
                  \SimulationData.transactionFeeUSD,
