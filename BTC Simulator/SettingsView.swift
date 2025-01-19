@@ -101,13 +101,14 @@ struct SettingsView: View {
                     isOn: $simSettings.useHalvingUnified,
                     sliderValue: $simSettings.halvingBumpUnified,
                     
-                    // ±50% around weekly=0.48 => range 0.24...0.72
-                    // ±50% around monthly=0.58 => range 0.29...0.87
+                    // New weekly default = 0.024 => ±75% => 0.024 * 0.75 = 0.018
+                    // Range: 0.024 - 0.018 ... 0.024 + 0.018 => 0.006 ... 0.042
+                    // Monthly unchanged => 0.58 => range 0.29 ... 0.87
                     sliderRange: simSettings.periodUnit == .weeks
-                        ? 0.24...0.72
+                        ? 0.006...0.042
                         : 0.29...0.87,
                     defaultValue: simSettings.periodUnit == .weeks
-                        ? 0.48
+                        ? 0.024
                         : 0.58,
                     
                     parameterDescription: """
@@ -135,9 +136,12 @@ struct SettingsView: View {
                     isOn: $simSettings.useInstitutionalDemandUnified,
                     sliderValue: $simSettings.maxDemandBoostUnified,
 
-                    // default ~0.001239 => ±50% => 0.00062...0.00186
+                    // New weekly default = 0.001239 => ±75% => ~0.00092925
+                    // Range: 0.001239 - 0.00092925 ... 0.001239 + 0.00092925
+                    //        => 0.00030975 ... 0.00216825
+                    // Monthly unchanged => 0.001239 => range 0.00062...0.00186
                     sliderRange: simSettings.periodUnit == .weeks
-                        ? 0.00062...0.00186
+                        ? 0.00030975...0.00216825
                         : 0.00062...0.00186,
                     defaultValue: simSettings.periodUnit == .weeks
                         ? 0.001239
@@ -157,12 +161,15 @@ struct SettingsView: View {
                     isOn: $simSettings.useCountryAdoptionUnified,
                     sliderValue: $simSettings.maxCountryAdBoostUnified,
 
-                    // default ~0.00047096 => ±50% => 0.00023548...0.00070644
+                    // New weekly default = 0.003 => ±75% => 0.00225
+                    // Range: 0.003 - 0.00225 ... 0.003 + 0.00225
+                    //        => 0.00075 ... 0.00525
+                    // Monthly unchanged => 0.00047096 => range 0.00023548...0.00070644
                     sliderRange: simSettings.periodUnit == .weeks
-                        ? 0.00023548...0.00070644
+                        ? 0.00075...0.00525
                         : 0.00023548...0.00070644,
                     defaultValue: simSettings.periodUnit == .weeks
-                        ? 0.00047096
+                        ? 0.003
                         : 0.00047096,
 
                     parameterDescription: """
@@ -179,9 +186,12 @@ struct SettingsView: View {
                     isOn: $simSettings.useRegulatoryClarityUnified,
                     sliderValue: $simSettings.maxClarityBoostUnified,
 
-                    // default ~0.0016644 => ±50% => 0.0008322...0.0024966
+                    // New weekly default = 0.0016644 => ±75% => ~0.0012483
+                    // Range: 0.0016644 - 0.0012483 ... 0.0016644 + 0.0012483
+                    //        => 0.0004161 ... 0.0029127
+                    // Monthly unchanged => 0.0016644 => range 0.0008322...0.0024966
                     sliderRange: simSettings.periodUnit == .weeks
-                        ? 0.0008322...0.0024966
+                        ? 0.0004161...0.0029127
                         : 0.0008322...0.0024966,
                     defaultValue: simSettings.periodUnit == .weeks
                         ? 0.0016644
@@ -201,9 +211,11 @@ struct SettingsView: View {
                     isOn: $simSettings.useEtfApprovalUnified,
                     sliderValue: $simSettings.maxEtfBoostUnified,
 
-                    // default ~0.000454685 => ±50% => 0.00022734...0.00068203
+                    // New weekly default = 0.00045468 => ±75% => ~0.00034101
+                    // Range: 0.00011367 ... 0.00079569
+                    // Monthly unchanged => 0.00045468 => range 0.00022734...0.00068203
                     sliderRange: simSettings.periodUnit == .weeks
-                        ? 0.00022734...0.00068203
+                        ? 0.00011367...0.00079569
                         : 0.00022734...0.00068203,
                     defaultValue: simSettings.periodUnit == .weeks
                         ? 0.00045468
@@ -223,9 +235,11 @@ struct SettingsView: View {
                     isOn: $simSettings.useTechBreakthroughUnified,
                     sliderValue: $simSettings.maxTechBoostUnified,
 
-                    // default ~0.00040664 => ±50% => 0.00020332...0.00060996
+                    // New weekly default = 0.00040664 => ±75% => ~0.00030498
+                    // Range: 0.00010166 ... 0.00071162
+                    // Monthly unchanged => 0.00040664 => range 0.00020332...0.00060996
                     sliderRange: simSettings.periodUnit == .weeks
-                        ? 0.00020332...0.00060996
+                        ? 0.00010166...0.00071162
                         : 0.00020332...0.00060996,
                     defaultValue: simSettings.periodUnit == .weeks
                         ? 0.00040664
@@ -245,9 +259,11 @@ struct SettingsView: View {
                     isOn: $simSettings.useScarcityEventsUnified,
                     sliderValue: $simSettings.maxScarcityBoostUnified,
 
-                    // default ~0.0007968 => ±50% => 0.0003984...0.0011952
+                    // New weekly default = 0.0007968 => ±75% => ~0.0005976
+                    // Range: 0.0001992 ... 0.0013944
+                    // Monthly unchanged => 0.0007968 => range 0.0003984...0.0011952
                     sliderRange: simSettings.periodUnit == .weeks
-                        ? 0.0003984...0.0011952
+                        ? 0.0001992...0.0013944
                         : 0.0003984...0.0011952,
                     defaultValue: simSettings.periodUnit == .weeks
                         ? 0.0007968
@@ -267,9 +283,11 @@ struct SettingsView: View {
                     isOn: $simSettings.useGlobalMacroHedgeUnified,
                     sliderValue: $simSettings.maxMacroBoostUnified,
 
-                    // default ~0.00041935 => ±50% => 0.00020968...0.00062904
+                    // New weekly default = 0.00041935 => ±75% => ~0.00031451
+                    // Range: 0.00010484 ... 0.00073386
+                    // Monthly unchanged => 0.00041935 => range 0.00020968...0.00062904
                     sliderRange: simSettings.periodUnit == .weeks
-                        ? 0.00020968...0.00062904
+                        ? 0.00010484...0.00073386
                         : 0.00020968...0.00062904,
                     defaultValue: simSettings.periodUnit == .weeks
                         ? 0.00041935
@@ -289,9 +307,11 @@ struct SettingsView: View {
                     isOn: $simSettings.useStablecoinShiftUnified,
                     sliderValue: $simSettings.maxStablecoinBoostUnified,
 
-                    // default ~0.00040493 => ±50% => 0.00020246...0.00060739
+                    // New weekly default = 0.00040493 => ±75% => ~0.00030370
+                    // Range: 0.00010123 ... 0.00070863
+                    // Monthly unchanged => 0.00040493 => range 0.00020246...0.00060739
                     sliderRange: simSettings.periodUnit == .weeks
-                        ? 0.00020246...0.00060739
+                        ? 0.00010123...0.00070863
                         : 0.00020246...0.00060739,
                     defaultValue: simSettings.periodUnit == .weeks
                         ? 0.00040493
@@ -311,9 +331,11 @@ struct SettingsView: View {
                     isOn: $simSettings.useDemographicAdoptionUnified,
                     sliderValue: $simSettings.maxDemoBoostUnified,
 
-                    // default ~0.00130568 => ±50% => 0.00065284...0.00195852
+                    // New weekly default = 0.00130568 => ±75% => ~0.00097926
+                    // Range: 0.00032642 ... 0.00228494
+                    // Monthly unchanged => 0.00130568 => range 0.00065284...0.00195852
                     sliderRange: simSettings.periodUnit == .weeks
-                        ? 0.00065284...0.00195852
+                        ? 0.00032642...0.00228494
                         : 0.00065284...0.00195852,
                     defaultValue: simSettings.periodUnit == .weeks
                         ? 0.00130568
@@ -333,9 +355,11 @@ struct SettingsView: View {
                     isOn: $simSettings.useAltcoinFlightUnified,
                     sliderValue: $simSettings.maxAltcoinBoostUnified,
 
-                    // default ~0.00028022 => ±50% => 0.00014011...0.00042033
+                    // New weekly default = 0.000280219... => ±75% => ~0.0002101646
+                    // Range: 0.00007005 ... 0.00049038
+                    // Monthly unchanged => 0.00028022 => range 0.00014011...0.00042033
                     sliderRange: simSettings.periodUnit == .weeks
-                        ? 0.00014011...0.00042033
+                        ? 0.00007005...0.00049038
                         : 0.00014011...0.00042033,
                     defaultValue: simSettings.periodUnit == .weeks
                         ? 0.00028022
@@ -355,9 +379,11 @@ struct SettingsView: View {
                     isOn: $simSettings.useAdoptionFactorUnified,
                     sliderValue: $simSettings.adoptionBaseFactorUnified,
 
-                    // default ~0.00096851 => ±50% => 0.00048425...0.00145276
+                    // New weekly default = 0.0009685099 => ±75% => ~0.0007263824
+                    // Range: 0.00024213 ... 0.00169489
+                    // Monthly unchanged => 0.00096851 => range 0.00048425...0.00145276
                     sliderRange: simSettings.periodUnit == .weeks
-                        ? 0.00048425...0.00145276
+                        ? 0.00024213...0.00169489
                         : 0.00048425...0.00145276,
                     defaultValue: simSettings.periodUnit == .weeks
                         ? 0.00096851
@@ -382,9 +408,11 @@ struct SettingsView: View {
                     isOn: $simSettings.useRegClampdownUnified,
                     sliderValue: $simSettings.maxClampDownUnified,
                     
-                    // default ~-0.00118833 => ±50% => range -0.00178249 ... -0.00059416
+                    // New weekly default = -0.0011883257 => ±75% => ~0.00089124
+                    // Range: -0.00207956 ... -0.00029709
+                    // Monthly unchanged => -0.00118833 => range -0.00178249 ... -0.00059416
                     sliderRange: simSettings.periodUnit == .weeks
-                        ? -0.00178249 ... -0.00059416
+                        ? -0.00207956 ... -0.00029709
                         : -0.00178249 ... -0.00059416,
                     defaultValue: simSettings.periodUnit == .weeks
                         ? -0.00118833
@@ -404,12 +432,14 @@ struct SettingsView: View {
                     isOn: $simSettings.useCompetitorCoinUnified,
                     sliderValue: $simSettings.maxCompetitorBoostUnified,
                     
-                    // default ~-0.00112599 => ±50% => range -0.00168899 ... -0.00056299
+                    // New weekly default = -0.0007437381 => ±75% => ~0.00055780
+                    // Range: -0.00130154 ... -0.00018593
+                    // Monthly unchanged => -0.00112599 => range -0.00168899 ... -0.00056299
                     sliderRange: simSettings.periodUnit == .weeks
-                        ? -0.00168899 ... -0.00056299
+                        ? -0.00130154 ... -0.00018593
                         : -0.00168899 ... -0.00056299,
                     defaultValue: simSettings.periodUnit == .weeks
-                        ? -0.00112599
+                        ? -0.00074374
                         : -0.00112599,
                     
                     parameterDescription: """
@@ -426,9 +456,11 @@ struct SettingsView: View {
                     isOn: $simSettings.useSecurityBreachUnified,
                     sliderValue: $simSettings.breachImpactUnified,
                     
-                    // default ~-0.00076128 => ±50% => range -0.00114192 ... -0.00038064
+                    // New weekly default = -0.0007612827 => ±75% => ~0.00057096
+                    // Range: -0.00133224 ... -0.00019032
+                    // Monthly unchanged => -0.00076128 => range -0.00114192 ... -0.00038064
                     sliderRange: simSettings.periodUnit == .weeks
-                        ? -0.00114192 ... -0.00038064
+                        ? -0.00133224 ... -0.00019032
                         : -0.00114192 ... -0.00038064,
                     defaultValue: simSettings.periodUnit == .weeks
                         ? -0.00076128
@@ -448,9 +480,11 @@ struct SettingsView: View {
                     isOn: $simSettings.useBubblePopUnified,
                     sliderValue: $simSettings.maxPopDropUnified,
                     
-                    // default ~-0.00125551 => ±50% => range -0.00188326 ... -0.00062775
+                    // Weekly default remains -0.0012555069 => ±75% => ~0.00094163
+                    // Range: -0.00219713 ... -0.00031388
+                    // Monthly unchanged => -0.00125551 => range -0.00188326...-0.00062775
                     sliderRange: simSettings.periodUnit == .weeks
-                        ? -0.00188326 ... -0.00062775
+                        ? -0.00219713 ... -0.00031388
                         : -0.00188326 ... -0.00062775,
                     defaultValue: simSettings.periodUnit == .weeks
                         ? -0.00125551
@@ -470,12 +504,14 @@ struct SettingsView: View {
                     isOn: $simSettings.useStablecoinMeltdownUnified,
                     sliderValue: $simSettings.maxMeltdownDropUnified,
                     
-                    // default ~-0.00070280 => ±50% => range -0.00105421 ... -0.00035140
+                    // New weekly default = -0.0006013240 => ±75% => ~0.000450993
+                    // Range: -0.00105231 ... -0.00015033
+                    // Monthly unchanged => -0.00070280 => range -0.00105421 ... -0.00035140
                     sliderRange: simSettings.periodUnit == .weeks
-                        ? -0.00105421 ... -0.00035140
+                        ? -0.00105231 ... -0.00015033
                         : -0.00105421 ... -0.00035140,
                     defaultValue: simSettings.periodUnit == .weeks
-                        ? -0.00070280
+                        ? -0.00060132
                         : -0.00070280,
                     
                     parameterDescription: """
@@ -486,20 +522,22 @@ struct SettingsView: View {
                     onTitleTap: toggleFactor
                 )
                 
+                // 6) Black Swan Events
                 FactorToggleRow(
                     iconName: "tornado",
                     title: "Black Swan Events",
                     isOn: $simSettings.useBlackSwanUnified,
                     sliderValue: $simSettings.blackSwanDropUnified,
-                    
-                    // default ~-0.00184115 => ±50% => range -0.00276172 ... -0.00092057
+
+                    // new weekly default -0.3 => ±50% => half = 0.15 => range -0.45 ... -0.15
+                    // monthly unchanged => -0.00276172 ... -0.00092057
                     sliderRange: simSettings.periodUnit == .weeks
-                        ? -0.00276172 ... -0.00092057
+                        ? -0.45 ... -0.15
                         : -0.00276172 ... -0.00092057,
                     defaultValue: simSettings.periodUnit == .weeks
-                        ? -0.00184115
+                        ? -0.3
                         : -0.00184115,
-                    
+
                     parameterDescription: """
                     Highly unpredictable disasters or wars can undermine all markets,
                     including BTC, causing extreme selloffs.
@@ -514,12 +552,14 @@ struct SettingsView: View {
                     isOn: $simSettings.useBearMarketUnified,
                     sliderValue: $simSettings.bearWeeklyDriftUnified,
                     
-                    // default ~-0.00071953 => ±50% => range -0.00107930 ... -0.00035977
+                    // New weekly default = -0.0001 => ±75% => 0.000075
+                    // Range: -0.000175 ... -0.000025
+                    // Monthly unchanged => -0.00071953 => range -0.00107930 ... -0.00035977
                     sliderRange: simSettings.periodUnit == .weeks
-                        ? -0.00107930 ... -0.00035977
+                        ? -0.000175 ... -0.000025
                         : -0.00107930 ... -0.00035977,
                     defaultValue: simSettings.periodUnit == .weeks
-                        ? -0.00071953
+                        ? -0.0001
                         : -0.00071953,
                     
                     parameterDescription: """
@@ -536,12 +576,14 @@ struct SettingsView: View {
                     isOn: $simSettings.useMaturingMarketUnified,
                     sliderValue: $simSettings.maxMaturingDropUnified,
                     
-                    // default -0.004 => ±50% => range -0.006 ... -0.002
+                    // New weekly default = -0.0032688174 => ±75% => ~0.002451613
+                    // Range: -0.00572043 ... -0.00081720
+                    // Monthly unchanged => -0.004 => range -0.006 ... -0.002
                     sliderRange: simSettings.periodUnit == .weeks
-                        ? -0.006 ... -0.002
+                        ? -0.00572043 ... -0.00081720
                         : -0.006 ... -0.002,
                     defaultValue: simSettings.periodUnit == .weeks
-                        ? -0.004
+                        ? -0.00326882
                         : -0.004,
                     
                     parameterDescription: """
@@ -558,12 +600,14 @@ struct SettingsView: View {
                     isOn: $simSettings.useRecessionUnified,
                     sliderValue: $simSettings.maxRecessionDropUnified,
                     
-                    // default ~-0.00145081 => ±50% => range -0.00217621 ... -0.00072540
+                    // New weekly default = -0.0010073162 => ±75% => ~0.000755487
+                    // Range: -0.00176280 ... -0.00025183
+                    // Monthly unchanged => -0.00145081 => range -0.00217621 ... -0.00072540
                     sliderRange: simSettings.periodUnit == .weeks
-                        ? -0.00217621 ... -0.00072540
+                        ? -0.00176280 ... -0.00025183
                         : -0.00217621 ... -0.00072540,
                     defaultValue: simSettings.periodUnit == .weeks
-                        ? -0.00145081
+                        ? -0.00100732
                         : -0.00145081,
                     
                     parameterDescription: """

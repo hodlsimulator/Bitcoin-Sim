@@ -20,51 +20,51 @@ class SimulationSettings: ObservableObject {
     // -----------------------------
 
     // Halving
-    private static let defaultHalvingBumpWeekly   = 0.48
+    private static let defaultHalvingBumpWeekly   = 0.024   // was 0.48
     private static let defaultHalvingBumpMonthly  = 0.58
 
     // Institutional Demand
-    private static let defaultMaxDemandBoostWeekly   = 0.0012392541338671777
+    private static let defaultMaxDemandBoostWeekly   = 0.001239  // was 0.0012392541338671777
     private static let defaultMaxDemandBoostMonthly  = 0.0012392541338671777
 
     // Country Adoption
-    private static let defaultMaxCountryAdBoostWeekly   = 0.00047095964199831683
+    private static let defaultMaxCountryAdBoostWeekly   = 0.003  // was 0.00047095964199831683
     private static let defaultMaxCountryAdBoostMonthly  = 0.00047095964199831683
 
     // Regulatory Clarity
-    private static let defaultMaxClarityBoostWeekly   = 0.0016644023749474966
+    private static let defaultMaxClarityBoostWeekly   = 0.0016644  // was 0.0016644023749474966
     private static let defaultMaxClarityBoostMonthly  = 0.0016644023749474966
 
     // ETF Approval
-    private static let defaultMaxEtfBoostWeekly   = 0.0004546850204467774
+    private static let defaultMaxEtfBoostWeekly   = 0.00045468  // was 0.0004546850204467774
     private static let defaultMaxEtfBoostMonthly  = 0.0004546850204467774
 
     // Tech Breakthrough
-    private static let defaultMaxTechBoostWeekly   = 0.00040663959745637255
+    private static let defaultMaxTechBoostWeekly   = 0.00040664  // was 0.00040663959745637255
     private static let defaultMaxTechBoostMonthly  = 0.00040663959745637255
 
     // Scarcity Events
-    private static let defaultMaxScarcityBoostWeekly   = 0.0007968083934443039
+    private static let defaultMaxScarcityBoostWeekly   = 0.0007968  // was 0.0007968083934443039
     private static let defaultMaxScarcityBoostMonthly  = 0.0007968083934443039
 
     // Global Macro Hedge
-    private static let defaultMaxMacroBoostWeekly   = 0.000419354572892189
+    private static let defaultMaxMacroBoostWeekly   = 0.00041935  // was 0.000419354572892189
     private static let defaultMaxMacroBoostMonthly  = 0.000419354572892189
 
     // Stablecoin Shift
-    private static let defaultMaxStablecoinBoostWeekly   = 0.0004049262363101775
+    private static let defaultMaxStablecoinBoostWeekly   = 0.00040493  // was 0.0004049262363101775
     private static let defaultMaxStablecoinBoostMonthly  = 0.0004049262363101775
 
     // Demographic Adoption
-    private static let defaultMaxDemoBoostWeekly   = 0.0013056834936141968
+    private static let defaultMaxDemoBoostWeekly   = 0.00130568  // was 0.0013056834936141968
     private static let defaultMaxDemoBoostMonthly  = 0.0013056834936141968
 
     // Altcoin Flight
-    private static let defaultMaxAltcoinBoostWeekly   = 0.0002802194461803342
+    private static let defaultMaxAltcoinBoostWeekly   = 0.0002802194461803342  // unchanged
     private static let defaultMaxAltcoinBoostMonthly  = 0.0002802194461803342
 
     // Adoption Factor
-    private static let defaultAdoptionBaseFactorWeekly   = 0.0009685099124908447
+    private static let defaultAdoptionBaseFactorWeekly   = 0.0009685099124908447  // unchanged
     private static let defaultAdoptionBaseFactorMonthly  = 0.0009685099124908447
 
 
@@ -73,39 +73,39 @@ class SimulationSettings: ObservableObject {
     // -----------------------------
 
     // Regulatory Clampdown
-    private static let defaultMaxClampDownWeekly   = -0.0011883256912231445
+    private static let defaultMaxClampDownWeekly   = -0.0011883256912231445  // unchanged
     private static let defaultMaxClampDownMonthly  = -0.0011883256912231445
 
     // Competitor Coin
-    private static let defaultMaxCompetitorBoostWeekly   = -0.0011259913444519043
+    private static let defaultMaxCompetitorBoostWeekly   = -0.0007437381567859649  // was -0.0011259913444519043
     private static let defaultMaxCompetitorBoostMonthly  = -0.0011259913444519043
 
     // Security Breach
-    private static let defaultBreachImpactWeekly   = -0.0007612827334384092
+    private static let defaultBreachImpactWeekly   = -0.0007612827334384092  // unchanged
     private static let defaultBreachImpactMonthly  = -0.0007612827334384092
 
     // Bubble Pop
-    private static let defaultMaxPopDropWeekly   = -0.0012555068731307985
+    private static let defaultMaxPopDropWeekly   = -0.0012555068731307985  // unchanged
     private static let defaultMaxPopDropMonthly  = -0.0012555068731307985
 
     // Stablecoin Meltdown
-    private static let defaultMaxMeltdownDropWeekly   = -0.0007028046205417837
+    private static let defaultMaxMeltdownDropWeekly   = -0.0006013240111422539  // was -0.0007028046205417837
     private static let defaultMaxMeltdownDropMonthly  = -0.0007028046205417837
 
     // Black Swan
-    private static let defaultBlackSwanDropWeekly   = -0.0018411452783672483
+    private static let defaultBlackSwanDropWeekly   = -0.3  // was -0.02
     private static let defaultBlackSwanDropMonthly  = -0.0018411452783672483
 
     // Bear Market
-    private static let defaultBearWeeklyDriftWeekly   = -0.0007195305824279769
+    private static let defaultBearWeeklyDriftWeekly   = -0.0001  // was -0.0007195305824279769
     private static let defaultBearWeeklyDriftMonthly  = -0.0007195305824279769
 
     // Maturing Market
-    private static let defaultMaxMaturingDropWeekly   = -0.004
+    private static let defaultMaxMaturingDropWeekly   = -0.00326881742477417  // was -0.004
     private static let defaultMaxMaturingDropMonthly  = -0.004
 
     // Recession
-    private static let defaultMaxRecessionDropWeekly   = -0.0014508080482482913
+    private static let defaultMaxRecessionDropWeekly   = -0.0010073162441545725  // was -0.0014508080482482913
     private static let defaultMaxRecessionDropMonthly  = -0.0014508080482482913
     
     init() {
