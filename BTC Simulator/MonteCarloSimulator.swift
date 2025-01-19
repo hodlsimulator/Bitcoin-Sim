@@ -540,12 +540,14 @@ private func runMonthlySimulation(
         // (B) Deposit once per month
         var typedDeposit = 0.0
         if currentMonth == 1 {
-            typedDeposit += settings.startingBalance
-        }
-        if currentMonth <= 12 {
-            typedDeposit += firstYearVal
+            // Only add the starting balance on month 1
+            typedDeposit = settings.startingBalance
+        } else if currentMonth <= 12 {
+            // From month 2..12, add firstYearVal
+            typedDeposit = firstYearVal
         } else {
-            typedDeposit += secondYearVal
+            // From month 13+ onward, add subsequentContribution
+            typedDeposit = secondYearVal
         }
         
         let (feeEUR, feeUSD, nContribEUR, nContribUSD, depositBTC) =
@@ -718,12 +720,14 @@ private func runWeeklySimulation(
         // 2) typedDeposit for each week
         var typedDeposit = 0.0
         if currentWeek == 1 {
-            typedDeposit += settings.startingBalance
-        }
-        if Double(currentWeek) <= 52.0 {
-            typedDeposit += firstYearVal
+            // Only add the starting balance on week 1
+            typedDeposit = settings.startingBalance
+        } else if currentWeek <= 52 {
+            // From week 2..52, add firstYearVal
+            typedDeposit = firstYearVal
         } else {
-            typedDeposit += secondYearVal
+            // From week 53+ onward, add subsequentContribution
+            typedDeposit = secondYearVal
         }
 
         let (feeEUR, feeUSD, nContribEUR, nContribUSD, depositBTC) =

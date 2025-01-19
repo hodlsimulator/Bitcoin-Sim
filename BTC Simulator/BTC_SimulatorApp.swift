@@ -21,7 +21,7 @@ struct BTCMonteCarloApp: App {
     @StateObject private var coordinator: SimulationCoordinator
 
     init() {
-        // 1) Create all objects locally
+        // 1) Create all objects
         let newAppViewModel = AppViewModel()
         let newInputManager = PersistentInputManager()
         let newSimSettings = SimulationSettings(loadDefaults: true)
@@ -34,7 +34,10 @@ struct BTCMonteCarloApp: App {
             chartSelection: newChartSelection
         )
 
-        // 2) Assign them to our @StateObject wrappers
+        // 2) Ensure simSettings has a reference to the same inputManager
+        newSimSettings.inputManager = newInputManager
+
+        // 3) Assign them to @StateObject wrappers
         _appViewModel = StateObject(wrappedValue: newAppViewModel)
         _inputManager = StateObject(wrappedValue: newInputManager)
         _simSettings = StateObject(wrappedValue: newSimSettings)
