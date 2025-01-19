@@ -21,52 +21,51 @@ class SimulationSettings: ObservableObject {
 
     // Halving
     private static let defaultHalvingBumpWeekly   = 0.35   // was 0.2
-    private static let defaultHalvingBumpMonthly  = 0.58
+    private static let defaultHalvingBumpMonthly  = 0.35   // was 0.35
 
     // Institutional Demand
-    private static let defaultMaxDemandBoostWeekly   = 0.001239   // was 0.0012392541338671777
-    private static let defaultMaxDemandBoostMonthly  = 0.0012392541338671777
+    private static let defaultMaxDemandBoostWeekly   = 0.001239      // was 0.0012392541338671777
+    private static let defaultMaxDemandBoostMonthly  = 0.0056589855  // was 0.008 (unchanged)
 
     // Country Adoption
     private static let defaultMaxCountryAdBoostWeekly   = 0.0009953915979713202  // was 0.00047095964199831683
-    private static let defaultMaxCountryAdBoostMonthly  = 0.00047095964199831683
+    private static let defaultMaxCountryAdBoostMonthly  = 0.005515515952320099    // was 0.0031705064
 
     // Regulatory Clarity
     private static let defaultMaxClarityBoostWeekly   = 0.000793849712267518  // was 0.0016644023749474966 (monthly)
-    private static let defaultMaxClarityBoostMonthly  = 0.0016644023749474966
+    private static let defaultMaxClarityBoostMonthly  = 0.0040737327          // was 0.008 (unchanged)
 
     // ETF Approval
-    private static let defaultMaxEtfBoostWeekly   = 0.002  // was 0.00045468
-    private static let defaultMaxEtfBoostMonthly  = 0.0004546850204467774
+    private static let defaultMaxEtfBoostWeekly   = 0.002         // was 0.00045468
+    private static let defaultMaxEtfBoostMonthly  = 0.0057142851  // was 0.008 (unchanged)
 
     // Tech Breakthrough
-    private static let defaultMaxTechBoostWeekly   = 0.00071162  // was 0.00040663959745637255
-    private static let defaultMaxTechBoostMonthly  = 0.00040663959745637255
+    private static let defaultMaxTechBoostWeekly   = 0.00071162    // was 0.00040663959745637255
+    private static let defaultMaxTechBoostMonthly  = 0.0028387091  // was 0.008 (unchanged)
 
     // Scarcity Events
     private static let defaultMaxScarcityBoostWeekly   = 0.00041308753681182863  // was 0.0007968083934443039
-    private static let defaultMaxScarcityBoostMonthly  = 0.0007968083934443039
+    private static let defaultMaxScarcityBoostMonthly  = 0.0032928705475521085   // was 0.0023778799
 
     // Global Macro Hedge
-    private static let defaultMaxMacroBoostWeekly   = 0.00041935  // was 0.000419354572892189
-    private static let defaultMaxMacroBoostMonthly  = 0.000419354572892189
+    private static let defaultMaxMacroBoostWeekly   = 0.00041935     // was 0.000419354572892189
+    private static let defaultMaxMacroBoostMonthly  = 0.0032442397   // was 0.008 (unchanged)
 
     // Stablecoin Shift
-    private static let defaultMaxStablecoinBoostWeekly   = 0.00040493  // was 0.0004049262363101775
-    private static let defaultMaxStablecoinBoostMonthly  = 0.0004049262363101775
+    private static let defaultMaxStablecoinBoostWeekly   = 0.00040493     // was 0.0004049262363101775
+    private static let defaultMaxStablecoinBoostMonthly  = 0.0023041475   // was 0.008 (unchanged)
 
     // Demographic Adoption
-    private static let defaultMaxDemoBoostWeekly   = 0.00130568  // was 0.0013056834936141968
-    private static let defaultMaxDemoBoostMonthly  = 0.0013056834936141968
+    private static let defaultMaxDemoBoostWeekly   = 0.00130568       // was 0.0013056834936141968
+    private static let defaultMaxDemoBoostMonthly  = 0.007291124714649915  // was 0.0054746541
 
     // Altcoin Flight
     private static let defaultMaxAltcoinBoostWeekly   = 0.0002802194461803342  // unchanged
-    private static let defaultMaxAltcoinBoostMonthly  = 0.0002802194461803342
+    private static let defaultMaxAltcoinBoostMonthly  = 0.0021566817           // was 0.008 (unchanged)
 
     // Adoption Factor
     private static let defaultAdoptionBaseFactorWeekly   = 0.0016045109088897705  // was 0.0009685099124908447
-    private static let defaultAdoptionBaseFactorMonthly  = 0.0009685099124908447
-
+    private static let defaultAdoptionBaseFactorMonthly  = 0.014660959934071304   // was 0.009714285
 
     // -----------------------------
     // BEARISH FACTORS

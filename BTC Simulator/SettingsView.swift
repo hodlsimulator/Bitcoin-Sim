@@ -102,14 +102,14 @@ struct SettingsView: View {
                     isOn: $simSettings.useHalvingUnified,
                     sliderValue: $simSettings.halvingBumpUnified,
                     
-                    // New weekly default = 0.35 => ±75% => 0.2625 => range: 0.0875 ... 0.6125
-                    // Monthly unchanged => 0.58 => range 0.29 ... 0.87
+                    // Weekly: default = 0.35 => ±75% => 0.2625 => range: 0.0875 ... 0.6125
+                    // Monthly: default = 0.35 => ±75% => 0.2625 => range: 0.0875 ... 0.6125
                     sliderRange: simSettings.periodUnit == .weeks
                         ? 0.0875...0.6125
-                        : 0.29...0.87,
+                        : 0.0875...0.6125,
                     defaultValue: simSettings.periodUnit == .weeks
                         ? 0.35
-                        : 0.58,
+                        : 0.35,
                     
                     parameterDescription: """
                         Occurs roughly every four years, reducing the block reward in half.
@@ -137,15 +137,14 @@ struct SettingsView: View {
                     isOn: $simSettings.useInstitutionalDemandUnified,
                     sliderValue: $simSettings.maxDemandBoostUnified,
 
-                    // New weekly default = 0.001239 => ±75% => ~0.00092925
-                    // Range: 0.00030975 ... 0.00216825
-                    // Monthly unchanged => 0.001239 => range 0.00062...0.00186
+                    // Weekly: default = 0.001239 => ±75% => ~0.00092925 => range: 0.00030975 ... 0.00216825
+                    // Monthly: default = 0.0056589855 => ±75% => ~0.00424424 => range: 0.00141475 ... 0.00990322
                     sliderRange: simSettings.periodUnit == .weeks
                         ? 0.00030975...0.00216825
-                        : 0.00062...0.00186,
+                        : 0.00141475...0.00990322,
                     defaultValue: simSettings.periodUnit == .weeks
                         ? 0.001239
-                        : 0.001239,
+                        : 0.0056589855,
 
                     parameterDescription: """
                     Large financial institutions and corporate treasuries entering the BTC market can drive prices up.
@@ -162,15 +161,14 @@ struct SettingsView: View {
                     isOn: $simSettings.useCountryAdoptionUnified,
                     sliderValue: $simSettings.maxCountryAdBoostUnified,
 
-                    // New weekly default = 0.00099539 => ±75% => ~0.00074654
-                    // Range: 0.00024885 ... 0.00174193
-                    // Monthly unchanged => 0.00047096 => range 0.00023548...0.00070644
+                    // Weekly: default = 0.00099539 => ±75% => range: 0.00024885 ... 0.00174193
+                    // Monthly: default = 0.005515515952320099 => ±75% => ~0.00413664 => range: ~0.00137888 ... 0.00965215
                     sliderRange: simSettings.periodUnit == .weeks
                         ? 0.00024885...0.00174193
-                        : 0.00023548...0.00070644,
+                        : 0.00137888...0.00965215,
                     defaultValue: simSettings.periodUnit == .weeks
                         ? 0.00099539
-                        : 0.00047096,
+                        : 0.005515515952320099,
 
                     parameterDescription: """
                     Nations adopting BTC as legal tender or as part of their reserves can lead to massive demand.
@@ -187,15 +185,14 @@ struct SettingsView: View {
                     isOn: $simSettings.useRegulatoryClarityUnified,
                     sliderValue: $simSettings.maxClarityBoostUnified,
 
-                    // New weekly default = 0.00079385 => ±75% => ~0.00059539
-                    // Range: 0.00019846 ... 0.00138924
-                    // Monthly unchanged => 0.0016644 => range 0.0008322...0.0024966
+                    // Weekly: default = 0.00079385 => ±75% => range: 0.00019846 ... 0.00138924
+                    // Monthly: default = 0.0040737327 => ±75% => ~0.00305530 => range: ~0.00101843 ... 0.00712903
                     sliderRange: simSettings.periodUnit == .weeks
                         ? 0.00019846...0.00138924
-                        : 0.0008322...0.0024966,
+                        : 0.00101843...0.00712903,
                     defaultValue: simSettings.periodUnit == .weeks
                         ? 0.00079385
-                        : 0.0016644,
+                        : 0.0040737327,
 
                     parameterDescription: """
                     Clear, favourable regulations can reduce uncertainty and risk for investors.
@@ -212,14 +209,14 @@ struct SettingsView: View {
                     isOn: $simSettings.useEtfApprovalUnified,
                     sliderValue: $simSettings.maxEtfBoostUnified,
 
-                    // New weekly default = 0.002 => ±75% => 0.0015 => range: 0.0005 ... 0.0035
-                    // Monthly unchanged => 0.00045468 => range 0.00022734...0.00068203
+                    // Weekly: default = 0.002 => ±75% => range: 0.0005 ... 0.0035
+                    // Monthly: default = 0.0057142851 => ±75% => ~0.00428571 => range: ~0.00142857 ... 0.01
                     sliderRange: simSettings.periodUnit == .weeks
                         ? 0.0005...0.0035
-                        : 0.00022734...0.00068203,
+                        : 0.00142857...0.01,
                     defaultValue: simSettings.periodUnit == .weeks
                         ? 0.002
-                        : 0.00045468,
+                        : 0.0057142851,
 
                     parameterDescription: """
                     Spot BTC ETFs allow traditional investors to gain exposure without holding actual BTC.
@@ -236,15 +233,14 @@ struct SettingsView: View {
                     isOn: $simSettings.useTechBreakthroughUnified,
                     sliderValue: $simSettings.maxTechBoostUnified,
 
-                    // New weekly default = 0.00071162 => ±75% => ~0.00053372
-                    // Range: 0.0001779 ... 0.00124534
-                    // Monthly unchanged => 0.00040664 => range 0.00020332...0.00060996
+                    // Weekly: default = 0.00071162 => ±75% => range: 0.0001779 ... 0.00124534
+                    // Monthly: default = 0.0028387091 => ±75% => ~0.00212903 => range: ~0.00070968 ... 0.00496739
                     sliderRange: simSettings.periodUnit == .weeks
                         ? 0.0001779...0.00124534
-                        : 0.00020332...0.00060996,
+                        : 0.00070968...0.00496739,
                     defaultValue: simSettings.periodUnit == .weeks
                         ? 0.00071162
-                        : 0.00040664,
+                        : 0.0028387091,
 
                     parameterDescription: """
                     Major improvements in Bitcoin’s protocol or L2 networks (Lightning, etc.)
@@ -261,15 +257,14 @@ struct SettingsView: View {
                     isOn: $simSettings.useScarcityEventsUnified,
                     sliderValue: $simSettings.maxScarcityBoostUnified,
 
-                    // New weekly default = 0.00041309 => ±75% => ~0.00030982
-                    // Range: 0.00010327 ... 0.00072291
-                    // Monthly unchanged => 0.0007968 => range 0.0003984...0.0011952
+                    // Weekly: default = 0.00041309 => ±75% => range: 0.00010327 ... 0.00072291
+                    // Monthly: default = 0.0032928705475521085 => ±75% => ~0.00246965 => range: ~0.00082322 ... 0.00576252
                     sliderRange: simSettings.periodUnit == .weeks
                         ? 0.00010327...0.00072291
-                        : 0.0003984...0.0011952,
+                        : 0.00082322...0.00576252,
                     defaultValue: simSettings.periodUnit == .weeks
                         ? 0.00041309
-                        : 0.0007968,
+                        : 0.0032928705475521085,
 
                     parameterDescription: """
                     Unusual events that reduce BTC supply—like large holders moving coins off exchanges—
@@ -286,15 +281,14 @@ struct SettingsView: View {
                     isOn: $simSettings.useGlobalMacroHedgeUnified,
                     sliderValue: $simSettings.maxMacroBoostUnified,
 
-                    // New weekly default = 0.00041935 => ±75% => ~0.00031451
-                    // Range: 0.00010484 ... 0.00073386
-                    // Monthly unchanged => 0.00041935 => range 0.00020968...0.00062904
+                    // Weekly: default = 0.00041935 => ±75% => range: 0.00010484 ... 0.00073386
+                    // Monthly: default = 0.0032442397 => ±75% => ~0.00243318 => range: ~0.00081106 ... 0.00567742
                     sliderRange: simSettings.periodUnit == .weeks
                         ? 0.00010484...0.00073386
-                        : 0.00020968...0.00062904,
+                        : 0.00081106...0.00567742,
                     defaultValue: simSettings.periodUnit == .weeks
                         ? 0.00041935
-                        : 0.00041935,
+                        : 0.0032442397,
 
                     parameterDescription: """
                     BTC’s “digital gold” narrative can be strong during uncertainty.
@@ -311,15 +305,14 @@ struct SettingsView: View {
                     isOn: $simSettings.useStablecoinShiftUnified,
                     sliderValue: $simSettings.maxStablecoinBoostUnified,
 
-                    // New weekly default = 0.00040493 => ±75% => ~0.00030370
-                    // Range: 0.00010123 ... 0.00070863
-                    // Monthly unchanged => 0.00040493 => range 0.00020246...0.00060739
+                    // Weekly: default = 0.00040493 => ±75% => range: 0.00010123 ... 0.00070863
+                    // Monthly: default = 0.0023041475 => ±75% => ~0.00172811 => range: ~0.00057604 ... 0.00403226
                     sliderRange: simSettings.periodUnit == .weeks
                         ? 0.00010123...0.00070863
-                        : 0.00020246...0.00060739,
+                        : 0.00057604...0.00403226,
                     defaultValue: simSettings.periodUnit == .weeks
                         ? 0.00040493
-                        : 0.00040493,
+                        : 0.0023041475,
 
                     parameterDescription: """
                     Sometimes large sums move from stablecoins directly into BTC.
@@ -336,15 +329,14 @@ struct SettingsView: View {
                     isOn: $simSettings.useDemographicAdoptionUnified,
                     sliderValue: $simSettings.maxDemoBoostUnified,
 
-                    // New weekly default = 0.00130568 => ±75% => ~0.00097926
-                    // Range: 0.00032642 ... 0.00228494
-                    // Monthly unchanged => 0.00130568 => range 0.00065284...0.00195852
+                    // Weekly: default = 0.00130568 => ±75% => range: 0.00032642...0.00228494
+                    // Monthly: default = 0.007291124714649915 => ±75% => ~0.00546834 => range: ~0.00182278 ... 0.01275947
                     sliderRange: simSettings.periodUnit == .weeks
                         ? 0.00032642...0.00228494
-                        : 0.00065284...0.00195852,
+                        : 0.00182278...0.01275947,
                     defaultValue: simSettings.periodUnit == .weeks
                         ? 0.00130568
-                        : 0.00130568,
+                        : 0.007291124714649915,
 
                     parameterDescription: """
                     Younger, more tech-savvy generations often invest in BTC,
@@ -361,15 +353,14 @@ struct SettingsView: View {
                     isOn: $simSettings.useAltcoinFlightUnified,
                     sliderValue: $simSettings.maxAltcoinBoostUnified,
 
-                    // New weekly default = 0.000280219... => ±75% => ~0.0002101646
-                    // Range: 0.00007005 ... 0.00049038
-                    // Monthly unchanged => 0.00028022 => range 0.00014011...0.00042033
+                    // Weekly: default = 0.00028022 => ±75% => range: 0.00007005...0.00049038
+                    // Monthly: default = 0.0021566817 => ±75% => ~0.00161751 => range: ~0.00053917 ... 0.00377419
                     sliderRange: simSettings.periodUnit == .weeks
                         ? 0.00007005...0.00049038
-                        : 0.00014011...0.00042033,
+                        : 0.00053917...0.00377419,
                     defaultValue: simSettings.periodUnit == .weeks
                         ? 0.00028022
-                        : 0.00028022,
+                        : 0.0021566817,
 
                     parameterDescription: """
                     During altcoin uncertainty or crackdowns, capital can rotate into BTC,
@@ -386,15 +377,14 @@ struct SettingsView: View {
                     isOn: $simSettings.useAdoptionFactorUnified,
                     sliderValue: $simSettings.adoptionBaseFactorUnified,
 
-                    // New weekly default = 0.00160451 => ±75% => ~0.00120338
-                    // Range: 0.00040113 ... 0.00280789
-                    // Monthly unchanged => 0.00096851 => range 0.00048425...0.00145276
+                    // Weekly: default = 0.00160451 => ±75% => range: 0.00040113...0.00280789
+                    // Monthly: default = 0.014660959934071304 => ±75% => ~0.01099572 => range: ~0.00366524 ... 0.02565668
                     sliderRange: simSettings.periodUnit == .weeks
                         ? 0.00040113...0.00280789
-                        : 0.00048425...0.00145276,
+                        : 0.00366524...0.02565668,
                     defaultValue: simSettings.periodUnit == .weeks
                         ? 0.00160451
-                        : 0.00096851,
+                        : 0.014660959934071304,
 
                     parameterDescription: """
                     A slow, steady upward drift in BTC price from incremental adoption.
