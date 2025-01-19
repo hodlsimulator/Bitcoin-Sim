@@ -77,12 +77,14 @@ func squishPortraitImage(_ portraitImage: UIImage) -> UIImage {
     
     let renderer = UIGraphicsImageRenderer(size: targetSize)
     return renderer.image { _ in
-        portraitImage.draw(in: CGRect(
-            x: xOffset,
-            y: yOffset,
-            width: scaledWidth,
-            height: scaledHeight
-        ))
+        portraitImage.draw(
+            in: CGRect(
+                x: xOffset,
+                y: yOffset,
+                width: scaledWidth,
+                height: scaledHeight
+            )
+        )
     }
 }
 
@@ -167,16 +169,13 @@ struct MonteCarloChartView: View {
         let simulations = chartDataCache.allRuns ?? []
         
         // 2) Flatten for domain
-        //    (Take each run’s points safely, flatten to see min/max)
         let allPoints = simulations.flatMap { $0.points }
         let decimalValues = allPoints.map { $0.value }
         
-        let minDec = decimalValues.min()
-        let maxDec = decimalValues.max()
-        let minVal = minDec.map { NSDecimalNumber(decimal: $0).doubleValue } ?? 1.0
-        let maxVal = maxDec.map { NSDecimalNumber(decimal: $0).doubleValue } ?? 2.0
+        let minVal = decimalValues.min().map { NSDecimalNumber(decimal: $0).doubleValue } ?? 1.0
+        let maxVal = decimalValues.max().map { NSDecimalNumber(decimal: $0).doubleValue } ?? 2.0
         
-        // 3) Build a log-scale domain
+        // Build a log-scale domain
         var bottomExp = floor(log10(minVal))
         if minVal <= pow(10, bottomExp), bottomExp > 0 {
             bottomExp -= 1
@@ -184,25 +183,25 @@ struct MonteCarloChartView: View {
         let domainMin = max(pow(10.0, bottomExp), 1.0)
         
         var topExp = floor(log10(maxVal))
-        if maxVal >= pow(10, topExp) {
+        if maxVal >= pow(10.0, topExp) {
             topExp += 1
         }
         let domainMax = pow(10.0, topExp)
         
-        // 4) Axis ticks => powers of ten
+        // Axis ticks => powers of ten
         let intBottom = Int(bottomExp)
         let intTop    = Int(topExp)
         let yTickValues = (intBottom...intTop).map { pow(10.0, Double($0)) }
         
-        // 5) X domain => convert weeks or months to “years”
+        // X domain => convert userPeriods to “years”
         let totalPeriods = Double(simSettings.userPeriods)
         let totalYears = (simSettings.periodUnit == .weeks)
             ? totalPeriods / 52.0
             : totalPeriods / 12.0
         
-        // A small helper for picking x-axis stride
-        func dynamicXStride(for totalY: Double) -> Double {
-            switch totalY {
+        // Small helper
+        func dynamicXStride(_ yrs: Double) -> Double {
+            switch yrs {
             case ..<1.01:  return 0.25
             case ..<2.01:  return 0.5
             case ..<5.01:  return 1.0
@@ -212,27 +211,23 @@ struct MonteCarloChartView: View {
             default:       return 25.0
             }
         }
-        let xStride = dynamicXStride(for: totalYears)
+        let xStride = dynamicXStride(totalYears)
         
-        // 6) Build the chart in a GeometryReader
         return GeometryReader { geo in
             ZStack {
                 Color.black.ignoresSafeArea()
                 
                 VStack(spacing: 0) {
                     Chart {
-                        // A) multi-run lines
-                        simulationLines(simulations: simulations,
-                                        simSettings: simSettings)
-                        // B) if you have a median or highlight line
-                        medianLines(simulations: simulations,
-                                    simSettings: simSettings)
+                        // multi-run lines
+                        simulationLines(simulations: simulations, simSettings: simSettings)
+                        // highlight line
+                        medianLines(simulations: simulations, simSettings: simSettings)
                     }
                     .chartLegend(.hidden)
                     .chartXScale(domain: 0.0...totalYears, type: .linear)
                     .chartYScale(domain: domainMin...domainMax, type: .log)
                     
-                    // Plot area padding
                     .chartPlotStyle { plotArea in
                         plotArea
                             .padding(.leading, 0)
@@ -240,8 +235,6 @@ struct MonteCarloChartView: View {
                             .padding(.top, 0)
                             .padding(.bottom, 20)
                     }
-                    
-                    // Y-axis: powers of ten, with your formatPowerOfTenLabel or formatSuffix
                     .chartYAxis {
                         AxisMarks(position: .leading, values: yTickValues) { axisValue in
                             AxisGridLine().foregroundStyle(.white.opacity(0.3))
@@ -255,8 +248,6 @@ struct MonteCarloChartView: View {
                             }
                         }
                     }
-                    
-                    // X-axis
                     .chartXAxis {
                         AxisMarks(values: Array(stride(from: 0.0, through: totalYears, by: xStride))) { axisValue in
                             AxisGridLine().foregroundStyle(.white.opacity(0.3))
@@ -264,9 +255,11 @@ struct MonteCarloChartView: View {
                             AxisValueLabel {
                                 if let dblVal = axisValue.as(Double.self), dblVal > 0 {
                                     if totalYears <= 2.0 {
-                                        Text("\(Int(dblVal * 12))M").foregroundColor(.white)
+                                        Text("\(Int(dblVal * 12))M")
+                                            .foregroundColor(.white)
                                     } else {
-                                        Text("\(Int(dblVal))Y").foregroundColor(.white)
+                                        Text("\(Int(dblVal))Y")
+                                            .foregroundColor(.white)
                                     }
                                 }
                             }
@@ -274,9 +267,7 @@ struct MonteCarloChartView: View {
                     }
                     .frame(width: geo.size.width, height: geo.size.height)
                 }
-                // Shift everything downward if in landscape
                 .padding(.top, orientationObserver.isLandscape ? 20 : 0)
-                // “squish” in portrait
                 .scaleEffect(x: 1.0, y: verticalScale, anchor: .bottom)
                 .offset(y: -topOffset)
             }
@@ -285,41 +276,9 @@ struct MonteCarloChartView: View {
     }
 }
 
-// MARK: - Example colour picking logic
 private func colorForIndex(_ idx: Int) -> Color {
-    // e.g. cycle 12 distinct hues
     let hue = Double(idx % 12) / 12.0
     return Color(hue: hue, saturation: 0.8, brightness: 0.85)
-}
-
-// For labeling powers of ten
-func formatPowerOfTenLabel(_ exponent: Int) -> String {
-    switch exponent {
-    case 0:  return "1"
-    case 1:  return "10"
-    case 2:  return "100"
-    case 3:  return "1K"
-    case 4:  return "10K"
-    case 5:  return "100K"
-    case 6:  return "1M"
-    case 7:  return "10M"
-    case 8:  return "100M"
-    case 9:  return "1B"
-    case 10: return "10B"
-    case 11: return "100B"
-    case 12: return "1T"
-    case 13: return "10T"
-    case 14: return "100T"
-    case 15: return "1Q"
-    case 16: return "10Q"
-    case 17: return "100Q"
-    case 18: return "1Qn"
-    case 19: return "10Qn"
-    case 20: return "100Qn"
-    case 21: return "1Se"
-    default:
-        return "10^\(exponent)"
-    }
 }
 
 // MARK: - The main container
@@ -368,6 +327,7 @@ struct MonteCarloResultsView: View {
             
             contentView
             
+            // Show "Generating Landscape" overlay
             if isGeneratingLandscape {
                 Color.black.opacity(0.6).ignoresSafeArea()
                 VStack(spacing: 20) {
@@ -377,6 +337,8 @@ struct MonteCarloResultsView: View {
                         .foregroundColor(.white)
                 }
             }
+            
+            // The top-drawer menu in portrait
             if !isLandscape && showChartMenu {
                 Color.black.opacity(0.3)
                     .ignoresSafeArea()
@@ -384,6 +346,7 @@ struct MonteCarloResultsView: View {
                         withAnimation { showChartMenu = false }
                     }
                     .zIndex(1)
+                
                 Button {
                     withAnimation {
                         if chartSelection.selectedChart == .cumulativePortfolio {
@@ -422,6 +385,7 @@ struct MonteCarloResultsView: View {
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarHidden(isLandscape)
         .toolbar {
+            // Show the chart menu toggle if portrait
             if !isLandscape {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
@@ -436,6 +400,7 @@ struct MonteCarloResultsView: View {
             }
         }
         .onAppear {
+            // If we start in landscape, build the squished version & snapshot
             if isLandscape, let portrait = portraitSnapshot {
                 squishedLandscape = squishPortraitImage(portrait)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
@@ -455,6 +420,7 @@ struct MonteCarloResultsView: View {
         }
         .onChange(of: isLandscape) { newVal in
             if newVal {
+                // portrait->landscape
                 if let portrait = portraitSnapshot {
                     DispatchQueue.main.async {
                         squishedLandscape = squishPortraitImage(portrait)
@@ -474,6 +440,7 @@ struct MonteCarloResultsView: View {
                     }
                 }
             } else {
+                // landscape->portrait
                 squishedLandscape = nil
                 brandNewLandscapeSnapshot = nil
                 isGeneratingLandscape = false
@@ -481,25 +448,34 @@ struct MonteCarloResultsView: View {
         }
     }
     
+    // MARK: - Content
     @ViewBuilder
     private var contentView: some View {
         if isLandscape {
             VStack(spacing: 0) {
                 Spacer().frame(height: 20)
+                
+                // 1) If we have a newly generated or cached landscape snapshot, display it
                 if let freshLandscape = freshLandscapeSnapshot {
                     Image(uiImage: freshLandscape)
                         .resizable()
                         .interpolation(.none)
                         .antialiased(false)
                         .aspectRatio(contentMode: .fill)
+                    
+                // 2) Else if we have a squished portrait fallback
                 } else if let squished = squishedLandscape {
                     Image(uiImage: squished)
                         .resizable()
                         .interpolation(.none)
                         .antialiased(false)
                         .aspectRatio(contentMode: .fill)
+                    
+                // 3) Else if we have an existing portrait snapshot
                 } else if let portrait = portraitSnapshot {
                     SquishedLandscapePlaceholderView(image: portrait)
+                    
+                // 4) Else show the chart itself if no snapshot is built
                 } else {
                     if chartSelection.selectedChart == .btcPrice {
                         MonteCarloChartView()
@@ -507,32 +483,44 @@ struct MonteCarloResultsView: View {
                             .environmentObject(chartDataCache)
                             .environmentObject(simSettings)
                     } else {
-                        Color.gray // or a PortfolioChartView
+                        PortfolioChartView()
+                            .environmentObject(orientationObserver)
+                            .environmentObject(chartDataCache)
+                            .environmentObject(simSettings)
                     }
                 }
             }
         } else {
+            // PORTRAIT
             if chartSelection.selectedChart == .btcPrice {
+                // If we have the BTC snapshot, display it
                 if let btcSnapshot = chartDataCache.chartSnapshot {
                     SnapshotView(snapshot: btcSnapshot)
                 } else {
+                    // else show the live chart
                     MonteCarloChartView()
                         .environmentObject(orientationObserver)
                         .environmentObject(chartDataCache)
                         .environmentObject(simSettings)
                 }
             } else {
+                // For portfolio
                 if let portfolioSnapshot = chartDataCache.chartSnapshotPortfolio {
                     SnapshotView(snapshot: portfolioSnapshot)
                 } else {
-                    Color.gray
+                    PortfolioChartView()
+                        .environmentObject(orientationObserver)
+                        .environmentObject(chartDataCache)
+                        .environmentObject(simSettings)
                 }
             }
         }
     }
     
+    // MARK: - Build the landscape snapshot
     private func buildTrueLandscapeSnapshot(completion: @escaping (UIImage) -> Void) {
         let desiredSize = CGSize(width: 800, height: 400)
+        
         let chartToSnapshot: AnyView
         switch chartSelection.selectedChart {
         case .btcPrice:
@@ -546,23 +534,59 @@ struct MonteCarloResultsView: View {
             )
         case .cumulativePortfolio:
             chartToSnapshot = AnyView(
-                Color.gray
+                PortfolioChartView()
+                    .environmentObject(orientationObserver)
+                    .environmentObject(chartDataCache)
+                    .environmentObject(simSettings)
                     .frame(width: desiredSize.width, height: desiredSize.height)
+                    .background(Color.black)
             )
         }
+        
         let hostingController = UIHostingController(rootView: chartToSnapshot)
         hostingController.view.frame = CGRect(origin: .zero, size: desiredSize)
         
         let renderer = UIGraphicsImageRenderer(size: desiredSize)
         let image = renderer.image { _ in
+            // drawHierarchy(in:afterScreenUpdates:) captures SwiftUI styles
             hostingController.view.drawHierarchy(in: hostingController.view.bounds, afterScreenUpdates: true)
         }
+        
         completion(image)
     }
 }
 
-// MARK: - ForceReflowView
+// For labeling powers of ten
+func formatPowerOfTenLabel(_ exponent: Int) -> String {
+    switch exponent {
+    case 0:  return "1"
+    case 1:  return "10"
+    case 2:  return "100"
+    case 3:  return "1K"
+    case 4:  return "10K"
+    case 5:  return "100K"
+    case 6:  return "1M"
+    case 7:  return "10M"
+    case 8:  return "100M"
+    case 9:  return "1B"
+    case 10: return "10B"
+    case 11: return "100B"
+    case 12: return "1T"
+    case 13: return "10T"
+    case 14: return "100T"
+    case 15: return "1Q"
+    case 16: return "10Q"
+    case 17: return "100Q"
+    case 18: return "1Qn"
+    case 19: return "10Qn"
+    case 20: return "100Qn"
+    case 21: return "1Se"
+    default:
+        return "10^\(exponent)"
+    }
+}
 
+// MARK: - ForceReflowView
 struct ForceReflowView<Content: View>: View {
     let content: Content
     
@@ -575,7 +599,11 @@ struct ForceReflowView<Content: View>: View {
     var body: some View {
         content
             .id(orientationID)
-            .onReceive(NotificationCenter.default.publisher(for: UIDevice.orientationDidChangeNotification)) { _ in
+            .onReceive(
+                NotificationCenter.default.publisher(
+                    for: UIDevice.orientationDidChangeNotification
+                )
+            ) { _ in
                 orientationID = UUID()
             }
     }

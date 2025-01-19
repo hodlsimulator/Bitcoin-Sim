@@ -535,7 +535,7 @@ private func runMonthlySimulation(
     // If needed, replicate monthly logic similarly (omitting debug prints).
     return []
 }
-
+    
 // The main runOneFullSimulation
 func runOneFullSimulation(
     settings: SimulationSettings,
