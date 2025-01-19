@@ -77,14 +77,12 @@ func squishPortraitImage(_ portraitImage: UIImage) -> UIImage {
     
     let renderer = UIGraphicsImageRenderer(size: targetSize)
     return renderer.image { _ in
-        portraitImage.draw(
-            in: CGRect(
-                x: xOffset,
-                y: yOffset,
-                width: scaledWidth,
-                height: scaledHeight
-            )
-        )
+        portraitImage.draw(in: CGRect(
+            x: xOffset,
+            y: yOffset,
+            width: scaledWidth,
+            height: scaledHeight
+        ))
     }
 }
 
@@ -148,60 +146,61 @@ func formatSuffix(_ value: Decimal) -> String {
     }
 }
 
-// MARK: - BTC Chart Subview
-
-import SwiftUI
-import Charts
+// MARK: - The Chart
 
 struct MonteCarloChartView: View {
     @EnvironmentObject var orientationObserver: OrientationObserver
     @EnvironmentObject var chartDataCache: ChartDataCache
     @EnvironmentObject var simSettings: SimulationSettings
     
-    /// How far to shift the entire chart after squishing (up = negative)
+    /// Shifts the entire chart up or down if desired
     private let topOffset: CGFloat = 0
     
-    /// Vertical "squish" factor (1.0 = no squish; e.g. 0.9 = 90% original height)
-    /// We'll conditionally disable it in landscape:
+    /// In portrait, we “squish” the chart vertically.
     var verticalScale: CGFloat {
-        orientationObserver.isLandscape ? 1.0 : 0.92 // CHANGED
+        orientationObserver.isLandscape ? 1.0 : 0.92
     }
     
     var body: some View {
         
-        // 1) Domain logic
+        // 1) Grab your array of runs safely
         let simulations = chartDataCache.allRuns ?? []
-        let allValues = simulations.flatMap { $0.points.map(\.value) }
         
-        let rawMin = allValues.min().map { NSDecimalNumber(decimal: $0).doubleValue } ?? 1.0
-        let rawMax = allValues.max().map { NSDecimalNumber(decimal: $0).doubleValue } ?? 2.0
+        // 2) Flatten for domain
+        //    (Take each run’s points safely, flatten to see min/max)
+        let allPoints = simulations.flatMap { $0.points }
+        let decimalValues = allPoints.map { $0.value }
         
-        // BOTTOM domain logic
-        var bottomExp = floor(log10(rawMin))
-        if rawMin <= pow(10, bottomExp), bottomExp > 0 {
+        let minDec = decimalValues.min()
+        let maxDec = decimalValues.max()
+        let minVal = minDec.map { NSDecimalNumber(decimal: $0).doubleValue } ?? 1.0
+        let maxVal = maxDec.map { NSDecimalNumber(decimal: $0).doubleValue } ?? 2.0
+        
+        // 3) Build a log-scale domain
+        var bottomExp = floor(log10(minVal))
+        if minVal <= pow(10, bottomExp), bottomExp > 0 {
             bottomExp -= 1
         }
         let domainMin = max(pow(10.0, bottomExp), 1.0)
         
-        // TOP domain logic
-        var topExp = floor(log10(rawMax))
-        if rawMax >= pow(10, topExp) {
+        var topExp = floor(log10(maxVal))
+        if maxVal >= pow(10, topExp) {
             topExp += 1
         }
         let domainMax = pow(10.0, topExp)
         
-        // Y-axis ticks => powers of ten
+        // 4) Axis ticks => powers of ten
         let intBottom = Int(bottomExp)
         let intTop    = Int(topExp)
         let yTickValues = (intBottom...intTop).map { pow(10.0, Double($0)) }
         
-        // 2) X domain => interpret userPeriods in weeks/months
+        // 5) X domain => convert weeks or months to “years”
         let totalPeriods = Double(simSettings.userPeriods)
         let totalYears = (simSettings.periodUnit == .weeks)
             ? totalPeriods / 52.0
             : totalPeriods / 12.0
         
-        // Helper to pick a 'nice' stride
+        // A small helper for picking x-axis stride
         func dynamicXStride(for totalY: Double) -> Double {
             switch totalY {
             case ..<1.01:  return 0.25
@@ -213,37 +212,36 @@ struct MonteCarloChartView: View {
             default:       return 25.0
             }
         }
-        
         let xStride = dynamicXStride(for: totalYears)
         
-        // 3) Return the SwiftUI View
+        // 6) Build the chart in a GeometryReader
         return GeometryReader { geo in
             ZStack {
                 Color.black.ignoresSafeArea()
                 
                 VStack(spacing: 0) {
                     Chart {
-                        simulationLines(simulations: simulations, simSettings: simSettings)
-                        medianLines(simulations: simulations, simSettings: simSettings)
+                        // A) multi-run lines
+                        simulationLines(simulations: simulations,
+                                        simSettings: simSettings)
+                        // B) if you have a median or highlight line
+                        medianLines(simulations: simulations,
+                                    simSettings: simSettings)
                     }
                     .chartLegend(.hidden)
                     .chartXScale(domain: 0.0...totalYears, type: .linear)
                     .chartYScale(domain: domainMin...domainMax, type: .log)
+                    
+                    // Plot area padding
                     .chartPlotStyle { plotArea in
-                        if orientationObserver.isLandscape {
-                            plotArea
-                                .padding(.leading, 0)
-                                .padding(.trailing, 0)
-                                .padding(.top, 0)
-                                .padding(.bottom, 20)
-                        } else {
-                            plotArea
-                                .padding(.leading, 0)
-                                .padding(.trailing, 0)
-                                .padding(.top, 0)
-                                .padding(.bottom, 20)
-                        }
+                        plotArea
+                            .padding(.leading, 0)
+                            .padding(.trailing, 0)
+                            .padding(.top, 0)
+                            .padding(.bottom, 20)
                     }
+                    
+                    // Y-axis: powers of ten, with your formatPowerOfTenLabel or formatSuffix
                     .chartYAxis {
                         AxisMarks(position: .leading, values: yTickValues) { axisValue in
                             AxisGridLine().foregroundStyle(.white.opacity(0.3))
@@ -257,6 +255,8 @@ struct MonteCarloChartView: View {
                             }
                         }
                     }
+                    
+                    // X-axis
                     .chartXAxis {
                         AxisMarks(values: Array(stride(from: 0.0, through: totalYears, by: xStride))) { axisValue in
                             AxisGridLine().foregroundStyle(.white.opacity(0.3))
@@ -264,11 +264,9 @@ struct MonteCarloChartView: View {
                             AxisValueLabel {
                                 if let dblVal = axisValue.as(Double.self), dblVal > 0 {
                                     if totalYears <= 2.0 {
-                                        Text("\(Int(dblVal * 12))M")
-                                            .foregroundColor(.white)
+                                        Text("\(Int(dblVal * 12))M").foregroundColor(.white)
                                     } else {
-                                        Text("\(Int(dblVal))Y")
-                                            .foregroundColor(.white)
+                                        Text("\(Int(dblVal))Y").foregroundColor(.white)
                                     }
                                 }
                             }
@@ -276,21 +274,25 @@ struct MonteCarloChartView: View {
                     }
                     .frame(width: geo.size.width, height: geo.size.height)
                 }
-                // Shift everything down 20 points in landscape, or 0 in portrait
+                // Shift everything downward if in landscape
                 .padding(.top, orientationObserver.isLandscape ? 20 : 0)
-                // CHANGED: scaleEffect is now using verticalScale (1.0 in landscape)
+                // “squish” in portrait
                 .scaleEffect(x: 1.0, y: verticalScale, anchor: .bottom)
                 .offset(y: -topOffset)
             }
         }
         .navigationBarHidden(false)
     }
-}   
+}
 
-// MARK: - Chart content with per-run color (already in your code)
+// MARK: - Example colour picking logic
+private func colorForIndex(_ idx: Int) -> Color {
+    // e.g. cycle 12 distinct hues
+    let hue = Double(idx % 12) / 12.0
+    return Color(hue: hue, saturation: 0.8, brightness: 0.85)
+}
 
-// MARK: - Format suffix on log scale
-
+// For labeling powers of ten
 func formatPowerOfTenLabel(_ exponent: Int) -> String {
     switch exponent {
     case 0:  return "1"
@@ -308,19 +310,19 @@ func formatPowerOfTenLabel(_ exponent: Int) -> String {
     case 12: return "1T"
     case 13: return "10T"
     case 14: return "100T"
-    case 15: return "1Q"   // quadrillion
+    case 15: return "1Q"
     case 16: return "10Q"
     case 17: return "100Q"
-    case 18: return "1Qn"  // quintillion
+    case 18: return "1Qn"
     case 19: return "10Qn"
     case 20: return "100Qn"
-    case 21: return "1Se"  // sextillion
+    case 21: return "1Se"
     default:
         return "10^\(exponent)"
     }
 }
 
-// MARK: - Main Results View
+// MARK: - The main container
 
 struct MonteCarloResultsView: View {
     @EnvironmentObject var chartSelection: ChartSelection
@@ -331,8 +333,6 @@ struct MonteCarloResultsView: View {
     @State private var squishedLandscape: UIImage? = nil
     @State private var brandNewLandscapeSnapshot: UIImage? = nil
     @State private var isGeneratingLandscape = false
-    
-    // A custom top-drawer menu
     @State private var showChartMenu = false
     
     enum ChartType {
@@ -377,17 +377,13 @@ struct MonteCarloResultsView: View {
                         .foregroundColor(.white)
                 }
             }
-            
             if !isLandscape && showChartMenu {
                 Color.black.opacity(0.3)
                     .ignoresSafeArea()
                     .onTapGesture {
-                        withAnimation {
-                            showChartMenu = false
-                        }
+                        withAnimation { showChartMenu = false }
                     }
                     .zIndex(1)
-                
                 Button {
                     withAnimation {
                         if chartSelection.selectedChart == .cumulativePortfolio {
@@ -440,7 +436,6 @@ struct MonteCarloResultsView: View {
             }
         }
         .onAppear {
-            // If we start in landscape, create squished version + build snapshot
             if isLandscape, let portrait = portraitSnapshot {
                 squishedLandscape = squishPortraitImage(portrait)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
@@ -460,13 +455,11 @@ struct MonteCarloResultsView: View {
         }
         .onChange(of: isLandscape) { newVal in
             if newVal {
-                // portrait->landscape
                 if let portrait = portraitSnapshot {
                     DispatchQueue.main.async {
                         squishedLandscape = squishPortraitImage(portrait)
                     }
                 }
-                // A slight delay for layout
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     isGeneratingLandscape = true
                     buildTrueLandscapeSnapshot { newSnapshot in
@@ -481,7 +474,6 @@ struct MonteCarloResultsView: View {
                     }
                 }
             } else {
-                // landscape->portrait
                 squishedLandscape = nil
                 brandNewLandscapeSnapshot = nil
                 isGeneratingLandscape = false
@@ -489,47 +481,37 @@ struct MonteCarloResultsView: View {
         }
     }
     
-    // MARK: - Chart Content
     @ViewBuilder
     private var contentView: some View {
         if isLandscape {
             VStack(spacing: 0) {
                 Spacer().frame(height: 20)
-                
                 if let freshLandscape = freshLandscapeSnapshot {
                     Image(uiImage: freshLandscape)
                         .resizable()
                         .interpolation(.none)
                         .antialiased(false)
                         .aspectRatio(contentMode: .fill)
-                    
                 } else if let squished = squishedLandscape {
                     Image(uiImage: squished)
                         .resizable()
                         .interpolation(.none)
                         .antialiased(false)
                         .aspectRatio(contentMode: .fill)
-                    
                 } else if let portrait = portraitSnapshot {
                     SquishedLandscapePlaceholderView(image: portrait)
-                    
                 } else {
-                    // If we haven't generated snapshots yet, show the chart
                     if chartSelection.selectedChart == .btcPrice {
                         MonteCarloChartView()
                             .environmentObject(orientationObserver)
                             .environmentObject(chartDataCache)
                             .environmentObject(simSettings)
                     } else {
-                        PortfolioChartView()
-                            .environmentObject(orientationObserver)
-                            .environmentObject(chartDataCache)
-                            .environmentObject(simSettings)
+                        Color.gray // or a PortfolioChartView
                     }
                 }
             }
         } else {
-            // PORTRAIT
             if chartSelection.selectedChart == .btcPrice {
                 if let btcSnapshot = chartDataCache.chartSnapshot {
                     SnapshotView(snapshot: btcSnapshot)
@@ -543,22 +525,14 @@ struct MonteCarloResultsView: View {
                 if let portfolioSnapshot = chartDataCache.chartSnapshotPortfolio {
                     SnapshotView(snapshot: portfolioSnapshot)
                 } else {
-                    PortfolioChartView()
-                        .environmentObject(orientationObserver)
-                        .environmentObject(chartDataCache)
-                        .environmentObject(simSettings)
+                    Color.gray
                 }
             }
         }
     }
     
-    // MARK: - Build Landscape Snapshots (UIHostingController approach)
-    // CHANGED: we'll render via a UIHostingController so the chart is fully laid out
-    // at the exact size we want, with no accidental scaling.
     private func buildTrueLandscapeSnapshot(completion: @escaping (UIImage) -> Void) {
-        let desiredSize = CGSize(width: 800, height: 400) // or match device if you prefer
-         
-        // We'll pick the correct chart
+        let desiredSize = CGSize(width: 800, height: 400)
         let chartToSnapshot: AnyView
         switch chartSelection.selectedChart {
         case .btcPrice:
@@ -572,26 +546,17 @@ struct MonteCarloResultsView: View {
             )
         case .cumulativePortfolio:
             chartToSnapshot = AnyView(
-                PortfolioChartView()
-                    .environmentObject(orientationObserver)
-                    .environmentObject(chartDataCache)
-                    .environmentObject(simSettings)
+                Color.gray
                     .frame(width: desiredSize.width, height: desiredSize.height)
-                    .background(Color.black)
             )
         }
-        
-        // Wrap in a temporary UIHostingController
         let hostingController = UIHostingController(rootView: chartToSnapshot)
         hostingController.view.frame = CGRect(origin: .zero, size: desiredSize)
         
-        // Render
         let renderer = UIGraphicsImageRenderer(size: desiredSize)
         let image = renderer.image { _ in
-            // drawHierarchy captures styling, though layer.render can look crisper sometimes:
             hostingController.view.drawHierarchy(in: hostingController.view.bounds, afterScreenUpdates: true)
         }
-        
         completion(image)
     }
 }
