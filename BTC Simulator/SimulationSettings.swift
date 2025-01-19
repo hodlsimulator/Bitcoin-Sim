@@ -74,35 +74,35 @@ class SimulationSettings: ObservableObject {
 
     // Regulatory Clampdown
     private static let defaultMaxClampDownWeekly   = -0.0019412885584652421  // was -0.0011883256912231445 (monthly)
-    private static let defaultMaxClampDownMonthly  = -0.0011883256912231445
+    private static let defaultMaxClampDownMonthly  = -0.02  // was -0.0011883256912231445
 
     // Competitor Coin
-    private static let defaultMaxCompetitorBoostWeekly   = -0.001129314495845437  // was -0.0011259913444519043 (monthly)
-    private static let defaultMaxCompetitorBoostMonthly  = -0.0011259913444519043
+    private static let defaultMaxCompetitorBoostWeekly   = -0.001129314495845437  // was -0.0011259913444519043
+    private static let defaultMaxCompetitorBoostMonthly  = -0.008  // was -0.0011259913444519043
 
     // Security Breach
     private static let defaultBreachImpactWeekly   = -0.0012699694280987979  // was -0.0007612827334384092 (monthly)
-    private static let defaultBreachImpactMonthly  = -0.0007612827334384092
+    private static let defaultBreachImpactMonthly  = -0.007  //was -0.0007612827334384092
 
     // Bubble Pop
     private static let defaultMaxPopDropWeekly   = -0.003214285969734192  // was -0.0012555068731307985
-    private static let defaultMaxPopDropMonthly  = -0.0012555068731307985
+    private static let defaultMaxPopDropMonthly  = -0.01  // was -0.0012555068731307985
 
     // Stablecoin Meltdown
     private static let defaultMaxMeltdownDropWeekly   = -0.0016935482919216154  // was -0.0006013240111422539
-    private static let defaultMaxMeltdownDropMonthly  = -0.0007028046205417837
+    private static let defaultMaxMeltdownDropMonthly  = -0.01  // was -0.0007028046205417837 
 
     // Black Swan
     private static let defaultBlackSwanDropWeekly   = -0.7977726936340332  // was -0.3
-    private static let defaultBlackSwanDropMonthly  = -0.0018411452783672483
+    private static let defaultBlackSwanDropMonthly  = -0.8  // was -0.0018411452783672483
 
     // Bear Market
     private static let defaultBearWeeklyDriftWeekly   = -0.001  // was -0.0001
-    private static let defaultBearWeeklyDriftMonthly  = -0.0007195305824279769
+    private static let defaultBearWeeklyDriftMonthly  = -0.01  // was -0.0007195305824279769
 
     // Maturing Market
     private static let defaultMaxMaturingDropWeekly   = -0.00326881742477417  // was -0.004
-    private static let defaultMaxMaturingDropMonthly  = -0.004
+    private static let defaultMaxMaturingDropMonthly  = -0.01  // was -0.004
 
     // Recession
     private static let defaultMaxRecessionDropWeekly   = -0.0010073162441545725  // was -0.0014508080482482913

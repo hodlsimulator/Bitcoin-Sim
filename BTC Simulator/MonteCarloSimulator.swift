@@ -8,7 +8,6 @@
 import Foundation
 import SwiftUI
 
-// A helper extension to format numbers with commas and 8 decimal places.
 extension Double {
     func withThousandsSeparator(decimalPlaces: Int = 8) -> String {
         let formatter = NumberFormatter()
@@ -21,7 +20,7 @@ extension Double {
 }
 
 // ──────────────────────────────────────────────────────────────────────────
-// 1) Global arrays for weekly/monthly historical returns
+// Global arrays for weekly/monthly historical returns
 // ──────────────────────────────────────────────────────────────────────────
 var historicalBTCWeeklyReturns: [Double] = []
 var sp500WeeklyReturns: [Double] = []
@@ -31,7 +30,7 @@ var historicalBTCMonthlyReturns: [Double] = []
 var sp500MonthlyReturns: [Double] = []
 
 // ──────────────────────────────────────────────────────────────────────────
-// 2) Probability thresholds & intervals
+// Probability thresholds & intervals
 // ──────────────────────────────────────────────────────────────────────────
 private let halvingIntervalGuess = 210.0
 private let blackSwanIntervalGuess = 400.0
@@ -61,7 +60,7 @@ func generateRandomEventMonths(totalMonths: Int, intervalGuess: Double) -> [Int]
 }
 
 // ──────────────────────────────────────────────────────────────────────────
-// 3) Random seed & normal distributions
+// Random seed & normal distributions
 // ──────────────────────────────────────────────────────────────────────────
 private var useSeededRandom = false
 private var seededGen: SeededGenerator?
@@ -106,7 +105,7 @@ private func randomNormal(mean: Double, standardDeviation: Double) -> Double {
 }
 
 // ──────────────────────────────────────────────────────────────────────────
-// 4) Dampening outliers
+// Dampening outliers
 // ──────────────────────────────────────────────────────────────────────────
 func dampenArctanWeekly(_ rawReturn: Double) -> Double {
     let factor = 0.6
@@ -116,14 +115,14 @@ func dampenArctanWeekly(_ rawReturn: Double) -> Double {
 }
 
 func dampenArctanMonthly(_ rawReturn: Double) -> Double {
-    let factor = 0.8
+    let factor = 0.65
     let scaled = rawReturn * factor
     let flattened = (2.0 / Double.pi) * atan(scaled)
     return flattened * 0.5
 }
 
 // ──────────────────────────────────────────────────────────────────────────
-// 5) lumpsumAdjustFactor, deposit calculations, toggles, etc.
+// lumpsumAdjustFactor, deposit calculations, toggles, etc.
 // ──────────────────────────────────────────────────────────────────────────
 private func lumpsumAdjustFactor(
     settings: SimulationSettings,
@@ -231,6 +230,7 @@ private func applyFactorToggles(
     var r = baseReturn
     let isWeekly = (settings.periodUnit == .weeks)
     
+    // Bullish toggles
     if settings.useHalving {
         if isWeekly && settings.useHalvingWeekly && halvingWeeks.contains(week) {
             r += settings.halvingBumpWeekly
@@ -238,7 +238,6 @@ private func applyFactorToggles(
             r += settings.halvingBumpMonthly
         }
     }
-
     if settings.useInstitutionalDemand {
         if isWeekly && settings.useInstitutionalDemandWeekly {
             r += settings.maxDemandBoostWeekly
@@ -316,7 +315,8 @@ private func applyFactorToggles(
             r += settings.adoptionBaseFactorMonthly
         }
     }
-    
+
+    // Bearish toggles
     if settings.useRegClampdown {
         if isWeekly && settings.useRegClampdownWeekly {
             r += settings.maxClampDownWeekly
@@ -346,12 +346,10 @@ private func applyFactorToggles(
         }
     }
     if settings.useStablecoinMeltdown {
-        // This checks for the blackSwanWeeks if meltdown is analogous to black swan
-        // If meltdown is always weekly, remove blackSwanWeeks check.
-        if isWeekly && settings.useStablecoinMeltdownWeekly && blackSwanWeeks.contains(week) {
-            r += settings.blackSwanDropWeekly
-        } else if !isWeekly && settings.useStablecoinMeltdownMonthly && blackSwanWeeks.contains(week) {
-            r += settings.blackSwanDropMonthly
+        if isWeekly && settings.useStablecoinMeltdownWeekly {
+            r += settings.maxMeltdownDropWeekly
+        } else if !isWeekly && settings.useStablecoinMeltdownMonthly {
+            r += settings.maxMeltdownDropMonthly
         }
     }
     if settings.useBlackSwan {
@@ -386,8 +384,7 @@ private func applyFactorToggles(
     return r
 }
 
-// MARK: - WEEKLY
-
+// MARK: - WEEKLY SIM
 private func runWeeklySimulation(
     settings: SimulationSettings,
     annualCAGR: Double,
@@ -420,6 +417,7 @@ private func runWeeklySimulation(
         var totalReturn = 0.0
         
         if lumpsum {
+            // Only apply lumpsum approach once per year (every 52 weeks)
             if Double(currentWeek).truncatingRemainder(dividingBy: 52.0) == 0 {
                 var lumpsumGrowth = cagrDecimal
                 if settings.useVolShocks && annualVolatility > 0 {
@@ -438,6 +436,7 @@ private func runWeeklySimulation(
                 prevBTCPriceUSD *= (1 + lumpsumGrowth)
             }
         } else {
+            // For historical sampling or lognormal approach
             if settings.useHistoricalSampling {
                 var weeklySample = pickRandomReturn(from: historicalBTCWeeklyReturns)
                 weeklySample = dampenArctanWeekly(weeklySample)
@@ -466,6 +465,7 @@ private func runWeeklySimulation(
         let newPriceUSD = prevBTCPriceUSD
         let newPriceEUR = newPriceUSD / exchangeRateEURUSD
         
+        // Contribution logic
         var typedDeposit = 0.0
         if currentWeek == 1 {
             typedDeposit = settings.startingBalance
@@ -483,6 +483,7 @@ private func runWeeklySimulation(
         )
         let holdingsAfterDeposit = oldHoldings + depositBTC
         
+        // Check thresholds for withdrawals
         let hypotheticalValueEUR = holdingsAfterDeposit * newPriceEUR
         var withdrawalEUR = 0.0
         if hypotheticalValueEUR > (settings.inputManager?.threshold2 ?? 0) {
@@ -520,7 +521,7 @@ private func runWeeklySimulation(
     return results
 }
 
-// MARK: - MONTHLY
+// MARK: - MONTHLY SIM
 private func runMonthlySimulation(
     settings: SimulationSettings,
     annualCAGR: Double,
@@ -532,11 +533,137 @@ private func runMonthlySimulation(
     blackSwanMonths: [Int],
     iterationIndex: Int
 ) -> [SimulationData] {
-    // If needed, replicate monthly logic similarly (omitting debug prints).
-    return []
-}
+
+    var results = [SimulationData]()
     
-// The main runOneFullSimulation
+    var prevBTCPriceUSD = initialBTCPriceUSD
+    var prevBTCHoldings = 0.0
+    
+    // Convert annual CAGR into a monthly fraction
+    let cagrDecimal = annualCAGR / 100.0
+    let periodVol   = (annualVolatility / 100.0) / sqrt(12.0)
+
+    let firstYearVal  = (settings.inputManager?.firstYearContribution as NSString?)?.doubleValue ?? 0
+    let secondYearVal = (settings.inputManager?.subsequentContribution as NSString?)?.doubleValue ?? 0
+
+    for currentMonth in 1...totalMonths {
+        
+        let oldPriceUSD = prevBTCPriceUSD
+        let oldHoldings = prevBTCHoldings
+        
+        let lumpsum = (!settings.useHistoricalSampling && !settings.useLognormalGrowth)
+        var totalReturn = 0.0
+        
+        if lumpsum {
+            // Lumpsum approach once per year => every 12 months
+            if Double(currentMonth).truncatingRemainder(dividingBy: 12.0) == 0 {
+                var lumpsumGrowth = cagrDecimal
+                if settings.useVolShocks && annualVolatility > 0 {
+                    let shockVol = randomNormal(mean: 0, standardDeviation: periodVol)
+                    // e.g. combine lumpsumGrowth and shock
+                    lumpsumGrowth = (1 + lumpsumGrowth) * exp(shockVol) - 1
+                }
+                // Apply toggles as if "week = currentMonth"
+                lumpsumGrowth = applyFactorToggles(
+                    baseReturn: lumpsumGrowth,
+                    week: currentMonth,
+                    settings: settings,
+                    halvingWeeks: halvingMonths,   // We'll just reuse param naming
+                    blackSwanWeeks: blackSwanMonths
+                )
+                let factor = lumpsumAdjustFactor(settings: settings, annualVolatility: annualVolatility)
+                lumpsumGrowth *= factor
+                prevBTCPriceUSD *= (1 + lumpsumGrowth)
+            }
+        } else {
+            // Historical sampling or lognormal approach
+            if settings.useHistoricalSampling {
+                var monthlySample = pickRandomReturn(from: historicalBTCMonthlyReturns)
+                monthlySample = dampenArctanMonthly(monthlySample)
+                totalReturn += monthlySample
+            }
+            if settings.useLognormalGrowth {
+                totalReturn += (cagrDecimal / 12.0)
+            }
+            if settings.useVolShocks {
+                let shockVol = randomNormal(mean: 0, standardDeviation: periodVol)
+                totalReturn += shockVol
+            }
+            let toggled = applyFactorToggles(
+                baseReturn: totalReturn,
+                week: currentMonth,
+                settings: settings,
+                halvingWeeks: halvingMonths,
+                blackSwanWeeks: blackSwanMonths
+            )
+            // In monthly mode, we treat the return as exp(toggled)
+            prevBTCPriceUSD *= exp(toggled)
+        }
+        
+        // Price floor
+        if prevBTCPriceUSD < 1.0 {
+            prevBTCPriceUSD = 1.0
+        }
+        let newPriceUSD = prevBTCPriceUSD
+        let newPriceEUR = newPriceUSD / exchangeRateEURUSD
+        
+        // Contribution logic (first year vs subsequent years)
+        var typedDeposit = 0.0
+        if currentMonth == 1 {
+            typedDeposit = settings.startingBalance
+        } else if currentMonth <= 12 {
+            typedDeposit = firstYearVal
+        } else {
+            typedDeposit = secondYearVal
+        }
+        
+        let (feeEUR, feeUSD, cEur, cUsd, depositBTC) = computeNetDeposit(
+            typedDeposit: typedDeposit,
+            settings: settings,
+            btcPriceUSD: newPriceUSD,
+            btcPriceEUR: newPriceEUR
+        )
+        let holdingsAfterDeposit = oldHoldings + depositBTC
+        
+        // Check thresholds for withdrawals
+        let hypotheticalValueEUR = holdingsAfterDeposit * newPriceEUR
+        var withdrawalEUR = 0.0
+        if hypotheticalValueEUR > (settings.inputManager?.threshold2 ?? 0) {
+            withdrawalEUR = settings.inputManager?.withdrawAmount2 ?? 0
+        } else if hypotheticalValueEUR > (settings.inputManager?.threshold1 ?? 0) {
+            withdrawalEUR = settings.inputManager?.withdrawAmount1 ?? 0
+        }
+        let withdrawalBTC = withdrawalEUR / newPriceEUR
+        let finalHoldings = max(0.0, holdingsAfterDeposit - withdrawalBTC)
+        
+        let portfolioValueEUR = finalHoldings * newPriceEUR
+        let portfolioValueUSD = finalHoldings * newPriceUSD
+        
+        let dataPoint = SimulationData(
+            week: currentMonth,  // Reuse 'week' var to store month index
+            startingBTC: oldHoldings,
+            netBTCHoldings: finalHoldings,
+            btcPriceUSD: Decimal(newPriceUSD),
+            btcPriceEUR: Decimal(newPriceEUR),
+            portfolioValueEUR: Decimal(portfolioValueEUR),
+            portfolioValueUSD: Decimal(portfolioValueUSD),
+            contributionEUR: cEur,
+            contributionUSD: cUsd,
+            transactionFeeEUR: feeEUR,
+            transactionFeeUSD: feeUSD,
+            netContributionBTC: depositBTC,
+            withdrawalEUR: withdrawalEUR,
+            withdrawalUSD: withdrawalEUR / exchangeRateEURUSD
+        )
+        results.append(dataPoint)
+        
+        prevBTCHoldings = finalHoldings
+    }
+    
+    return results
+}
+
+// Main runner for a single simulation
 func runOneFullSimulation(
     settings: SimulationSettings,
     annualCAGR: Double,
@@ -595,7 +722,7 @@ func runOneFullSimulation(
     }
 }
 
-// Multi-run approach
+// Runs multiple simulations with progress callback
 func runMonteCarloSimulationsWithProgress(
     settings: SimulationSettings,
     annualCAGR: Double,
@@ -642,6 +769,7 @@ func runMonteCarloSimulationsWithProgress(
         return ([], [])
     }
     
+    // Pick "median" run by final portfolioValueEUR or final BTC price
     let finalValues = allRuns.map { ($0.last?.portfolioValueEUR ?? Decimal.zero, $0) }
     let sorted = finalValues.sorted { $0.0 < $1.0 }
     let medianRun = sorted[sorted.count / 2].1

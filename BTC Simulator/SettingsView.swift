@@ -415,15 +415,14 @@ struct SettingsView: View {
                     isOn: $simSettings.useRegClampdownUnified,
                     sliderValue: $simSettings.maxClampDownUnified,
                     
-                    // New weekly default = -0.00194129 => ±75% => ~0.00145597
-                    // Range: -0.00339726 ... -0.00048532
-                    // Monthly unchanged => -0.00118833 => range -0.00178249 ... -0.00059416
+                    // New weekly default = -0.00194129 => ±75% => ~0.00145597 => range: -0.00339726 ... -0.00048532
+                    // New monthly default = -0.02 => ±75% => 0.015 => range: -0.035 ... -0.005
                     sliderRange: simSettings.periodUnit == .weeks
                         ? -0.00339726 ... -0.00048532
-                        : -0.00178249 ... -0.00059416,
+                        : -0.035 ... -0.005,
                     defaultValue: simSettings.periodUnit == .weeks
                         ? -0.00194129
-                        : -0.00118833,
+                        : -0.02,
                     
                     parameterDescription: """
                     Strict government regulations or bans can curb adoption,
@@ -439,15 +438,14 @@ struct SettingsView: View {
                     isOn: $simSettings.useCompetitorCoinUnified,
                     sliderValue: $simSettings.maxCompetitorBoostUnified,
                     
-                    // New weekly default = -0.00112931 => ±75% => ~0.00084698
-                    // Range: -0.00197629 ... -0.00028233
-                    // Monthly unchanged => -0.00112599 => range -0.00168899 ... -0.00056299
+                    // New weekly default = -0.00112931 => ±75% => ~0.00084698 => range: -0.00197629 ... -0.00028233
+                    // New monthly default = -0.008 => ±75% => 0.006 => range: -0.014 ... -0.002
                     sliderRange: simSettings.periodUnit == .weeks
                         ? -0.00197629 ... -0.00028233
-                        : -0.00168899 ... -0.00056299,
+                        : -0.014 ... -0.002,
                     defaultValue: simSettings.periodUnit == .weeks
                         ? -0.00112931
-                        : -0.00112599,
+                        : -0.008,
                     
                     parameterDescription: """
                     A rival cryptocurrency that promises superior tech or speed
@@ -465,13 +463,13 @@ struct SettingsView: View {
                     
                     // New weekly default = -0.00126997 => ±75% => ~0.00095248
                     // Range: -0.00222245 ... -0.00031749
-                    // Monthly unchanged => -0.00076128 => range -0.00114192 ... -0.00038064
+                    // New monthly default = -0.007 => ±75% => 0.00525 => range: -0.01225 ... -0.00175
                     sliderRange: simSettings.periodUnit == .weeks
                         ? -0.00222245 ... -0.00031749
-                        : -0.00114192 ... -0.00038064,
+                        : -0.01225 ... -0.00175,
                     defaultValue: simSettings.periodUnit == .weeks
                         ? -0.00126997
-                        : -0.00076128,
+                        : -0.007,
                     
                     parameterDescription: """
                     A major hack or exploit targeting BTC or big exchanges
@@ -479,7 +477,7 @@ struct SettingsView: View {
                     """,
                     activeFactor: activeFactor,
                     onTitleTap: toggleFactor
-                )
+                )   
                 
                 FactorToggleRow(
                     iconName: "bubble.left.and.bubble.right.fill",
@@ -487,15 +485,14 @@ struct SettingsView: View {
                     isOn: $simSettings.useBubblePopUnified,
                     sliderValue: $simSettings.maxPopDropUnified,
 
-                    // New weekly default = -0.00321429 => ±75% => ~0.00241072
-                    // Range: -0.00562501 ... -0.00080357
-                    // Monthly unchanged => -0.00125551 => range -0.00188326 ... -0.00062775
+                    // New weekly default = -0.00321429 => ±75% => ~0.00241072 => range: -0.00562501 ... -0.00080357
+                    // New monthly default = -0.01 => ±75% => 0.0075 => range: -0.0175 ... -0.0025
                     sliderRange: simSettings.periodUnit == .weeks
                         ? -0.00562501 ... -0.00080357
-                        : -0.00188326 ... -0.00062775,
+                        : -0.0175 ... -0.0025,
                     defaultValue: simSettings.periodUnit == .weeks
                         ? -0.00321429
-                        : -0.00125551,
+                        : -0.01,
 
                     parameterDescription: """
                     Speculative bubbles can burst, causing a rapid and sharp crash
@@ -511,15 +508,14 @@ struct SettingsView: View {
                     isOn: $simSettings.useStablecoinMeltdownUnified,
                     sliderValue: $simSettings.maxMeltdownDropUnified,
                     
-                    // New weekly default = -0.00169355 => ±75% => ~0.00127016
-                    // Range: -0.00296371 ... -0.00042339
-                    // Monthly unchanged => -0.00070280 => range -0.00105421 ... -0.00035140
+                    // New weekly default = -0.00169355 => ±75% => ~0.00127016 => range: -0.00296371 ... -0.00042339
+                    // New monthly default = -0.01 => ±75% => 0.0075 => range: -0.0175 ... -0.0025
                     sliderRange: simSettings.periodUnit == .weeks
                         ? -0.00296371 ... -0.00042339
-                        : -0.00105421 ... -0.00035140,
+                        : -0.0175 ... -0.0025,
                     defaultValue: simSettings.periodUnit == .weeks
                         ? -0.00169355
-                        : -0.00070280,
+                        : -0.01,
                     
                     parameterDescription: """
                     Major stablecoins de-pegging or collapsing can spark a crisis of confidence
@@ -529,20 +525,22 @@ struct SettingsView: View {
                     onTitleTap: toggleFactor
                 )
                 
+                // New monthly default = -0.8 (was -0.0018411452783672483)
+
                 FactorToggleRow(
                     iconName: "tornado",
                     title: "Black Swan Events",
                     isOn: $simSettings.useBlackSwanUnified,
                     sliderValue: $simSettings.blackSwanDropUnified,
 
-                    // New weekly default = -0.79777 => ±50% => half = ~0.398885 => range: -1.196655 ... -0.398885
-                    // Monthly unchanged => -0.00276172 ... -0.00092057
+                    // New weekly default = -0.79777 => ±50% => ~0.398885 => range: -1.196655 ... -0.398885
+                    // New monthly default = -0.8 => ±50% => half = 0.4 => range: -1.2 ... -0.4
                     sliderRange: simSettings.periodUnit == .weeks
                         ? -1.196655 ... -0.398885
-                        : -0.00276172 ... -0.00092057,
+                        : -1.2 ... -0.4,
                     defaultValue: simSettings.periodUnit == .weeks
                         ? -0.79777
-                        : -0.00184115,
+                        : -0.8,
 
                     parameterDescription: """
                     Highly unpredictable disasters or wars can undermine all markets,
@@ -552,6 +550,8 @@ struct SettingsView: View {
                     onTitleTap: toggleFactor
                 )
                 
+                // New monthly default = -0.01 (was -0.0007195305824279769)
+
                 FactorToggleRow(
                     iconName: "chart.bar.xaxis",
                     title: "Bear Market Conditions",
@@ -559,13 +559,13 @@ struct SettingsView: View {
                     sliderValue: $simSettings.bearWeeklyDriftUnified,
                     
                     // Weekly default = -0.001 => ±0.00075 => range -0.00175 ... -0.00025
-                    // Monthly unchanged => -0.00071953 => range -0.00107930 ... -0.00035977
+                    // New monthly default = -0.01 => ±0.0075 => range -0.0175 ... -0.0025
                     sliderRange: simSettings.periodUnit == .weeks
                         ? -0.00175 ... -0.00025
-                        : -0.00107930 ... -0.00035977,
+                        : -0.0175 ... -0.0025,
                     defaultValue: simSettings.periodUnit == .weeks
                         ? -0.001
-                        : -0.00071953,
+                        : -0.01,
                     
                     parameterDescription: """
                         Prolonged negativity in crypto can produce a steady downward trend,
@@ -583,13 +583,14 @@ struct SettingsView: View {
                     
                     // New weekly default = -0.00326882 => ±75% => ~0.00245161
                     // Range: -0.00572043 ... -0.00081720
-                    // Monthly unchanged => -0.004 => range -0.006 ... -0.002
+                    // New monthly default = -0.01 => ±75% => ~0.0075
+                    // Range: -0.0175 ... -0.0025
                     sliderRange: simSettings.periodUnit == .weeks
                         ? -0.00572043 ... -0.00081720
-                        : -0.006 ... -0.002,
+                        : -0.0175 ... -0.0025,
                     defaultValue: simSettings.periodUnit == .weeks
                         ? -0.00326882
-                        : -0.004,
+                        : -0.01,
                     
                     parameterDescription: """
                     As BTC matures, growth rates slow, leading to smaller returns

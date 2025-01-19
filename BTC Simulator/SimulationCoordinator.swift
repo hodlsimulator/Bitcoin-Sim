@@ -154,9 +154,8 @@ class SimulationCoordinator: ObservableObject {
             }
             
             // Instead of sorting by final portfolio, we now sort by final BTC price (USD).
-            // This picks the run whose end-of-run BTC price is at the median.
             let finalRuns = allIterations.map {
-                // Grab the final week's BTC price in USD
+                // Grab the final week's (or month's) BTC price in USD
                 ($0.last?.btcPriceUSD ?? Decimal.zero, $0)
             }
             let sortedRuns = finalRuns.sorted { $0.0 < $1.0 }
@@ -168,8 +167,7 @@ class SimulationCoordinator: ObservableObject {
             // Just a partial sample debug
             if let firstRun = allIterations.first {
                 let midIndex = firstRun.count / 2
-                print("// DEBUG: partial sample => week1 => BTC=\(firstRun[0].btcPriceUSD), portfolio=\(firstRun[0].portfolioValueEUR)")
-                print("                  => week\(midIndex) => BTC=\(firstRun[midIndex].btcPriceUSD), portfolio=\(firstRun[midIndex].portfolioValueEUR)")
+            
                 if let lastItem = firstRun.last {
                     print("// DEBUG: partial sample => last => BTC=\(lastItem.btcPriceUSD), portfolio=\(lastItem.portfolioValueEUR)")
                 }
@@ -192,43 +190,29 @@ class SimulationCoordinator: ObservableObject {
                 let medianIndex    = sortedRuns.count / 2
                 let ninetiethIndex = min(sortedRuns.count - 1, Int(Double(sortedRuns.count - 1) * 0.90))
                 
-                // Single-run approach for 10th, median, 90th:
                 let tenthRun     = sortedRuns[tenthIndex].1
                 let medianRun    = sortedRuns[medianIndex].1
                 let ninetiethRun = sortedRuns[ninetiethIndex].1
 
-                // For demonstration: we set `medianResults` and `monteCarloResults` to that single run
-                // (the run whose final BTC price is in the middle).
                 self.tenthPercentileResults = tenthRun
                 self.ninetiethPercentileResults = ninetiethRun
 
-                // OLD SPLICED APPROACH: we skip `computeMedianSimulationData`.
-                // let medianLineData = self.computeMedianSimulationData(allIterations: allIterations)
-                // self.medianResults = medianLineData
-                // self.monteCarloResults = medianLineData
-
-                // Instead, pick the single iteration for the median final BTC price:
+                // Using single-run approach for median final BTC price:
                 self.medianResults = medianRun
                 self.monteCarloResults = medianRun
 
-                // We'll still keep references for the chart logic:
                 self.selectedPercentile = .median
                 self.allSimData = allIterations
 
-                // If needed, you can do "range band" chart if you want 10th & 90th lines.
-                // But for a single line chart, just rely on `monteCarloResults`.
-
-                // For debugging:
                 let tenthFinalBTC     = tenthRun.last?.btcPriceUSD     ?? 0
                 let ninetiethFinalBTC = ninetiethRun.last?.btcPriceUSD ?? 0
                 let medianFinalBTC    = medianRun.last?.btcPriceUSD    ?? 0
 
                 print("// DEBUG: Tenth final BTC price => \(tenthFinalBTC)")
                 print("// DEBUG: Ninetieth final BTC price => \(ninetiethFinalBTC)")
-                print("// DEBUG: medianRun => \(medianRun.count) weeks. " +
+                print("// DEBUG: medianRun => \(medianRun.count) periods. " +
                       "Final BTC => \(medianFinalBTC)")
 
-                // Build or skip chart snapshots
                 let allSimsAsWeekPoints = self.convertAllSimsToWeekPoints()
                 let allSimsAsPortfolioPoints = self.convertAllSimsToPortfolioWeekPoints()
                 
@@ -243,7 +227,6 @@ class SimulationCoordinator: ObservableObject {
                 self.chartDataCache.chartSnapshotPortfolio = nil
                 self.chartDataCache.chartSnapshotPortfolioLandscape = nil
                 
-                // Possibly not used, but we'll store them anyway:
                 self.chartDataCache.allRuns = allSimsAsWeekPoints
                 self.chartDataCache.portfolioRuns = allSimsAsPortfolioPoints
 
@@ -341,22 +324,11 @@ class SimulationCoordinator: ObservableObject {
         return combinedString.hashValue
     }
 
-    // -- REMOVED usage of the "spliced" median approach here:
-    /*
-    private func computeMedianSimulationData(allIterations: [[SimulationData]]) -> [SimulationData] {
-        // *We no longer call this to build 'medianLineData'*
-        // If you want to keep the spliced approach for debugging, you can
-        // still have this function but comment out usage in the final block.
-        ...
-    }
-    */
-
     private func processAllResults(_ allResults: [[SimulationData]]) {
         print("// DEBUG: processAllResults() => got \(allResults.count) runs.")
     }
 }
 
-// Helper for median of Decimal arrays
 func medianOfDecimalArray(_ arr: [Decimal]) -> Decimal {
     if arr.isEmpty { return .zero }
     let sortedArr = arr.sorted(by: <)
@@ -369,7 +341,6 @@ func medianOfDecimalArray(_ arr: [Decimal]) -> Decimal {
     }
 }
 
-// Helper for median of Double arrays
 func medianOfDoubleArray(_ arr: [Double]) -> Double {
     if arr.isEmpty { return 0.0 }
     let sortedArr = arr.sorted()
