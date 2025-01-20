@@ -179,6 +179,9 @@ class SimulationSettings: ObservableObject {
         if defaults.object(forKey: "useVolShocks") != nil {
             useVolShocks = defaults.bool(forKey: "useVolShocks")
         }
+        if defaults.object(forKey: "useGarchVolatility") != nil {
+            useGarchVolatility = defaults.bool(forKey: "useGarchVolatility")
+        }
         if defaults.object(forKey: "lastUsedSeed") != nil {
             lastUsedSeed = UInt64(defaults.integer(forKey: "lastUsedSeed"))
         }
@@ -850,6 +853,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
+    
     @Published var seedValue: UInt64 = 0 {
         didSet {
             if isInitialized {
@@ -857,6 +861,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
+    
     @Published var useRandomSeed: Bool = true {
         didSet {
             if isInitialized {
@@ -864,6 +869,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
+    
     @Published var useHistoricalSampling: Bool = true {
         didSet {
             if isInitialized {
@@ -871,13 +877,7 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var useGarchVolatility: Bool = true {
-        didSet {
-            if isInitialized {
-                UserDefaults.standard.set(useGarchVolatility, forKey: "useGarchVolatility")
-            }
-        }
-    }
+    
     @Published var useVolShocks: Bool = true {
         didSet {
             if isInitialized {
@@ -885,6 +885,41 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
+    
+    @Published var useGarchVolatility: Bool = true {
+        didSet {
+            if isInitialized {
+                UserDefaults.standard.set(useGarchVolatility, forKey: "useGarchVolatility")
+            }
+        }
+    }
+    
+    @Published var useAutoCorrelation: Bool = false {
+        didSet {
+            if isInitialized {
+                UserDefaults.standard.set(useAutoCorrelation, forKey: "useAutoCorrelation")
+            }
+        }
+    }
+
+    /// Strength of autocorrelation (0 = none, 1 = full carryover of last return).
+    @Published var autoCorrelationStrength: Double = 0.2 {
+        didSet {
+            if isInitialized {
+                UserDefaults.standard.set(autoCorrelationStrength, forKey: "autoCorrelationStrength")
+            }
+        }
+    }
+
+    /// Mean reversion target, e.g. 0 for no drift, or you can pick a small positivity.
+    @Published var meanReversionTarget: Double = 0.0 {
+        didSet {
+            if isInitialized {
+                UserDefaults.standard.set(meanReversionTarget, forKey: "meanReversionTarget")
+            }
+        }
+    }
+
     @Published var lastUsedSeed: UInt64 = 0
 
     // -----------------------------

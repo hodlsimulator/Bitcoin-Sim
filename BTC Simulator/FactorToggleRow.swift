@@ -153,7 +153,7 @@ struct FactorToggleRow: View {
                         .foregroundColor(.secondary)
                         .frame(width: 70, alignment: .trailing)
                         .disabled(!isOn)
-                }
+                }   
                 else if displayAsPercent {
                     Text(String(format: "%.4f%%", sliderValue * 100))
                         .font(.caption)

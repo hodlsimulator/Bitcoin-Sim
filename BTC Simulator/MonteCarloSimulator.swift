@@ -7,7 +7,9 @@
 
 import Foundation
 import SwiftUI
+import GameplayKit // for GKARC4RandomSource
 
+// MARK: - Utility Extension
 extension Double {
     func withThousandsSeparator(decimalPlaces: Int = 8) -> String {
         let formatter = NumberFormatter()
@@ -30,83 +32,65 @@ var historicalBTCMonthlyReturns: [Double] = []
 var sp500MonthlyReturns: [Double] = []
 
 // ──────────────────────────────────────────────────────────────────────────
-// Probability thresholds & intervals
+// Probability thresholds & intervals (for halving or black swan events)
 // ──────────────────────────────────────────────────────────────────────────
 private let halvingIntervalGuess = 210.0
 private let blackSwanIntervalGuess = 400.0
 private let halvingIntervalGuessMonths: Double = 48.0
 private let blackSwanIntervalGuessMonths: Double = 92.0
 
-func generateRandomEventWeeks(totalWeeks: Int, intervalGuess: Double) -> [Int] {
+// MARK: - Unified Random Event Generators
+/// Generates random event weeks based on an expected interval, using our seeded RNG.
+func generateRandomEventWeeks(
+    totalWeeks: Int,
+    intervalGuess: Double,
+    rng: GKRandomSource
+) -> [Int] {
     let expectedCount = Double(totalWeeks) / intervalGuess
     let eventCount = Int(round(expectedCount))
     var eventWeeks: [Int] = []
     for _ in 0..<eventCount {
-        let randomWeek = Int.random(in: 1...totalWeeks)
+        // Use seeded RNG, not Swift’s Int.random(in:).
+        let randomWeek = rng.nextInt(upperBound: totalWeeks) + 1
         eventWeeks.append(randomWeek)
     }
     return eventWeeks.sorted()
 }
 
-func generateRandomEventMonths(totalMonths: Int, intervalGuess: Double) -> [Int] {
+/// Generates random event months based on an expected interval, using seeded RNG.
+func generateRandomEventMonths(
+    totalMonths: Int,
+    intervalGuess: Double,
+    rng: GKRandomSource
+) -> [Int] {
     let expectedCount = Double(totalMonths) / intervalGuess
     let eventCount = Int(round(expectedCount))
     var eventMonths: [Int] = []
     for _ in 0..<eventCount {
-        let randomMonth = Int.random(in: 1...totalMonths)
+        let randomMonth = rng.nextInt(upperBound: totalMonths) + 1
         eventMonths.append(randomMonth)
     }
     return eventMonths.sorted()
 }
 
-// ──────────────────────────────────────────────────────────────────────────
-// Random seed & normal distributions
-// ──────────────────────────────────────────────────────────────────────────
-private var useSeededRandom = false
-private var seededGen: SeededGenerator?
-
-private struct SeededGenerator: RandomNumberGenerator {
-    private var state: UInt64
-    init(seed: UInt64) {
-        self.state = seed
-    }
-    mutating func next() -> UInt64 {
-        state = 2862933555777941757 &* state &+ 3037000493
-        return state
-    }
-}
-
-private func setRandomSeed(_ seed: UInt64?) {
-    if let s = seed {
-        useSeededRandom = true
-        seededGen = SeededGenerator(seed: s)
-    } else {
-        useSeededRandom = false
-        seededGen = nil
-    }
-}
-
-fileprivate func seededRandomNormal<G: RandomNumberGenerator>(
-    mean: Double,
-    stdDev: Double,
-    rng: inout G
-) -> Double {
-    let u1 = Double(rng.next()) / Double(UInt64.max)
-    let u2 = Double(rng.next()) / Double(UInt64.max)
-    let z0 = sqrt(-2.0 * log(u1)) * cos(2.0 * .pi * u2)
-    return z0 * stdDev + mean
-}
-
-private func randomNormal(mean: Double, standardDeviation: Double) -> Double {
-    let u1 = Double.random(in: 0..<1)
-    let u2 = Double.random(in: 0..<1)
+// MARK: - Normal Draw with RNG
+/// A standard normal draw using a seeded GKRandomSource.
+private func randomNormalWithRNG(mean: Double, standardDeviation: Double, rng: GKRandomSource) -> Double {
+    let u1 = Double(rng.nextUniform())
+    let u2 = Double(rng.nextUniform())
     let z0 = sqrt(-2.0 * log(u1)) * cos(2.0 * .pi * u2)
     return z0 * standardDeviation + mean
 }
 
-// ──────────────────────────────────────────────────────────────────────────
-// Dampening outliers
-// ──────────────────────────────────────────────────────────────────────────
+// MARK: - Historical Return Picker
+/// Picks a random return from an array, using our seeded RNG.
+fileprivate func pickRandomReturn(from arr: [Double], rng: GKRandomSource) -> Double {
+    guard !arr.isEmpty else { return 0.0 }
+    let idx = rng.nextInt(upperBound: arr.count)
+    return arr[idx]
+}
+
+// MARK: - Dampen Outliers
 func dampenArctanWeekly(_ rawReturn: Double) -> Double {
     let factor = 0.6
     let scaled = rawReturn * factor
@@ -121,9 +105,7 @@ func dampenArctanMonthly(_ rawReturn: Double) -> Double {
     return flattened * 0.5
 }
 
-// ──────────────────────────────────────────────────────────────────────────
-// lumpsumAdjustFactor, deposit calculations, toggles, etc.
-// ──────────────────────────────────────────────────────────────────────────
+// MARK: - Lump-sum Factor
 private func lumpsumAdjustFactor(
     settings: SimulationSettings,
     annualVolatility: Double
@@ -177,6 +159,7 @@ private func lumpsumAdjustFactor(
     return factor
 }
 
+// MARK: - Contribution / Deposit
 private func computeNetDeposit(
     typedDeposit: Double,
     settings: SimulationSettings,
@@ -220,17 +203,19 @@ private func computeNetDeposit(
     }
 }
 
+// MARK: - Factor Toggles (Bullish/Bearish)
 private func applyFactorToggles(
     baseReturn: Double,
     week: Int,
     settings: SimulationSettings,
+    mempoolDataManager: MempoolDataManager,
     halvingWeeks: [Int],
-    blackSwanWeeks: [Int]
+    rng: GKRandomSource // needed for black swan probability
 ) -> Double {
     var r = baseReturn
     let isWeekly = (settings.periodUnit == .weeks)
     
-    // Bullish toggles
+    // ────────── BULLISH ──────────
     if settings.useHalving {
         if isWeekly && settings.useHalvingWeekly && halvingWeeks.contains(week) {
             r += settings.halvingBumpWeekly
@@ -315,8 +300,8 @@ private func applyFactorToggles(
             r += settings.adoptionBaseFactorMonthly
         }
     }
-
-    // Bearish toggles
+    
+    // ────────── BEARISH ──────────
     if settings.useRegClampdown {
         if isWeekly && settings.useRegClampdownWeekly {
             r += settings.maxClampDownWeekly
@@ -353,10 +338,18 @@ private func applyFactorToggles(
         }
     }
     if settings.useBlackSwan {
-        if isWeekly && settings.useBlackSwanWeekly && blackSwanWeeks.contains(week) {
-            r += settings.blackSwanDropWeekly
-        } else if !isWeekly && settings.useBlackSwanMonthly && blackSwanWeeks.contains(week) {
-            r += settings.blackSwanDropMonthly
+        // Probability-based approach => seeded
+        let stressLevel = mempoolDataManager.stressLevel(at: week)
+        let baseProb = 0.003
+        let dynamicProb = (stressLevel > 80.0) ? baseProb * 2 : baseProb
+        // Instead of Double.random(in: 0...1), we do:
+        let roll = Double(rng.nextUniform())
+        if roll < dynamicProb {
+            if isWeekly {
+                r += settings.blackSwanDropWeekly
+            } else {
+                r += settings.blackSwanDropMonthly
+            }
         }
     }
     if settings.useBearMarket {
@@ -393,25 +386,19 @@ private func runWeeklySimulation(
     totalWeeklySteps: Int,
     initialBTCPriceUSD: Double,
     halvingWeeks: [Int],
-    blackSwanWeeks: [Int],
-    iterationIndex: Int
+    iterationIndex: Int,
+    mempoolDataManager: MempoolDataManager,
+    rng: GKRandomSource
 ) -> [SimulationData] {
     
     var results = [SimulationData]()
-    
     var prevBTCPriceUSD = initialBTCPriceUSD
     var prevBTCHoldings = 0.0
     
     let cagrDecimal = annualCAGR / 100.0
-    
-    // For normal use, weekly stdev = annualVol / sqrt(52),
-    // but we might override it if GARCH is on
     let baseWeeklyVol = (annualVolatility / 100.0) / sqrt(52.0)
 
-    // CHANGED: If using GARCH, create our GarchModel.
-    // You could store GARCH parameters in SimulationSettings, or just hardcode them here.
-    // We'll pick some example values that might need tuning.
-    // e.g. ω = 0.000001, α = 0.1, β = 0.85 => typical ballpark for GARCH(1,1).
+    // GARCH model
     var garchModel = GarchModel(
         omega: 0.000001,
         alpha: 0.1,
@@ -422,49 +409,55 @@ private func runWeeklySimulation(
     let firstYearVal  = (settings.inputManager?.firstYearContribution as NSString?)?.doubleValue ?? 0
     let secondYearVal = (settings.inputManager?.subsequentContribution as NSString?)?.doubleValue ?? 0
     
-    // We'll store lastReturn to feed GARCH each loop.
-    // E.g. if we do "exp(totalReturn) - 1" as the percentage,
-    // we can pass totalReturn itself as an approximation to lastReturn.
     var lastStepLogReturn = 0.0
+    var lastAutoReturn = 0.0 // for autocorrelation
 
     for currentWeek in 1...totalWeeklySteps {
         
         let lumpsum = (!settings.useHistoricalSampling && !settings.useLognormalGrowth)
         var totalReturn = 0.0
         
-        // NEW: GARCH CODE
-        // compute the current stdev from GARCH or the fixed base.
+        // Current stdev (GARCH or fixed)
         let currentVol = settings.useGarchVolatility
             ? garchModel.currentStdDev()
             : baseWeeklyVol
         
         if lumpsum {
-            // Only apply lumpsum approach once per year (every 52 weeks)
+            // Once every 52 weeks
             if Double(currentWeek).truncatingRemainder(dividingBy: 52.0) == 0 {
                 var lumpsumGrowth = cagrDecimal
                 if settings.useVolShocks && annualVolatility > 0 {
-                    // Use currentVol instead of baseWeeklyVol if GARCH is on:
-                    let shockVol = randomNormal(mean: 0, standardDeviation: currentVol)
+                    let shockVol = randomNormalWithRNG(
+                        mean: 0,
+                        standardDeviation: currentVol,
+                        rng: rng
+                    )
                     lumpsumGrowth = (1 + lumpsumGrowth) * exp(shockVol) - 1
+                }
+                if settings.useAutoCorrelation {
+                    let phi = settings.autoCorrelationStrength
+                    lumpsumGrowth = (1 - phi) * lumpsumGrowth + phi * lastAutoReturn
                 }
                 lumpsumGrowth = applyFactorToggles(
                     baseReturn: lumpsumGrowth,
                     week: currentWeek,
                     settings: settings,
+                    mempoolDataManager: mempoolDataManager,
                     halvingWeeks: halvingWeeks,
-                    blackSwanWeeks: blackSwanWeeks
+                    rng: rng
                 )
+                
                 let factor = lumpsumAdjustFactor(settings: settings, annualVolatility: annualVolatility)
                 lumpsumGrowth *= factor
                 prevBTCPriceUSD *= (1 + lumpsumGrowth)
                 
-                // For GARCH, approximate lastReturn for next step:
                 lastStepLogReturn = log(1 + lumpsumGrowth)
+                lastAutoReturn = lumpsumGrowth
             }
         } else {
-            // Historical sampling or lognormal approach
+            // Historical sampling or lognormal each step
             if settings.useHistoricalSampling {
-                var weeklySample = pickRandomReturn(from: historicalBTCWeeklyReturns)
+                var weeklySample = pickRandomReturn(from: historicalBTCWeeklyReturns, rng: rng)
                 weeklySample = dampenArctanWeekly(weeklySample)
                 totalReturn += weeklySample
             }
@@ -472,30 +465,35 @@ private func runWeeklySimulation(
                 totalReturn += (cagrDecimal / 52.0)
             }
             if settings.useVolShocks {
-                // CHANGED: Use currentVol if GARCH is on
-                let shockVol = randomNormal(mean: 0, standardDeviation: currentVol)
+                let shockVol = randomNormalWithRNG(mean: 0, standardDeviation: currentVol, rng: rng)
                 totalReturn += shockVol
+            }
+            if settings.useAutoCorrelation {
+                let phi = settings.autoCorrelationStrength
+                totalReturn = (1 - phi) * totalReturn + phi * lastAutoReturn
             }
             let toggled = applyFactorToggles(
                 baseReturn: totalReturn,
                 week: currentWeek,
                 settings: settings,
+                mempoolDataManager: mempoolDataManager,
                 halvingWeeks: halvingWeeks,
-                blackSwanWeeks: blackSwanWeeks
+                rng: rng
             )
             prevBTCPriceUSD *= exp(toggled)
             
-            // GARCH: store lastReturn for next iteration
             lastStepLogReturn = toggled
+            lastAutoReturn = toggled
         }
         
+        // Floor
         if prevBTCPriceUSD < 1.0 {
             prevBTCPriceUSD = 1.0
         }
         let newPriceUSD = prevBTCPriceUSD
         let newPriceEUR = newPriceUSD / exchangeRateEURUSD
         
-        // Contribution logic
+        // Contributions
         var typedDeposit = 0.0
         if currentWeek == 1 {
             typedDeposit = settings.startingBalance
@@ -513,7 +511,7 @@ private func runWeeklySimulation(
         )
         let holdingsAfterDeposit = prevBTCHoldings + depositBTC
         
-        // Check thresholds for withdrawals
+        // Withdraw thresholds
         let hypotheticalValueEUR = holdingsAfterDeposit * newPriceEUR
         var withdrawalEUR = 0.0
         if hypotheticalValueEUR > (settings.inputManager?.threshold2 ?? 0) {
@@ -527,8 +525,6 @@ private func runWeeklySimulation(
         let portfolioValueEUR = finalHoldings * newPriceEUR
         let portfolioValueUSD = finalHoldings * newPriceUSD
         
-        // NEW: If GARCH is on, update the variance for next step
-        // using the last log-return we just applied.
         if settings.useGarchVolatility {
             garchModel.updateVariance(lastReturn: lastStepLogReturn)
         }
@@ -566,21 +562,18 @@ private func runMonthlySimulation(
     totalMonths: Int,
     initialBTCPriceUSD: Double,
     halvingMonths: [Int],
-    blackSwanMonths: [Int],
-    iterationIndex: Int
+    iterationIndex: Int,
+    mempoolDataManager: MempoolDataManager,
+    rng: GKRandomSource
 ) -> [SimulationData] {
 
     var results = [SimulationData]()
-    
     var prevBTCPriceUSD = initialBTCPriceUSD
     var prevBTCHoldings = 0.0
     
     let cagrDecimal = annualCAGR / 100.0
-    
-    // Normal monthly stdev = annualVol / sqrt(12)
     let baseMonthlyVol = (annualVolatility / 100.0) / sqrt(12.0)
 
-    // NEW: GARCH CODE for monthly
     var garchModel = GarchModel(
         omega: 0.00001,
         alpha: 0.1,
@@ -592,41 +585,48 @@ private func runMonthlySimulation(
     let secondYearVal = (settings.inputManager?.subsequentContribution as NSString?)?.doubleValue ?? 0
     
     var lastStepLogReturn = 0.0
+    var lastAutoReturn = 0.0
 
     for currentMonth in 1...totalMonths {
-        
         let lumpsum = (!settings.useHistoricalSampling && !settings.useLognormalGrowth)
         var totalReturn = 0.0
         
-        // CHANGED: current stdev from GARCH or fixed
         let currentVol = settings.useGarchVolatility
             ? garchModel.currentStdDev()
             : baseMonthlyVol
         
         if lumpsum {
-            // Lumpsum approach once per year => every 12 months
+            // Once per year => every 12 months
             if Double(currentMonth).truncatingRemainder(dividingBy: 12.0) == 0 {
                 var lumpsumGrowth = cagrDecimal
                 if settings.useVolShocks && annualVolatility > 0 {
-                    let shockVol = randomNormal(mean: 0, standardDeviation: currentVol)
+                    let shockVol = randomNormalWithRNG(mean: 0, standardDeviation: currentVol, rng: rng)
                     lumpsumGrowth = (1 + lumpsumGrowth) * exp(shockVol) - 1
+                }
+                if settings.useAutoCorrelation {
+                    let phi = settings.autoCorrelationStrength
+                    lumpsumGrowth = (1 - phi) * lumpsumGrowth + phi * lastAutoReturn
                 }
                 lumpsumGrowth = applyFactorToggles(
                     baseReturn: lumpsumGrowth,
                     week: currentMonth,
                     settings: settings,
+                    mempoolDataManager: mempoolDataManager,
                     halvingWeeks: halvingMonths,
-                    blackSwanWeeks: blackSwanMonths
+                    rng: rng
                 )
+                
                 let factor = lumpsumAdjustFactor(settings: settings, annualVolatility: annualVolatility)
                 lumpsumGrowth *= factor
                 prevBTCPriceUSD *= (1 + lumpsumGrowth)
                 
                 lastStepLogReturn = log(1 + lumpsumGrowth)
+                lastAutoReturn = lumpsumGrowth
             }
         } else {
+            // Historical sampling or lognormal each month
             if settings.useHistoricalSampling {
-                var monthlySample = pickRandomReturn(from: historicalBTCMonthlyReturns)
+                var monthlySample = pickRandomReturn(from: historicalBTCMonthlyReturns, rng: rng)
                 monthlySample = dampenArctanMonthly(monthlySample)
                 totalReturn += monthlySample
             }
@@ -634,19 +634,25 @@ private func runMonthlySimulation(
                 totalReturn += (cagrDecimal / 12.0)
             }
             if settings.useVolShocks {
-                let shockVol = randomNormal(mean: 0, standardDeviation: currentVol)
+                let shockVol = randomNormalWithRNG(mean: 0, standardDeviation: currentVol, rng: rng)
                 totalReturn += shockVol
+            }
+            if settings.useAutoCorrelation {
+                let phi = settings.autoCorrelationStrength
+                totalReturn = (1 - phi) * totalReturn + (phi * lastAutoReturn)
             }
             let toggled = applyFactorToggles(
                 baseReturn: totalReturn,
                 week: currentMonth,
                 settings: settings,
+                mempoolDataManager: mempoolDataManager,
                 halvingWeeks: halvingMonths,
-                blackSwanWeeks: blackSwanMonths
+                rng: rng
             )
             prevBTCPriceUSD *= exp(toggled)
             
             lastStepLogReturn = toggled
+            lastAutoReturn = toggled
         }
         
         // Floor
@@ -656,7 +662,7 @@ private func runMonthlySimulation(
         let newPriceUSD = prevBTCPriceUSD
         let newPriceEUR = newPriceUSD / exchangeRateEURUSD
         
-        // Contribution logic
+        // Contribution
         var typedDeposit = 0.0
         if currentMonth == 1 {
             typedDeposit = settings.startingBalance
@@ -674,7 +680,7 @@ private func runMonthlySimulation(
         )
         let holdingsAfterDeposit = prevBTCHoldings + depositBTC
         
-        // Check thresholds
+        // Withdraw thresholds
         let hypotheticalValueEUR = holdingsAfterDeposit * newPriceEUR
         var withdrawalEUR = 0.0
         if hypotheticalValueEUR > (settings.inputManager?.threshold2 ?? 0) {
@@ -688,13 +694,12 @@ private func runMonthlySimulation(
         let portfolioValueEUR = finalHoldings * newPriceEUR
         let portfolioValueUSD = finalHoldings * newPriceUSD
         
-        // NEW: GARCH update
         if settings.useGarchVolatility {
             garchModel.updateVariance(lastReturn: lastStepLogReturn)
         }
 
         let dataPoint = SimulationData(
-            week: currentMonth, // reusing 'week' to store month index
+            week: currentMonth, // storing month in 'week' field
             startingBTC: prevBTCHoldings,
             netBTCHoldings: finalHoldings,
             btcPriceUSD: Decimal(newPriceUSD),
@@ -717,7 +722,7 @@ private func runMonthlySimulation(
     return results
 }
 
-// Main runner for a single simulation
+// MARK: - Single Simulation Entry
 func runOneFullSimulation(
     settings: SimulationSettings,
     annualCAGR: Double,
@@ -726,21 +731,21 @@ func runOneFullSimulation(
     userWeeks: Int,
     initialBTCPriceUSD: Double,
     iterationIndex: Int = 0,
-    seed: UInt64? = nil
+    rng: GKRandomSource, // single seeded RNG
+    mempoolDataManager: MempoolDataManager? = nil
 ) -> [SimulationData] {
 
     if settings.periodUnit == .months {
         let totalMonths = userWeeks
+        
+        // Generate random halving months with the same RNG
         let randomHalvingMonths = generateRandomEventMonths(
             totalMonths: totalMonths,
-            intervalGuess: halvingIntervalGuessMonths
+            intervalGuess: halvingIntervalGuessMonths,
+            rng: rng
         )
-        let randomBlackSwanMonths = generateRandomEventMonths(
-            totalMonths: totalMonths,
-            intervalGuess: blackSwanIntervalGuessMonths
-        )
-        
-        return runMonthlySimulation(
+
+        let monthlyResult = runMonthlySimulation(
             settings: settings,
             annualCAGR: annualCAGR,
             annualVolatility: annualVolatility,
@@ -748,21 +753,23 @@ func runOneFullSimulation(
             totalMonths: totalMonths,
             initialBTCPriceUSD: initialBTCPriceUSD,
             halvingMonths: randomHalvingMonths,
-            blackSwanMonths: randomBlackSwanMonths,
-            iterationIndex: iterationIndex
+            iterationIndex: iterationIndex,
+            mempoolDataManager: mempoolDataManager ?? MempoolDataManager(mempoolData: []),
+            rng: rng
         )
+        return monthlyResult
+
     } else {
         let totalWeeks = userWeeks
+        
+        // Generate random halving weeks with the same RNG
         let randomHalvingWeeks = generateRandomEventWeeks(
             totalWeeks: totalWeeks,
-            intervalGuess: halvingIntervalGuess
-        )
-        let randomBlackSwanWeeks = generateRandomEventWeeks(
-            totalWeeks: totalWeeks,
-            intervalGuess: blackSwanIntervalGuess
+            intervalGuess: halvingIntervalGuess,
+            rng: rng
         )
         
-        return runWeeklySimulation(
+        let weeklyResult = runWeeklySimulation(
             settings: settings,
             annualCAGR: annualCAGR,
             annualVolatility: annualVolatility,
@@ -770,17 +777,17 @@ func runOneFullSimulation(
             totalWeeklySteps: totalWeeks,
             initialBTCPriceUSD: initialBTCPriceUSD,
             halvingWeeks: randomHalvingWeeks,
-            blackSwanWeeks: randomBlackSwanWeeks,
-            iterationIndex: iterationIndex
+            iterationIndex: iterationIndex,
+            mempoolDataManager: mempoolDataManager ?? MempoolDataManager(mempoolData: []),
+            rng: rng
         )
+        return weeklyResult
     }
 }
 
-// NEW CODE: Helper to compute median BTC price at each step across all runs.
+// MARK: - Compute median BTC across all runs
 fileprivate func computeMedianBTCPriceByStep(allRuns: [[SimulationData]]) -> [Decimal] {
-    // If no runs, or no data, return empty
     guard let steps = allRuns.first?.count, steps > 0 else { return [] }
-    
     var medians = [Decimal](repeating: 0, count: steps)
     
     for stepIndex in 0..<steps {
@@ -794,21 +801,20 @@ fileprivate func computeMedianBTCPriceByStep(allRuns: [[SimulationData]]) -> [De
             continue
         }
         
-        let sorted = pricesAtStep.sorted()
-        let mid = sorted.count / 2
-        if sorted.count % 2 == 0 {
-            // even => average the middle two
-            let p1 = sorted[mid - 1]
-            let p2 = sorted[mid]
+        let sortedPrices = pricesAtStep.sorted()
+        let mid = sortedPrices.count / 2
+        if sortedPrices.count % 2 == 0 {
+            let p1 = sortedPrices[mid - 1]
+            let p2 = sortedPrices[mid]
             medians[stepIndex] = (p1 + p2) / 2
         } else {
-            medians[stepIndex] = sorted[mid]
+            medians[stepIndex] = sortedPrices[mid]
         }
     }
     return medians
 }
 
-// Runs multiple simulations with progress callback
+// MARK: - Run Multiple Simulations With Progress
 func runMonteCarloSimulationsWithProgress(
     settings: SimulationSettings,
     annualCAGR: Double,
@@ -820,24 +826,33 @@ func runMonteCarloSimulationsWithProgress(
     initialBTCPriceUSD: Double,
     isCancelled: () -> Bool,
     progressCallback: @escaping (Int) -> Void,
-    seed: UInt64? = nil
+    seed: UInt64? = nil,
+    mempoolDataManager: MempoolDataManager? = nil
 ) -> (
     medianRun: [SimulationData],
     allRuns: [[SimulationData]],
     stepMedianPrices: [Decimal]
 ) {
+    // 1) Create a single RNG for all draws
+    let rng: GKRandomSource
+    if let validSeed = seed {
+        let seedData = withUnsafeBytes(of: validSeed) { Data($0) }
+        rng = GKARC4RandomSource(seed: seedData)
+    } else {
+        rng = GKARC4RandomSource() // unseeded => new each run
+    }
     
-    setRandomSeed(seed)
+    // 2) Array to store all runs
     var allRuns = [[SimulationData]]()
-
+    
+    // 3) Loop
     for i in 0..<iterations {
-        if isCancelled() {
-            break
-        }
+        if isCancelled() { break }
         
-        // optional small delay
+        // optional sim delay
         Thread.sleep(forTimeInterval: 0.01)
 
+        // Each iteration -> runOneFullSimulation with the same rng (it advances each time)
         let simRun = runOneFullSimulation(
             settings: settings,
             annualCAGR: annualCAGR,
@@ -845,38 +860,28 @@ func runMonteCarloSimulationsWithProgress(
             exchangeRateEURUSD: exchangeRateEURUSD,
             userWeeks: userWeeks,
             initialBTCPriceUSD: initialBTCPriceUSD,
-            iterationIndex: i+1
+            iterationIndex: i + 1,
+            rng: rng,
+            mempoolDataManager: mempoolDataManager
         )
         allRuns.append(simRun)
         
-        if isCancelled() {
-            break
-        }
+        if isCancelled() { break }
         progressCallback(i + 1)
     }
     
+    // If no runs, return empties
     if allRuns.isEmpty {
         return ([], [], [])
     }
     
-    // Pick "median" run by final portfolioValueEUR
+    // 4) Pick a median run by final portfolioValueEUR
     let finalValues = allRuns.map { ($0.last?.portfolioValueEUR ?? Decimal.zero, $0) }
     let sorted = finalValues.sorted { $0.0 < $1.0 }
     let medianRun = sorted[sorted.count / 2].1
     
-    // Compute the median BTC price across all runs at each step
+    // 5) Compute median BTC price across steps
     let stepMedians = computeMedianBTCPriceByStep(allRuns: allRuns)
 
     return (medianRun, allRuns, stepMedians)
-}
-
-fileprivate func pickRandomReturn(from arr: [Double]) -> Double {
-    guard !arr.isEmpty else { return 0.0 }
-    if useSeededRandom, var rng = seededGen {
-        let val = arr.randomElement(using: &rng) ?? 0.0
-        seededGen = rng
-        return val
-    } else {
-        return arr.randomElement() ?? 0.0
-    }
 }
