@@ -264,7 +264,7 @@ func bestFitLine(
             y: .value("Value", NSDecimalNumber(decimal: pt.value).doubleValue)
         )
         .foregroundStyle(
-            Color(hue: 0.08, saturation: 0.9, brightness: dynamicBrightness)
+            Color(hue: 0.08, saturation: 1.0, brightness: dynamicBrightness)
         )
         .lineStyle(
             StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round)
