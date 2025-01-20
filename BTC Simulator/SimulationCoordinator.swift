@@ -4,6 +4,7 @@
 //
 //  Created by . . on 02/01/2025.
 //
+
 import SwiftUI
 
 enum PercentileChoice {
@@ -27,6 +28,9 @@ class SimulationCoordinator: ObservableObject {
     
     @Published var allSimData: [[SimulationData]] = []
     
+    // Step-by-step median BTC prices (week or month)
+    @Published var stepMedianBTCs: [Decimal] = []
+
     var chartDataCache: ChartDataCache
     private var simSettings: SimulationSettings
     private var inputManager: PersistentInputManager
@@ -52,7 +56,7 @@ class SimulationCoordinator: ObservableObject {
 
         simSettings.printAllSettings()
 
-        // Load historical returns for whichever period we use (weeks or months)
+        // Decide whether to load monthly or weekly returns
         if simSettings.periodUnit == .months {
             historicalBTCMonthlyReturns = loadBTCMonthlyReturns()
             sp500MonthlyReturns        = loadSP500MonthlyReturns()
@@ -123,11 +127,12 @@ class SimulationCoordinator: ObservableObject {
                 }
             }()
 
-            let userPriceUSDAsDouble =
-                NSDecimalNumber(decimal: Decimal(self.simSettings.initialBTCPriceUSD)).doubleValue
+            let userPriceUSDAsDouble = NSDecimalNumber(decimal: Decimal(self.simSettings.initialBTCPriceUSD)).doubleValue
 
-            // Run the Monte Carlo sims
-            let (_, allIterations) = runMonteCarloSimulationsWithProgress(
+            // ----------------------------------------------------------------
+            // We call runMonteCarloSimulationsWithProgress
+            // ----------------------------------------------------------------
+            let (medianRun, allIterations, stepMedianPrices) = runMonteCarloSimulationsWithProgress(
                 settings: self.simSettings,
                 annualCAGR: userInputCAGR,
                 annualVolatility: userInputVolatility,
@@ -153,27 +158,12 @@ class SimulationCoordinator: ObservableObject {
                 return
             }
             
-            // Instead of sorting by final portfolio, we now sort by final BTC price (USD).
-            let finalRuns = allIterations.map {
-                // Grab the final week's (or month's) BTC price in USD
-                ($0.last?.btcPriceUSD ?? Decimal.zero, $0)
-            }
-            let sortedRuns = finalRuns.sorted { $0.0 < $1.0 }
-            
-            print("// DEBUG: sortedRuns => \(sortedRuns.count) runs. " +
-                  "Sample final BTC price range => first: \(sortedRuns.first?.0 ?? 0) " +
-                  "... last: \(sortedRuns.last?.0 ?? 0)")
-
-            // Just a partial sample debug
-            if let firstRun = allIterations.first {
-                let midIndex = firstRun.count / 2
-            
-                if let lastItem = firstRun.last {
-                    print("// DEBUG: partial sample => last => BTC=\(lastItem.btcPriceUSD), portfolio=\(lastItem.portfolioValueEUR)")
-                }
+            DispatchQueue.main.async {
+                // Store the stepMedianPrices
+                self.stepMedianBTCs = stepMedianPrices
             }
 
-            if sortedRuns.isEmpty {
+            if allIterations.isEmpty {
                 print("// DEBUG: No runs => done.")
                 DispatchQueue.main.async {
                     self.isLoading = false
@@ -186,33 +176,66 @@ class SimulationCoordinator: ObservableObject {
                 self.isChartBuilding = true
                 print("// DEBUG: Simulation finished => isChartBuilding=true now.")
                 
+                // Next, pick the 10th, median, 90th runs by final BTC
+                let finalRuns = allIterations.enumerated().map {
+                    // We'll keep iteration index from enumerated() for logging
+                    ($0.offset, $0.element.last?.btcPriceUSD ?? Decimal.zero, $0.element)
+                }
+                let sortedRuns = finalRuns.sorted { $0.1 < $1.1 }
+                
+                print("// DEBUG: sortedRuns => \(sortedRuns.count) runs.")
+
+                if sortedRuns.isEmpty {
+                    print("// DEBUG: sortedRuns empty => done.")
+                    self.isChartBuilding = false
+                    return
+                }
+
                 let tenthIndex     = max(0, Int(Double(sortedRuns.count - 1) * 0.10))
                 let medianIndex    = sortedRuns.count / 2
                 let ninetiethIndex = min(sortedRuns.count - 1, Int(Double(sortedRuns.count - 1) * 0.90))
                 
-                let tenthRun     = sortedRuns[tenthIndex].1
-                let medianRun    = sortedRuns[medianIndex].1
-                let ninetiethRun = sortedRuns[ninetiethIndex].1
+                let tenthRunIndex  = sortedRuns[tenthIndex].0
+                let tenthRun       = sortedRuns[tenthIndex].2
+                let medianRunIndex = sortedRuns[medianIndex].0
+                let medianRun2     = sortedRuns[medianIndex].2
+                let ninetiethRunIndex = sortedRuns[ninetiethIndex].0
+                let ninetiethRun   = sortedRuns[ninetiethIndex].2
 
                 self.tenthPercentileResults = tenthRun
                 self.ninetiethPercentileResults = ninetiethRun
+                self.medianResults = medianRun2
 
-                // Using single-run approach for median final BTC price:
-                self.medianResults = medianRun
-                self.monteCarloResults = medianRun
-
+                // NEW CODE: find the single run that best fits stepMedianPrices
+                let bestFitRunIndex = self.findRepresentativeRunIndex(allRuns: allIterations, stepMedianBTC: stepMedianPrices)
+                let bestFitRun = allIterations[bestFitRunIndex]
+                
+                // We'll use that best-fit run as the main "display" run
+                self.monteCarloResults = bestFitRun
+                
                 self.selectedPercentile = .median
                 self.allSimData = allIterations
 
-                let tenthFinalBTC     = tenthRun.last?.btcPriceUSD     ?? 0
-                let ninetiethFinalBTC = ninetiethRun.last?.btcPriceUSD ?? 0
-                let medianFinalBTC    = medianRun.last?.btcPriceUSD    ?? 0
+                // Debug outputs
+                print("// DEBUG: Tenth run => iteration #\(tenthRunIndex), final BTC => \(sortedRuns[tenthIndex].1)")
+                print("// DEBUG: 'median final BTC' => iteration #\(medianRunIndex), final BTC => \(sortedRuns[medianIndex].1)")
+                print("// DEBUG: Ninetieth run => iteration #\(ninetiethRunIndex), final BTC => \(sortedRuns[ninetiethIndex].1)")
+                print("// DEBUG: bestFitRun => iteration #\(bestFitRunIndex) chosen by distance. =>")
+                let dist = self.computeDistance(run: bestFitRun, stepMedianBTC: stepMedianPrices, iterationIndex: bestFitRunIndex, verbose: true)
+                print("// DEBUG:   totalDist => \(dist)")
 
-                print("// DEBUG: Tenth final BTC price => \(tenthFinalBTC)")
-                print("// DEBUG: Ninetieth final BTC price => \(ninetiethFinalBTC)")
-                print("// DEBUG: medianRun => \(medianRun.count) periods. " +
-                      "Final BTC => \(medianFinalBTC)")
-
+                // NEW CODE: Log the best-fit run's actual steps
+                print("// VERBOSE: Logging the best-fit run (#\(bestFitRunIndex)) step-by-step:")
+                for (stepIdx, row) in bestFitRun.enumerated() { // NEW CODE
+                    let monthNum = stepIdx + 1
+                    // Convert Decimals to Double if you want more clarity
+                    let btcDouble = NSDecimalNumber(decimal: row.btcPriceUSD).doubleValue
+                    let portDouble = NSDecimalNumber(decimal: row.portfolioValueUSD).doubleValue
+                    
+                    print("//   Month=\(monthNum), BTC=\(btcDouble), portfolio=\(portDouble), depositUSD=\(row.contributionUSD), withdrawal=\(row.withdrawalUSD)")
+                }
+                
+                // Build chart data
                 let allSimsAsWeekPoints = self.convertAllSimsToWeekPoints()
                 let allSimsAsPortfolioPoints = self.convertAllSimsToPortfolioWeekPoints()
                 
@@ -242,6 +265,7 @@ class SimulationCoordinator: ObservableObject {
                     return
                 }
                 
+                // Build chart snapshots
                 DispatchQueue.main.async {
                     if self.isCancelled {
                         self.isChartBuilding = false
@@ -285,6 +309,7 @@ class SimulationCoordinator: ObservableObject {
                 }
             }
 
+            // We do any background analysis here
             DispatchQueue.global(qos: .background).async {
                 self.processAllResults(allIterations)
             }
@@ -329,25 +354,91 @@ class SimulationCoordinator: ObservableObject {
     }
 }
 
-func medianOfDecimalArray(_ arr: [Decimal]) -> Decimal {
-    if arr.isEmpty { return .zero }
-    let sortedArr = arr.sorted(by: <)
-    let mid = sortedArr.count / 2
-    if sortedArr.count.isMultiple(of: 2) {
-        let sum = sortedArr[mid] + sortedArr[mid - 1]
-        return sum / Decimal(2)
-    } else {
-        return sortedArr[mid]
+// MARK: - "Representative Run" with verbose logging
+extension SimulationCoordinator {
+    /// Returns the index in `allRuns` that is best fit to `stepMedianBTC`.
+    /// We'll print a verbose log for every iteration.
+    fileprivate func findRepresentativeRunIndex(
+        allRuns: [[SimulationData]],
+        stepMedianBTC: [Decimal]
+    ) -> Int {
+        var minDistance = Double.greatestFiniteMagnitude
+        var bestIndex = 0
+        
+        // 1) Find the run with smallest distance
+        for (i, run) in allRuns.enumerated() {
+            let dist = computeDistance(
+                run: run,
+                stepMedianBTC: stepMedianBTC,
+                iterationIndex: i,
+                verbose: false
+            )
+            if dist < minDistance {
+                minDistance = dist
+                bestIndex = i
+            }
+        }
+        
+        // 2) Print summary for all runs
+        print("// VERBOSE: Representative run search results:")
+        for (j, run) in allRuns.enumerated() {
+            let dist = computeDistance(run: run, stepMedianBTC: stepMedianBTC, iterationIndex: j, verbose: false)
+            let marker = (j == bestIndex) ? "<-- BEST" : ""
+            print("//   run #\(j) => total distance=\(dist) \(marker)")
+        }
+        
+        // 3) Also log the EXACT steps of the best-fit run
+        print("// VERBOSE: Logging the best-fit run (#\(bestIndex)) step-by-step:")
+        logRunSteps(bestRun: allRuns[bestIndex], runIndex: bestIndex)
+        
+        return bestIndex
     }
-}
-
-func medianOfDoubleArray(_ arr: [Double]) -> Double {
-    if arr.isEmpty { return 0.0 }
-    let sortedArr = arr.sorted()
-    let mid = sortedArr.count / 2
-    if sortedArr.count.isMultiple(of: 2) {
-        return (sortedArr[mid] + sortedArr[mid - 1]) / 2.0
-    } else {
-        return sortedArr[mid]
+    
+    /// Detailed distance computation. If `verbose == true`, we also print each step's difference.
+    fileprivate func computeDistance(
+        run: [SimulationData],
+        stepMedianBTC: [Decimal],
+        iterationIndex: Int,
+        verbose: Bool
+    ) -> Double {
+        var totalDist = 0.0
+        let count = min(run.count, stepMedianBTC.count)
+        
+        if verbose {
+            print("// DEBUG: Distances for iteration #\(iterationIndex):")
+        }
+        
+        for step in 0..<count {
+            let runBTC = NSDecimalNumber(decimal: run[step].btcPriceUSD).doubleValue
+            let medianBTC = NSDecimalNumber(decimal: stepMedianBTC[step]).doubleValue
+            let diff = abs(runBTC - medianBTC)
+            
+            totalDist += diff
+            
+            if verbose {
+                print("   Step=\(step + 1), runBTC=\(runBTC), median=\(medianBTC), diff=\(diff)")
+            }
+        }
+        
+        if verbose {
+            print("   => totalDist=\(totalDist)")
+        }
+        
+        return totalDist
+    }
+    
+    /// NEW CODE: Dump the step-by-step BTC price & portfolio for the chosen run.
+    private func logRunSteps(bestRun: [SimulationData], runIndex: Int) {
+        print("// VERBOSE: bestRun #\(runIndex) => step-by-step detail:")
+        for (i, row) in bestRun.enumerated() {
+            let step = i + 1
+            let btcUSD = NSDecimalNumber(decimal: row.btcPriceUSD).doubleValue
+            let portfolioUSD = NSDecimalNumber(decimal: row.portfolioValueUSD).doubleValue
+            print("""
+            //   step=\(step), BTC=\(btcUSD), holdings=\(row.netBTCHoldings), 
+            //     portfolio=\(portfolioUSD), depositUSD=\(row.contributionUSD), 
+            //     withdrawal=\(row.withdrawalUSD)
+            """)
+        }
     }
 }

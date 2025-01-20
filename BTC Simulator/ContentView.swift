@@ -103,14 +103,12 @@ class PersistentInputManager: ObservableObject {
         self.threshold1 = (storedT1 != 0.0) ? storedT1 : 30000.0
 
         let storedW1 = UserDefaults.standard.double(forKey: "withdrawAmount1")
-        // Instead of 100.0 fallback, use 0.0:
         self.withdrawAmount1 = (storedW1 != 0.0) ? storedW1 : 0.0
 
         let storedT2 = UserDefaults.standard.double(forKey: "threshold2")
         self.threshold2 = (storedT2 != 0.0) ? storedT2 : 60000.0
 
         let storedW2 = UserDefaults.standard.double(forKey: "withdrawAmount2")
-        // Instead of 200.0 fallback, use 0.0:
         self.withdrawAmount2 = (storedW2 != 0.0) ? storedW2 : 0.0
     }
 
@@ -154,7 +152,7 @@ class PersistentInputManager: ObservableObject {
         guard let parsedValue = Double(rawValue) else {
             return 40.0
         }
-        return min(parsedValue, 1000.0) // clamp at 1000
+        return min(parsedValue, 1000.0)
     }
 }
 
@@ -187,24 +185,23 @@ fileprivate enum ChartLoadingState {
 // MARK: - ChartDataCache
 class ChartDataCache: ObservableObject {
     let id = UUID()  // Track the identity
-    
+
     @Published var allRuns: [SimulationRun]? = nil
     @Published var storedInputsHash: Int? = nil
-    
+
     // For iOS, store a snapshot as UIImage
     @Published var chartSnapshot: UIImage?
     @Published var chartSnapshotLandscape: UIImage?
-    
+
     @Published var portfolioChartSnapshot: UIImage?
     @Published var portfolioChartSnapshotLandscape: UIImage?
     @Published var portfolioRuns: [SimulationRun]?
-    
+
     // Add these two for portfolio:
     @Published var chartSnapshotPortfolio: UIImage? = nil
     @Published var chartSnapshotPortfolioLandscape: UIImage? = nil
 }
 
-// MARK: - ContentView
 struct ContentView: View {
     // Track old values so we can invalidate the chart if changed
     @State private var oldIterationsValue: String = ""
@@ -217,24 +214,24 @@ struct ContentView: View {
 
     @State private var isAtBottom: Bool = false
     @State private var lastViewedWeek: Int = 0
-    
+
     @State private var scrollToBottom: Bool = false
     @State private var lastScrollTime = Date()
     @State private var contentScrollProxy: ScrollViewProxy?
 
     @State private var currentPage: Int = 0
     @State private var lastViewedPage: Int = 0
-    
+
     @State private var currentTip: String = ""
     @State private var showTip: Bool = false
     @State private var tipTimer: Timer? = nil
-    
+
     @State private var hideScrollIndicators = true
-    
+
     // No more local arrays. Use the new file’s data:
     private var loadingTips: [String] { TipsData.filteredLoadingTips(for: simSettings) }
     private var usageTips: [String] { TipsData.filteredUsageTips(for: simSettings) }
-    
+
     // Columns in the table view (depending on the user’s currency preference):
     private var columns: [(String, PartialKeyPath<SimulationData>)] {
         switch simSettings.currencyPreference {
@@ -278,29 +275,29 @@ struct ContentView: View {
             ]
         }
     }
-    
+
     @State private var showSettings = false
     @State private var showAbout = false
     @State private var showHistograms = false
     @State private var showGraphics = false
-    
+
     @State private var tenthPercentileResults: [SimulationData] = []
     @State private var medianResults: [SimulationData] = []
     @State private var ninetiethPercentileResults: [SimulationData] = []
     @State private var selectedPercentile: PercentileChoice = .median
-    
+
     @State private var allSimData: [[SimulationData]] = []
-    
+
     @State private var chartLoadingState: ChartLoadingState = .none
-    
+
     @State private var showSnapshotView = false
     @State private var showSnapshotsDebug = false
-    
+
     @EnvironmentObject var simSettings: SimulationSettings
     @EnvironmentObject var inputManager: PersistentInputManager
     @EnvironmentObject var chartDataCache: ChartDataCache
     @EnvironmentObject var coordinator: SimulationCoordinator
-    
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -313,14 +310,14 @@ struct ContentView: View {
                 } else {
                     simulationResultsView
                 }
-                
+
                 // Show the “→” button if we have results + chart built
                 if !coordinator.isSimulationRun &&
                     !coordinator.monteCarloResults.isEmpty &&
                     !coordinator.isChartBuilding {
                     transitionToResultsButton
                 }
-                
+
                 // Loading / Chart-building overlay
                 if coordinator.isLoading || coordinator.isChartBuilding {
                     loadingOverlayCombined
@@ -343,7 +340,7 @@ struct ContentView: View {
                 if savedWeek != 0 {
                     lastViewedWeek = savedWeek
                 }
-                
+
                 let savedPage = UserDefaults.standard.integer(forKey: "lastViewedPage")
                 if savedPage < columns.count {
                     lastViewedPage = savedPage
@@ -368,7 +365,7 @@ struct ContentView: View {
             }
         }
     }
-    
+
     // MARK: - Parameter Screen
     private var parametersScreen: some View {
         ZStack {
@@ -378,22 +375,22 @@ struct ContentView: View {
                 endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
-            
+
             VStack(spacing: 30) {
                 Spacer().frame(height: 60)
-                
+
                 Text("HODL Simulator")
                     .font(.custom("AvenirNext-Heavy", size: 36))
                     .foregroundColor(.white)
                     .shadow(color: Color.white.opacity(0.6), radius: 6, x: 0, y: 0)
-                
+
                 Text("Set your simulation parameters")
                     .font(.callout)
                     .foregroundColor(.gray)
-                
+
                 // Parameter card
                 VStack(spacing: 20) {
-                    
+
                     // Row 1: Iterations & CAGR
                     HStack(spacing: 24) {
                         // Iterations
@@ -415,7 +412,7 @@ struct ContentView: View {
                                     }
                                 }
                         }
-                        
+
                         // CAGR
                         VStack(spacing: 4) {
                             Text("CAGR (%)")
@@ -436,7 +433,7 @@ struct ContentView: View {
                                 }
                         }
                     }
-                    
+
                     // Row 2: Vol & StdDev
                     HStack(spacing: 24) {
                         // Vol
@@ -458,7 +455,7 @@ struct ContentView: View {
                                     }
                                 }
                         }
-                        
+
                         // StdDev
                         VStack(spacing: 4) {
                             Text("StdDev")
@@ -479,13 +476,13 @@ struct ContentView: View {
                                 }
                         }
                     }
-                    
+
                     // Row 3: Toggles
                     HStack(spacing: 32) {
                         Toggle("Charts", isOn: $inputManager.generateGraphs)
                             .toggleStyle(CheckboxToggleStyle())
                             .foregroundColor(.white)
-                        
+
                         Toggle("Lock Seed", isOn: $simSettings.lockedRandomSeed)
                             .toggleStyle(CheckboxToggleStyle())
                             .foregroundColor(.white)
@@ -508,7 +505,7 @@ struct ContentView: View {
                         .fill(Color(white: 0.1).opacity(0.8))
                 )
                 .padding(.horizontal, 30)
-                
+
                 // Run Simulation
                 if coordinator.isLoading || coordinator.isChartBuilding {
                     // Invisible placeholder so layout stays put
@@ -520,14 +517,14 @@ struct ContentView: View {
                         .background(Color.clear)
                         .cornerRadius(8)
                         .padding(.top, 6)
-                    
+
                     Spacer()
                 } else {
                     Button {
                         activeField = nil
                         coordinator.isLoading = true
                         coordinator.isChartBuilding = false
-                        
+
                         coordinator.runSimulation(
                             generateGraphs: inputManager.generateGraphs,
                             lockRandomSeed: simSettings.lockedRandomSeed
@@ -541,7 +538,7 @@ struct ContentView: View {
                             .cornerRadius(8)
                     }
                     .padding(.top, 6)
-                    
+
                     Spacer()
                 }
             }
@@ -551,17 +548,15 @@ struct ContentView: View {
             activeField = nil
         }
     }
-    
+
     // MARK: - If inputs change, clear cached chart
-    
     private func invalidateChartIfInputChanged() {
         coordinator.chartDataCache.allRuns = nil
         coordinator.chartDataCache.storedInputsHash = nil
         print("// DEBUG: invalidateChartIfInputChanged => cleared chart cache.")
     }
-    
+
     // MARK: - Bottom icons (gear, info)
-    
     @ViewBuilder
     private var bottomIcons: some View {
         if !coordinator.isLoading && !coordinator.isChartBuilding {
@@ -575,9 +570,9 @@ struct ContentView: View {
                             .padding()
                     }
                     .padding(.leading, 15)
-                    
+
                     Spacer()
-                    
+
                     Button(action: { showSettings = true }) {
                         Image(systemName: "gearshape")
                             .font(.system(size: 28))
@@ -590,16 +585,16 @@ struct ContentView: View {
             }
         }
     }
-    
+
     // MARK: - Simulation Results Screen
     private var simulationResultsView: some View {
         ScrollViewReader { scrollProxy in
             ZStack {
                 Color(white: 0.12)
                     .edgesIgnoringSafeArea(.bottom)
-                
+
                 VStack(spacing: 0) {
-                    
+
                     // -- Top bar --
                     HStack {
                         // Back button
@@ -641,10 +636,10 @@ struct ContentView: View {
                     }
                     .padding(.vertical, 10)
                     .background(Color(white: 0.12))
-                    
+
                     // -- Calculate & show Summary Card --
                     let (finalBTCPrice, finalPortfolioValue, growthPercent, currencySymbol) = calculateSummaryValues()
-                    
+
                     SimulationSummaryCardView(
                         finalBTCPrice: finalBTCPrice,
                         finalPortfolioValue: finalPortfolioValue,
@@ -652,7 +647,7 @@ struct ContentView: View {
                         currencySymbol: currencySymbol
                     )
                     // -------------------------------------
-                    
+
                     // -- Column headers --
                     HStack(spacing: 0) {
                         Text(simSettings.periodUnit == .weeks ? "Week" : "Month")
@@ -662,7 +657,7 @@ struct ContentView: View {
                             .padding(.vertical, 8)
                             .background(Color.black)
                             .foregroundColor(.orange)
-                        
+
                         ZStack {
                             Text(columns[currentPage].0)
                                 .font(.headline)
@@ -671,7 +666,7 @@ struct ContentView: View {
                                 .background(Color.black)
                                 .foregroundColor(.orange)
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                            
+
                             GeometryReader { geometry in
                                 HStack(spacing: 0) {
                                     Color.clear
@@ -697,12 +692,12 @@ struct ContentView: View {
                         .frame(height: 50)
                     }
                     .background(Color.black)
-                    
+
                     // -- Main data scroll --
                     ScrollView(.vertical, showsIndicators: !hideScrollIndicators) {
-                        
+
                         let displayedResults = coordinator.monteCarloResults
-                        
+
                         HStack(spacing: 0) {
                             // Left column
                             VStack(spacing: 0) {
@@ -711,8 +706,7 @@ struct ContentView: View {
                                     let rowBackground = index.isMultiple(of: 2)
                                         ? Color(white: 0.10)
                                         : Color(white: 0.14)
-                                    
-                                    // FIX #1 removed
+
                                     Text("\(result.week)")
                                         .frame(width: 70, alignment: .leading)
                                         .padding(.leading, 50)
@@ -724,7 +718,7 @@ struct ContentView: View {
                                         .background(RowOffsetReporter(week: result.week))
                                 }
                             }
-                            
+
                             // Right column (pages)
                             TabView(selection: $currentPage) {
                                 ForEach(0..<columns.count, id: \.self) { idx in
@@ -735,7 +729,7 @@ struct ContentView: View {
                                                 let rowBackground = rowIndex.isMultiple(of: 2)
                                                     ? Color(white: 0.10)
                                                     : Color(white: 0.14)
-                                                
+
                                                 Text(getValue(rowResult, columns[idx].1))
                                                     .frame(maxWidth: .infinity, alignment: .leading)
                                                     .padding(.leading, 80)
@@ -779,12 +773,12 @@ struct ContentView: View {
                         .onPreferenceChange(RowOffsetPreferenceKey.self) { offsets in
                             let targetY: CGFloat = 160 + 120
                             let finalWeeks = simSettings.userPeriods
-                            
+
                             let filtered = offsets.filter { (week, _) in
                                 week >= 0 && week <= finalWeeks
                             }
                             let mapped = filtered.mapValues { abs($0 - targetY) }
-                            
+
                             if let (closestWeek, _) = mapped.min(by: { $0.value < $1.value }) {
                                 lastViewedWeek = closestWeek
                             }
@@ -836,7 +830,7 @@ struct ContentView: View {
                     UserDefaults.standard.set(lastViewedWeek, forKey: "lastViewedWeek")
                     UserDefaults.standard.set(currentPage, forKey: "lastViewedPage")
                 }
-                
+
                 // -- Jump to bottom button --
                 if !isAtBottom {
                     VStack {
@@ -864,7 +858,7 @@ struct ContentView: View {
             // Return zeros and a default symbol
             return (0, 0, 0, "$")
         }
-        
+
         // 1) Convert from Decimal to Double
         let finalBTC = simSettings.currencyPreference == .eur
             ? NSDecimalNumber(decimal: lastRow.btcPriceEUR).doubleValue
@@ -872,31 +866,29 @@ struct ContentView: View {
 
         let finalPortfolio: Double
         if simSettings.currencyPreference == .eur {
-            // Either grab the EUR property or do a USD-EUR conversion
             finalPortfolio = NSDecimalNumber(decimal: lastRow.portfolioValueEUR).doubleValue
         } else {
             finalPortfolio = NSDecimalNumber(decimal: lastRow.portfolioValueUSD).doubleValue
         }
-        
+
         // 2) Sum all contributions
         let totalContributions = coordinator.monteCarloResults.reduce(0.0) { partialSum, row in
             partialSum + row.contributionUSD
         }
-        
+
         // 3) Calculate growth % = ((final - totalContributions) / totalContributions) * 100
         var growth = 0.0
         if totalContributions > 0 {
             growth = (finalPortfolio - totalContributions) / totalContributions * 100.0
         }
-        
+
         // 4) Decide which currency symbol to show
         let symbol = (simSettings.currencyPreference == .eur) ? "€" : "$"
-        
+
         return (finalBTC, finalPortfolio, growth, symbol)
     }
-    
+
     // MARK: - Next arrow to show results
-    
     private var transitionToResultsButton: some View {
         VStack {
             HStack {
@@ -928,14 +920,14 @@ struct ContentView: View {
             Spacer()
         }
     }
-    
+
     // MARK: - Loading Overlay
     private var loadingOverlayCombined: some View {
         ZStack {
             Color.black.opacity(0.6).ignoresSafeArea()
             VStack(spacing: 0) {
                 Spacer().frame(height: 250)
-                
+
                 HStack {
                     Spacer()
                     if coordinator.isLoading && !coordinator.isChartBuilding {
@@ -956,12 +948,12 @@ struct ContentView: View {
                 if coordinator.isLoading {
                     InteractiveBitcoinSymbol3DSpinner()
                         .padding(.bottom, 30)
-                    
+
                     VStack(spacing: 17) {
                         Text("Simulating: \(coordinator.completedIterations) / \(coordinator.totalIterations)")
                             .font(.body.monospacedDigit())
                             .foregroundColor(.white)
-                        
+
                         ProgressView(value: Double(coordinator.completedIterations),
                                      total: Double(coordinator.totalIterations))
                             .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
@@ -989,7 +981,7 @@ struct ContentView: View {
 
                     Spacer().frame(height: 30)
                 }
-                
+
                 if showTip && coordinator.isLoading {
                     Text(currentTip)
                         .foregroundColor(.white)
@@ -999,27 +991,27 @@ struct ContentView: View {
                         .transition(.opacity)
                         .padding(.bottom, 30)
                 }
-                
+
                 Spacer()
             }
         }
         .onAppear { startTipCycle() }
         .onDisappear { stopTipCycle() }
     }
-    
+
     // MARK: - Tip cycle
     private func startTipCycle() {
         showTip = false
         tipTimer?.invalidate()
         tipTimer = nil
-        
+
         DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
             currentTip = loadingTips.randomElement() ?? ""
             withAnimation(.easeInOut(duration: 2)) {
                 showTip = true
             }
         }
-        
+
         tipTimer = Timer.scheduledTimer(withTimeInterval: 20, repeats: true) { _ in
             withAnimation(.easeInOut(duration: 2)) {
                 showTip = false
@@ -1032,20 +1024,20 @@ struct ContentView: View {
             }
         }
     }
-    
+
     private func stopTipCycle() {
         tipTimer?.invalidate()
         tipTimer = nil
         showTip = false
     }
-    
+
     // MARK: - Data Formatting
     private func getValue(_ item: SimulationData, _ keyPath: PartialKeyPath<SimulationData>) -> String {
         // 1) If the field is a Decimal:
         if let decimalVal = item[keyPath: keyPath] as? Decimal {
             let doubleValue = NSDecimalNumber(decimal: decimalVal).doubleValue
             return doubleValue.formattedCurrency()
-            
+
         // 2) If the field is a Double:
         } else if let doubleVal = item[keyPath: keyPath] as? Double {
             switch keyPath {
@@ -1071,11 +1063,11 @@ struct ContentView: View {
             default:
                 return String(format: "%.2f", doubleVal)
             }
-            
+
         // 3) If the field is an Int:
         } else if let intVal = item[keyPath: keyPath] as? Int {
             return "\(intVal)"
-            
+
         // 4) Otherwise (e.g. a String?), return empty or handle differently
         } else {
             return ""
