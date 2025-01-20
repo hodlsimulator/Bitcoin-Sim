@@ -253,7 +253,7 @@ func computeMedianLine(_ simulations: [SimulationRun]) -> [WeekPoint] {
 }
 
 /// Conditionally divides by 52 if user selected `.weeks`, or 12 if user selected `.months`.
-fileprivate func convertPeriodToYears(
+func convertPeriodToYears(
     _ periodIndex: Int,
     _ simSettings: SimulationSettings
 ) -> Double {

@@ -35,16 +35,20 @@ class SimulationCoordinator: ObservableObject {
     private var simSettings: SimulationSettings
     private var inputManager: PersistentInputManager
         
-    @Published var chartSelection: ChartSelection
+    // Renamed from chartSelection to simChartSelection
+    @Published var simChartSelection: SimChartSelection
 
-    init(chartDataCache: ChartDataCache,
-         simSettings: SimulationSettings,
-         inputManager: PersistentInputManager,
-         chartSelection: ChartSelection) {
+    init(
+        chartDataCache: ChartDataCache,
+        simSettings: SimulationSettings,
+        inputManager: PersistentInputManager,
+        // changed from chartSelection: ChartSelection
+        simChartSelection: SimChartSelection
+    ) {
         self.chartDataCache = chartDataCache
         self.simSettings = simSettings
         self.inputManager = inputManager
-        self.chartSelection = chartSelection
+        self.simChartSelection = simChartSelection
     }
     
     func runSimulation(generateGraphs: Bool, lockRandomSeed: Bool) {
@@ -52,7 +56,6 @@ class SimulationCoordinator: ObservableObject {
 
         let newHash = computeInputsHash()
         print("// DEBUG: runSimulation() => newHash = \(newHash), storedInputsHash = \(String(describing: chartDataCache.storedInputsHash))")
-
         simSettings.printAllSettings()
 
         // Decide whether to load monthly or weekly returns
@@ -126,10 +129,12 @@ class SimulationCoordinator: ObservableObject {
                 }
             }()
 
-            let userPriceUSDAsDouble = NSDecimalNumber(decimal: Decimal(self.simSettings.initialBTCPriceUSD)).doubleValue
+            let userPriceUSDAsDouble = NSDecimalNumber(
+                decimal: Decimal(self.simSettings.initialBTCPriceUSD)
+            ).doubleValue
 
             // ----------------------------------------------------------------
-            // We call runMonteCarloSimulationsWithProgress
+            // Run all simulations
             // ----------------------------------------------------------------
             let (medianRun, allIterations, stepMedianPrices) = runMonteCarloSimulationsWithProgress(
                 settings: self.simSettings,
@@ -177,7 +182,6 @@ class SimulationCoordinator: ObservableObject {
                 
                 // Next, pick the 10th, median, 90th runs by final BTC
                 let finalRuns = allIterations.enumerated().map {
-                    // We'll keep iteration index from enumerated() for logging
                     ($0.offset, $0.element.last?.btcPriceUSD ?? Decimal.zero, $0.element)
                 }
                 let sortedRuns = finalRuns.sorted { $0.1 < $1.1 }
@@ -206,7 +210,10 @@ class SimulationCoordinator: ObservableObject {
                 self.medianResults = medianRun2
 
                 // Find the single run that best fits stepMedianPrices
-                let bestFitRunIndex = self.findRepresentativeRunIndex(allRuns: allIterations, stepMedianBTC: stepMedianPrices)
+                let bestFitRunIndex = self.findRepresentativeRunIndex(
+                    allRuns: allIterations,
+                    stepMedianBTC: stepMedianPrices
+                )
                 let bestFitRun = allIterations[bestFitRunIndex]
                 self.monteCarloResults = bestFitRun
                 
@@ -219,10 +226,23 @@ class SimulationCoordinator: ObservableObject {
                 print("// DEBUG: Ninetieth run => iteration #\(ninetiethRunIndex), final BTC => \(sortedRuns[ninetiethIndex].1)")
                 print("// DEBUG: bestFitRun => iteration #\(bestFitRunIndex) chosen by distance.")
                 
-                // Build chart data
+                // Build chart data (all runs) => faint lines
                 let allSimsAsWeekPoints = self.convertAllSimsToWeekPoints()
                 let allSimsAsPortfolioPoints = self.convertAllSimsToPortfolioWeekPoints()
-                
+
+                // Build chart data (BEST-FIT ONLY) => bold overlay
+                let bestFitBTCPoints = bestFitRun.map { row in
+                    WeekPoint(week: row.week, value: row.btcPriceUSD)
+                }
+                let bestFitPortfolioPoints = bestFitRun.map { row in
+                    (self.simSettings.currencyPreference == .eur)
+                        ? row.portfolioValueEUR
+                        : row.portfolioValueUSD
+                }.enumerated().map { (idx, val) in
+                    WeekPoint(week: bestFitRun[idx].week, value: val)
+                }
+
+                // Clear old snapshots
                 if self.chartDataCache.chartSnapshot != nil {
                     print("// DEBUG: clearing old BTC chartSnapshot.")
                 }
@@ -234,14 +254,25 @@ class SimulationCoordinator: ObservableObject {
                 self.chartDataCache.chartSnapshotPortfolio = nil
                 self.chartDataCache.chartSnapshotPortfolioLandscape = nil
                 
+                // Store the faint lines
                 self.chartDataCache.allRuns = allSimsAsWeekPoints
                 self.chartDataCache.portfolioRuns = allSimsAsPortfolioPoints
+                
+                // Store the single best-fit line for BTC
+                self.chartDataCache.bestFitRun = [
+                    SimulationRun(points: bestFitBTCPoints)
+                ]
+                // And for the portfolio
+                self.chartDataCache.bestFitPortfolioRun = [
+                    SimulationRun(points: bestFitPortfolioPoints)
+                ]
 
                 self.chartDataCache.storedInputsHash = newHash
                 
-                let oldSelection = self.chartSelection.selectedChart
+                let oldSelection = self.simChartSelection.selectedChart
                 print("// CHANGED: oldSelection => \(oldSelection)")
 
+                // If user doesn't want to generate charts, skip chart building
                 if !generateGraphs {
                     print("// DEBUG: Skipping chart building because generateGraphs == false.")
                     self.isChartBuilding = false
@@ -255,11 +286,11 @@ class SimulationCoordinator: ObservableObject {
                         self.isChartBuilding = false
                         return
                     }
-                    self.chartSelection.selectedChart = .btcPrice
+                    self.simChartSelection.selectedChart = .btcPrice
                     let btcChartView = MonteCarloResultsView()
                         .environmentObject(self.chartDataCache)
                         .environmentObject(self.simSettings)
-                        .environmentObject(self.chartSelection)
+                        .environmentObject(self.simChartSelection)
                     
                     DispatchQueue.main.async {
                         if self.isCancelled {
@@ -269,11 +300,11 @@ class SimulationCoordinator: ObservableObject {
                         let btcSnapshot = btcChartView.snapshot()
                         self.chartDataCache.chartSnapshot = btcSnapshot
                         
-                        self.chartSelection.selectedChart = .cumulativePortfolio
+                        self.simChartSelection.selectedChart = .cumulativePortfolio
                         let portfolioChartView = MonteCarloResultsView()
                             .environmentObject(self.chartDataCache)
                             .environmentObject(self.simSettings)
-                            .environmentObject(self.chartSelection)
+                            .environmentObject(self.simChartSelection)
                         
                         DispatchQueue.main.async {
                             if self.isCancelled {
@@ -283,7 +314,7 @@ class SimulationCoordinator: ObservableObject {
                             let portfolioSnapshot = portfolioChartView.snapshot()
                             self.chartDataCache.chartSnapshotPortfolio = portfolioSnapshot
                             
-                            self.chartSelection.selectedChart = oldSelection
+                            self.simChartSelection.selectedChart = oldSelection
                             print("// CHANGED: restored oldSelection => \(oldSelection)")
 
                             self.isChartBuilding = false
@@ -291,15 +322,16 @@ class SimulationCoordinator: ObservableObject {
                         }
                     }
                 }
-            }
 
-            // We do any background analysis here
-            DispatchQueue.global(qos: .background).async {
-                self.processAllResults(allIterations)
+                // Background analysis
+                DispatchQueue.global(qos: .background).async {
+                    self.processAllResults(allIterations)
+                }
             }
         }
     }
     
+    // MARK: - Convert All Sims => Faint Lines
     func convertAllSimsToWeekPoints() -> [SimulationRun] {
         allSimData.map { singleRun -> SimulationRun in
             let wpoints = singleRun.map { row in
@@ -321,14 +353,13 @@ class SimulationCoordinator: ObservableObject {
         }
     }
     
+    // MARK: - Helpers
     private func computeInputsHash() -> Int {
-        let finalPeriods = (simSettings.periodUnit == .weeks)
-            ? simSettings.userPeriods
-            : simSettings.userPeriods
+        let finalPeriods = simSettings.userPeriods // same if months or weeks
 
         let combinedString = """
-        \(inputManager.iterations)_\(inputManager.annualCAGR)_\(inputManager.annualVolatility)_\
-        \(finalPeriods)_\(simSettings.initialBTCPriceUSD)
+        \(inputManager.iterations)_\(inputManager.annualCAGR)_\
+        \(inputManager.annualVolatility)_\(finalPeriods)_\(simSettings.initialBTCPriceUSD)
         """
         return combinedString.hashValue
     }

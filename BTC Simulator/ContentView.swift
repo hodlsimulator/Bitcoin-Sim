@@ -186,20 +186,34 @@ fileprivate enum ChartLoadingState {
 class ChartDataCache: ObservableObject {
     let id = UUID()  // Track the identity
 
+    /// All Monte Carlo runs (BTC price)
     @Published var allRuns: [SimulationRun]? = nil
+
+    /// Additional (portfolio) runs
+    @Published var portfolioRuns: [SimulationRun]? = nil
+
+    /// The single best-fit run for BTC price (orange line)
+    @Published var bestFitRun: [SimulationRun]? = nil
+
+    /// The single best-fit run for portfolio (if needed)
+    @Published var bestFitPortfolioRun: [SimulationRun]? = nil
+
+    /// A hash of user inputs, used to see if the chart is stale or needs refreshing
     @Published var storedInputsHash: Int? = nil
 
     // For iOS, store a snapshot as UIImage
-    @Published var chartSnapshot: UIImage?
-    @Published var chartSnapshotLandscape: UIImage?
+    @Published var chartSnapshot: UIImage? = nil
+    @Published var chartSnapshotLandscape: UIImage? = nil
 
-    @Published var portfolioChartSnapshot: UIImage?
-    @Published var portfolioChartSnapshotLandscape: UIImage?
-    @Published var portfolioRuns: [SimulationRun]?
+    @Published var portfolioChartSnapshot: UIImage? = nil
+    @Published var portfolioChartSnapshotLandscape: UIImage? = nil
 
-    // Add these two for portfolio:
+    // Alternatively named:
     @Published var chartSnapshotPortfolio: UIImage? = nil
     @Published var chartSnapshotPortfolioLandscape: UIImage? = nil
+
+    // Add any other logic or initialisers if needed
+    init() { }
 }
 
 struct ContentView: View {
@@ -357,7 +371,7 @@ struct ContentView: View {
                     MonteCarloResultsView()
                         .environmentObject(coordinator.chartDataCache)
                         .environmentObject(simSettings)
-                        .environmentObject(coordinator.chartSelection)
+                        .environmentObject(coordinator.simChartSelection)
                 } else {
                     Text("Loading chart…")
                         .foregroundColor(.white)

@@ -88,94 +88,50 @@ func squishPortraitImage(_ portraitImage: UIImage) -> UIImage {
     }
 }
 
-// MARK: - Number Formatting
+// MARK: - ChartType
 
-private let thousand          = Decimal(string: "1e3")!
-private let million           = Decimal(string: "1e6")!
-private let billion           = Decimal(string: "1e9")!
-private let trillion          = Decimal(string: "1e12")!
-private let quadrillion       = Decimal(string: "1e15")!
-private let quintillion       = Decimal(string: "1e18")!
-private let sextillion        = Decimal(string: "1e21")!
-private let septillion        = Decimal(string: "1e24")!
-private let octillion         = Decimal(string: "1e27")!
-private let nonillion         = Decimal(string: "1e30")!
-private let decillion         = Decimal(string: "1e33")!
-private let undecillion       = Decimal(string: "1e36")!
-private let duodecillion      = Decimal(string: "1e39")!
-private let tredecillion      = Decimal(string: "1e42")!
-private let quattuordecillion = Decimal(string: "1e45")!
-
-func formatSuffix(_ value: Decimal) -> String {
-    func wholeNumber(_ x: Decimal) -> Int {
-        let rounded = NSDecimalNumber(decimal: x).rounding(accordingToBehavior: nil)
-        return rounded.intValue
-    }
-    
-    switch value {
-    case _ where value >= quattuordecillion:
-        return "\(wholeNumber(value / quattuordecillion))Qd"
-    case _ where value >= tredecillion:
-        return "\(wholeNumber(value / tredecillion))Td"
-    case _ where value >= duodecillion:
-        return "\(wholeNumber(value / duodecillion))Do"
-    case _ where value >= undecillion:
-        return "\(wholeNumber(value / undecillion))U"
-    case _ where value >= decillion:
-        return "\(wholeNumber(value / decillion))D"
-    case _ where value >= nonillion:
-        return "\(wholeNumber(value / nonillion))N"
-    case _ where value >= octillion:
-        return "\(wholeNumber(value / octillion))O"
-    case _ where value >= septillion:
-        return "\(wholeNumber(value / septillion))S"
-    case _ where value >= sextillion:
-        return "\(wholeNumber(value / sextillion))Se"
-    case _ where value >= quintillion:
-        return "\(wholeNumber(value / quintillion))Qn"
-    case _ where value >= quadrillion:
-        return "\(wholeNumber(value / quadrillion))Q"
-    case _ where value >= trillion:
-        return "\(wholeNumber(value / trillion))T"
-    case _ where value >= billion:
-        return "\(wholeNumber(value / billion))B"
-    case _ where value >= million:
-        return "\(wholeNumber(value / million))M"
-    case _ where value >= thousand:
-        return "\(wholeNumber(value / thousand))k"
-    default:
-        return "\(wholeNumber(value))"
-    }
+enum ChartType {
+    case btcPrice
+    case cumulativePortfolio
 }
 
-// MARK: - The Chart
+// MARK: - MonteCarloChartView
+
+//
+//  MonteCarloChartView.swift
+//  BTCMonteCarlo
+//
+//  Created by Conor on 30/12/2024.
+//
+
+import SwiftUI
+import Charts
 
 struct MonteCarloChartView: View {
     @EnvironmentObject var orientationObserver: OrientationObserver
     @EnvironmentObject var chartDataCache: ChartDataCache
     @EnvironmentObject var simSettings: SimulationSettings
     
-    /// Shifts the entire chart up or down if desired
-    private let topOffset: CGFloat = 0
-    
-    /// In portrait, we “squish” the chart vertically.
     var verticalScale: CGFloat {
         orientationObserver.isLandscape ? 1.0 : 0.92
     }
     
     var body: some View {
-        
-        // 1) Grab your array of runs safely
+        // Pull in all runs plus a single best-fit
         let simulations = chartDataCache.allRuns ?? []
+        let bestFit = chartDataCache.bestFitRun?.first
         
-        // 2) Flatten for domain
+        // Filter out the best-fit so we don’t draw it twice
+        let normalSimulations = simulations.filter { $0.id != bestFit?.id }
+        
+        // Flattened array to find min & max
         let allPoints = simulations.flatMap { $0.points }
         let decimalValues = allPoints.map { $0.value }
         
         let minVal = decimalValues.min().map { NSDecimalNumber(decimal: $0).doubleValue } ?? 1.0
         let maxVal = decimalValues.max().map { NSDecimalNumber(decimal: $0).doubleValue } ?? 2.0
         
-        // Build a log-scale domain
+        // Build log-scale domain
         var bottomExp = floor(log10(minVal))
         if minVal <= pow(10, bottomExp), bottomExp > 0 {
             bottomExp -= 1
@@ -188,18 +144,15 @@ struct MonteCarloChartView: View {
         }
         let domainMax = pow(10.0, topExp)
         
-        // Axis ticks => powers of ten
         let intBottom = Int(bottomExp)
         let intTop    = Int(topExp)
         let yTickValues = (intBottom...intTop).map { pow(10.0, Double($0)) }
         
-        // X domain => convert userPeriods to “years”
         let totalPeriods = Double(simSettings.userPeriods)
         let totalYears = (simSettings.periodUnit == .weeks)
             ? totalPeriods / 52.0
             : totalPeriods / 12.0
         
-        // Small helper
         func dynamicXStride(_ yrs: Double) -> Double {
             switch yrs {
             case ..<1.01:  return 0.25
@@ -219,15 +172,17 @@ struct MonteCarloChartView: View {
                 
                 VStack(spacing: 0) {
                     Chart {
-                        // multi-run lines
-                        simulationLines(simulations: simulations, simSettings: simSettings)
-                        // highlight line
-                        medianLines(simulations: simulations, simSettings: simSettings)
+                        // 1) Faint lines for normal runs only
+                        simulationLines(simulations: normalSimulations, simSettings: simSettings)
+                        
+                        // 2) Overlaid bold orange best-fit (excluded above)
+                        if let bestFitRun = bestFit {
+                            bestFitLine(bestFitRun, simSettings: simSettings)
+                        }
                     }
                     .chartLegend(.hidden)
                     .chartXScale(domain: 0.0...totalYears, type: .linear)
                     .chartYScale(domain: domainMin...domainMax, type: .log)
-                    
                     .chartPlotStyle { plotArea in
                         plotArea
                             .padding(.leading, 0)
@@ -269,22 +224,39 @@ struct MonteCarloChartView: View {
                 }
                 .padding(.top, orientationObserver.isLandscape ? 20 : 0)
                 .scaleEffect(x: 1.0, y: verticalScale, anchor: .bottom)
-                .offset(y: -topOffset)
+            }
+            // Debug logging to see if best‐fit & main runs share IDs
+            .onAppear {
+                print("Best fit ID:", bestFit?.id ?? "<nil>")
+                for sim in simulations {
+                    print("Simulation ID:", sim.id)
+                }
             }
         }
-        .navigationBarHidden(false)
     }
 }
 
-private func colorForIndex(_ idx: Int) -> Color {
-    let hue = Double(idx % 12) / 12.0
-    return Color(hue: hue, saturation: 0.8, brightness: 0.85)
+// MARK: - bestFitLine builder
+@ChartContentBuilder
+func bestFitLine(
+    _ run: SimulationRun,
+    simSettings: SimulationSettings
+) -> some ChartContent {
+    // Bold orange line
+    ForEach(run.points) { pt in
+        LineMark(
+            x: .value("Year", convertPeriodToYears(pt.week, simSettings)),
+            y: .value("Value", NSDecimalNumber(decimal: pt.value).doubleValue)
+        )
+        .foregroundStyle(Color.orange)
+        .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
+    }
 }
 
 // MARK: - The main container
 
 struct MonteCarloResultsView: View {
-    @EnvironmentObject var chartSelection: ChartSelection
+    @EnvironmentObject var simChartSelection: SimChartSelection
     @EnvironmentObject var chartDataCache: ChartDataCache
     @EnvironmentObject var simSettings: SimulationSettings
     @StateObject private var orientationObserver = OrientationObserver()
@@ -294,13 +266,9 @@ struct MonteCarloResultsView: View {
     @State private var isGeneratingLandscape = false
     @State private var showChartMenu = false
     
-    enum ChartType {
-        case btcPrice
-        case cumulativePortfolio
-    }
-    
+    // Decide which snapshot to show in portrait
     private var portraitSnapshot: UIImage? {
-        switch chartSelection.selectedChart {
+        switch simChartSelection.selectedChart {
         case .btcPrice:
             return chartDataCache.chartSnapshot
         case .cumulativePortfolio:
@@ -308,8 +276,9 @@ struct MonteCarloResultsView: View {
         }
     }
     
+    // Decide which snapshot for a fresh landscape
     private var freshLandscapeSnapshot: UIImage? {
-        switch chartSelection.selectedChart {
+        switch simChartSelection.selectedChart {
         case .btcPrice:
             return chartDataCache.chartSnapshotLandscape
         case .cumulativePortfolio:
@@ -327,7 +296,7 @@ struct MonteCarloResultsView: View {
             
             contentView
             
-            // Show "Generating Landscape" overlay
+            // Show overlay if generating landscape
             if isGeneratingLandscape {
                 Color.black.opacity(0.6).ignoresSafeArea()
                 VStack(spacing: 20) {
@@ -349,18 +318,19 @@ struct MonteCarloResultsView: View {
                 
                 Button {
                     withAnimation {
-                        if chartSelection.selectedChart == .cumulativePortfolio {
-                            chartSelection.selectedChart = .btcPrice
-                        } else {
-                            chartSelection.selectedChart = .cumulativePortfolio
-                        }
+                        // Flip between .btcPrice and .cumulativePortfolio
+                        simChartSelection.selectedChart = (
+                            simChartSelection.selectedChart == .cumulativePortfolio
+                            ? .btcPrice
+                            : .cumulativePortfolio
+                        )
                         showChartMenu = false
                     }
                 } label: {
                     Text(
-                        chartSelection.selectedChart == .cumulativePortfolio
-                        ? "BTC Price Chart"
-                        : "Cumulative Portfolio"
+                        simChartSelection.selectedChart == .cumulativePortfolio
+                            ? "BTC Price Chart"
+                            : "Cumulative Portfolio"
                     )
                     .foregroundColor(.white)
                     .font(.headline)
@@ -378,14 +348,14 @@ struct MonteCarloResultsView: View {
         .navigationTitle(
             isLandscape
             ? ""
-            : (chartSelection.selectedChart == .btcPrice
+            : (simChartSelection.selectedChart == .btcPrice
                ? "Monte Carlo – BTC Price (USD)"
                : "Cumulative Portfolio Returns")
         )
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarHidden(isLandscape)
         .toolbar {
-            // Show the chart menu toggle if portrait
+            // Chart menu toggle if portrait
             if !isLandscape {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
@@ -406,7 +376,7 @@ struct MonteCarloResultsView: View {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                     isGeneratingLandscape = true
                     buildTrueLandscapeSnapshot { newSnapshot in
-                        switch chartSelection.selectedChart {
+                        switch simChartSelection.selectedChart {
                         case .btcPrice:
                             chartDataCache.chartSnapshotLandscape = newSnapshot
                         case .cumulativePortfolio:
@@ -420,7 +390,7 @@ struct MonteCarloResultsView: View {
         }
         .onChange(of: isLandscape) { newVal in
             if newVal {
-                // portrait->landscape
+                // portrait -> landscape
                 if let portrait = portraitSnapshot {
                     DispatchQueue.main.async {
                         squishedLandscape = squishPortraitImage(portrait)
@@ -429,7 +399,7 @@ struct MonteCarloResultsView: View {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     isGeneratingLandscape = true
                     buildTrueLandscapeSnapshot { newSnapshot in
-                        switch chartSelection.selectedChart {
+                        switch simChartSelection.selectedChart {
                         case .btcPrice:
                             chartDataCache.chartSnapshotLandscape = newSnapshot
                         case .cumulativePortfolio:
@@ -440,7 +410,7 @@ struct MonteCarloResultsView: View {
                     }
                 }
             } else {
-                // landscape->portrait
+                // landscape -> portrait
                 squishedLandscape = nil
                 brandNewLandscapeSnapshot = nil
                 isGeneratingLandscape = false
@@ -455,7 +425,7 @@ struct MonteCarloResultsView: View {
             VStack(spacing: 0) {
                 Spacer().frame(height: 20)
                 
-                // 1) If we have a newly generated or cached landscape snapshot, display it
+                // 1) If we have a new or cached landscape snapshot
                 if let freshLandscape = freshLandscapeSnapshot {
                     Image(uiImage: freshLandscape)
                         .resizable()
@@ -463,7 +433,7 @@ struct MonteCarloResultsView: View {
                         .antialiased(false)
                         .aspectRatio(contentMode: .fill)
                     
-                // 2) Else if we have a squished portrait fallback
+                // 2) Or a squished portrait fallback
                 } else if let squished = squishedLandscape {
                     Image(uiImage: squished)
                         .resizable()
@@ -471,13 +441,13 @@ struct MonteCarloResultsView: View {
                         .antialiased(false)
                         .aspectRatio(contentMode: .fill)
                     
-                // 3) Else if we have an existing portrait snapshot
+                // 3) Or an existing portrait snapshot
                 } else if let portrait = portraitSnapshot {
                     SquishedLandscapePlaceholderView(image: portrait)
                     
-                // 4) Else show the chart itself if no snapshot is built
+                // 4) Else show the live chart
                 } else {
-                    if chartSelection.selectedChart == .btcPrice {
+                    if simChartSelection.selectedChart == .btcPrice {
                         MonteCarloChartView()
                             .environmentObject(orientationObserver)
                             .environmentObject(chartDataCache)
@@ -491,20 +461,17 @@ struct MonteCarloResultsView: View {
                 }
             }
         } else {
-            // PORTRAIT
-            if chartSelection.selectedChart == .btcPrice {
-                // If we have the BTC snapshot, display it
+            // Portrait
+            if simChartSelection.selectedChart == .btcPrice {
                 if let btcSnapshot = chartDataCache.chartSnapshot {
                     SnapshotView(snapshot: btcSnapshot)
                 } else {
-                    // else show the live chart
                     MonteCarloChartView()
                         .environmentObject(orientationObserver)
                         .environmentObject(chartDataCache)
                         .environmentObject(simSettings)
                 }
             } else {
-                // For portfolio
                 if let portfolioSnapshot = chartDataCache.chartSnapshotPortfolio {
                     SnapshotView(snapshot: portfolioSnapshot)
                 } else {
@@ -522,7 +489,7 @@ struct MonteCarloResultsView: View {
         let desiredSize = CGSize(width: 800, height: 400)
         
         let chartToSnapshot: AnyView
-        switch chartSelection.selectedChart {
+        switch simChartSelection.selectedChart {
         case .btcPrice:
             chartToSnapshot = AnyView(
                 MonteCarloChartView()
@@ -548,15 +515,17 @@ struct MonteCarloResultsView: View {
         
         let renderer = UIGraphicsImageRenderer(size: desiredSize)
         let image = renderer.image { _ in
-            // drawHierarchy(in:afterScreenUpdates:) captures SwiftUI styles
-            hostingController.view.drawHierarchy(in: hostingController.view.bounds, afterScreenUpdates: true)
+            hostingController.view.drawHierarchy(
+                in: hostingController.view.bounds,
+                afterScreenUpdates: true
+            )
         }
         
         completion(image)
     }
 }
 
-// For labeling powers of ten
+// MARK: - formatPowerOfTenLabel
 func formatPowerOfTenLabel(_ exponent: Int) -> String {
     switch exponent {
     case 0:  return "1"

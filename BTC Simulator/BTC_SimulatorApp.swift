@@ -5,8 +5,8 @@
 
 import SwiftUI
 
-class ChartSelection: ObservableObject {
-    @Published var selectedChart: MonteCarloResultsView.ChartType = .btcPrice
+class SimChartSelection: ObservableObject {
+    @Published var selectedChart: ChartType = .btcPrice
 }
 
 @main
@@ -17,7 +17,7 @@ struct BTCMonteCarloApp: App {
     @StateObject private var inputManager: PersistentInputManager
     @StateObject private var simSettings: SimulationSettings
     @StateObject private var chartDataCache: ChartDataCache
-    @StateObject private var chartSelection: ChartSelection
+    @StateObject private var simChartSelection: SimChartSelection
     @StateObject private var coordinator: SimulationCoordinator
 
     init() {
@@ -26,12 +26,16 @@ struct BTCMonteCarloApp: App {
         let newInputManager = PersistentInputManager()
         let newSimSettings = SimulationSettings(loadDefaults: true)
         let newChartDataCache = ChartDataCache()
-        let newChartSelection = ChartSelection()
+        
+        // Rename from ChartSelection => SimChartSelection
+        let newSimChartSelection = SimChartSelection()
+        
+        // Coordinator must now accept simChartSelection
         let newCoordinator = SimulationCoordinator(
             chartDataCache: newChartDataCache,
             simSettings: newSimSettings,
             inputManager: newInputManager,
-            chartSelection: newChartSelection
+            simChartSelection: newSimChartSelection
         )
 
         // 2) Ensure simSettings has a reference to the same inputManager
@@ -42,7 +46,7 @@ struct BTCMonteCarloApp: App {
         _inputManager = StateObject(wrappedValue: newInputManager)
         _simSettings = StateObject(wrappedValue: newSimSettings)
         _chartDataCache = StateObject(wrappedValue: newChartDataCache)
-        _chartSelection = StateObject(wrappedValue: newChartSelection)
+        _simChartSelection = StateObject(wrappedValue: newSimChartSelection)
         _coordinator = StateObject(wrappedValue: newCoordinator)
     }
 
@@ -68,7 +72,8 @@ struct BTCMonteCarloApp: App {
                             .environmentObject(inputManager)
                             .environmentObject(simSettings)
                             .environmentObject(chartDataCache)
-                            .environmentObject(chartSelection)
+                            // Pass simChartSelection instead of chartSelection
+                            .environmentObject(simChartSelection)
                             .environmentObject(coordinator)
                             .environmentObject(appViewModel)
                     }
@@ -79,7 +84,7 @@ struct BTCMonteCarloApp: App {
                             .environmentObject(inputManager)
                             .environmentObject(simSettings)
                             .environmentObject(chartDataCache)
-                            .environmentObject(chartSelection)
+                            .environmentObject(simChartSelection)
                             .environmentObject(coordinator)
                             .environmentObject(appViewModel)
                     }

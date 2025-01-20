@@ -2,34 +2,41 @@
 //  PortfolioChartView.swift
 //  BTCMonteCarlo
 //
-//  Created by . . on 05/01/2025.
+//  Created by Conor on ...
 //
 
 import SwiftUI
 import Charts
 
+/// This chart is nearly identical to the BTC one, but uses `portfolioValue` data.
+/// It includes dynamic X and Y logic, clamps invalid values, and optionally shows a best-fit line.
 struct PortfolioChartView: View {
     @EnvironmentObject var orientationObserver: OrientationObserver
     @EnvironmentObject var chartDataCache: ChartDataCache
     @EnvironmentObject var simSettings: SimulationSettings
     
-    // We'll conditionally "squish" the chart in portrait
-    private var verticalScale: CGFloat {
+    // We'll squash it slightly in portrait
+    private var scaleY: CGFloat {
         orientationObserver.isLandscape ? 1.0 : 0.92
     }
     
     var body: some View {
-        // 1) Safely unwrap portfolioRuns:
+        let isLandscape = orientationObserver.isLandscape
+        
+        // 1) Grab the portfolio runs
         let simulations = chartDataCache.portfolioRuns ?? []
+        // Grab the best-fit run (if any)
+        let bestFit = chartDataCache.bestFitPortfolioRun?.first
         
-        // 2) Flatten all runs’ points => find min & max
-        let allPoints = simulations.flatMap { $0.points }
-        let decimalValues = allPoints.map { $0.value }
+        // Filter out the best-fit so it’s drawn only once
+        let normalSimulations = simulations.filter { $0.id != bestFit?.id }
         
-        // 3) Convert to Double, clamp invalid
-        var rawMin = decimalValues.min().map { NSDecimalNumber(decimal: $0).doubleValue } ?? 1.0
-        var rawMax = decimalValues.max().map { NSDecimalNumber(decimal: $0).doubleValue } ?? 2.0
+        // 2) Flatten to find min & max
+        let allValues = simulations.flatMap { $0.points.map(\.value) }
+        var rawMin = allValues.min().map { NSDecimalNumber(decimal: $0).doubleValue } ?? 1.0
+        var rawMax = allValues.max().map { NSDecimalNumber(decimal: $0).doubleValue } ?? 2.0
         
+        // 3) Clamp invalid or non-positive values (so log10 won't crash)
         if !rawMin.isFinite || rawMin <= 0 { rawMin = 1.0 }
         if !rawMax.isFinite || rawMax <= 0 { rawMax = rawMin + 1.0 }
         
@@ -39,23 +46,26 @@ struct PortfolioChartView: View {
         if rawMax >= pow(10.0, topExp) {
             topExp += 1
         }
-        let domainMin = max(pow(10.0, bottomExp), 1.0)
-        let domainMax = pow(10.0, topExp)
-        // Ensure domainMax > domainMin
-        let finalDomainMax = max(domainMax, domainMin + 1.0)
         
-        // 5) Build power-of-ten tick marks on Y axis
-        let intBottom = Int(floor(log10(domainMin)))
+        let domainMin = pow(10.0, bottomExp)
+        let domainMax = pow(10.0, topExp)
+        
+        // Ensure at least 1.0 at the bottom, and at least a +1 range
+        let finalDomainMin = max(1.0, domainMin)
+        let finalDomainMax = max(finalDomainMin + 1.0, domainMax)
+        
+        // 5) Build power-of-ten tick marks for Y
+        let intBottom = Int(floor(log10(finalDomainMin)))
         let intTop    = Int(floor(log10(finalDomainMax)))
         let yTickValues = (intBottom...intTop).map { pow(10.0, Double($0)) }
         
         // 6) Convert userPeriods => total years
         let totalUnits = Double(simSettings.userPeriods)
-        let totalYears: Double = (simSettings.periodUnit == .weeks)
+        let totalYears = (simSettings.periodUnit == .weeks)
             ? totalUnits / 52.0
             : totalUnits / 12.0
         
-        // 7) Decide X stride
+        // Decide an X-axis stride
         let xStride = dynamicXStride(for: totalYears)
         
         return GeometryReader { geo in
@@ -64,17 +74,20 @@ struct PortfolioChartView: View {
                 
                 VStack(spacing: 0) {
                     Chart {
-                        // Multi-run lines
-                        simulationLines(simulations: simulations, simSettings: simSettings)
+                        // 1) Draw the normal “spaghetti” lines
+                        simulationLines(simulations: normalSimulations, simSettings: simSettings)
                         
-                        // If you want a highlight line for median, do below:
-                        medianLines(simulations: simulations, simSettings: simSettings)
+                        // 2) (Optional) Remove or comment out the median line:
+                        // medianLines(simulations: normalSimulations, simSettings: simSettings)
                         
+                        // 3) Overlaid bold orange best-fit
+                        if let bestFitRun = bestFit {
+                            bestFitLine(bestFitRun, simSettings: simSettings)
+                        }
                     }
                     .chartLegend(.hidden)
                     .chartXScale(domain: 0.0...totalYears, type: .linear)
-                    .chartYScale(domain: domainMin...finalDomainMax, type: .log)
-                    
+                    .chartYScale(domain: finalDomainMin...finalDomainMax, type: .log)
                     .chartPlotStyle { plotArea in
                         plotArea
                             .padding(.top, 0)
@@ -96,7 +109,7 @@ struct PortfolioChartView: View {
                         }
                     }
                     
-                    // X-axis => show months if totalYears <= 2, else years
+                    // X-axis => months if <=2 years, else years
                     .chartXAxis {
                         AxisMarks(values: Array(stride(from: 0.0, through: totalYears, by: xStride))) { axisValue in
                             AxisGridLine().foregroundStyle(.white.opacity(0.3))
@@ -114,8 +127,9 @@ struct PortfolioChartView: View {
                             }
                         }
                     }
-                    // Slightly squash in portrait, anchored at bottom
-                    .scaleEffect(x: 1.0, y: verticalScale, anchor: .bottom)
+                    
+                    // Slightly squash vertically if in portrait
+                    .scaleEffect(x: 1.0, y: scaleY, anchor: .bottom)
                     .frame(width: geo.size.width, height: geo.size.height)
                 }
             }
@@ -124,14 +138,7 @@ struct PortfolioChartView: View {
     }
 }
 
-
-// MARK: - Logic for color picking
-private func colorForIndex(_ idx: Int) -> Color {
-    let hue = Double(idx % 12) / 12.0
-    return Color(hue: hue, saturation: 0.8, brightness: 0.85)
-}
-
-// MARK: - A stride for X
+// MARK: - Choose an X-axis stride
 private func dynamicXStride(for totalYears: Double) -> Double {
     switch totalYears {
     case ..<1.01:
