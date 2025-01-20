@@ -505,9 +505,12 @@ struct SettingsView: View {
                 isOn: $simSettings.useBlackSwanUnified,
                 sliderValue: $simSettings.blackSwanDropUnified,
                 sliderRange: simSettings.periodUnit == .weeks
+                    // Old weekly range unchanged
                     ? -1.196655 ... -0.398885
-                    : -1.2 ... -0.4,
-                defaultValue: simSettings.periodUnit == .weeks ? -0.79777 : -0.8,
+                    // New monthly range: -0.8 ... 0.0, with midpoint -0.4
+                    : -0.8 ... 0.0,
+                // New monthly default is -0.4 (midpoint). Weekly remains -0.79777.
+                defaultValue: simSettings.periodUnit == .weeks ? -0.79777 : -0.4,
                 parameterDescription: blackSwanDesc,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor

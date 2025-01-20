@@ -340,7 +340,7 @@ private func applyFactorToggles(
     if settings.useBlackSwan {
         // Probability-based approach => seeded
         let stressLevel = mempoolDataManager.stressLevel(at: week)
-        let baseProb = 0.003
+        let baseProb = 0.028
         let dynamicProb = (stressLevel > 80.0) ? baseProb * 2 : baseProb
         // Instead of Double.random(in: 0...1), we do:
         let roll = Double(rng.nextUniform())

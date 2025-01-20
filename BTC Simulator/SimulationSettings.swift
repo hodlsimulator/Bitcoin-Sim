@@ -93,7 +93,7 @@ class SimulationSettings: ObservableObject {
 
     // Black Swan
     private static let defaultBlackSwanDropWeekly   = -0.7977726936340332  // was -0.3
-    private static let defaultBlackSwanDropMonthly  = -0.8  // was -0.0018411452783672483
+    private static let defaultBlackSwanDropMonthly  = -0.4  // was -0.8
 
     // Bear Market
     private static let defaultBearWeeklyDriftWeekly   = -0.001  // was -0.0001
