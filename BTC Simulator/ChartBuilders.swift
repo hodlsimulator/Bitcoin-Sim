@@ -164,7 +164,7 @@ func simulationLines(
                 x: .value("Year", convertPeriodToYears(pt.week, simSettings)),
                 y: .value("Value", NSDecimalNumber(decimal: pt.value).doubleValue)
             )
-            .foregroundStyle(colour.opacity(0.2))
+            .foregroundStyle(colour.opacity(0.3))
             .foregroundStyle(by: .value("SeriesIndex", index))
             .lineStyle(
                 StrokeStyle(

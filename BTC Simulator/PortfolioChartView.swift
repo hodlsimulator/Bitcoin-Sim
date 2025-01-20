@@ -9,7 +9,8 @@ import SwiftUI
 import Charts
 
 /// This chart is nearly identical to the BTC one, but uses `portfolioValue` data.
-/// It includes dynamic X and Y logic, clamps invalid values, and optionally shows a best-fit line.
+/// It includes dynamic X and Y logic, clamps invalid values, and shows a best‐fit line
+/// which gets darker and thicker as the iteration count grows.
 struct PortfolioChartView: View {
     @EnvironmentObject var orientationObserver: OrientationObserver
     @EnvironmentObject var chartDataCache: ChartDataCache
@@ -23,26 +24,27 @@ struct PortfolioChartView: View {
     var body: some View {
         let isLandscape = orientationObserver.isLandscape
         
-        // 1) Grab the portfolio runs
+        // 1) Grab all portfolio runs
         let simulations = chartDataCache.portfolioRuns ?? []
-        // Grab the best-fit run (if any)
+        
+        // 2) Grab the best‐fit run (if any)
         let bestFit = chartDataCache.bestFitPortfolioRun?.first
         
-        // Filter out the best-fit so it’s drawn only once
+        // Filter out the best‐fit so it’s drawn only once
         let normalSimulations = simulations.filter { $0.id != bestFit?.id }
         
-        // 2) Flatten to find min & max
+        // Flatten to find min & max among all runs
         let allValues = simulations.flatMap { $0.points.map(\.value) }
         var rawMin = allValues.min().map { NSDecimalNumber(decimal: $0).doubleValue } ?? 1.0
         var rawMax = allValues.max().map { NSDecimalNumber(decimal: $0).doubleValue } ?? 2.0
         
-        // 3) Clamp invalid or non-positive values (so log10 won't crash)
+        // Clamp invalid or non‐positive values so log10 won't crash
         if !rawMin.isFinite || rawMin <= 0 { rawMin = 1.0 }
         if !rawMax.isFinite || rawMax <= 0 { rawMax = rawMin + 1.0 }
         
-        // 4) Build log domain
+        // Build log domain
         var bottomExp = floor(log10(rawMin))
-        var topExp    = floor(log10(rawMax))
+        var topExp = floor(log10(rawMax))
         if rawMax >= pow(10.0, topExp) {
             topExp += 1
         }
@@ -54,12 +56,12 @@ struct PortfolioChartView: View {
         let finalDomainMin = max(1.0, domainMin)
         let finalDomainMax = max(finalDomainMin + 1.0, domainMax)
         
-        // 5) Build power-of-ten tick marks for Y
+        // Build power‐of‐ten tick marks for Y
         let intBottom = Int(floor(log10(finalDomainMin)))
         let intTop    = Int(floor(log10(finalDomainMax)))
         let yTickValues = (intBottom...intTop).map { pow(10.0, Double($0)) }
         
-        // 6) Convert userPeriods => total years
+        // Convert userPeriods => total years
         let totalUnits = Double(simSettings.userPeriods)
         let totalYears = (simSettings.periodUnit == .weeks)
             ? totalUnits / 52.0
@@ -68,21 +70,29 @@ struct PortfolioChartView: View {
         // Decide an X-axis stride
         let xStride = dynamicXStride(for: totalYears)
         
+        // We'll use normalSimulations.count + 1 to figure out how many runs exist
+        // so we can scale the best‐fit line's thickness/brightness appropriately.
+        let iterationCount = normalSimulations.count + 1
+        
         return GeometryReader { geo in
             ZStack {
                 Color.black.ignoresSafeArea()
                 
                 VStack(spacing: 0) {
                     Chart {
-                        // 1) Draw the normal “spaghetti” lines
+                        // 1) The “spaghetti” lines
                         simulationLines(simulations: normalSimulations, simSettings: simSettings)
                         
-                        // 2) (Optional) Remove or comment out the median line:
+                        // 2) Optionally remove median lines if desired
                         // medianLines(simulations: normalSimulations, simSettings: simSettings)
                         
-                        // 3) Overlaid bold orange best-fit
+                        // 3) Overlaid bold best‐fit line (thickens/darkens with iterationCount)
                         if let bestFitRun = bestFit {
-                            bestFitLine(bestFitRun, simSettings: simSettings)
+                            bestFitLine(
+                                bestFitRun,
+                                simSettings: simSettings,
+                                iterationCount: iterationCount
+                            )
                         }
                     }
                     .chartLegend(.hidden)

@@ -166,6 +166,9 @@ struct MonteCarloChartView: View {
         }
         let xStride = dynamicXStride(totalYears)
         
+        // We'll use the total # of runs (including best-fit) to adjust best-fit thickness & darkness
+        let iterationCount = normalSimulations.count + 1
+        
         return GeometryReader { geo in
             ZStack {
                 Color.black.ignoresSafeArea()
@@ -177,7 +180,11 @@ struct MonteCarloChartView: View {
                         
                         // 2) Overlaid bold orange best-fit (excluded above)
                         if let bestFitRun = bestFit {
-                            bestFitLine(bestFitRun, simSettings: simSettings)
+                            bestFitLine(
+                                bestFitRun,
+                                simSettings: simSettings,
+                                iterationCount: iterationCount
+                            )
                         }
                     }
                     .chartLegend(.hidden)
@@ -225,31 +232,43 @@ struct MonteCarloChartView: View {
                 .padding(.top, orientationObserver.isLandscape ? 20 : 0)
                 .scaleEffect(x: 1.0, y: verticalScale, anchor: .bottom)
             }
-            // Debug logging to see if best‐fit & main runs share IDs
-            .onAppear {
-                print("Best fit ID:", bestFit?.id ?? "<nil>")
-                for sim in simulations {
-                    print("Simulation ID:", sim.id)
-                }
-            }
         }
     }
 }
 
-// MARK: - bestFitLine builder
+// MARK: - bestFitLine builder with even darker/thicker scaling
 @ChartContentBuilder
 func bestFitLine(
     _ run: SimulationRun,
-    simSettings: SimulationSettings
+    simSettings: SimulationSettings,
+    iterationCount: Int
 ) -> some ChartContent {
-    // Bold orange line
-    ForEach(run.points) { pt in
+    // Clamp iterationCount to [70..1000]
+    let clamped = max(70, min(iterationCount, 700))
+    let fraction = Double(clamped - 70) / Double(700 - 70)
+    
+    // 1) Make brightness drop from 1.0 → 0.6
+    let minBrightness: CGFloat = 1.0
+    let maxDarkBrightness: CGFloat = 0.6  // darker than before
+    let dynamicBrightness = minBrightness - fraction * (minBrightness - maxDarkBrightness)
+    
+    // 2) Thicken from 2.0 → 5.0
+    let minWidth: CGFloat = 2.0
+    let maxWidth: CGFloat = 5.0
+    let lineWidth = minWidth + fraction * (maxWidth - minWidth)
+    
+    // 3) Apply new styling
+    return ForEach(run.points) { pt in
         LineMark(
             x: .value("Year", convertPeriodToYears(pt.week, simSettings)),
             y: .value("Value", NSDecimalNumber(decimal: pt.value).doubleValue)
         )
-        .foregroundStyle(Color.orange)
-        .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
+        .foregroundStyle(
+            Color(hue: 0.08, saturation: 0.9, brightness: dynamicBrightness)
+        )
+        .lineStyle(
+            StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round)
+        )
     }
 }
 
