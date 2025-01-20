@@ -47,6 +47,7 @@
 		E191AD632D1B0C9400020DBE /* CSVLoaderSP500.swift in Sources */ = {isa = PBXBuildFile; fileRef = E191AD622D1B0C9100020DBE /* CSVLoaderSP500.swift */; };
 		E191AD652D1B0D5700020DBE /* CSVParsingUtilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = E191AD642D1B0D5200020DBE /* CSVParsingUtilities.swift */; };
 		E191AD672D1B764400020DBE /* CSVLoaderBTC.swift in Sources */ = {isa = PBXBuildFile; fileRef = E191AD662D1B763E00020DBE /* CSVLoaderBTC.swift */; };
+		E19D10E72D3ED96200E3A55E /* GARCHHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = E19D10E62D3ED96000E3A55E /* GARCHHelper.swift */; };
 		E1A1E51F2D2A7364008F7658 /* PortfolioChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A1E51E2D2A7362008F7658 /* PortfolioChartView.swift */; };
 		E1A1E5272D2E371D008F7658 /* TipsData.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A1E5262D2E371B008F7658 /* TipsData.swift */; };
 		E1A1E5292D2E38FA008F7658 /* CheckboxToggleStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A1E5282D2E38F9008F7658 /* CheckboxToggleStyle.swift */; };
@@ -101,6 +102,7 @@
 		E191AD622D1B0C9100020DBE /* CSVLoaderSP500.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVLoaderSP500.swift; sourceTree = "<group>"; };
 		E191AD642D1B0D5200020DBE /* CSVParsingUtilities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVParsingUtilities.swift; sourceTree = "<group>"; };
 		E191AD662D1B763E00020DBE /* CSVLoaderBTC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVLoaderBTC.swift; sourceTree = "<group>"; };
+		E19D10E62D3ED96000E3A55E /* GARCHHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GARCHHelper.swift; sourceTree = "<group>"; };
 		E1A1E51E2D2A7362008F7658 /* PortfolioChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioChartView.swift; sourceTree = "<group>"; };
 		E1A1E5262D2E371B008F7658 /* TipsData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TipsData.swift; sourceTree = "<group>"; };
 		E1A1E5282D2E38F9008F7658 /* CheckboxToggleStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckboxToggleStyle.swift; sourceTree = "<group>"; };
@@ -169,6 +171,7 @@
 				E191AD642D1B0D5200020DBE /* CSVParsingUtilities.swift */,
 				E166A8AB2CF855B60003F518 /* DoubleExtensions.swift */,
 				E1883F432D1E69B5007AA90B /* FactorToggleRow.swift */,
+				E19D10E62D3ED96000E3A55E /* GARCHHelper.swift */,
 				E1883F3F2D1E0DC8007AA90B /* InputManager.swift */,
 				E1A1E52A2D2E3967008F7658 /* InteractiveBitcoinSymbol3DSpinner.swift */,
 				E17B2F272D27505100ECE087 /* LandscapePlaceholderView.swift */,
@@ -355,6 +358,7 @@
 				E166A8B92CF955ED0003F518 /* ContentOffsetScrollView.swift in Sources */,
 				E191AD632D1B0C9400020DBE /* CSVLoaderSP500.swift in Sources */,
 				E191AD652D1B0D5700020DBE /* CSVParsingUtilities.swift in Sources */,
+				E19D10E72D3ED96200E3A55E /* GARCHHelper.swift in Sources */,
 				E1883F3C2D1DDC78007AA90B /* ParametersFormView.swift in Sources */,
 				E18C2BE12D259248006E7438 /* ChartSnapshotView.swift in Sources */,
 				E166A8AA2CF855B00003F518 /* CSVLoader.swift in Sources */,

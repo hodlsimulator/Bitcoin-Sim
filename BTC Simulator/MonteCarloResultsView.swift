@@ -247,14 +247,14 @@ func bestFitLine(
     let clamped = max(70, min(iterationCount, 700))
     let fraction = Double(clamped - 70) / Double(700 - 70)
     
-    // 1) Make brightness drop from 1.0 → 0.6
+    // 1) Make brightness drop from 1.0 → 0.65
     let minBrightness: CGFloat = 1.0
-    let maxDarkBrightness: CGFloat = 0.6  // darker than before
+    let maxDarkBrightness: CGFloat = 0.65  // darker than before
     let dynamicBrightness = minBrightness - fraction * (minBrightness - maxDarkBrightness)
     
-    // 2) Thicken from 2.0 → 5.0
+    // 2) Thicken from 2.0 → 4.0
     let minWidth: CGFloat = 2.0
-    let maxWidth: CGFloat = 5.0
+    let maxWidth: CGFloat = 4.0
     let lineWidth = minWidth + fraction * (maxWidth - minWidth)
     
     // 3) Apply new styling

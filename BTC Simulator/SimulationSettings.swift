@@ -871,7 +871,13 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-
+    @Published var useGarchVolatility: Bool = true {
+        didSet {
+            if isInitialized {
+                UserDefaults.standard.set(useGarchVolatility, forKey: "useGarchVolatility")
+            }
+        }
+    }
     @Published var useVolShocks: Bool = true {
         didSet {
             if isInitialized {
@@ -2867,7 +2873,7 @@ class SimulationSettings: ObservableObject {
         printAllSettings()
     }
 
-    // MARK: - Restore Defaults
+    /// MARK: - Restore Defaults
     func restoreDefaults() {
         let defaults = UserDefaults.standard
         defaults.set(useHistoricalSampling, forKey: "useHistoricalSampling")
@@ -2921,6 +2927,9 @@ class SimulationSettings: ObservableObject {
         // Remove your new toggles
         defaults.removeObject(forKey: "useHistoricalSampling")
         defaults.removeObject(forKey: "useVolShocks")
+        
+        // NEW: Remove GARCH toggle
+        defaults.removeObject(forKey: "useGarchVolatility")
 
         // Remove new weekly/monthly keys
         defaults.removeObject(forKey: "useHalvingWeekly")
@@ -3031,11 +3040,14 @@ class SimulationSettings: ObservableObject {
         // Also remove or reset the toggle
         defaults.removeObject(forKey: "useLognormalGrowth")
         useLognormalGrowth = true
-    
+
         // Reassign them to the NEW defaults:
         useHistoricalSampling = true
         useVolShocks = true
-    
+
+        // NEW: Set GARCH default to true
+        useGarchVolatility = true
+
         // Reassign them to the NEW defaults:
         useHalving = true
                 
@@ -3078,7 +3090,7 @@ class SimulationSettings: ObservableObject {
 
         useEtfApprovalMonthly = true
         maxEtfBoostMonthly = SimulationSettings.defaultMaxEtfBoostMonthly
-    
+
         useTechBreakthrough = true
 
         useTechBreakthroughWeekly = true
@@ -3118,7 +3130,7 @@ class SimulationSettings: ObservableObject {
 
         useDemographicAdoptionMonthly = true
         maxDemoBoostMonthly = SimulationSettings.defaultMaxDemoBoostMonthly
-    
+
         useAltcoinFlight = true
             
         useAltcoinFlightWeekly = true

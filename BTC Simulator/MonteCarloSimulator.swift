@@ -403,22 +403,48 @@ private func runWeeklySimulation(
     var prevBTCHoldings = 0.0
     
     let cagrDecimal = annualCAGR / 100.0
-    let periodVol   = (annualVolatility / 100.0) / sqrt(52.0)
+    
+    // For normal use, weekly stdev = annualVol / sqrt(52),
+    // but we might override it if GARCH is on
+    let baseWeeklyVol = (annualVolatility / 100.0) / sqrt(52.0)
 
+    // CHANGED: If using GARCH, create our GarchModel.
+    // You could store GARCH parameters in SimulationSettings, or just hardcode them here.
+    // We'll pick some example values that might need tuning.
+    // e.g. ω = 0.000001, α = 0.1, β = 0.85 => typical ballpark for GARCH(1,1).
+    var garchModel = GarchModel(
+        omega: 0.000001,
+        alpha: 0.1,
+        beta: 0.85,
+        initialVariance: baseWeeklyVol * baseWeeklyVol
+    )
+    
     let firstYearVal  = (settings.inputManager?.firstYearContribution as NSString?)?.doubleValue ?? 0
     let secondYearVal = (settings.inputManager?.subsequentContribution as NSString?)?.doubleValue ?? 0
+    
+    // We'll store lastReturn to feed GARCH each loop.
+    // E.g. if we do "exp(totalReturn) - 1" as the percentage,
+    // we can pass totalReturn itself as an approximation to lastReturn.
+    var lastStepLogReturn = 0.0
 
     for currentWeek in 1...totalWeeklySteps {
         
         let lumpsum = (!settings.useHistoricalSampling && !settings.useLognormalGrowth)
         var totalReturn = 0.0
         
+        // NEW: GARCH CODE
+        // compute the current stdev from GARCH or the fixed base.
+        let currentVol = settings.useGarchVolatility
+            ? garchModel.currentStdDev()
+            : baseWeeklyVol
+        
         if lumpsum {
             // Only apply lumpsum approach once per year (every 52 weeks)
             if Double(currentWeek).truncatingRemainder(dividingBy: 52.0) == 0 {
                 var lumpsumGrowth = cagrDecimal
                 if settings.useVolShocks && annualVolatility > 0 {
-                    let shockVol = randomNormal(mean: 0, standardDeviation: periodVol)
+                    // Use currentVol instead of baseWeeklyVol if GARCH is on:
+                    let shockVol = randomNormal(mean: 0, standardDeviation: currentVol)
                     lumpsumGrowth = (1 + lumpsumGrowth) * exp(shockVol) - 1
                 }
                 lumpsumGrowth = applyFactorToggles(
@@ -431,6 +457,9 @@ private func runWeeklySimulation(
                 let factor = lumpsumAdjustFactor(settings: settings, annualVolatility: annualVolatility)
                 lumpsumGrowth *= factor
                 prevBTCPriceUSD *= (1 + lumpsumGrowth)
+                
+                // For GARCH, approximate lastReturn for next step:
+                lastStepLogReturn = log(1 + lumpsumGrowth)
             }
         } else {
             // Historical sampling or lognormal approach
@@ -443,7 +472,8 @@ private func runWeeklySimulation(
                 totalReturn += (cagrDecimal / 52.0)
             }
             if settings.useVolShocks {
-                let shockVol = randomNormal(mean: 0, standardDeviation: periodVol)
+                // CHANGED: Use currentVol if GARCH is on
+                let shockVol = randomNormal(mean: 0, standardDeviation: currentVol)
                 totalReturn += shockVol
             }
             let toggled = applyFactorToggles(
@@ -454,6 +484,9 @@ private func runWeeklySimulation(
                 blackSwanWeeks: blackSwanWeeks
             )
             prevBTCPriceUSD *= exp(toggled)
+            
+            // GARCH: store lastReturn for next iteration
+            lastStepLogReturn = toggled
         }
         
         if prevBTCPriceUSD < 1.0 {
@@ -494,6 +527,12 @@ private func runWeeklySimulation(
         let portfolioValueEUR = finalHoldings * newPriceEUR
         let portfolioValueUSD = finalHoldings * newPriceUSD
         
+        // NEW: If GARCH is on, update the variance for next step
+        // using the last log-return we just applied.
+        if settings.useGarchVolatility {
+            garchModel.updateVariance(lastReturn: lastStepLogReturn)
+        }
+
         let dataPoint = SimulationData(
             week: currentWeek,
             startingBTC: prevBTCHoldings,
@@ -537,37 +576,55 @@ private func runMonthlySimulation(
     var prevBTCHoldings = 0.0
     
     let cagrDecimal = annualCAGR / 100.0
-    let periodVol   = (annualVolatility / 100.0) / sqrt(12.0)
+    
+    // Normal monthly stdev = annualVol / sqrt(12)
+    let baseMonthlyVol = (annualVolatility / 100.0) / sqrt(12.0)
 
+    // NEW: GARCH CODE for monthly
+    var garchModel = GarchModel(
+        omega: 0.00001,
+        alpha: 0.1,
+        beta: 0.85,
+        initialVariance: baseMonthlyVol * baseMonthlyVol
+    )
+    
     let firstYearVal  = (settings.inputManager?.firstYearContribution as NSString?)?.doubleValue ?? 0
     let secondYearVal = (settings.inputManager?.subsequentContribution as NSString?)?.doubleValue ?? 0
+    
+    var lastStepLogReturn = 0.0
 
     for currentMonth in 1...totalMonths {
         
         let lumpsum = (!settings.useHistoricalSampling && !settings.useLognormalGrowth)
         var totalReturn = 0.0
         
+        // CHANGED: current stdev from GARCH or fixed
+        let currentVol = settings.useGarchVolatility
+            ? garchModel.currentStdDev()
+            : baseMonthlyVol
+        
         if lumpsum {
             // Lumpsum approach once per year => every 12 months
             if Double(currentMonth).truncatingRemainder(dividingBy: 12.0) == 0 {
                 var lumpsumGrowth = cagrDecimal
                 if settings.useVolShocks && annualVolatility > 0 {
-                    let shockVol = randomNormal(mean: 0, standardDeviation: periodVol)
+                    let shockVol = randomNormal(mean: 0, standardDeviation: currentVol)
                     lumpsumGrowth = (1 + lumpsumGrowth) * exp(shockVol) - 1
                 }
                 lumpsumGrowth = applyFactorToggles(
                     baseReturn: lumpsumGrowth,
                     week: currentMonth,
                     settings: settings,
-                    halvingWeeks: halvingMonths, // reusing param name
+                    halvingWeeks: halvingMonths,
                     blackSwanWeeks: blackSwanMonths
                 )
                 let factor = lumpsumAdjustFactor(settings: settings, annualVolatility: annualVolatility)
                 lumpsumGrowth *= factor
                 prevBTCPriceUSD *= (1 + lumpsumGrowth)
+                
+                lastStepLogReturn = log(1 + lumpsumGrowth)
             }
         } else {
-            // Historical sampling or lognormal approach
             if settings.useHistoricalSampling {
                 var monthlySample = pickRandomReturn(from: historicalBTCMonthlyReturns)
                 monthlySample = dampenArctanMonthly(monthlySample)
@@ -577,7 +634,7 @@ private func runMonthlySimulation(
                 totalReturn += (cagrDecimal / 12.0)
             }
             if settings.useVolShocks {
-                let shockVol = randomNormal(mean: 0, standardDeviation: periodVol)
+                let shockVol = randomNormal(mean: 0, standardDeviation: currentVol)
                 totalReturn += shockVol
             }
             let toggled = applyFactorToggles(
@@ -588,6 +645,8 @@ private func runMonthlySimulation(
                 blackSwanWeeks: blackSwanMonths
             )
             prevBTCPriceUSD *= exp(toggled)
+            
+            lastStepLogReturn = toggled
         }
         
         // Floor
@@ -628,6 +687,11 @@ private func runMonthlySimulation(
         
         let portfolioValueEUR = finalHoldings * newPriceEUR
         let portfolioValueUSD = finalHoldings * newPriceUSD
+        
+        // NEW: GARCH update
+        if settings.useGarchVolatility {
+            garchModel.updateVariance(lastReturn: lastStepLogReturn)
+        }
 
         let dataPoint = SimulationData(
             week: currentMonth, // reusing 'week' to store month index

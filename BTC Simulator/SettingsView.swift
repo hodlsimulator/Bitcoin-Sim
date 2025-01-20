@@ -721,10 +721,14 @@ struct SettingsView: View {
                 Toggle("Use Volatility Shocks", isOn: $simSettings.useVolShocks)
                     .tint(.orange)
                     .foregroundColor(.white)
+                
+                Toggle("Use GARCH Volatility", isOn: $simSettings.useGarchVolatility)
+                    .tint(.orange)
+                    .foregroundColor(.white)
             } header: {
                 Text("Volatility")
             } footer: {
-                Text("Enables random volatility spikes during simulations.")
+                Text("Use GARCH to make volatility evolve based on recent returns (more realistic swings).")
                     .foregroundColor(.secondary)
             }
             .listRowBackground(Color(white: 0.15))
