@@ -394,8 +394,7 @@ private func runWeeklySimulation(
     initialBTCPriceUSD: Double,
     halvingWeeks: [Int],
     blackSwanWeeks: [Int],
-    iterationIndex: Int,
-    verboseLog: Bool = false
+    iterationIndex: Int
 ) -> [SimulationData] {
     
     var results = [SimulationData]()
@@ -410,9 +409,6 @@ private func runWeeklySimulation(
     let secondYearVal = (settings.inputManager?.subsequentContribution as NSString?)?.doubleValue ?? 0
 
     for currentWeek in 1...totalWeeklySteps {
-        
-        let oldPriceUSD = prevBTCPriceUSD
-        let oldHoldings = prevBTCHoldings
         
         let lumpsum = (!settings.useHistoricalSampling && !settings.useLognormalGrowth)
         var totalReturn = 0.0
@@ -437,7 +433,7 @@ private func runWeeklySimulation(
                 prevBTCPriceUSD *= (1 + lumpsumGrowth)
             }
         } else {
-            // For historical sampling or lognormal approach
+            // Historical sampling or lognormal approach
             if settings.useHistoricalSampling {
                 var weeklySample = pickRandomReturn(from: historicalBTCWeeklyReturns)
                 weeklySample = dampenArctanWeekly(weeklySample)
@@ -482,7 +478,7 @@ private func runWeeklySimulation(
             btcPriceUSD: newPriceUSD,
             btcPriceEUR: newPriceEUR
         )
-        let holdingsAfterDeposit = oldHoldings + depositBTC
+        let holdingsAfterDeposit = prevBTCHoldings + depositBTC
         
         // Check thresholds for withdrawals
         let hypotheticalValueEUR = holdingsAfterDeposit * newPriceEUR
@@ -500,7 +496,7 @@ private func runWeeklySimulation(
         
         let dataPoint = SimulationData(
             week: currentWeek,
-            startingBTC: oldHoldings,
+            startingBTC: prevBTCHoldings,
             netBTCHoldings: finalHoldings,
             btcPriceUSD: Decimal(newPriceUSD),
             btcPriceEUR: Decimal(newPriceEUR),
@@ -532,8 +528,7 @@ private func runMonthlySimulation(
     initialBTCPriceUSD: Double,
     halvingMonths: [Int],
     blackSwanMonths: [Int],
-    iterationIndex: Int,
-    verboseLog: Bool = false // NEW CODE
+    iterationIndex: Int
 ) -> [SimulationData] {
 
     var results = [SimulationData]()
@@ -541,29 +536,17 @@ private func runMonthlySimulation(
     var prevBTCPriceUSD = initialBTCPriceUSD
     var prevBTCHoldings = 0.0
     
-    // Convert annual CAGR into a monthly fraction
     let cagrDecimal = annualCAGR / 100.0
     let periodVol   = (annualVolatility / 100.0) / sqrt(12.0)
 
     let firstYearVal  = (settings.inputManager?.firstYearContribution as NSString?)?.doubleValue ?? 0
     let secondYearVal = (settings.inputManager?.subsequentContribution as NSString?)?.doubleValue ?? 0
 
-    // OPTIONAL: A quick log line before we start
-    if verboseLog {
-        print("// VERBOSE: runMonthlySimulation => iteration=\(iterationIndex), totalMonths=\(totalMonths), initialBTC=\(prevBTCPriceUSD)")
-    }
-
     for currentMonth in 1...totalMonths {
-        
-        let oldPriceUSD = prevBTCPriceUSD
-        let oldHoldings = prevBTCHoldings
         
         let lumpsum = (!settings.useHistoricalSampling && !settings.useLognormalGrowth)
         var totalReturn = 0.0
         
-        // ──────────────────────────────────────────────────────────
-        // 1) Determine the final BTC price for this month, after toggles
-        // ──────────────────────────────────────────────────────────
         if lumpsum {
             // Lumpsum approach once per year => every 12 months
             if Double(currentMonth).truncatingRemainder(dividingBy: 12.0) == 0 {
@@ -607,16 +590,14 @@ private func runMonthlySimulation(
             prevBTCPriceUSD *= exp(toggled)
         }
         
-        // Price floor
+        // Floor
         if prevBTCPriceUSD < 1.0 {
             prevBTCPriceUSD = 1.0
         }
         let newPriceUSD = prevBTCPriceUSD
         let newPriceEUR = newPriceUSD / exchangeRateEURUSD
         
-        // ──────────────────────────────────────────────────────────
-        // 2) Now that we have the new final monthly BTC price, do the deposit
-        // ──────────────────────────────────────────────────────────
+        // Contribution logic
         var typedDeposit = 0.0
         if currentMonth == 1 {
             typedDeposit = settings.startingBalance
@@ -632,11 +613,9 @@ private func runMonthlySimulation(
             btcPriceUSD: newPriceUSD,
             btcPriceEUR: newPriceEUR
         )
-        let holdingsAfterDeposit = oldHoldings + depositBTC
+        let holdingsAfterDeposit = prevBTCHoldings + depositBTC
         
-        // ──────────────────────────────────────────────────────────
-        // 3) Handle threshold-based withdrawals
-        // ──────────────────────────────────────────────────────────
+        // Check thresholds
         let hypotheticalValueEUR = holdingsAfterDeposit * newPriceEUR
         var withdrawalEUR = 0.0
         if hypotheticalValueEUR > (settings.inputManager?.threshold2 ?? 0) {
@@ -650,32 +629,9 @@ private func runMonthlySimulation(
         let portfolioValueEUR = finalHoldings * newPriceEUR
         let portfolioValueUSD = finalHoldings * newPriceUSD
 
-        // ──────────────────────────────────────────────────────────
-        // 4) Verbose logging
-        // ──────────────────────────────────────────────────────────
-        if verboseLog {
-            let oldPortfolioUSD = oldHoldings * oldPriceUSD
-            let depositInUSD    = (cUsd > 0.0 ? cUsd : 0.0)
-            let portfolioChange = portfolioValueUSD - oldPortfolioUSD
-            
-            print("""
-            // [Iter=\(iterationIndex) Month=\(currentMonth)]
-            //   oldBTC=\(oldPriceUSD), newBTC=\(newPriceUSD)
-            //   oldHoldings=\(oldHoldings), finalHoldings=\(finalHoldings)
-            //   typedDeposit=\(typedDeposit), depositBTC=\(depositBTC),
-            //   depositUSD=\(depositInUSD), feeUSD=\(feeUSD)
-            //   withdrawalUSD=\(withdrawalEUR / exchangeRateEURUSD)
-            //   oldPortUSD=\(oldPortfolioUSD), newPortUSD=\(portfolioValueUSD)
-            //   portChange=\(portfolioChange)
-            """)
-        }
-
-        // ──────────────────────────────────────────────────────────
-        // 5) Build SimulationData for this month
-        // ──────────────────────────────────────────────────────────
         let dataPoint = SimulationData(
             week: currentMonth, // reusing 'week' to store month index
-            startingBTC: oldHoldings,
+            startingBTC: prevBTCHoldings,
             netBTCHoldings: finalHoldings,
             btcPriceUSD: Decimal(newPriceUSD),
             btcPriceEUR: Decimal(newPriceEUR),
@@ -691,7 +647,6 @@ private func runMonthlySimulation(
         )
         results.append(dataPoint)
         
-        // 6) Move on to the next iteration
         prevBTCHoldings = finalHoldings
     }
     
@@ -707,8 +662,7 @@ func runOneFullSimulation(
     userWeeks: Int,
     initialBTCPriceUSD: Double,
     iterationIndex: Int = 0,
-    seed: UInt64? = nil,
-    verboseLog: Bool = false // NEW CODE
+    seed: UInt64? = nil
 ) -> [SimulationData] {
 
     if settings.periodUnit == .months {
@@ -731,8 +685,7 @@ func runOneFullSimulation(
             initialBTCPriceUSD: initialBTCPriceUSD,
             halvingMonths: randomHalvingMonths,
             blackSwanMonths: randomBlackSwanMonths,
-            iterationIndex: iterationIndex,
-            verboseLog: verboseLog // NEW CODE
+            iterationIndex: iterationIndex
         )
     } else {
         let totalWeeks = userWeeks
@@ -754,8 +707,7 @@ func runOneFullSimulation(
             initialBTCPriceUSD: initialBTCPriceUSD,
             halvingWeeks: randomHalvingWeeks,
             blackSwanWeeks: randomBlackSwanWeeks,
-            iterationIndex: iterationIndex,
-            verboseLog: verboseLog // NEW CODE
+            iterationIndex: iterationIndex
         )
     }
 }
@@ -768,9 +720,7 @@ fileprivate func computeMedianBTCPriceByStep(allRuns: [[SimulationData]]) -> [De
     var medians = [Decimal](repeating: 0, count: steps)
     
     for stepIndex in 0..<steps {
-        // Gather the BTC price from each run at this stepIndex
         let pricesAtStep = allRuns.compactMap { run -> Decimal? in
-            // If a run didn't have that many steps, safely check
             guard run.indices.contains(stepIndex) else { return nil }
             return run[stepIndex].btcPriceUSD
         }
@@ -783,7 +733,7 @@ fileprivate func computeMedianBTCPriceByStep(allRuns: [[SimulationData]]) -> [De
         let sorted = pricesAtStep.sorted()
         let mid = sorted.count / 2
         if sorted.count % 2 == 0 {
-            // even number => average the middle two
+            // even => average the middle two
             let p1 = sorted[mid - 1]
             let p2 = sorted[mid]
             medians[stepIndex] = (p1 + p2) / 2
@@ -810,7 +760,7 @@ func runMonteCarloSimulationsWithProgress(
 ) -> (
     medianRun: [SimulationData],
     allRuns: [[SimulationData]],
-    stepMedianPrices: [Decimal] // The new median BTC price per step
+    stepMedianPrices: [Decimal]
 ) {
     
     setRandomSeed(seed)
@@ -831,8 +781,7 @@ func runMonteCarloSimulationsWithProgress(
             exchangeRateEURUSD: exchangeRateEURUSD,
             userWeeks: userWeeks,
             initialBTCPriceUSD: initialBTCPriceUSD,
-            iterationIndex: i+1,
-            verboseLog: true
+            iterationIndex: i+1
         )
         allRuns.append(simRun)
         
@@ -843,7 +792,6 @@ func runMonteCarloSimulationsWithProgress(
     }
     
     if allRuns.isEmpty {
-        // Return empty everything
         return ([], [], [])
     }
     
@@ -852,7 +800,7 @@ func runMonteCarloSimulationsWithProgress(
     let sorted = finalValues.sorted { $0.0 < $1.0 }
     let medianRun = sorted[sorted.count / 2].1
     
-    // For each step, compute the median BTC price across all runs
+    // Compute the median BTC price across all runs at each step
     let stepMedians = computeMedianBTCPriceByStep(allRuns: allRuns)
 
     return (medianRun, allRuns, stepMedians)

@@ -40,8 +40,7 @@ class SimulationCoordinator: ObservableObject {
     init(chartDataCache: ChartDataCache,
          simSettings: SimulationSettings,
          inputManager: PersistentInputManager,
-         chartSelection: ChartSelection)
-    {
+         chartSelection: ChartSelection) {
         self.chartDataCache = chartDataCache
         self.simSettings = simSettings
         self.inputManager = inputManager
@@ -206,11 +205,9 @@ class SimulationCoordinator: ObservableObject {
                 self.ninetiethPercentileResults = ninetiethRun
                 self.medianResults = medianRun2
 
-                // NEW CODE: find the single run that best fits stepMedianPrices
+                // Find the single run that best fits stepMedianPrices
                 let bestFitRunIndex = self.findRepresentativeRunIndex(allRuns: allIterations, stepMedianBTC: stepMedianPrices)
                 let bestFitRun = allIterations[bestFitRunIndex]
-                
-                // We'll use that best-fit run as the main "display" run
                 self.monteCarloResults = bestFitRun
                 
                 self.selectedPercentile = .median
@@ -220,20 +217,7 @@ class SimulationCoordinator: ObservableObject {
                 print("// DEBUG: Tenth run => iteration #\(tenthRunIndex), final BTC => \(sortedRuns[tenthIndex].1)")
                 print("// DEBUG: 'median final BTC' => iteration #\(medianRunIndex), final BTC => \(sortedRuns[medianIndex].1)")
                 print("// DEBUG: Ninetieth run => iteration #\(ninetiethRunIndex), final BTC => \(sortedRuns[ninetiethIndex].1)")
-                print("// DEBUG: bestFitRun => iteration #\(bestFitRunIndex) chosen by distance. =>")
-                let dist = self.computeDistance(run: bestFitRun, stepMedianBTC: stepMedianPrices, iterationIndex: bestFitRunIndex, verbose: true)
-                print("// DEBUG:   totalDist => \(dist)")
-
-                // NEW CODE: Log the best-fit run's actual steps
-                print("// VERBOSE: Logging the best-fit run (#\(bestFitRunIndex)) step-by-step:")
-                for (stepIdx, row) in bestFitRun.enumerated() { // NEW CODE
-                    let monthNum = stepIdx + 1
-                    // Convert Decimals to Double if you want more clarity
-                    let btcDouble = NSDecimalNumber(decimal: row.btcPriceUSD).doubleValue
-                    let portDouble = NSDecimalNumber(decimal: row.portfolioValueUSD).doubleValue
-                    
-                    print("//   Month=\(monthNum), BTC=\(btcDouble), portfolio=\(portDouble), depositUSD=\(row.contributionUSD), withdrawal=\(row.withdrawalUSD)")
-                }
+                print("// DEBUG: bestFitRun => iteration #\(bestFitRunIndex) chosen by distance.")
                 
                 // Build chart data
                 let allSimsAsWeekPoints = self.convertAllSimsToWeekPoints()
@@ -354,10 +338,9 @@ class SimulationCoordinator: ObservableObject {
     }
 }
 
-// MARK: - "Representative Run" with verbose logging
+// MARK: - "Representative Run" logic
 extension SimulationCoordinator {
     /// Returns the index in `allRuns` that is best fit to `stepMedianBTC`.
-    /// We'll print a verbose log for every iteration.
     fileprivate func findRepresentativeRunIndex(
         allRuns: [[SimulationData]],
         stepMedianBTC: [Decimal]
@@ -365,80 +348,30 @@ extension SimulationCoordinator {
         var minDistance = Double.greatestFiniteMagnitude
         var bestIndex = 0
         
-        // 1) Find the run with smallest distance
         for (i, run) in allRuns.enumerated() {
-            let dist = computeDistance(
-                run: run,
-                stepMedianBTC: stepMedianBTC,
-                iterationIndex: i,
-                verbose: false
-            )
+            let dist = computeDistance(run: run, stepMedianBTC: stepMedianBTC, verbose: false)
             if dist < minDistance {
                 minDistance = dist
                 bestIndex = i
             }
         }
-        
-        // 2) Print summary for all runs
-        print("// VERBOSE: Representative run search results:")
-        for (j, run) in allRuns.enumerated() {
-            let dist = computeDistance(run: run, stepMedianBTC: stepMedianBTC, iterationIndex: j, verbose: false)
-            let marker = (j == bestIndex) ? "<-- BEST" : ""
-            print("//   run #\(j) => total distance=\(dist) \(marker)")
-        }
-        
-        // 3) Also log the EXACT steps of the best-fit run
-        print("// VERBOSE: Logging the best-fit run (#\(bestIndex)) step-by-step:")
-        logRunSteps(bestRun: allRuns[bestIndex], runIndex: bestIndex)
-        
         return bestIndex
     }
     
-    /// Detailed distance computation. If `verbose == true`, we also print each step's difference.
+    /// Calculates how “close” a run is to the median BTC array.
     fileprivate func computeDistance(
         run: [SimulationData],
         stepMedianBTC: [Decimal],
-        iterationIndex: Int,
         verbose: Bool
     ) -> Double {
         var totalDist = 0.0
         let count = min(run.count, stepMedianBTC.count)
         
-        if verbose {
-            print("// DEBUG: Distances for iteration #\(iterationIndex):")
-        }
-        
         for step in 0..<count {
             let runBTC = NSDecimalNumber(decimal: run[step].btcPriceUSD).doubleValue
             let medianBTC = NSDecimalNumber(decimal: stepMedianBTC[step]).doubleValue
-            let diff = abs(runBTC - medianBTC)
-            
-            totalDist += diff
-            
-            if verbose {
-                print("   Step=\(step + 1), runBTC=\(runBTC), median=\(medianBTC), diff=\(diff)")
-            }
+            totalDist += abs(runBTC - medianBTC)
         }
-        
-        if verbose {
-            print("   => totalDist=\(totalDist)")
-        }
-        
         return totalDist
-    }
-    
-    /// NEW CODE: Dump the step-by-step BTC price & portfolio for the chosen run.
-    private func logRunSteps(bestRun: [SimulationData], runIndex: Int) {
-        print("// VERBOSE: bestRun #\(runIndex) => step-by-step detail:")
-        for (i, row) in bestRun.enumerated() {
-            let step = i + 1
-            let btcUSD = NSDecimalNumber(decimal: row.btcPriceUSD).doubleValue
-            let portfolioUSD = NSDecimalNumber(decimal: row.portfolioValueUSD).doubleValue
-            print("""
-            //   step=\(step), BTC=\(btcUSD), holdings=\(row.netBTCHoldings), 
-            //     portfolio=\(portfolioUSD), depositUSD=\(row.contributionUSD), 
-            //     withdrawal=\(row.withdrawalUSD)
-            """)
-        }
     }
 }
