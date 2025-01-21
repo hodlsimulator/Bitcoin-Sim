@@ -52,6 +52,7 @@
 		E19D10ED2D40279600E3A55E /* SimulationSettings+Defaults.swift in Sources */ = {isa = PBXBuildFile; fileRef = E19D10EC2D40279200E3A55E /* SimulationSettings+Defaults.swift */; };
 		E19D10EF2D40290A00E3A55E /* SimulationSettings+RestoreDefaults.swift in Sources */ = {isa = PBXBuildFile; fileRef = E19D10EE2D40290800E3A55E /* SimulationSettings+RestoreDefaults.swift */; };
 		E19D10F12D402BDC00E3A55E /* SimulationSettings+ToggleAll.swift in Sources */ = {isa = PBXBuildFile; fileRef = E19D10F02D402BD800E3A55E /* SimulationSettings+ToggleAll.swift */; };
+		E19D10F32D4033D600E3A55E /* SimulationSettings+HashAndRun.swift in Sources */ = {isa = PBXBuildFile; fileRef = E19D10F22D4033D400E3A55E /* SimulationSettings+HashAndRun.swift */; };
 		E1A1E51F2D2A7364008F7658 /* PortfolioChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A1E51E2D2A7362008F7658 /* PortfolioChartView.swift */; };
 		E1A1E5272D2E371D008F7658 /* TipsData.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A1E5262D2E371B008F7658 /* TipsData.swift */; };
 		E1A1E5292D2E38FA008F7658 /* CheckboxToggleStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A1E5282D2E38F9008F7658 /* CheckboxToggleStyle.swift */; };
@@ -111,6 +112,7 @@
 		E19D10EC2D40279200E3A55E /* SimulationSettings+Defaults.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SimulationSettings+Defaults.swift"; sourceTree = "<group>"; };
 		E19D10EE2D40290800E3A55E /* SimulationSettings+RestoreDefaults.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SimulationSettings+RestoreDefaults.swift"; sourceTree = "<group>"; };
 		E19D10F02D402BD800E3A55E /* SimulationSettings+ToggleAll.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SimulationSettings+ToggleAll.swift"; sourceTree = "<group>"; };
+		E19D10F22D4033D400E3A55E /* SimulationSettings+HashAndRun.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SimulationSettings+HashAndRun.swift"; sourceTree = "<group>"; };
 		E1A1E51E2D2A7362008F7658 /* PortfolioChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioChartView.swift; sourceTree = "<group>"; };
 		E1A1E5262D2E371B008F7658 /* TipsData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TipsData.swift; sourceTree = "<group>"; };
 		E1A1E5282D2E38F9008F7658 /* CheckboxToggleStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckboxToggleStyle.swift; sourceTree = "<group>"; };
@@ -197,6 +199,7 @@
 				E166A8AF2CF855C20003F518 /* SimulationData.swift */,
 				E1883F392D1DD94C007AA90B /* SimulationSettings.swift */,
 				E19D10EC2D40279200E3A55E /* SimulationSettings+Defaults.swift */,
+				E19D10F22D4033D400E3A55E /* SimulationSettings+HashAndRun.swift */,
 				E14D240A2D3A6988007CC11A /* SimulationSettingsInit.swift */,
 				E19D10EE2D40290800E3A55E /* SimulationSettings+RestoreDefaults.swift */,
 				E19D10F02D402BD800E3A55E /* SimulationSettings+ToggleAll.swift */,
@@ -371,6 +374,7 @@
 				E191AD672D1B764400020DBE /* CSVLoaderBTC.swift in Sources */,
 				E1A1E5292D2E38FA008F7658 /* CheckboxToggleStyle.swift in Sources */,
 				E166A8B92CF955ED0003F518 /* ContentOffsetScrollView.swift in Sources */,
+				E19D10F32D4033D600E3A55E /* SimulationSettings+HashAndRun.swift in Sources */,
 				E191AD632D1B0C9400020DBE /* CSVLoaderSP500.swift in Sources */,
 				E191AD652D1B0D5700020DBE /* CSVParsingUtilities.swift in Sources */,
 				E19D10E72D3ED96200E3A55E /* GARCHHelper.swift in Sources */,
