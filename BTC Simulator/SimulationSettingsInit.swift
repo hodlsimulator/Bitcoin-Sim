@@ -14,18 +14,16 @@ extension SimulationSettings {
 
         let defaults = UserDefaults.standard
 
-        // 1. Prevent didSet observers from triggering during bulk updates
+        // 1) Prevent didSet observers from triggering during bulk updates
         self.isUpdating = true
 
-        // 2. MARK: - Load Basic Settings
+        // 2) MARK: - Load Basic Settings
 
         // Lognormal Growth
         if defaults.object(forKey: "useLognormalGrowth") != nil {
             let val = defaults.bool(forKey: "useLognormalGrowth")
-            print("DEBUG: read useLognormalGrowth => \(val)")
             self.useLognormalGrowth = val
         } else {
-            // If there's no stored value, default to true
             self.useLognormalGrowth = true
         }
 
@@ -52,7 +50,6 @@ extension SimulationSettings {
         // Currency Preference
         if let storedPrefRaw = defaults.string(forKey: "currencyPreference"),
            let storedPref = PreferredCurrency(rawValue: storedPrefRaw) {
-            print("DEBUG: read currencyPreference => \(storedPref)")
             self.currencyPreference = storedPref
         } else {
             self.currencyPreference = .eur
@@ -60,196 +57,121 @@ extension SimulationSettings {
 
         // Random Seed
         let lockedSeedVal = defaults.bool(forKey: "lockedRandomSeed")
-        print("DEBUG: read lockedRandomSeed => \(lockedSeedVal)")
         self.lockedRandomSeed = lockedSeedVal
 
         if let storedSeed = defaults.object(forKey: "seedValue") as? UInt64 {
-            print("DEBUG: read seedValue => \(storedSeed)")
             self.seedValue = storedSeed
         }
         let storedUseRandom = defaults.object(forKey: "useRandomSeed") as? Bool ?? true
-        print("DEBUG: read useRandomSeed => \(storedUseRandom)")
         self.useRandomSeed = storedUseRandom
 
         // Sampling & Volatility
         if defaults.object(forKey: "useHistoricalSampling") != nil {
             let val = defaults.bool(forKey: "useHistoricalSampling")
-            print("DEBUG: read useHistoricalSampling => \(val)")
             self.useHistoricalSampling = val
         }
         if defaults.object(forKey: "useVolShocks") != nil {
             let val = defaults.bool(forKey: "useVolShocks")
-            print("DEBUG: read useVolShocks => \(val)")
             self.useVolShocks = val
         }
 
         // GARCH Toggle
         if defaults.object(forKey: "useGarchVolatility") != nil {
             let val = defaults.bool(forKey: "useGarchVolatility")
-            print("DEBUG: read useGarchVolatility => \(val)")
             self.useGarchVolatility = val
         }
 
         // Autocorrelation Toggles
         if defaults.object(forKey: "useAutoCorrelation") != nil {
             let storedValue = defaults.bool(forKey: "useAutoCorrelation")
-            print("DEBUG: read useAutoCorrelation => \(storedValue)")
             self.useAutoCorrelation = storedValue
         }
         if defaults.object(forKey: "autoCorrelationStrength") != nil {
             let val = defaults.double(forKey: "autoCorrelationStrength")
-            print("DEBUG: read autoCorrelationStrength => \(val)")
             self.autoCorrelationStrength = val
         }
         if defaults.object(forKey: "meanReversionTarget") != nil {
             let val = defaults.double(forKey: "meanReversionTarget")
-            print("DEBUG: read meanReversionTarget => \(val)")
             self.meanReversionTarget = val
         }
 
         // Lock Historical Sampling
         if let savedLockSampling = defaults.object(forKey: "lockHistoricalSampling") as? Bool {
-            print("DEBUG: read lockHistoricalSampling => \(savedLockSampling)")
             self.lockHistoricalSampling = savedLockSampling
         }
 
-        // 3. MARK: - Load Bullish Factors (Parent Toggles)
+        // 3) MARK: - Load Bullish Factors (Parent Toggles)
 
-        // Halving
         if let storedHalving = defaults.object(forKey: "useHalving") as? Bool {
-            print("DEBUG: read useHalving => \(storedHalving)")
             self.useHalving = storedHalving
         }
-
-        // Institutional Demand
         if let storedInstitutional = defaults.object(forKey: "useInstitutionalDemand") as? Bool {
-            print("DEBUG: read useInstitutionalDemand => \(storedInstitutional)")
             self.useInstitutionalDemand = storedInstitutional
         }
-
-        // Country Adoption
         if let storedCountry = defaults.object(forKey: "useCountryAdoption") as? Bool {
-            print("DEBUG: read useCountryAdoption => \(storedCountry)")
             self.useCountryAdoption = storedCountry
         }
-
-        // Regulatory Clarity
         if let storedRegClarity = defaults.object(forKey: "useRegulatoryClarity") as? Bool {
-            print("DEBUG: read useRegulatoryClarity => \(storedRegClarity)")
             self.useRegulatoryClarity = storedRegClarity
         }
-
-        // ETF Approval
         if let storedEtf = defaults.object(forKey: "useEtfApproval") as? Bool {
-            print("DEBUG: read useEtfApproval => \(storedEtf)")
             self.useEtfApproval = storedEtf
         }
-
-        // Tech Breakthrough
         if let storedTech = defaults.object(forKey: "useTechBreakthrough") as? Bool {
-            print("DEBUG: read useTechBreakthrough => \(storedTech)")
             self.useTechBreakthrough = storedTech
         }
-
-        // Scarcity Events
         if let storedScarcity = defaults.object(forKey: "useScarcityEvents") as? Bool {
-            print("DEBUG: read useScarcityEvents => \(storedScarcity)")
             self.useScarcityEvents = storedScarcity
         }
-
-        // Global Macro Hedge
         if let storedMacro = defaults.object(forKey: "useGlobalMacroHedge") as? Bool {
-            print("DEBUG: read useGlobalMacroHedge => \(storedMacro)")
             self.useGlobalMacroHedge = storedMacro
         }
-
-        // Stablecoin Shift
         if let storedStableShift = defaults.object(forKey: "useStablecoinShift") as? Bool {
-            print("DEBUG: read useStablecoinShift => \(storedStableShift)")
             self.useStablecoinShift = storedStableShift
         }
-
-        // Demographic Adoption
         if let storedDemo = defaults.object(forKey: "useDemographicAdoption") as? Bool {
-            print("DEBUG: read useDemographicAdoption => \(storedDemo)")
             self.useDemographicAdoption = storedDemo
         }
-
-        // Altcoin Flight
         if let storedAltcoinFlight = defaults.object(forKey: "useAltcoinFlight") as? Bool {
-            print("DEBUG: read useAltcoinFlight => \(storedAltcoinFlight)")
             self.useAltcoinFlight = storedAltcoinFlight
         }
-
-        // Adoption Factor
         if let storedAdoption = defaults.object(forKey: "useAdoptionFactor") as? Bool {
-            print("DEBUG: read useAdoptionFactor => \(storedAdoption)")
             self.useAdoptionFactor = storedAdoption
         }
 
-        // 4. MARK: - Load Bearish Factors (Parent Toggles)
+        // 4) MARK: - Load Bearish Factors (Parent Toggles)
 
-        // Regulatory Clampdown
         if let storedRegClamp = defaults.object(forKey: "useRegClampdown") as? Bool {
-            print("DEBUG: read useRegClampdown => \(storedRegClamp)")
             self.useRegClampdown = storedRegClamp
         }
-
-        // Competitor Coin
         if let storedCompetitor = defaults.object(forKey: "useCompetitorCoin") as? Bool {
-            print("DEBUG: read useCompetitorCoin => \(storedCompetitor)")
             self.useCompetitorCoin = storedCompetitor
         }
-
-        // Security Breach
         if let storedSecBreach = defaults.object(forKey: "useSecurityBreach") as? Bool {
-            print("DEBUG: read useSecurityBreach => \(storedSecBreach)")
             self.useSecurityBreach = storedSecBreach
         }
-
-        // Bubble Pop
         if let storedBubblePop = defaults.object(forKey: "useBubblePop") as? Bool {
-            print("DEBUG: read useBubblePop => \(storedBubblePop)")
             self.useBubblePop = storedBubblePop
         }
-
-        // Stablecoin Meltdown
         if let storedStableMeltdown = defaults.object(forKey: "useStablecoinMeltdown") as? Bool {
-            print("DEBUG: read useStablecoinMeltdown => \(storedStableMeltdown)")
             self.useStablecoinMeltdown = storedStableMeltdown
         }
-
-        // Black Swan
         if let storedSwan = defaults.object(forKey: "useBlackSwan") as? Bool {
-            print("DEBUG: read useBlackSwan => \(storedSwan)")
             self.useBlackSwan = storedSwan
         }
-
-        // Bear Market
         if let storedBearMkt = defaults.object(forKey: "useBearMarket") as? Bool {
-            print("DEBUG: read useBearMarket => \(storedBearMkt)")
             self.useBearMarket = storedBearMkt
         }
-
-        // Maturing Market
         if let storedMaturing = defaults.object(forKey: "useMaturingMarket") as? Bool {
-            print("DEBUG: read useMaturingMarket => \(storedMaturing)")
             self.useMaturingMarket = storedMaturing
         }
-
-        // Recession
         if let storedRecession = defaults.object(forKey: "useRecession") as? Bool {
-            print("DEBUG: read useRecession => \(storedRecession)")
             self.useRecession = storedRecession
         }
 
-        // 5. MARK: - Load Child Toggles (Weekly/Monthly)
+        // 5) MARK: - Load Child Toggles (Weekly/Monthly)
 
-        // Note: Load **Child Toggles First** to ensure consistency
-
-        // -----------------------------
-        // Halving Children
-        // -----------------------------
+        // Halving
         if let storedHalvingWeekly = defaults.object(forKey: "useHalvingWeekly") as? Bool {
             self.useHalvingWeekly = storedHalvingWeekly
         }
@@ -263,9 +185,7 @@ extension SimulationSettings {
             self.halvingBumpMonthly = storedHalvingBumpMonthly
         }
 
-        // -----------------------------
-        // Institutional Demand Children
-        // -----------------------------
+        // Institutional Demand
         if let storedInstWeekly = defaults.object(forKey: "useInstitutionalDemandWeekly") as? Bool {
             self.useInstitutionalDemandWeekly = storedInstWeekly
         }
@@ -279,9 +199,7 @@ extension SimulationSettings {
             self.maxDemandBoostMonthly = storedInstBoostMonthly
         }
 
-        // -----------------------------
-        // Country Adoption Children
-        // -----------------------------
+        // Country Adoption
         if let storedCountryWeekly = defaults.object(forKey: "useCountryAdoptionWeekly") as? Bool {
             self.useCountryAdoptionWeekly = storedCountryWeekly
         }
@@ -295,9 +213,7 @@ extension SimulationSettings {
             self.maxCountryAdBoostMonthly = storedCountryAdBoostMonthly
         }
 
-        // -----------------------------
-        // Regulatory Clarity Children
-        // -----------------------------
+        // Regulatory Clarity
         if let storedRegClarityWeekly = defaults.object(forKey: "useRegulatoryClarityWeekly") as? Bool {
             self.useRegulatoryClarityWeekly = storedRegClarityWeekly
         }
@@ -311,9 +227,7 @@ extension SimulationSettings {
             self.maxClarityBoostMonthly = storedMaxClarityBoostMonthly
         }
 
-        // -----------------------------
-        // ETF Approval Children
-        // -----------------------------
+        // ETF Approval
         if let storedEtfWeekly = defaults.object(forKey: "useEtfApprovalWeekly") as? Bool {
             self.useEtfApprovalWeekly = storedEtfWeekly
         }
@@ -327,9 +241,7 @@ extension SimulationSettings {
             self.maxEtfBoostMonthly = storedEtfBoostMonthly
         }
 
-        // -----------------------------
-        // Tech Breakthrough Children
-        // -----------------------------
+        // Tech Breakthrough
         if let storedTechWeekly = defaults.object(forKey: "useTechBreakthroughWeekly") as? Bool {
             self.useTechBreakthroughWeekly = storedTechWeekly
         }
@@ -343,9 +255,7 @@ extension SimulationSettings {
             self.maxTechBoostMonthly = storedTechBoostMonthly
         }
 
-        // -----------------------------
-        // Scarcity Events Children
-        // -----------------------------
+        // Scarcity Events
         if let storedScarcityWeekly = defaults.object(forKey: "useScarcityEventsWeekly") as? Bool {
             self.useScarcityEventsWeekly = storedScarcityWeekly
         }
@@ -359,9 +269,7 @@ extension SimulationSettings {
             self.maxScarcityBoostMonthly = storedScarcityBoostMonthly
         }
 
-        // -----------------------------
-        // Global Macro Hedge Children
-        // -----------------------------
+        // Global Macro Hedge
         if let storedMacroWeekly = defaults.object(forKey: "useGlobalMacroHedgeWeekly") as? Bool {
             self.useGlobalMacroHedgeWeekly = storedMacroWeekly
         }
@@ -375,9 +283,7 @@ extension SimulationSettings {
             self.maxMacroBoostMonthly = storedMacroBoostMonthly
         }
 
-        // -----------------------------
-        // Stablecoin Shift Children
-        // -----------------------------
+        // Stablecoin Shift
         if let storedStableWeekly = defaults.object(forKey: "useStablecoinShiftWeekly") as? Bool {
             self.useStablecoinShiftWeekly = storedStableWeekly
         }
@@ -391,9 +297,7 @@ extension SimulationSettings {
             self.maxStablecoinBoostMonthly = storedStableBoostMonthly
         }
 
-        // -----------------------------
-        // Demographic Adoption Children
-        // -----------------------------
+        // Demographic Adoption
         if let storedDemoWeekly = defaults.object(forKey: "useDemographicAdoptionWeekly") as? Bool {
             self.useDemographicAdoptionWeekly = storedDemoWeekly
         }
@@ -407,9 +311,7 @@ extension SimulationSettings {
             self.maxDemoBoostMonthly = storedDemoBoostMonthly
         }
 
-        // -----------------------------
-        // Altcoin Flight Children
-        // -----------------------------
+        // Altcoin Flight
         if let storedAltcoinWeekly = defaults.object(forKey: "useAltcoinFlightWeekly") as? Bool {
             self.useAltcoinFlightWeekly = storedAltcoinWeekly
         }
@@ -423,9 +325,7 @@ extension SimulationSettings {
             self.maxAltcoinBoostMonthly = storedAltcoinBoostMonthly
         }
 
-        // -----------------------------
-        // Adoption Factor Children
-        // -----------------------------
+        // Adoption Factor
         if let storedAdoptionWeekly = defaults.object(forKey: "useAdoptionFactorWeekly") as? Bool {
             self.useAdoptionFactorWeekly = storedAdoptionWeekly
         }
@@ -439,13 +339,9 @@ extension SimulationSettings {
             self.adoptionBaseFactorMonthly = storedAdoptionFactorMonthly
         }
 
-        // -----------------------------
-        // MARK: - Load Bearish Factors (Child Toggles)
-        // -----------------------------
+        // 6) MARK: - Load Bearish Factors (Child Toggles)
 
-        // -----------------------------
-        // Regulatory Clampdown Children
-        // -----------------------------
+        // Regulatory Clampdown
         if let storedRegClampWeekly = defaults.object(forKey: "useRegClampdownWeekly") as? Bool {
             self.useRegClampdownWeekly = storedRegClampWeekly
         }
@@ -459,9 +355,7 @@ extension SimulationSettings {
             self.maxClampDownMonthly = storedClampDownMonthly
         }
 
-        // -----------------------------
-        // Competitor Coin Children
-        // -----------------------------
+        // Competitor Coin
         if let storedCompetitorWeekly = defaults.object(forKey: "useCompetitorCoinWeekly") as? Bool {
             self.useCompetitorCoinWeekly = storedCompetitorWeekly
         }
@@ -475,9 +369,7 @@ extension SimulationSettings {
             self.maxCompetitorBoostMonthly = storedCompetitorBoostMonthly
         }
 
-        // -----------------------------
-        // Security Breach Children
-        // -----------------------------
+        // Security Breach
         if let storedBreachWeekly = defaults.object(forKey: "useSecurityBreachWeekly") as? Bool {
             self.useSecurityBreachWeekly = storedBreachWeekly
         }
@@ -491,9 +383,7 @@ extension SimulationSettings {
             self.breachImpactMonthly = storedBreachImpactMonthly
         }
 
-        // -----------------------------
-        // Bubble Pop Children
-        // -----------------------------
+        // Bubble Pop
         if let storedBubblePopWeekly = defaults.object(forKey: "useBubblePopWeekly") as? Bool {
             self.useBubblePopWeekly = storedBubblePopWeekly
         }
@@ -507,9 +397,7 @@ extension SimulationSettings {
             self.maxPopDropMonthly = storedPopDropMonthly
         }
 
-        // -----------------------------
-        // Stablecoin Meltdown Children
-        // -----------------------------
+        // Stablecoin Meltdown
         if let storedMeltdownWeekly = defaults.object(forKey: "useStablecoinMeltdownWeekly") as? Bool {
             self.useStablecoinMeltdownWeekly = storedMeltdownWeekly
         }
@@ -523,9 +411,7 @@ extension SimulationSettings {
             self.maxMeltdownDropMonthly = storedMeltdownDropMonthly
         }
 
-        // -----------------------------
-        // Black Swan Children
-        // -----------------------------
+        // Black Swan
         if let storedBlackSwanWeekly = defaults.object(forKey: "useBlackSwanWeekly") as? Bool {
             self.useBlackSwanWeekly = storedBlackSwanWeekly
         }
@@ -539,9 +425,7 @@ extension SimulationSettings {
             self.blackSwanDropMonthly = storedBlackSwanDropMonthly
         }
 
-        // -----------------------------
-        // Bear Market Children
-        // -----------------------------
+        // Bear Market
         if let storedBearWeekly = defaults.object(forKey: "useBearMarketWeekly") as? Bool {
             self.useBearMarketWeekly = storedBearWeekly
         }
@@ -555,9 +439,7 @@ extension SimulationSettings {
             self.bearWeeklyDriftMonthly = storedBearWeeklyDriftMonthly
         }
 
-        // -----------------------------
-        // Maturing Market Children
-        // -----------------------------
+        // Maturing Market
         if let storedMaturingWeekly = defaults.object(forKey: "useMaturingMarketWeekly") as? Bool {
             self.useMaturingMarketWeekly = storedMaturingWeekly
         }
@@ -571,9 +453,7 @@ extension SimulationSettings {
             self.maxMaturingDropMonthly = storedMaxMaturingDropMonthly
         }
 
-        // -----------------------------
-        // Recession Children
-        // -----------------------------
+        // Recession
         if let storedRecessionWeekly = defaults.object(forKey: "useRecessionWeekly") as? Bool {
             self.useRecessionWeekly = storedRecessionWeekly
         }
@@ -587,29 +467,51 @@ extension SimulationSettings {
             self.maxRecessionDropMonthly = storedRecessionDropMonthly
         }
 
-        // 6. MARK: - Finalize Initialization
-
-        // Allow didSet observers to trigger again
+        // 7) Done loading from UserDefaults so far:
         self.isUpdating = false
 
-        // Mark initialization as complete
+        // 8) Final pass: set parents based on children, but still skip didSet logic
+        //    to avoid "pick weekly" overrides. Then re-enable normal updates.
+        self.isUpdating = true
+
+        // BULLISH
+        useHalving = (useHalvingWeekly || useHalvingMonthly)
+        useInstitutionalDemand = (useInstitutionalDemandWeekly || useInstitutionalDemandMonthly)
+        useCountryAdoption = (useCountryAdoptionWeekly || useCountryAdoptionMonthly)
+        useRegulatoryClarity = (useRegulatoryClarityWeekly || useRegulatoryClarityMonthly)
+        useEtfApproval = (useEtfApprovalWeekly || useEtfApprovalMonthly)
+        useTechBreakthrough = (useTechBreakthroughWeekly || useTechBreakthroughMonthly)
+        useScarcityEvents = (useScarcityEventsWeekly || useScarcityEventsMonthly)
+        useGlobalMacroHedge = (useGlobalMacroHedgeWeekly || useGlobalMacroHedgeMonthly)
+        useStablecoinShift = (useStablecoinShiftWeekly || useStablecoinShiftMonthly)
+        useDemographicAdoption = (useDemographicAdoptionWeekly || useDemographicAdoptionMonthly)
+        useAltcoinFlight = (useAltcoinFlightWeekly || useAltcoinFlightMonthly)
+        useAdoptionFactor = (useAdoptionFactorWeekly || useAdoptionFactorMonthly)
+
+        // BEARISH
+        useRegClampdown = (useRegClampdownWeekly || useRegClampdownMonthly)
+        useCompetitorCoin = (useCompetitorCoinWeekly || useCompetitorCoinMonthly)
+        useSecurityBreach = (useSecurityBreachWeekly || useSecurityBreachMonthly)
+        useBubblePop = (useBubblePopWeekly || useBubblePopMonthly)
+        useStablecoinMeltdown = (useStablecoinMeltdownWeekly || useStablecoinMeltdownMonthly)
+        useBlackSwan = (useBlackSwanWeekly || useBlackSwanMonthly)
+        useBearMarket = (useBearMarketWeekly || useBearMarketMonthly)
+        useMaturingMarket = (useMaturingMarketWeekly || useMaturingMarketMonthly)
+        useRecession = (useRecessionWeekly || useRecessionMonthly)
+
+        self.isUpdating = false
         self.isInitialized = true
 
-        // Sync the master toggle based on all factors
+        // 9) Now sync the master toggle once
         self.syncToggleAllState()
 
-        // 7. MARK: - Set Default States on First Launch
-        // Detect if it's the first launch by checking a specific key
+        // 10) Handle first launch scenario
         if defaults.object(forKey: "hasLaunchedBefore") == nil {
-            print("DEBUG: First launch detected. Setting default toggles.")
             defaults.set(true, forKey: "hasLaunchedBefore")
-
-            // Now, turn all factors on with weekly children on
+            // Turn everything on (this triggers "pick weekly" in each parent's didSet).
             self.isUpdating = true
-            self.toggleAll = true  // Assuming toggleAll's didSet handles setting children
+            self.toggleAll = true
             self.isUpdating = false
-
-            // Sync again after setting toggleAll
             self.syncToggleAllState()
         }
     }

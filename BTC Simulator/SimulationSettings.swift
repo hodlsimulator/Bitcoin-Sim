@@ -155,13 +155,16 @@ class SimulationSettings: ObservableObject {
             guard isInitialized else { return }
             // Only proceed if it actually changed
             guard oldValue != toggleAll else { return }
-                
-            // If we’re not in a bulk update:
+
             if !isUpdating {
                 isUpdating = true
 
+                // Decide which child toggles to pick based on a global mode (e.g. periodUnit)
+                // Adjust if your actual code uses a different property to indicate weekly vs monthly.
+                let usingWeeklyMode = (periodUnit == .weeks)
+
                 if toggleAll {
-                    // Turn ON all parent toggles
+                    // Turn ON all *parent* toggles
                     useHalving = true
                     useInstitutionalDemand = true
                     useCountryAdoption = true
@@ -174,6 +177,7 @@ class SimulationSettings: ObservableObject {
                     useDemographicAdoption = true
                     useAltcoinFlight = true
                     useAdoptionFactor = true
+
                     useRegClampdown = true
                     useCompetitorCoin = true
                     useSecurityBreach = true
@@ -183,8 +187,141 @@ class SimulationSettings: ObservableObject {
                     useBearMarket = true
                     useMaturingMarket = true
                     useRecession = true
+
+                    // Pick weekly or monthly children based on the global mode:
+                    if usingWeeklyMode {
+                        // Bullish children
+                        useHalvingWeekly = true
+                        useHalvingMonthly = false
+
+                        useInstitutionalDemandWeekly = true
+                        useInstitutionalDemandMonthly = false
+
+                        useCountryAdoptionWeekly = true
+                        useCountryAdoptionMonthly = false
+
+                        useRegulatoryClarityWeekly = true
+                        useRegulatoryClarityMonthly = false
+
+                        useEtfApprovalWeekly = true
+                        useEtfApprovalMonthly = false
+
+                        useTechBreakthroughWeekly = true
+                        useTechBreakthroughMonthly = false
+
+                        useScarcityEventsWeekly = true
+                        useScarcityEventsMonthly = false
+
+                        useGlobalMacroHedgeWeekly = true
+                        useGlobalMacroHedgeMonthly = false
+
+                        useStablecoinShiftWeekly = true
+                        useStablecoinShiftMonthly = false
+
+                        useDemographicAdoptionWeekly = true
+                        useDemographicAdoptionMonthly = false
+
+                        useAltcoinFlightWeekly = true
+                        useAltcoinFlightMonthly = false
+
+                        useAdoptionFactorWeekly = true
+                        useAdoptionFactorMonthly = false
+
+                        // Bearish children
+                        useRegClampdownWeekly = true
+                        useRegClampdownMonthly = false
+
+                        useCompetitorCoinWeekly = true
+                        useCompetitorCoinMonthly = false
+
+                        useSecurityBreachWeekly = true
+                        useSecurityBreachMonthly = false
+
+                        useBubblePopWeekly = true
+                        useBubblePopMonthly = false
+
+                        useStablecoinMeltdownWeekly = true
+                        useStablecoinMeltdownMonthly = false
+
+                        useBlackSwanWeekly = true
+                        useBlackSwanMonthly = false
+
+                        useBearMarketWeekly = true
+                        useBearMarketMonthly = false
+
+                        useMaturingMarketWeekly = true
+                        useMaturingMarketMonthly = false
+
+                        useRecessionWeekly = true
+                        useRecessionMonthly = false
+                    } else {
+                        // Monthly mode
+                        useHalvingWeekly = false
+                        useHalvingMonthly = true
+
+                        useInstitutionalDemandWeekly = false
+                        useInstitutionalDemandMonthly = true
+
+                        useCountryAdoptionWeekly = false
+                        useCountryAdoptionMonthly = true
+
+                        useRegulatoryClarityWeekly = false
+                        useRegulatoryClarityMonthly = true
+
+                        useEtfApprovalWeekly = false
+                        useEtfApprovalMonthly = true
+
+                        useTechBreakthroughWeekly = false
+                        useTechBreakthroughMonthly = true
+
+                        useScarcityEventsWeekly = false
+                        useScarcityEventsMonthly = true
+
+                        useGlobalMacroHedgeWeekly = false
+                        useGlobalMacroHedgeMonthly = true
+
+                        useStablecoinShiftWeekly = false
+                        useStablecoinShiftMonthly = true
+
+                        useDemographicAdoptionWeekly = false
+                        useDemographicAdoptionMonthly = true
+
+                        useAltcoinFlightWeekly = false
+                        useAltcoinFlightMonthly = true
+
+                        useAdoptionFactorWeekly = false
+                        useAdoptionFactorMonthly = true
+
+                        useRegClampdownWeekly = false
+                        useRegClampdownMonthly = true
+
+                        useCompetitorCoinWeekly = false
+                        useCompetitorCoinMonthly = true
+
+                        useSecurityBreachWeekly = false
+                        useSecurityBreachMonthly = true
+
+                        useBubblePopWeekly = false
+                        useBubblePopMonthly = true
+
+                        useStablecoinMeltdownWeekly = false
+                        useStablecoinMeltdownMonthly = true
+
+                        useBlackSwanWeekly = false
+                        useBlackSwanMonthly = true
+
+                        useBearMarketWeekly = false
+                        useBearMarketMonthly = true
+
+                        useMaturingMarketWeekly = false
+                        useMaturingMarketMonthly = true
+
+                        useRecessionWeekly = false
+                        useRecessionMonthly = true
+                    }
+
                 } else {
-                    // Turn OFF all parent toggles
+                    // Turn OFF all factors
                     useHalving = false
                     useInstitutionalDemand = false
                     useCountryAdoption = false
@@ -197,6 +334,7 @@ class SimulationSettings: ObservableObject {
                     useDemographicAdoption = false
                     useAltcoinFlight = false
                     useAdoptionFactor = false
+
                     useRegClampdown = false
                     useCompetitorCoin = false
                     useSecurityBreach = false
@@ -206,12 +344,76 @@ class SimulationSettings: ObservableObject {
                     useBearMarket = false
                     useMaturingMarket = false
                     useRecession = false
+
+                    // Also turn OFF all child toggles so everything is definitely off:
+                    useHalvingWeekly = false
+                    useHalvingMonthly = false
+
+                    useInstitutionalDemandWeekly = false
+                    useInstitutionalDemandMonthly = false
+
+                    useCountryAdoptionWeekly = false
+                    useCountryAdoptionMonthly = false
+
+                    useRegulatoryClarityWeekly = false
+                    useRegulatoryClarityMonthly = false
+
+                    useEtfApprovalWeekly = false
+                    useEtfApprovalMonthly = false
+
+                    useTechBreakthroughWeekly = false
+                    useTechBreakthroughMonthly = false
+
+                    useScarcityEventsWeekly = false
+                    useScarcityEventsMonthly = false
+
+                    useGlobalMacroHedgeWeekly = false
+                    useGlobalMacroHedgeMonthly = false
+
+                    useStablecoinShiftWeekly = false
+                    useStablecoinShiftMonthly = false
+
+                    useDemographicAdoptionWeekly = false
+                    useDemographicAdoptionMonthly = false
+
+                    useAltcoinFlightWeekly = false
+                    useAltcoinFlightMonthly = false
+
+                    useAdoptionFactorWeekly = false
+                    useAdoptionFactorMonthly = false
+
+                    useRegClampdownWeekly = false
+                    useRegClampdownMonthly = false
+
+                    useCompetitorCoinWeekly = false
+                    useCompetitorCoinMonthly = false
+
+                    useSecurityBreachWeekly = false
+                    useSecurityBreachMonthly = false
+
+                    useBubblePopWeekly = false
+                    useBubblePopMonthly = false
+
+                    useStablecoinMeltdownWeekly = false
+                    useStablecoinMeltdownMonthly = false
+
+                    useBlackSwanWeekly = false
+                    useBlackSwanMonthly = false
+
+                    useBearMarketWeekly = false
+                    useBearMarketMonthly = false
+
+                    useMaturingMarketWeekly = false
+                    useMaturingMarketMonthly = false
+
+                    useRecessionWeekly = false
+                    useRecessionMonthly = false
                 }
 
-                // End the bulk update
+                // Done adjusting everything
                 isUpdating = false
 
-                // Optionally do one final sync
+                // Sync the master toggle if needed
                 syncToggleAllState()
             }
         }
@@ -343,22 +545,11 @@ class SimulationSettings: ObservableObject {
     // -----------------------------
     @Published var useHalving: Bool = true {
         didSet {
-            guard isInitialized else { return }
-            guard oldValue != useHalving else { return }
-
+            guard isInitialized, oldValue != useHalving else { return }
             UserDefaults.standard.set(useHalving, forKey: "useHalving")
 
-            // If parent is ON => pick weekly by default
-            isUpdating = true
-            if useHalving {
-                useHalvingWeekly = true
-                useHalvingMonthly = false
-            } else {
-                // Parent OFF => both children OFF
-                useHalvingWeekly = false
-                useHalvingMonthly = false
-            }
-            isUpdating = false
+            // NOTE: Removed the forced "default to weekly" logic here
+            // Now toggling this on/off won't auto-choose weekly or monthly.
 
             syncToggleAllState()
         }
@@ -368,21 +559,9 @@ class SimulationSettings: ObservableObject {
     @Published var useHalvingWeekly: Bool = false {
         didSet {
             guard isInitialized, !isUpdating, oldValue != useHalvingWeekly else { return }
-
             UserDefaults.standard.set(useHalvingWeekly, forKey: "useHalvingWeekly")
-            isUpdating = true
 
-            if useHalvingWeekly {
-                // Turn parent on, turn monthly off
-                useHalving = true
-                useHalvingMonthly = false
-            } else {
-                // If weekly is off and monthly is off => parent off
-                if !useHalvingMonthly {
-                    useHalving = false
-                }
-            }
-            isUpdating = false
+            // Removed the code that turned the parent on or forced the other child off
 
             syncToggleAllState()
         }
@@ -400,21 +579,9 @@ class SimulationSettings: ObservableObject {
     @Published var useHalvingMonthly: Bool = false {
         didSet {
             guard isInitialized, !isUpdating, oldValue != useHalvingMonthly else { return }
-
             UserDefaults.standard.set(useHalvingMonthly, forKey: "useHalvingMonthly")
-            isUpdating = true
 
-            if useHalvingMonthly {
-                // Turn parent on, turn weekly off
-                useHalving = true
-                useHalvingWeekly = false
-            } else {
-                // If monthly is off and weekly is off => parent off
-                if !useHalvingWeekly {
-                    useHalving = false
-                }
-            }
-            isUpdating = false
+            // Removed the code that turned the parent on or forced the other child off
 
             syncToggleAllState()
         }
@@ -433,22 +600,10 @@ class SimulationSettings: ObservableObject {
     // -----------------------------
     @Published var useInstitutionalDemand: Bool = true {
         didSet {
-            guard isInitialized else { return }
-            guard oldValue != useInstitutionalDemand else { return }
-
+            guard isInitialized, oldValue != useInstitutionalDemand else { return }
             UserDefaults.standard.set(useInstitutionalDemand, forKey: "useInstitutionalDemand")
-
-            isUpdating = true
-            if useInstitutionalDemand {
-                // Default to weekly on, monthly off
-                useInstitutionalDemandWeekly = true
-                useInstitutionalDemandMonthly = false
-            } else {
-                // Off => both children off
-                useInstitutionalDemandWeekly = false
-                useInstitutionalDemandMonthly = false
-            }
-            isUpdating = false
+            
+            // Removed default-to-weekly logic
 
             syncToggleAllState()
         }
@@ -457,19 +612,9 @@ class SimulationSettings: ObservableObject {
     @Published var useInstitutionalDemandWeekly: Bool = false {
         didSet {
             guard isInitialized, !isUpdating, oldValue != useInstitutionalDemandWeekly else { return }
-
             UserDefaults.standard.set(useInstitutionalDemandWeekly, forKey: "useInstitutionalDemandWeekly")
-            isUpdating = true
-
-            if useInstitutionalDemandWeekly {
-                useInstitutionalDemand = true
-                useInstitutionalDemandMonthly = false
-            } else {
-                if !useInstitutionalDemandMonthly {
-                    useInstitutionalDemand = false
-                }
-            }
-            isUpdating = false
+            
+            // Removed parent + sibling forcing
 
             syncToggleAllState()
         }
@@ -486,19 +631,9 @@ class SimulationSettings: ObservableObject {
     @Published var useInstitutionalDemandMonthly: Bool = false {
         didSet {
             guard isInitialized, !isUpdating, oldValue != useInstitutionalDemandMonthly else { return }
-
             UserDefaults.standard.set(useInstitutionalDemandMonthly, forKey: "useInstitutionalDemandMonthly")
-            isUpdating = true
-
-            if useInstitutionalDemandMonthly {
-                useInstitutionalDemand = true
-                useInstitutionalDemandWeekly = false
-            } else {
-                if !useInstitutionalDemandWeekly {
-                    useInstitutionalDemand = false
-                }
-            }
-            isUpdating = false
+            
+            // Removed parent + sibling forcing
 
             syncToggleAllState()
         }
@@ -517,20 +652,10 @@ class SimulationSettings: ObservableObject {
     // -----------------------------
     @Published var useCountryAdoption: Bool = true {
         didSet {
-            guard isInitialized else { return }
-            guard oldValue != useCountryAdoption else { return }
-
+            guard isInitialized, oldValue != useCountryAdoption else { return }
             UserDefaults.standard.set(useCountryAdoption, forKey: "useCountryAdoption")
-
-            isUpdating = true
-            if useCountryAdoption {
-                useCountryAdoptionWeekly = true
-                useCountryAdoptionMonthly = false
-            } else {
-                useCountryAdoptionWeekly = false
-                useCountryAdoptionMonthly = false
-            }
-            isUpdating = false
+            
+            // Removed default-to-weekly logic
 
             syncToggleAllState()
         }
@@ -539,19 +664,9 @@ class SimulationSettings: ObservableObject {
     @Published var useCountryAdoptionWeekly: Bool = false {
         didSet {
             guard isInitialized, !isUpdating, oldValue != useCountryAdoptionWeekly else { return }
-
             UserDefaults.standard.set(useCountryAdoptionWeekly, forKey: "useCountryAdoptionWeekly")
-            isUpdating = true
-
-            if useCountryAdoptionWeekly {
-                useCountryAdoption = true
-                useCountryAdoptionMonthly = false
-            } else {
-                if !useCountryAdoptionMonthly {
-                    useCountryAdoption = false
-                }
-            }
-            isUpdating = false
+            
+            // Removed parent + sibling forcing
 
             syncToggleAllState()
         }
@@ -568,19 +683,9 @@ class SimulationSettings: ObservableObject {
     @Published var useCountryAdoptionMonthly: Bool = false {
         didSet {
             guard isInitialized, !isUpdating, oldValue != useCountryAdoptionMonthly else { return }
-
             UserDefaults.standard.set(useCountryAdoptionMonthly, forKey: "useCountryAdoptionMonthly")
-            isUpdating = true
 
-            if useCountryAdoptionMonthly {
-                useCountryAdoption = true
-                useCountryAdoptionWeekly = false
-            } else {
-                if !useCountryAdoptionWeekly {
-                    useCountryAdoption = false
-                }
-            }
-            isUpdating = false
+            // Removed parent + sibling forcing
 
             syncToggleAllState()
         }
@@ -599,20 +704,10 @@ class SimulationSettings: ObservableObject {
     // -----------------------------
     @Published var useRegulatoryClarity: Bool = true {
         didSet {
-            guard isInitialized else { return }
-            guard oldValue != useRegulatoryClarity else { return }
-
+            guard isInitialized, oldValue != useRegulatoryClarity else { return }
             UserDefaults.standard.set(useRegulatoryClarity, forKey: "useRegulatoryClarity")
 
-            isUpdating = true
-            if useRegulatoryClarity {
-                useRegulatoryClarityWeekly = true
-                useRegulatoryClarityMonthly = false
-            } else {
-                useRegulatoryClarityWeekly = false
-                useRegulatoryClarityMonthly = false
-            }
-            isUpdating = false
+            // Removed default-to-weekly logic
 
             syncToggleAllState()
         }
@@ -621,19 +716,9 @@ class SimulationSettings: ObservableObject {
     @Published var useRegulatoryClarityWeekly: Bool = false {
         didSet {
             guard isInitialized, !isUpdating, oldValue != useRegulatoryClarityWeekly else { return }
-
             UserDefaults.standard.set(useRegulatoryClarityWeekly, forKey: "useRegulatoryClarityWeekly")
-            isUpdating = true
 
-            if useRegulatoryClarityWeekly {
-                useRegulatoryClarity = true
-                useRegulatoryClarityMonthly = false
-            } else {
-                if !useRegulatoryClarityMonthly {
-                    useRegulatoryClarity = false
-                }
-            }
-            isUpdating = false
+            // Removed parent + sibling forcing
 
             syncToggleAllState()
         }
@@ -650,19 +735,9 @@ class SimulationSettings: ObservableObject {
     @Published var useRegulatoryClarityMonthly: Bool = false {
         didSet {
             guard isInitialized, !isUpdating, oldValue != useRegulatoryClarityMonthly else { return }
-
             UserDefaults.standard.set(useRegulatoryClarityMonthly, forKey: "useRegulatoryClarityMonthly")
-            isUpdating = true
-
-            if useRegulatoryClarityMonthly {
-                useRegulatoryClarity = true
-                useRegulatoryClarityWeekly = false
-            } else {
-                if !useRegulatoryClarityWeekly {
-                    useRegulatoryClarity = false
-                }
-            }
-            isUpdating = false
+            
+            // Removed parent + sibling forcing
 
             syncToggleAllState()
         }
@@ -681,20 +756,10 @@ class SimulationSettings: ObservableObject {
     // -----------------------------
     @Published var useEtfApproval: Bool = true {
         didSet {
-            guard isInitialized else { return }
-            guard oldValue != useEtfApproval else { return }
-
+            guard isInitialized, oldValue != useEtfApproval else { return }
             UserDefaults.standard.set(useEtfApproval, forKey: "useEtfApproval")
 
-            isUpdating = true
-            if useEtfApproval {
-                useEtfApprovalWeekly = true
-                useEtfApprovalMonthly = false
-            } else {
-                useEtfApprovalWeekly = false
-                useEtfApprovalMonthly = false
-            }
-            isUpdating = false
+            // Removed default-to-weekly logic
 
             syncToggleAllState()
         }
@@ -703,19 +768,9 @@ class SimulationSettings: ObservableObject {
     @Published var useEtfApprovalWeekly: Bool = false {
         didSet {
             guard isInitialized, !isUpdating, oldValue != useEtfApprovalWeekly else { return }
-
             UserDefaults.standard.set(useEtfApprovalWeekly, forKey: "useEtfApprovalWeekly")
-            isUpdating = true
 
-            if useEtfApprovalWeekly {
-                useEtfApproval = true
-                useEtfApprovalMonthly = false
-            } else {
-                if !useEtfApprovalMonthly {
-                    useEtfApproval = false
-                }
-            }
-            isUpdating = false
+            // Removed parent + sibling forcing
 
             syncToggleAllState()
         }
@@ -732,19 +787,9 @@ class SimulationSettings: ObservableObject {
     @Published var useEtfApprovalMonthly: Bool = false {
         didSet {
             guard isInitialized, !isUpdating, oldValue != useEtfApprovalMonthly else { return }
-
             UserDefaults.standard.set(useEtfApprovalMonthly, forKey: "useEtfApprovalMonthly")
-            isUpdating = true
 
-            if useEtfApprovalMonthly {
-                useEtfApproval = true
-                useEtfApprovalWeekly = false
-            } else {
-                if !useEtfApprovalWeekly {
-                    useEtfApproval = false
-                }
-            }
-            isUpdating = false
+            // Removed parent + sibling forcing
 
             syncToggleAllState()
         }
@@ -763,20 +808,10 @@ class SimulationSettings: ObservableObject {
     // -----------------------------
     @Published var useTechBreakthrough: Bool = true {
         didSet {
-            guard isInitialized else { return }
-            guard oldValue != useTechBreakthrough else { return }
-
+            guard isInitialized, oldValue != useTechBreakthrough else { return }
             UserDefaults.standard.set(useTechBreakthrough, forKey: "useTechBreakthrough")
 
-            isUpdating = true
-            if useTechBreakthrough {
-                useTechBreakthroughWeekly = true
-                useTechBreakthroughMonthly = false
-            } else {
-                useTechBreakthroughWeekly = false
-                useTechBreakthroughMonthly = false
-            }
-            isUpdating = false
+            // Removed default-to-weekly logic
 
             syncToggleAllState()
         }
@@ -785,19 +820,9 @@ class SimulationSettings: ObservableObject {
     @Published var useTechBreakthroughWeekly: Bool = false {
         didSet {
             guard isInitialized, !isUpdating, oldValue != useTechBreakthroughWeekly else { return }
-
             UserDefaults.standard.set(useTechBreakthroughWeekly, forKey: "useTechBreakthroughWeekly")
-            isUpdating = true
 
-            if useTechBreakthroughWeekly {
-                useTechBreakthrough = true
-                useTechBreakthroughMonthly = false
-            } else {
-                if !useTechBreakthroughMonthly {
-                    useTechBreakthrough = false
-                }
-            }
-            isUpdating = false
+            // Removed parent + sibling forcing
 
             syncToggleAllState()
         }
@@ -814,19 +839,9 @@ class SimulationSettings: ObservableObject {
     @Published var useTechBreakthroughMonthly: Bool = false {
         didSet {
             guard isInitialized, !isUpdating, oldValue != useTechBreakthroughMonthly else { return }
-
             UserDefaults.standard.set(useTechBreakthroughMonthly, forKey: "useTechBreakthroughMonthly")
-            isUpdating = true
 
-            if useTechBreakthroughMonthly {
-                useTechBreakthrough = true
-                useTechBreakthroughWeekly = false
-            } else {
-                if !useTechBreakthroughWeekly {
-                    useTechBreakthrough = false
-                }
-            }
-            isUpdating = false
+            // Removed parent + sibling forcing
 
             syncToggleAllState()
         }
@@ -845,20 +860,10 @@ class SimulationSettings: ObservableObject {
     // -----------------------------
     @Published var useScarcityEvents: Bool = true {
         didSet {
-            guard isInitialized else { return }
-            guard oldValue != useScarcityEvents else { return }
-
+            guard isInitialized, oldValue != useScarcityEvents else { return }
             UserDefaults.standard.set(useScarcityEvents, forKey: "useScarcityEvents")
 
-            isUpdating = true
-            if useScarcityEvents {
-                useScarcityEventsWeekly = true
-                useScarcityEventsMonthly = false
-            } else {
-                useScarcityEventsWeekly = false
-                useScarcityEventsMonthly = false
-            }
-            isUpdating = false
+            // Removed default-to-weekly logic
 
             syncToggleAllState()
         }
@@ -867,19 +872,9 @@ class SimulationSettings: ObservableObject {
     @Published var useScarcityEventsWeekly: Bool = false {
         didSet {
             guard isInitialized, !isUpdating, oldValue != useScarcityEventsWeekly else { return }
-
             UserDefaults.standard.set(useScarcityEventsWeekly, forKey: "useScarcityEventsWeekly")
-            isUpdating = true
 
-            if useScarcityEventsWeekly {
-                useScarcityEvents = true
-                useScarcityEventsMonthly = false
-            } else {
-                if !useScarcityEventsMonthly {
-                    useScarcityEvents = false
-                }
-            }
-            isUpdating = false
+            // Removed parent + sibling forcing
 
             syncToggleAllState()
         }
@@ -896,19 +891,9 @@ class SimulationSettings: ObservableObject {
     @Published var useScarcityEventsMonthly: Bool = false {
         didSet {
             guard isInitialized, !isUpdating, oldValue != useScarcityEventsMonthly else { return }
-
             UserDefaults.standard.set(useScarcityEventsMonthly, forKey: "useScarcityEventsMonthly")
-            isUpdating = true
 
-            if useScarcityEventsMonthly {
-                useScarcityEvents = true
-                useScarcityEventsWeekly = false
-            } else {
-                if !useScarcityEventsWeekly {
-                    useScarcityEvents = false
-                }
-            }
-            isUpdating = false
+            // Removed parent + sibling forcing
 
             syncToggleAllState()
         }
@@ -927,20 +912,10 @@ class SimulationSettings: ObservableObject {
     // -----------------------------
     @Published var useGlobalMacroHedge: Bool = true {
         didSet {
-            guard isInitialized else { return }
-            guard oldValue != useGlobalMacroHedge else { return }
-
+            guard isInitialized, oldValue != useGlobalMacroHedge else { return }
             UserDefaults.standard.set(useGlobalMacroHedge, forKey: "useGlobalMacroHedge")
 
-            isUpdating = true
-            if useGlobalMacroHedge {
-                useGlobalMacroHedgeWeekly = true
-                useGlobalMacroHedgeMonthly = false
-            } else {
-                useGlobalMacroHedgeWeekly = false
-                useGlobalMacroHedgeMonthly = false
-            }
-            isUpdating = false
+            // Removed default-to-weekly logic
 
             syncToggleAllState()
         }
@@ -949,19 +924,9 @@ class SimulationSettings: ObservableObject {
     @Published var useGlobalMacroHedgeWeekly: Bool = false {
         didSet {
             guard isInitialized, !isUpdating, oldValue != useGlobalMacroHedgeWeekly else { return }
-
             UserDefaults.standard.set(useGlobalMacroHedgeWeekly, forKey: "useGlobalMacroHedgeWeekly")
-            isUpdating = true
 
-            if useGlobalMacroHedgeWeekly {
-                useGlobalMacroHedge = true
-                useGlobalMacroHedgeMonthly = false
-            } else {
-                if !useGlobalMacroHedgeMonthly {
-                    useGlobalMacroHedge = false
-                }
-            }
-            isUpdating = false
+            // Removed parent + sibling forcing
 
             syncToggleAllState()
         }
@@ -978,19 +943,9 @@ class SimulationSettings: ObservableObject {
     @Published var useGlobalMacroHedgeMonthly: Bool = false {
         didSet {
             guard isInitialized, !isUpdating, oldValue != useGlobalMacroHedgeMonthly else { return }
-
             UserDefaults.standard.set(useGlobalMacroHedgeMonthly, forKey: "useGlobalMacroHedgeMonthly")
-            isUpdating = true
 
-            if useGlobalMacroHedgeMonthly {
-                useGlobalMacroHedge = true
-                useGlobalMacroHedgeWeekly = false
-            } else {
-                if !useGlobalMacroHedgeWeekly {
-                    useGlobalMacroHedge = false
-                }
-            }
-            isUpdating = false
+            // Removed parent + sibling forcing
 
             syncToggleAllState()
         }
@@ -1009,20 +964,10 @@ class SimulationSettings: ObservableObject {
     // -----------------------------
     @Published var useStablecoinShift: Bool = true {
         didSet {
-            guard isInitialized else { return }
-            guard oldValue != useStablecoinShift else { return }
-
+            guard isInitialized, oldValue != useStablecoinShift else { return }
             UserDefaults.standard.set(useStablecoinShift, forKey: "useStablecoinShift")
 
-            isUpdating = true
-            if useStablecoinShift {
-                useStablecoinShiftWeekly = true
-                useStablecoinShiftMonthly = false
-            } else {
-                useStablecoinShiftWeekly = false
-                useStablecoinShiftMonthly = false
-            }
-            isUpdating = false
+            // Removed default-to-weekly logic
 
             syncToggleAllState()
         }
@@ -1031,19 +976,9 @@ class SimulationSettings: ObservableObject {
     @Published var useStablecoinShiftWeekly: Bool = false {
         didSet {
             guard isInitialized, !isUpdating, oldValue != useStablecoinShiftWeekly else { return }
-
             UserDefaults.standard.set(useStablecoinShiftWeekly, forKey: "useStablecoinShiftWeekly")
-            isUpdating = true
 
-            if useStablecoinShiftWeekly {
-                useStablecoinShift = true
-                useStablecoinShiftMonthly = false
-            } else {
-                if !useStablecoinShiftMonthly {
-                    useStablecoinShift = false
-                }
-            }
-            isUpdating = false
+            // Removed parent + sibling forcing
 
             syncToggleAllState()
         }
@@ -1060,19 +995,9 @@ class SimulationSettings: ObservableObject {
     @Published var useStablecoinShiftMonthly: Bool = false {
         didSet {
             guard isInitialized, !isUpdating, oldValue != useStablecoinShiftMonthly else { return }
-
             UserDefaults.standard.set(useStablecoinShiftMonthly, forKey: "useStablecoinShiftMonthly")
-            isUpdating = true
 
-            if useStablecoinShiftMonthly {
-                useStablecoinShift = true
-                useStablecoinShiftWeekly = false
-            } else {
-                if !useStablecoinShiftWeekly {
-                    useStablecoinShift = false
-                }
-            }
-            isUpdating = false
+            // Removed parent + sibling forcing
 
             syncToggleAllState()
         }
@@ -1091,20 +1016,10 @@ class SimulationSettings: ObservableObject {
     // -----------------------------
     @Published var useDemographicAdoption: Bool = true {
         didSet {
-            guard isInitialized else { return }
-            guard oldValue != useDemographicAdoption else { return }
-
+            guard isInitialized, oldValue != useDemographicAdoption else { return }
             UserDefaults.standard.set(useDemographicAdoption, forKey: "useDemographicAdoption")
 
-            isUpdating = true
-            if useDemographicAdoption {
-                useDemographicAdoptionWeekly = true
-                useDemographicAdoptionMonthly = false
-            } else {
-                useDemographicAdoptionWeekly = false
-                useDemographicAdoptionMonthly = false
-            }
-            isUpdating = false
+            // Removed default-to-weekly logic
 
             syncToggleAllState()
         }
@@ -1113,19 +1028,9 @@ class SimulationSettings: ObservableObject {
     @Published var useDemographicAdoptionWeekly: Bool = false {
         didSet {
             guard isInitialized, !isUpdating, oldValue != useDemographicAdoptionWeekly else { return }
-
             UserDefaults.standard.set(useDemographicAdoptionWeekly, forKey: "useDemographicAdoptionWeekly")
-            isUpdating = true
 
-            if useDemographicAdoptionWeekly {
-                useDemographicAdoption = true
-                useDemographicAdoptionMonthly = false
-            } else {
-                if !useDemographicAdoptionMonthly {
-                    useDemographicAdoption = false
-                }
-            }
-            isUpdating = false
+            // Removed parent + sibling forcing
 
             syncToggleAllState()
         }
@@ -1142,19 +1047,9 @@ class SimulationSettings: ObservableObject {
     @Published var useDemographicAdoptionMonthly: Bool = false {
         didSet {
             guard isInitialized, !isUpdating, oldValue != useDemographicAdoptionMonthly else { return }
-
             UserDefaults.standard.set(useDemographicAdoptionMonthly, forKey: "useDemographicAdoptionMonthly")
-            isUpdating = true
 
-            if useDemographicAdoptionMonthly {
-                useDemographicAdoption = true
-                useDemographicAdoptionWeekly = false
-            } else {
-                if !useDemographicAdoptionWeekly {
-                    useDemographicAdoption = false
-                }
-            }
-            isUpdating = false
+            // Removed parent + sibling forcing
 
             syncToggleAllState()
         }
@@ -1173,20 +1068,10 @@ class SimulationSettings: ObservableObject {
     // -----------------------------
     @Published var useAltcoinFlight: Bool = true {
         didSet {
-            guard isInitialized else { return }
-            guard oldValue != useAltcoinFlight else { return }
-
+            guard isInitialized, oldValue != useAltcoinFlight else { return }
             UserDefaults.standard.set(useAltcoinFlight, forKey: "useAltcoinFlight")
 
-            isUpdating = true
-            if useAltcoinFlight {
-                useAltcoinFlightWeekly = true
-                useAltcoinFlightMonthly = false
-            } else {
-                useAltcoinFlightWeekly = false
-                useAltcoinFlightMonthly = false
-            }
-            isUpdating = false
+            // Removed default-to-weekly logic
 
             syncToggleAllState()
         }
@@ -1195,19 +1080,9 @@ class SimulationSettings: ObservableObject {
     @Published var useAltcoinFlightWeekly: Bool = false {
         didSet {
             guard isInitialized, !isUpdating, oldValue != useAltcoinFlightWeekly else { return }
-
             UserDefaults.standard.set(useAltcoinFlightWeekly, forKey: "useAltcoinFlightWeekly")
-            isUpdating = true
 
-            if useAltcoinFlightWeekly {
-                useAltcoinFlight = true
-                useAltcoinFlightMonthly = false
-            } else {
-                if !useAltcoinFlightMonthly {
-                    useAltcoinFlight = false
-                }
-            }
-            isUpdating = false
+            // Removed parent + sibling forcing
 
             syncToggleAllState()
         }
@@ -1224,19 +1099,9 @@ class SimulationSettings: ObservableObject {
     @Published var useAltcoinFlightMonthly: Bool = false {
         didSet {
             guard isInitialized, !isUpdating, oldValue != useAltcoinFlightMonthly else { return }
-
             UserDefaults.standard.set(useAltcoinFlightMonthly, forKey: "useAltcoinFlightMonthly")
-            isUpdating = true
 
-            if useAltcoinFlightMonthly {
-                useAltcoinFlight = true
-                useAltcoinFlightWeekly = false
-            } else {
-                if !useAltcoinFlightWeekly {
-                    useAltcoinFlight = false
-                }
-            }
-            isUpdating = false
+            // Removed parent + sibling forcing
 
             syncToggleAllState()
         }
@@ -1255,20 +1120,10 @@ class SimulationSettings: ObservableObject {
     // -----------------------------
     @Published var useAdoptionFactor: Bool = true {
         didSet {
-            guard isInitialized else { return }
-            guard oldValue != useAdoptionFactor else { return }
-
+            guard isInitialized, oldValue != useAdoptionFactor else { return }
             UserDefaults.standard.set(useAdoptionFactor, forKey: "useAdoptionFactor")
 
-            isUpdating = true
-            if useAdoptionFactor {
-                useAdoptionFactorWeekly = true
-                useAdoptionFactorMonthly = false
-            } else {
-                useAdoptionFactorWeekly = false
-                useAdoptionFactorMonthly = false
-            }
-            isUpdating = false
+            // Removed default-to-weekly logic
 
             syncToggleAllState()
         }
@@ -1277,19 +1132,9 @@ class SimulationSettings: ObservableObject {
     @Published var useAdoptionFactorWeekly: Bool = false {
         didSet {
             guard isInitialized, !isUpdating, oldValue != useAdoptionFactorWeekly else { return }
-
             UserDefaults.standard.set(useAdoptionFactorWeekly, forKey: "useAdoptionFactorWeekly")
-            isUpdating = true
 
-            if useAdoptionFactorWeekly {
-                useAdoptionFactor = true
-                useAdoptionFactorMonthly = false
-            } else {
-                if !useAdoptionFactorMonthly {
-                    useAdoptionFactor = false
-                }
-            }
-            isUpdating = false
+            // Removed parent + sibling forcing
 
             syncToggleAllState()
         }
@@ -1306,19 +1151,9 @@ class SimulationSettings: ObservableObject {
     @Published var useAdoptionFactorMonthly: Bool = false {
         didSet {
             guard isInitialized, !isUpdating, oldValue != useAdoptionFactorMonthly else { return }
-
             UserDefaults.standard.set(useAdoptionFactorMonthly, forKey: "useAdoptionFactorMonthly")
-            isUpdating = true
 
-            if useAdoptionFactorMonthly {
-                useAdoptionFactor = true
-                useAdoptionFactorWeekly = false
-            } else {
-                if !useAdoptionFactorWeekly {
-                    useAdoptionFactor = false
-                }
-            }
-            isUpdating = false
+            // Removed parent + sibling forcing
 
             syncToggleAllState()
         }
@@ -1341,22 +1176,10 @@ class SimulationSettings: ObservableObject {
     // -----------------------------
     @Published var useRegClampdown: Bool = true {
         didSet {
-            guard isInitialized else { return }
-            guard oldValue != useRegClampdown else { return }
-
+            guard isInitialized, oldValue != useRegClampdown else { return }
             UserDefaults.standard.set(useRegClampdown, forKey: "useRegClampdown")
 
-            isUpdating = true
-            if useRegClampdown {
-                // Parent on => weekly on, monthly off
-                useRegClampdownWeekly = true
-                useRegClampdownMonthly = false
-            } else {
-                // Parent off => both children off
-                useRegClampdownWeekly = false
-                useRegClampdownMonthly = false
-            }
-            isUpdating = false
+            // Removed the forced "weekly on, monthly off" logic.
 
             syncToggleAllState()
         }
@@ -1365,21 +1188,9 @@ class SimulationSettings: ObservableObject {
     @Published var useRegClampdownWeekly: Bool = false {
         didSet {
             guard isInitialized, !isUpdating, oldValue != useRegClampdownWeekly else { return }
-
             UserDefaults.standard.set(useRegClampdownWeekly, forKey: "useRegClampdownWeekly")
-            isUpdating = true
 
-            if useRegClampdownWeekly {
-                // Child on => parent on, sibling off
-                useRegClampdown = true
-                useRegClampdownMonthly = false
-            } else {
-                // If both weekly & monthly are off => parent off
-                if !useRegClampdownMonthly {
-                    useRegClampdown = false
-                }
-            }
-            isUpdating = false
+            // Removed the code that forced parent on or sibling off.
 
             syncToggleAllState()
         }
@@ -1396,19 +1207,9 @@ class SimulationSettings: ObservableObject {
     @Published var useRegClampdownMonthly: Bool = false {
         didSet {
             guard isInitialized, !isUpdating, oldValue != useRegClampdownMonthly else { return }
-
             UserDefaults.standard.set(useRegClampdownMonthly, forKey: "useRegClampdownMonthly")
-            isUpdating = true
 
-            if useRegClampdownMonthly {
-                useRegClampdown = true
-                useRegClampdownWeekly = false
-            } else {
-                if !useRegClampdownWeekly {
-                    useRegClampdown = false
-                }
-            }
-            isUpdating = false
+            // Removed the code that forced parent on or sibling off.
 
             syncToggleAllState()
         }
@@ -1427,20 +1228,10 @@ class SimulationSettings: ObservableObject {
     // -----------------------------
     @Published var useCompetitorCoin: Bool = true {
         didSet {
-            guard isInitialized else { return }
-            guard oldValue != useCompetitorCoin else { return }
-
+            guard isInitialized, oldValue != useCompetitorCoin else { return }
             UserDefaults.standard.set(useCompetitorCoin, forKey: "useCompetitorCoin")
 
-            isUpdating = true
-            if useCompetitorCoin {
-                useCompetitorCoinWeekly = true
-                useCompetitorCoinMonthly = false
-            } else {
-                useCompetitorCoinWeekly = false
-                useCompetitorCoinMonthly = false
-            }
-            isUpdating = false
+            // Removed forced "weekly on, monthly off" logic.
 
             syncToggleAllState()
         }
@@ -1449,19 +1240,9 @@ class SimulationSettings: ObservableObject {
     @Published var useCompetitorCoinWeekly: Bool = false {
         didSet {
             guard isInitialized, !isUpdating, oldValue != useCompetitorCoinWeekly else { return }
-
             UserDefaults.standard.set(useCompetitorCoinWeekly, forKey: "useCompetitorCoinWeekly")
-            isUpdating = true
 
-            if useCompetitorCoinWeekly {
-                useCompetitorCoin = true
-                useCompetitorCoinMonthly = false
-            } else {
-                if !useCompetitorCoinMonthly {
-                    useCompetitorCoin = false
-                }
-            }
-            isUpdating = false
+            // Removed parent & sibling forcing.
 
             syncToggleAllState()
         }
@@ -1478,19 +1259,9 @@ class SimulationSettings: ObservableObject {
     @Published var useCompetitorCoinMonthly: Bool = false {
         didSet {
             guard isInitialized, !isUpdating, oldValue != useCompetitorCoinMonthly else { return }
-
             UserDefaults.standard.set(useCompetitorCoinMonthly, forKey: "useCompetitorCoinMonthly")
-            isUpdating = true
 
-            if useCompetitorCoinMonthly {
-                useCompetitorCoin = true
-                useCompetitorCoinWeekly = false
-            } else {
-                if !useCompetitorCoinWeekly {
-                    useCompetitorCoin = false
-                }
-            }
-            isUpdating = false
+            // Removed parent & sibling forcing.
 
             syncToggleAllState()
         }
@@ -1509,20 +1280,10 @@ class SimulationSettings: ObservableObject {
     // -----------------------------
     @Published var useSecurityBreach: Bool = true {
         didSet {
-            guard isInitialized else { return }
-            guard oldValue != useSecurityBreach else { return }
-
+            guard isInitialized, oldValue != useSecurityBreach else { return }
             UserDefaults.standard.set(useSecurityBreach, forKey: "useSecurityBreach")
 
-            isUpdating = true
-            if useSecurityBreach {
-                useSecurityBreachWeekly = true
-                useSecurityBreachMonthly = false
-            } else {
-                useSecurityBreachWeekly = false
-                useSecurityBreachMonthly = false
-            }
-            isUpdating = false
+            // Removed forced "weekly on, monthly off" logic.
 
             syncToggleAllState()
         }
@@ -1531,19 +1292,9 @@ class SimulationSettings: ObservableObject {
     @Published var useSecurityBreachWeekly: Bool = false {
         didSet {
             guard isInitialized, !isUpdating, oldValue != useSecurityBreachWeekly else { return }
-
             UserDefaults.standard.set(useSecurityBreachWeekly, forKey: "useSecurityBreachWeekly")
-            isUpdating = true
 
-            if useSecurityBreachWeekly {
-                useSecurityBreach = true
-                useSecurityBreachMonthly = false
-            } else {
-                if !useSecurityBreachMonthly {
-                    useSecurityBreach = false
-                }
-            }
-            isUpdating = false
+            // Removed parent & sibling forcing.
 
             syncToggleAllState()
         }
@@ -1560,19 +1311,9 @@ class SimulationSettings: ObservableObject {
     @Published var useSecurityBreachMonthly: Bool = false {
         didSet {
             guard isInitialized, !isUpdating, oldValue != useSecurityBreachMonthly else { return }
-
             UserDefaults.standard.set(useSecurityBreachMonthly, forKey: "useSecurityBreachMonthly")
-            isUpdating = true
 
-            if useSecurityBreachMonthly {
-                useSecurityBreach = true
-                useSecurityBreachWeekly = false
-            } else {
-                if !useSecurityBreachWeekly {
-                    useSecurityBreach = false
-                }
-            }
-            isUpdating = false
+            // Removed parent & sibling forcing.
 
             syncToggleAllState()
         }
@@ -1591,20 +1332,10 @@ class SimulationSettings: ObservableObject {
     // -----------------------------
     @Published var useBubblePop: Bool = true {
         didSet {
-            guard isInitialized else { return }
-            guard oldValue != useBubblePop else { return }
-
+            guard isInitialized, oldValue != useBubblePop else { return }
             UserDefaults.standard.set(useBubblePop, forKey: "useBubblePop")
 
-            isUpdating = true
-            if useBubblePop {
-                useBubblePopWeekly = true
-                useBubblePopMonthly = false
-            } else {
-                useBubblePopWeekly = false
-                useBubblePopMonthly = false
-            }
-            isUpdating = false
+            // Removed forced "weekly on, monthly off" logic.
 
             syncToggleAllState()
         }
@@ -1613,19 +1344,9 @@ class SimulationSettings: ObservableObject {
     @Published var useBubblePopWeekly: Bool = false {
         didSet {
             guard isInitialized, !isUpdating, oldValue != useBubblePopWeekly else { return }
-
             UserDefaults.standard.set(useBubblePopWeekly, forKey: "useBubblePopWeekly")
-            isUpdating = true
 
-            if useBubblePopWeekly {
-                useBubblePop = true
-                useBubblePopMonthly = false
-            } else {
-                if !useBubblePopMonthly {
-                    useBubblePop = false
-                }
-            }
-            isUpdating = false
+            // Removed parent & sibling forcing.
 
             syncToggleAllState()
         }
@@ -1642,19 +1363,9 @@ class SimulationSettings: ObservableObject {
     @Published var useBubblePopMonthly: Bool = false {
         didSet {
             guard isInitialized, !isUpdating, oldValue != useBubblePopMonthly else { return }
-
             UserDefaults.standard.set(useBubblePopMonthly, forKey: "useBubblePopMonthly")
-            isUpdating = true
 
-            if useBubblePopMonthly {
-                useBubblePop = true
-                useBubblePopWeekly = false
-            } else {
-                if !useBubblePopWeekly {
-                    useBubblePop = false
-                }
-            }
-            isUpdating = false
+            // Removed parent & sibling forcing.
 
             syncToggleAllState()
         }
@@ -1673,20 +1384,10 @@ class SimulationSettings: ObservableObject {
     // -----------------------------
     @Published var useStablecoinMeltdown: Bool = true {
         didSet {
-            guard isInitialized else { return }
-            guard oldValue != useStablecoinMeltdown else { return }
-
+            guard isInitialized, oldValue != useStablecoinMeltdown else { return }
             UserDefaults.standard.set(useStablecoinMeltdown, forKey: "useStablecoinMeltdown")
 
-            isUpdating = true
-            if useStablecoinMeltdown {
-                useStablecoinMeltdownWeekly = true
-                useStablecoinMeltdownMonthly = false
-            } else {
-                useStablecoinMeltdownWeekly = false
-                useStablecoinMeltdownMonthly = false
-            }
-            isUpdating = false
+            // Removed forced "weekly on, monthly off" logic.
 
             syncToggleAllState()
         }
@@ -1695,19 +1396,9 @@ class SimulationSettings: ObservableObject {
     @Published var useStablecoinMeltdownWeekly: Bool = false {
         didSet {
             guard isInitialized, !isUpdating, oldValue != useStablecoinMeltdownWeekly else { return }
-
             UserDefaults.standard.set(useStablecoinMeltdownWeekly, forKey: "useStablecoinMeltdownWeekly")
-            isUpdating = true
 
-            if useStablecoinMeltdownWeekly {
-                useStablecoinMeltdown = true
-                useStablecoinMeltdownMonthly = false
-            } else {
-                if !useStablecoinMeltdownMonthly {
-                    useStablecoinMeltdown = false
-                }
-            }
-            isUpdating = false
+            // Removed parent & sibling forcing.
 
             syncToggleAllState()
         }
@@ -1724,19 +1415,9 @@ class SimulationSettings: ObservableObject {
     @Published var useStablecoinMeltdownMonthly: Bool = false {
         didSet {
             guard isInitialized, !isUpdating, oldValue != useStablecoinMeltdownMonthly else { return }
-
             UserDefaults.standard.set(useStablecoinMeltdownMonthly, forKey: "useStablecoinMeltdownMonthly")
-            isUpdating = true
 
-            if useStablecoinMeltdownMonthly {
-                useStablecoinMeltdown = true
-                useStablecoinMeltdownWeekly = false
-            } else {
-                if !useStablecoinMeltdownWeekly {
-                    useStablecoinMeltdown = false
-                }
-            }
-            isUpdating = false
+            // Removed parent & sibling forcing.
 
             syncToggleAllState()
         }
@@ -1755,22 +1436,10 @@ class SimulationSettings: ObservableObject {
     // -----------------------------
     @Published var useBlackSwan: Bool = false {
         didSet {
-            guard isInitialized else { return }
-            guard oldValue != useBlackSwan else { return }
-
+            guard isInitialized, oldValue != useBlackSwan else { return }
             UserDefaults.standard.set(useBlackSwan, forKey: "useBlackSwan")
 
-            isUpdating = true
-            if useBlackSwan {
-                // Turn on weekly by default, monthly off
-                useBlackSwanWeekly = true
-                useBlackSwanMonthly = false
-            } else {
-                // Turn both children off
-                useBlackSwanWeekly = false
-                useBlackSwanMonthly = false
-            }
-            isUpdating = false
+            // Removed forced "weekly on" logic.
 
             syncToggleAllState()
         }
@@ -1779,19 +1448,9 @@ class SimulationSettings: ObservableObject {
     @Published var useBlackSwanWeekly: Bool = false {
         didSet {
             guard isInitialized, !isUpdating, oldValue != useBlackSwanWeekly else { return }
-
             UserDefaults.standard.set(useBlackSwanWeekly, forKey: "useBlackSwanWeekly")
-            isUpdating = true
 
-            if useBlackSwanWeekly {
-                useBlackSwan = true
-                useBlackSwanMonthly = false
-            } else {
-                if !useBlackSwanMonthly {
-                    useBlackSwan = false
-                }
-            }
-            isUpdating = false
+            // Removed parent & sibling forcing.
 
             syncToggleAllState()
         }
@@ -1808,19 +1467,9 @@ class SimulationSettings: ObservableObject {
     @Published var useBlackSwanMonthly: Bool = false {
         didSet {
             guard isInitialized, !isUpdating, oldValue != useBlackSwanMonthly else { return }
-
             UserDefaults.standard.set(useBlackSwanMonthly, forKey: "useBlackSwanMonthly")
-            isUpdating = true
 
-            if useBlackSwanMonthly {
-                useBlackSwan = true
-                useBlackSwanWeekly = false
-            } else {
-                if !useBlackSwanWeekly {
-                    useBlackSwan = false
-                }
-            }
-            isUpdating = false
+            // Removed parent & sibling forcing.
 
             syncToggleAllState()
         }
@@ -1839,20 +1488,10 @@ class SimulationSettings: ObservableObject {
     // -----------------------------
     @Published var useBearMarket: Bool = true {
         didSet {
-            guard isInitialized else { return }
-            guard oldValue != useBearMarket else { return }
-
+            guard isInitialized, oldValue != useBearMarket else { return }
             UserDefaults.standard.set(useBearMarket, forKey: "useBearMarket")
 
-            isUpdating = true
-            if useBearMarket {
-                useBearMarketWeekly = true
-                useBearMarketMonthly = false
-            } else {
-                useBearMarketWeekly = false
-                useBearMarketMonthly = false
-            }
-            isUpdating = false
+            // Removed forced "weekly on, monthly off" logic.
 
             syncToggleAllState()
         }
@@ -1861,19 +1500,9 @@ class SimulationSettings: ObservableObject {
     @Published var useBearMarketWeekly: Bool = false {
         didSet {
             guard isInitialized, !isUpdating, oldValue != useBearMarketWeekly else { return }
-
             UserDefaults.standard.set(useBearMarketWeekly, forKey: "useBearMarketWeekly")
-            isUpdating = true
 
-            if useBearMarketWeekly {
-                useBearMarket = true
-                useBearMarketMonthly = false
-            } else {
-                if !useBearMarketMonthly {
-                    useBearMarket = false
-                }
-            }
-            isUpdating = false
+            // Removed parent & sibling forcing.
 
             syncToggleAllState()
         }
@@ -1890,19 +1519,9 @@ class SimulationSettings: ObservableObject {
     @Published var useBearMarketMonthly: Bool = false {
         didSet {
             guard isInitialized, !isUpdating, oldValue != useBearMarketMonthly else { return }
-
             UserDefaults.standard.set(useBearMarketMonthly, forKey: "useBearMarketMonthly")
-            isUpdating = true
 
-            if useBearMarketMonthly {
-                useBearMarket = true
-                useBearMarketWeekly = false
-            } else {
-                if !useBearMarketWeekly {
-                    useBearMarket = false
-                }
-            }
-            isUpdating = false
+            // Removed parent & sibling forcing.
 
             syncToggleAllState()
         }
@@ -1921,20 +1540,10 @@ class SimulationSettings: ObservableObject {
     // -----------------------------
     @Published var useMaturingMarket: Bool = true {
         didSet {
-            guard isInitialized else { return }
-            guard oldValue != useMaturingMarket else { return }
-
+            guard isInitialized, oldValue != useMaturingMarket else { return }
             UserDefaults.standard.set(useMaturingMarket, forKey: "useMaturingMarket")
 
-            isUpdating = true
-            if useMaturingMarket {
-                useMaturingMarketWeekly = true
-                useMaturingMarketMonthly = false
-            } else {
-                useMaturingMarketWeekly = false
-                useMaturingMarketMonthly = false
-            }
-            isUpdating = false
+            // Removed forced "weekly on, monthly off" logic.
 
             syncToggleAllState()
         }
@@ -1943,19 +1552,9 @@ class SimulationSettings: ObservableObject {
     @Published var useMaturingMarketWeekly: Bool = false {
         didSet {
             guard isInitialized, !isUpdating, oldValue != useMaturingMarketWeekly else { return }
-
             UserDefaults.standard.set(useMaturingMarketWeekly, forKey: "useMaturingMarketWeekly")
-            isUpdating = true
 
-            if useMaturingMarketWeekly {
-                useMaturingMarket = true
-                useMaturingMarketMonthly = false
-            } else {
-                if !useMaturingMarketMonthly {
-                    useMaturingMarket = false
-                }
-            }
-            isUpdating = false
+            // Removed parent & sibling forcing.
 
             syncToggleAllState()
         }
@@ -1972,19 +1571,9 @@ class SimulationSettings: ObservableObject {
     @Published var useMaturingMarketMonthly: Bool = false {
         didSet {
             guard isInitialized, !isUpdating, oldValue != useMaturingMarketMonthly else { return }
-
             UserDefaults.standard.set(useMaturingMarketMonthly, forKey: "useMaturingMarketMonthly")
-            isUpdating = true
 
-            if useMaturingMarketMonthly {
-                useMaturingMarket = true
-                useMaturingMarketWeekly = false
-            } else {
-                if !useMaturingMarketWeekly {
-                    useMaturingMarket = false
-                }
-            }
-            isUpdating = false
+            // Removed parent & sibling forcing.
 
             syncToggleAllState()
         }
@@ -2003,20 +1592,10 @@ class SimulationSettings: ObservableObject {
     // -----------------------------
     @Published var useRecession: Bool = true {
         didSet {
-            guard isInitialized else { return }
-            guard oldValue != useRecession else { return }
-
+            guard isInitialized, oldValue != useRecession else { return }
             UserDefaults.standard.set(useRecession, forKey: "useRecession")
 
-            isUpdating = true
-            if useRecession {
-                useRecessionWeekly = true
-                useRecessionMonthly = false
-            } else {
-                useRecessionWeekly = false
-                useRecessionMonthly = false
-            }
-            isUpdating = false
+            // Removed forced "weekly on, monthly off" logic.
 
             syncToggleAllState()
         }
@@ -2025,19 +1604,9 @@ class SimulationSettings: ObservableObject {
     @Published var useRecessionWeekly: Bool = false {
         didSet {
             guard isInitialized, !isUpdating, oldValue != useRecessionWeekly else { return }
-
             UserDefaults.standard.set(useRecessionWeekly, forKey: "useRecessionWeekly")
-            isUpdating = true
 
-            if useRecessionWeekly {
-                useRecession = true
-                useRecessionMonthly = false
-            } else {
-                if !useRecessionMonthly {
-                    useRecession = false
-                }
-            }
-            isUpdating = false
+            // Removed parent & sibling forcing.
 
             syncToggleAllState()
         }
@@ -2054,19 +1623,9 @@ class SimulationSettings: ObservableObject {
     @Published var useRecessionMonthly: Bool = false {
         didSet {
             guard isInitialized, !isUpdating, oldValue != useRecessionMonthly else { return }
-
             UserDefaults.standard.set(useRecessionMonthly, forKey: "useRecessionMonthly")
-            isUpdating = true
 
-            if useRecessionMonthly {
-                useRecession = true
-                useRecessionWeekly = false
-            } else {
-                if !useRecessionWeekly {
-                    useRecession = false
-                }
-            }
-            isUpdating = false
+            // Removed parent & sibling forcing.
 
             syncToggleAllState()
         }
@@ -2370,10 +1929,10 @@ class SimulationSettings: ObservableObject {
         // Remove your new toggles
         defaults.removeObject(forKey: "useHistoricalSampling")
         defaults.removeObject(forKey: "useVolShocks")
-        
+
         // NEW: Remove GARCH toggle
         defaults.removeObject(forKey: "useGarchVolatility")
-        
+
         // Remove the keys from UserDefaults
         defaults.removeObject(forKey: "useAutoCorrelation")
         defaults.removeObject(forKey: "autoCorrelationStrength")
@@ -2501,239 +2060,192 @@ class SimulationSettings: ObservableObject {
         // NEW: Set GARCH default to true
         useGarchVolatility = true
 
-        // Reassign them to the NEW defaults:
+        //
+        // BULLISH FACTORS: set each parent's monthly = false by default
+        //
+
+        // Halving
         useHalving = true
-                
         useHalvingWeekly = true
         halvingBumpWeekly = SimulationSettings.defaultHalvingBumpWeekly
-
-        useHalvingMonthly = true
+        useHalvingMonthly = false
         halvingBumpMonthly = SimulationSettings.defaultHalvingBumpMonthly
 
+        // Institutional Demand
         useInstitutionalDemand = true
-            
-        // Weekly
         useInstitutionalDemandWeekly = true
         maxDemandBoostWeekly = SimulationSettings.defaultMaxDemandBoostWeekly
-        
-        // Monthly
-        useInstitutionalDemandMonthly = true
+        useInstitutionalDemandMonthly = false
         maxDemandBoostMonthly = SimulationSettings.defaultMaxDemandBoostMonthly
 
+        // Country Adoption
         useCountryAdoption = true
-            
         useCountryAdoptionWeekly = true
         maxCountryAdBoostWeekly = SimulationSettings.defaultMaxCountryAdBoostWeekly
-        
-        useCountryAdoptionMonthly = true
+        useCountryAdoptionMonthly = false
         maxCountryAdBoostMonthly = SimulationSettings.defaultMaxCountryAdBoostMonthly
 
+        // Regulatory Clarity
         useRegulatoryClarity = true
-            
         useRegulatoryClarityWeekly = true
         maxClarityBoostWeekly = SimulationSettings.defaultMaxClarityBoostWeekly
-        
-        useRegulatoryClarityMonthly = true
+        useRegulatoryClarityMonthly = false
         maxClarityBoostMonthly = SimulationSettings.defaultMaxClarityBoostMonthly
 
+        // ETF Approval
         useEtfApproval = true
-
         useEtfApprovalWeekly = true
         maxEtfBoostWeekly = SimulationSettings.defaultMaxEtfBoostWeekly
-
-        useEtfApprovalMonthly = true
+        useEtfApprovalMonthly = false
         maxEtfBoostMonthly = SimulationSettings.defaultMaxEtfBoostMonthly
 
+        // Tech Breakthrough
         useTechBreakthrough = true
-
         useTechBreakthroughWeekly = true
         maxTechBoostWeekly = SimulationSettings.defaultMaxTechBoostWeekly
-
-        useTechBreakthroughMonthly = true
+        useTechBreakthroughMonthly = false
         maxTechBoostMonthly = SimulationSettings.defaultMaxTechBoostMonthly
 
+        // Scarcity Events
         useScarcityEvents = true
-
         useScarcityEventsWeekly = true
         maxScarcityBoostWeekly = SimulationSettings.defaultMaxScarcityBoostWeekly
-
-        useScarcityEventsMonthly = true
+        useScarcityEventsMonthly = false
         maxScarcityBoostMonthly = SimulationSettings.defaultMaxScarcityBoostMonthly
 
+        // Global Macro Hedge
         useGlobalMacroHedge = true
-
         useGlobalMacroHedgeWeekly = true
         maxMacroBoostWeekly = SimulationSettings.defaultMaxMacroBoostWeekly
-
-        useGlobalMacroHedgeMonthly = true
+        useGlobalMacroHedgeMonthly = false
         maxMacroBoostMonthly = SimulationSettings.defaultMaxMacroBoostMonthly
 
+        // Stablecoin Shift
         useStablecoinShift = true
-
         useStablecoinShiftWeekly = true
         maxStablecoinBoostWeekly = SimulationSettings.defaultMaxStablecoinBoostWeekly
-
-        useStablecoinShiftMonthly = true
+        useStablecoinShiftMonthly = false
         maxStablecoinBoostMonthly = SimulationSettings.defaultMaxStablecoinBoostMonthly
 
+        // Demographic Adoption
         useDemographicAdoption = true
-
         useDemographicAdoptionWeekly = true
         maxDemoBoostWeekly = SimulationSettings.defaultMaxDemoBoostWeekly
-
-        useDemographicAdoptionMonthly = true
+        useDemographicAdoptionMonthly = false
         maxDemoBoostMonthly = SimulationSettings.defaultMaxDemoBoostMonthly
 
+        // Altcoin Flight
         useAltcoinFlight = true
-            
         useAltcoinFlightWeekly = true
         maxAltcoinBoostWeekly = SimulationSettings.defaultMaxAltcoinBoostWeekly
-        
-        useAltcoinFlightMonthly = true
+        useAltcoinFlightMonthly = false
         maxAltcoinBoostMonthly = SimulationSettings.defaultMaxAltcoinBoostMonthly
 
+        // Adoption Factor
         useAdoptionFactor = true
-            
         useAdoptionFactorWeekly = true
         adoptionBaseFactorWeekly = SimulationSettings.defaultAdoptionBaseFactorWeekly
-        
-        useAdoptionFactorMonthly = true
+        useAdoptionFactorMonthly = false
         adoptionBaseFactorMonthly = SimulationSettings.defaultAdoptionBaseFactorMonthly
 
+        //
+        // BEARISH FACTORS: left as is
+        //
+
         useRegClampdown = true
-            
         useRegClampdownWeekly = true
         maxClampDownWeekly = SimulationSettings.defaultMaxClampDownWeekly
-        
         useRegClampdownMonthly = true
         maxClampDownMonthly = SimulationSettings.defaultMaxClampDownMonthly
 
         useCompetitorCoin = true
-            
         useCompetitorCoinWeekly = true
         maxCompetitorBoostWeekly = SimulationSettings.defaultMaxCompetitorBoostWeekly
-        
         useCompetitorCoinMonthly = true
         maxCompetitorBoostMonthly = SimulationSettings.defaultMaxCompetitorBoostMonthly
 
         useSecurityBreach = true
-            
         useSecurityBreachWeekly = true
         breachImpactWeekly = SimulationSettings.defaultBreachImpactWeekly
-
         useSecurityBreachMonthly = true
         breachImpactMonthly = SimulationSettings.defaultBreachImpactMonthly
 
         useBubblePop = true
-            
         useBubblePopWeekly = true
         maxPopDropWeekly = SimulationSettings.defaultMaxPopDropWeekly
-        
         useBubblePopMonthly = true
         maxPopDropMonthly = SimulationSettings.defaultMaxPopDropMonthly
 
         useStablecoinMeltdown = true
-
         useStablecoinMeltdownWeekly = true
         maxMeltdownDropWeekly = SimulationSettings.defaultMaxMeltdownDropWeekly
-
         useStablecoinMeltdownMonthly = true
         maxMeltdownDropMonthly = SimulationSettings.defaultMaxMeltdownDropMonthly
 
         useBlackSwan = true
-            
         useBlackSwanWeekly = true
         blackSwanDropWeekly = SimulationSettings.defaultBlackSwanDropWeekly
-
         useBlackSwanMonthly = true
         blackSwanDropMonthly = SimulationSettings.defaultBlackSwanDropMonthly
 
         useBearMarket = true
-
         useBearMarketWeekly = true
         bearWeeklyDriftWeekly = SimulationSettings.defaultBearWeeklyDriftWeekly
-
         useBearMarketMonthly = true
         bearWeeklyDriftMonthly = SimulationSettings.defaultBearWeeklyDriftMonthly
 
         useMaturingMarket = true
-
         useMaturingMarketWeekly = true
         maxMaturingDropWeekly = SimulationSettings.defaultMaxMaturingDropWeekly
-
         useMaturingMarketMonthly = true
         maxMaturingDropMonthly = SimulationSettings.defaultMaxMaturingDropMonthly
 
         useRecession = true
-
         useRecessionWeekly = true
         maxRecessionDropWeekly = SimulationSettings.defaultMaxRecessionDropWeekly
-
         useRecessionMonthly = true
         maxRecessionDropMonthly = SimulationSettings.defaultMaxRecessionDropMonthly
 
-        // Enable everything
+        // Finally, enable everything at once
         toggleAll = true
 
         // Reset lockHistoricalSampling
         lockHistoricalSampling = false
     }
     
-    /// After finishing our initial UserDefaults load (when `isUpdating` is false),
-    /// call this to sync parent toggles based on their child weekly/monthly toggles.
-    /// If either weekly or monthly is `true`, the parent becomes `true`; otherwise `false`.
     private func finalizeToggleStateAfterLoad() {
-        // -----------------------------
-        // BULLISH
-        // -----------------------------
-        // Halving
+        // Temporarily disable the chain-reaction logic
+        isUpdating = true
+
+        // BULLISH:
         useHalving = (useHalvingWeekly || useHalvingMonthly)
-        // Institutional Demand
         useInstitutionalDemand = (useInstitutionalDemandWeekly || useInstitutionalDemandMonthly)
-        // Country Adoption
         useCountryAdoption = (useCountryAdoptionWeekly || useCountryAdoptionMonthly)
-        // Regulatory Clarity
         useRegulatoryClarity = (useRegulatoryClarityWeekly || useRegulatoryClarityMonthly)
-        // ETF Approval
         useEtfApproval = (useEtfApprovalWeekly || useEtfApprovalMonthly)
-        // Tech Breakthrough
         useTechBreakthrough = (useTechBreakthroughWeekly || useTechBreakthroughMonthly)
-        // Scarcity Events
         useScarcityEvents = (useScarcityEventsWeekly || useScarcityEventsMonthly)
-        // Global Macro Hedge
         useGlobalMacroHedge = (useGlobalMacroHedgeWeekly || useGlobalMacroHedgeMonthly)
-        // Stablecoin Shift
         useStablecoinShift = (useStablecoinShiftWeekly || useStablecoinShiftMonthly)
-        // Demographic Adoption
         useDemographicAdoption = (useDemographicAdoptionWeekly || useDemographicAdoptionMonthly)
-        // Altcoin Flight
         useAltcoinFlight = (useAltcoinFlightWeekly || useAltcoinFlightMonthly)
-        // Adoption Factor
         useAdoptionFactor = (useAdoptionFactorWeekly || useAdoptionFactorMonthly)
-        
-        // -----------------------------
-        // BEARISH
-        // -----------------------------
-        // Regulatory Clampdown
+
+        // BEARISH:
         useRegClampdown = (useRegClampdownWeekly || useRegClampdownMonthly)
-        // Competitor Coin
         useCompetitorCoin = (useCompetitorCoinWeekly || useCompetitorCoinMonthly)
-        // Security Breach
         useSecurityBreach = (useSecurityBreachWeekly || useSecurityBreachMonthly)
-        // Bubble Pop
         useBubblePop = (useBubblePopWeekly || useBubblePopMonthly)
-        // Stablecoin Meltdown
         useStablecoinMeltdown = (useStablecoinMeltdownWeekly || useStablecoinMeltdownMonthly)
-        // Black Swan
         useBlackSwan = (useBlackSwanWeekly || useBlackSwanMonthly)
-        // Bear Market
         useBearMarket = (useBearMarketWeekly || useBearMarketMonthly)
-        // Maturing Market
         useMaturingMarket = (useMaturingMarketWeekly || useMaturingMarketMonthly)
-        // Recession
         useRecession = (useRecessionWeekly || useRecessionMonthly)
-        
-        // Finally, let’s sync the master toggle if needed
+
+        // Re-enable normal updates
+        isUpdating = false
+
+        // Finally, sync the master toggle
         syncToggleAllState()
     }
 }
