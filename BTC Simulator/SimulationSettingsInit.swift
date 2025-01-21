@@ -469,37 +469,6 @@ extension SimulationSettings {
 
         // 7) Done loading from UserDefaults so far:
         self.isUpdating = false
-
-        // 8) Final pass: set parents based on children, but still skip didSet logic
-        //    to avoid "pick weekly" overrides. Then re-enable normal updates.
-        self.isUpdating = true
-
-        // BULLISH
-        useHalving = (useHalvingWeekly || useHalvingMonthly)
-        useInstitutionalDemand = (useInstitutionalDemandWeekly || useInstitutionalDemandMonthly)
-        useCountryAdoption = (useCountryAdoptionWeekly || useCountryAdoptionMonthly)
-        useRegulatoryClarity = (useRegulatoryClarityWeekly || useRegulatoryClarityMonthly)
-        useEtfApproval = (useEtfApprovalWeekly || useEtfApprovalMonthly)
-        useTechBreakthrough = (useTechBreakthroughWeekly || useTechBreakthroughMonthly)
-        useScarcityEvents = (useScarcityEventsWeekly || useScarcityEventsMonthly)
-        useGlobalMacroHedge = (useGlobalMacroHedgeWeekly || useGlobalMacroHedgeMonthly)
-        useStablecoinShift = (useStablecoinShiftWeekly || useStablecoinShiftMonthly)
-        useDemographicAdoption = (useDemographicAdoptionWeekly || useDemographicAdoptionMonthly)
-        useAltcoinFlight = (useAltcoinFlightWeekly || useAltcoinFlightMonthly)
-        useAdoptionFactor = (useAdoptionFactorWeekly || useAdoptionFactorMonthly)
-
-        // BEARISH
-        useRegClampdown = (useRegClampdownWeekly || useRegClampdownMonthly)
-        useCompetitorCoin = (useCompetitorCoinWeekly || useCompetitorCoinMonthly)
-        useSecurityBreach = (useSecurityBreachWeekly || useSecurityBreachMonthly)
-        useBubblePop = (useBubblePopWeekly || useBubblePopMonthly)
-        useStablecoinMeltdown = (useStablecoinMeltdownWeekly || useStablecoinMeltdownMonthly)
-        useBlackSwan = (useBlackSwanWeekly || useBlackSwanMonthly)
-        useBearMarket = (useBearMarketWeekly || useBearMarketMonthly)
-        useMaturingMarket = (useMaturingMarketWeekly || useMaturingMarketMonthly)
-        useRecession = (useRecessionWeekly || useRecessionMonthly)
-
-        self.isUpdating = false
         self.isInitialized = true
 
         // 9) Now sync the master toggle once
