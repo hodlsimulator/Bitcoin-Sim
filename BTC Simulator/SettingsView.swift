@@ -675,9 +675,8 @@ struct SettingsView: View {
                     Text("Autocorrelation Strength")
                         .foregroundColor(.white)
                     Slider(value: $simSettings.autoCorrelationStrength, in: 0...1, step: 0.05)
-                        .tint(simSettings.useAutoCorrelation
-                              ? Color(red: 189/255, green: 255/255, blue: 255/255)
-                              : .gray)
+                        // Changed to the same colour as FactorToggleRow
+                        .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
                 }
 
                 // Mean reversion slider
@@ -685,9 +684,8 @@ struct SettingsView: View {
                     Text("Mean Reversion Target")
                         .foregroundColor(.white)
                     Slider(value: $simSettings.meanReversionTarget, in: -0.02...0.02, step: 0.001)
-                        .tint(simSettings.useAutoCorrelation
-                              ? Color(red: 189/255, green: 255/255, blue: 255/255)
-                              : .gray)
+                        // Changed to the same colour as FactorToggleRow
+                        .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
                 }
             }
             // Disable & dim if autocorrelation is off
