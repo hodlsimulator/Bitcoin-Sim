@@ -378,6 +378,10 @@ struct ContentView: View {
                 }
             }
         }
+        Button("Dump UserDefaults") {
+            let dict = UserDefaults.standard.dictionaryRepresentation()
+            print("All defaults: \(dict)")
+        }
     }
 
     // MARK: - Parameter Screen

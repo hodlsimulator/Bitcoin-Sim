@@ -667,24 +667,49 @@ struct SettingsView: View {
                 // Toggle is orange when on, grey otherwise
                 .tint(simSettings.useAutoCorrelation ? .orange : .gray)
                 .foregroundColor(.white)
-
+            
             // Sliders in a group so they're both disabled/dimmed together
             Group {
                 // Strength slider
                 HStack {
+                    // Reset button (icon) for Autocorrelation Strength
+                    Button {
+                        // Assign your default value here:
+                        // e.g. if your default is 0.3, do:
+                        simSettings.autoCorrelationStrength = 0.3
+                    } label: {
+                        Image(systemName: "arrow.uturn.backward.circle")
+                            .foregroundColor(.orange)
+                    }
+                    .buttonStyle(.plain)
+                    // Add some spacing if you like
+                    .padding(.trailing, 4)
+                    
                     Text("Autocorrelation Strength")
                         .foregroundColor(.white)
+                    
                     Slider(value: $simSettings.autoCorrelationStrength, in: 0...1, step: 0.05)
-                        // Changed to the same colour as FactorToggleRow
                         .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
                 }
-
+                
                 // Mean reversion slider
                 HStack {
+                    // Reset button (icon) for Mean Reversion Target
+                    Button {
+                        // Assign your default value here:
+                        // e.g. if your default is 0.0, do:
+                        simSettings.meanReversionTarget = 0.0
+                    } label: {
+                        Image(systemName: "arrow.uturn.backward.circle")
+                            .foregroundColor(.orange)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.trailing, 4)
+                    
                     Text("Mean Reversion Target")
                         .foregroundColor(.white)
+                    
                     Slider(value: $simSettings.meanReversionTarget, in: -0.02...0.02, step: 0.001)
-                        // Changed to the same colour as FactorToggleRow
                         .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
                 }
             }
