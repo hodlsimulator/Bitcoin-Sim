@@ -39,40 +39,6 @@ private let blackSwanIntervalGuess = 400.0
 private let halvingIntervalGuessMonths: Double = 48.0
 private let blackSwanIntervalGuessMonths: Double = 92.0
 
-// MARK: - Unified Random Event Generators
-/// Generates random event weeks based on an expected interval, using our seeded RNG.
-func generateRandomEventWeeks(
-    totalWeeks: Int,
-    intervalGuess: Double,
-    rng: GKRandomSource
-) -> [Int] {
-    let expectedCount = Double(totalWeeks) / intervalGuess
-    let eventCount = Int(round(expectedCount))
-    var eventWeeks: [Int] = []
-    for _ in 0..<eventCount {
-        // Use seeded RNG, not Swift’s Int.random(in:).
-        let randomWeek = rng.nextInt(upperBound: totalWeeks) + 1
-        eventWeeks.append(randomWeek)
-    }
-    return eventWeeks.sorted()
-}
-
-/// Generates random event months based on an expected interval, using seeded RNG.
-func generateRandomEventMonths(
-    totalMonths: Int,
-    intervalGuess: Double,
-    rng: GKRandomSource
-) -> [Int] {
-    let expectedCount = Double(totalMonths) / intervalGuess
-    let eventCount = Int(round(expectedCount))
-    var eventMonths: [Int] = []
-    for _ in 0..<eventCount {
-        let randomMonth = rng.nextInt(upperBound: totalMonths) + 1
-        eventMonths.append(randomMonth)
-    }
-    return eventMonths.sorted()
-}
-
 // MARK: - Normal Draw with RNG
 /// A standard normal draw using a seeded GKRandomSource.
 private func randomNormalWithRNG(mean: Double, standardDeviation: Double, rng: GKRandomSource) -> Double {
@@ -209,7 +175,6 @@ private func applyFactorToggles(
     week: Int,
     settings: SimulationSettings,
     mempoolDataManager: MempoolDataManager,
-    halvingWeeks: [Int],
     rng: GKRandomSource // needed for black swan probability
 ) -> Double {
     var r = baseReturn
@@ -217,10 +182,19 @@ private func applyFactorToggles(
     
     // ────────── BULLISH ──────────
     if settings.useHalving {
-        if isWeekly && settings.useHalvingWeekly && halvingWeeks.contains(week) {
-            r += settings.halvingBumpWeekly
-        } else if !isWeekly && settings.useHalvingMonthly && halvingWeeks.contains(week) {
-            r += settings.halvingBumpMonthly
+        // Probability-based approach, similar to black swan
+        let stressLevel = mempoolDataManager.stressLevel(at: week)
+        let baseProb = 0.02
+        // If stress above 80, scale up
+        let dynamicProb = (stressLevel > 80.0) ? baseProb * 1.5 : baseProb
+        let roll = Double(rng.nextUniform())
+        
+        if roll < dynamicProb {
+            if isWeekly && settings.useHalvingWeekly {
+                r += settings.halvingBumpWeekly
+            } else if !isWeekly && settings.useHalvingMonthly {
+                r += settings.halvingBumpMonthly
+            }
         }
     }
     if settings.useInstitutionalDemand {
@@ -385,12 +359,11 @@ private func runWeeklySimulation(
     exchangeRateEURUSD: Double,
     totalWeeklySteps: Int,
     initialBTCPriceUSD: Double,
-    halvingWeeks: [Int],
     iterationIndex: Int,
     mempoolDataManager: MempoolDataManager,
     rng: GKRandomSource
 ) -> [SimulationData] {
-    
+
     var results = [SimulationData]()
     var prevBTCPriceUSD = initialBTCPriceUSD
     var prevBTCHoldings = 0.0
@@ -438,12 +411,12 @@ private func runWeeklySimulation(
                     let phi = settings.autoCorrelationStrength
                     lumpsumGrowth = (1 - phi) * lumpsumGrowth + phi * lastAutoReturn
                 }
+                // ─── Replaced halvingWeeks with probability-based approach in applyFactorToggles ───
                 lumpsumGrowth = applyFactorToggles(
                     baseReturn: lumpsumGrowth,
                     week: currentWeek,
                     settings: settings,
                     mempoolDataManager: mempoolDataManager,
-                    halvingWeeks: halvingWeeks,
                     rng: rng
                 )
                 
@@ -472,12 +445,12 @@ private func runWeeklySimulation(
                 let phi = settings.autoCorrelationStrength
                 totalReturn = (1 - phi) * totalReturn + phi * lastAutoReturn
             }
+            // ─── Replaced halvingWeeks with probability-based approach in applyFactorToggles ───
             let toggled = applyFactorToggles(
                 baseReturn: totalReturn,
                 week: currentWeek,
                 settings: settings,
                 mempoolDataManager: mempoolDataManager,
-                halvingWeeks: halvingWeeks,
                 rng: rng
             )
             prevBTCPriceUSD *= exp(toggled)
@@ -553,6 +526,7 @@ private func runWeeklySimulation(
     return results
 }
 
+
 // MARK: - MONTHLY SIM
 private func runMonthlySimulation(
     settings: SimulationSettings,
@@ -561,7 +535,6 @@ private func runMonthlySimulation(
     exchangeRateEURUSD: Double,
     totalMonths: Int,
     initialBTCPriceUSD: Double,
-    halvingMonths: [Int],
     iterationIndex: Int,
     mempoolDataManager: MempoolDataManager,
     rng: GKRandomSource
@@ -607,12 +580,12 @@ private func runMonthlySimulation(
                     let phi = settings.autoCorrelationStrength
                     lumpsumGrowth = (1 - phi) * lumpsumGrowth + phi * lastAutoReturn
                 }
+                // ─── Replaced halvingMonths with probability-based approach in applyFactorToggles ───
                 lumpsumGrowth = applyFactorToggles(
                     baseReturn: lumpsumGrowth,
                     week: currentMonth,
                     settings: settings,
                     mempoolDataManager: mempoolDataManager,
-                    halvingWeeks: halvingMonths,
                     rng: rng
                 )
                 
@@ -641,12 +614,12 @@ private func runMonthlySimulation(
                 let phi = settings.autoCorrelationStrength
                 totalReturn = (1 - phi) * totalReturn + (phi * lastAutoReturn)
             }
+            // ─── Replaced halvingMonths with probability-based approach in applyFactorToggles ───
             let toggled = applyFactorToggles(
                 baseReturn: totalReturn,
                 week: currentMonth,
                 settings: settings,
                 mempoolDataManager: mempoolDataManager,
-                halvingWeeks: halvingMonths,
                 rng: rng
             )
             prevBTCPriceUSD *= exp(toggled)
@@ -731,20 +704,14 @@ func runOneFullSimulation(
     userWeeks: Int,
     initialBTCPriceUSD: Double,
     iterationIndex: Int = 0,
-    rng: GKRandomSource, // single seeded RNG
+    rng: GKRandomSource,
     mempoolDataManager: MempoolDataManager? = nil
 ) -> [SimulationData] {
 
     if settings.periodUnit == .months {
         let totalMonths = userWeeks
         
-        // Generate random halving months with the same RNG
-        let randomHalvingMonths = generateRandomEventMonths(
-            totalMonths: totalMonths,
-            intervalGuess: halvingIntervalGuessMonths,
-            rng: rng
-        )
-
+        // No more random halving months!
         let monthlyResult = runMonthlySimulation(
             settings: settings,
             annualCAGR: annualCAGR,
@@ -752,7 +719,6 @@ func runOneFullSimulation(
             exchangeRateEURUSD: exchangeRateEURUSD,
             totalMonths: totalMonths,
             initialBTCPriceUSD: initialBTCPriceUSD,
-            halvingMonths: randomHalvingMonths,
             iterationIndex: iterationIndex,
             mempoolDataManager: mempoolDataManager ?? MempoolDataManager(mempoolData: []),
             rng: rng
@@ -762,13 +728,7 @@ func runOneFullSimulation(
     } else {
         let totalWeeks = userWeeks
         
-        // Generate random halving weeks with the same RNG
-        let randomHalvingWeeks = generateRandomEventWeeks(
-            totalWeeks: totalWeeks,
-            intervalGuess: halvingIntervalGuess,
-            rng: rng
-        )
-        
+        // No more random halving weeks!
         let weeklyResult = runWeeklySimulation(
             settings: settings,
             annualCAGR: annualCAGR,
@@ -776,7 +736,6 @@ func runOneFullSimulation(
             exchangeRateEURUSD: exchangeRateEURUSD,
             totalWeeklySteps: totalWeeks,
             initialBTCPriceUSD: initialBTCPriceUSD,
-            halvingWeeks: randomHalvingWeeks,
             iterationIndex: iterationIndex,
             mempoolDataManager: mempoolDataManager ?? MempoolDataManager(mempoolData: []),
             rng: rng

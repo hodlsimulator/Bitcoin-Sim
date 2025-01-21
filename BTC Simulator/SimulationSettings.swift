@@ -2342,25 +2342,35 @@ class SimulationSettings: ObservableObject {
     }
 
 
-    // Black Swan
-    @Published var useBlackSwan: Bool = true {
+    // MARK: - Black Swan
+    @Published var useBlackSwan: Bool = false {
         didSet {
             guard isInitialized else { return }
             guard oldValue != useBlackSwan else { return }
 
             UserDefaults.standard.set(useBlackSwan, forKey: "useBlackSwan")
-            
-            if useBlackSwan {
-                useBlackSwanWeekly = true
-                UserDefaults.standard.set(true, forKey: "useBlackSwanWeekly")
-                useBlackSwanMonthly = true
-                UserDefaults.standard.set(true, forKey: "useBlackSwanMonthly")
-            } else {
+
+            if !useBlackSwan {
+                // Turning the parent off => force both children off
+                isUpdating = true
                 useBlackSwanWeekly = false
                 UserDefaults.standard.set(false, forKey: "useBlackSwanWeekly")
+
                 useBlackSwanMonthly = false
                 UserDefaults.standard.set(false, forKey: "useBlackSwanMonthly")
+                isUpdating = false
             }
+            
+            // If you wanted the parent "on" to auto-turn one child on:
+            // else {
+            //     // e.g. default to weekly
+            //     isUpdating = true
+            //     useBlackSwanWeekly = true
+            //     UserDefaults.standard.set(true, forKey: "useBlackSwanWeekly")
+            //     useBlackSwanMonthly = false
+            //     UserDefaults.standard.set(false, forKey: "useBlackSwanMonthly")
+            //     isUpdating = false
+            // }
 
             if !isUpdating {
                 syncToggleAllState()
@@ -2368,18 +2378,25 @@ class SimulationSettings: ObservableObject {
         }
     }
 
-    // WEEKLY
-    @Published var useBlackSwanWeekly: Bool = true {
+    @Published var useBlackSwanWeekly: Bool = false {
         didSet {
             if isInitialized && !isUpdating && oldValue != useBlackSwanWeekly {
                 UserDefaults.standard.set(useBlackSwanWeekly, forKey: "useBlackSwanWeekly")
-                
+
+                isUpdating = true
                 if useBlackSwanWeekly {
+                    // Weekly on => parent on, monthly off
                     useBlackSwan = true
-                } else if !useBlackSwanMonthly {
-                    useBlackSwan = false
+                    useBlackSwanMonthly = false
+                    UserDefaults.standard.set(false, forKey: "useBlackSwanMonthly")
+                } else {
+                    // Weekly off => if monthly is also off, parent off
+                    if !useBlackSwanMonthly {
+                        useBlackSwan = false
+                    }
                 }
-                
+                isUpdating = false
+
                 if toggleAll {
                     toggleAll = false
                 }
@@ -2396,18 +2413,26 @@ class SimulationSettings: ObservableObject {
         }
     }
 
-    // MONTHLY
-    @Published var useBlackSwanMonthly: Bool = true {
+    // MARK: - Black Swan (Monthly)
+    @Published var useBlackSwanMonthly: Bool = false {
         didSet {
             if isInitialized && !isUpdating && oldValue != useBlackSwanMonthly {
                 UserDefaults.standard.set(useBlackSwanMonthly, forKey: "useBlackSwanMonthly")
-                
+
+                isUpdating = true
                 if useBlackSwanMonthly {
+                    // Monthly on => parent on, weekly off
                     useBlackSwan = true
-                } else if !useBlackSwanWeekly {
-                    useBlackSwan = false
+                    useBlackSwanWeekly = false
+                    UserDefaults.standard.set(false, forKey: "useBlackSwanWeekly")
+                } else {
+                    // Monthly off => if weekly is also off, parent off
+                    if !useBlackSwanWeekly {
+                        useBlackSwan = false
+                    }
                 }
-                
+                isUpdating = false
+
                 if toggleAll {
                     toggleAll = false
                 }
@@ -2423,7 +2448,6 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-
 
     // Bear Market
     @Published var useBearMarket: Bool = true {
@@ -3265,7 +3289,9 @@ class SimulationSettings: ObservableObject {
     /// call this to sync parent toggles based on their child weekly/monthly toggles.
     /// If either weekly or monthly is `true`, the parent becomes `true`; otherwise `false`.
     private func finalizeToggleStateAfterLoad() {
-        
+        useBlackSwanWeekly = false
+        useBlackSwanMonthly = false
+        useBlackSwan = false
         // -----------------------------
         // BULLISH
         // -----------------------------
@@ -3308,7 +3334,9 @@ class SimulationSettings: ObservableObject {
         // Stablecoin Meltdown
         useStablecoinMeltdown = (useStablecoinMeltdownWeekly || useStablecoinMeltdownMonthly)
         // Black Swan
-        useBlackSwan = (useBlackSwanWeekly || useBlackSwanMonthly)
+        print(">> finalizeToggleStateAfterLoad BEFORE => useBlackSwanWeekly=\(useBlackSwanWeekly), useBlackSwanMonthly=\(useBlackSwanMonthly), useBlackSwan=\(useBlackSwan)")
+        //  useBlackSwan = (useBlackSwanWeekly || useBlackSwanMonthly)
+        print(">> finalizeToggleStateAfterLoad AFTER => useBlackSwanWeekly=\(useBlackSwanWeekly), useBlackSwanMonthly=\(useBlackSwanMonthly), useBlackSwan=\(useBlackSwan)")
         // Bear Market
         useBearMarket = (useBearMarketWeekly || useBearMarketMonthly)
         // Maturing Market
