@@ -8,6 +8,10 @@
 import Foundation
 import SwiftUI
 import GameplayKit // for GKARC4RandomSource
+import os.log
+import os.signpost
+
+let myLog = OSLog(subsystem: "com.conor.hodlsim", category: "Performance")
 
 // MARK: - Utility Extension
 extension Double {
@@ -415,6 +419,17 @@ private func runWeeklySimulation(
     rng: GKRandomSource
 ) -> [SimulationData] {
 
+    // Create a signpost ID each time this function is called:
+    let signpostID = OSSignpostID(log: myLog)
+
+    // Start the signpost
+    os_signpost(.begin, log: myLog, name: "runWeeklySimulation", signpostID: signpostID)
+
+    // Use 'defer' so we always end the signpost even if we return or throw
+    defer {
+        os_signpost(.end, log: myLog, name: "runWeeklySimulation", signpostID: signpostID)
+    }
+
     var results = [SimulationData]()
     var prevBTCPriceUSD = initialBTCPriceUSD
     var prevBTCHoldings = 0.0
@@ -434,7 +449,7 @@ private func runWeeklySimulation(
     let secondYearVal = (settings.inputManager?.subsequentContribution as NSString?)?.doubleValue ?? 0
     
     var lastStepLogReturn = 0.0
-    var lastAutoReturn = 0.0 // for autocorrelation
+    var lastAutoReturn    = 0.0 // for autocorrelation
 
     for currentWeek in 1...totalWeeklySteps {
         
@@ -471,19 +486,22 @@ private func runWeeklySimulation(
                     rng: rng
                 )
                 
-                let factor = lumpsumAdjustFactor(settings: settings, annualVolatility: annualVolatility)
+                let factor = lumpsumAdjustFactor(
+                    settings: settings,
+                    annualVolatility: annualVolatility
+                )
                 lumpsumGrowth *= factor
                 prevBTCPriceUSD *= (1 + lumpsumGrowth)
                 
                 lastStepLogReturn = log(1 + lumpsumGrowth)
-                lastAutoReturn = lumpsumGrowth
+                lastAutoReturn    = lumpsumGrowth
             }
         } else {
             // Historical sampling or lognormal each step
             if settings.useHistoricalSampling {
                 var weeklySample = pickRandomReturn(from: historicalBTCWeeklyReturns, rng: rng)
-                weeklySample = dampenArctanWeekly(weeklySample)
-                totalReturn += weeklySample
+                weeklySample     = dampenArctanWeekly(weeklySample)
+                totalReturn     += weeklySample
             }
             if settings.useLognormalGrowth {
                 totalReturn += (cagrDecimal / 52.0)
@@ -507,7 +525,7 @@ private func runWeeklySimulation(
             prevBTCPriceUSD *= exp(toggled)
             
             lastStepLogReturn = toggled
-            lastAutoReturn = toggled
+            lastAutoReturn    = toggled
         }
         
         // Floor
