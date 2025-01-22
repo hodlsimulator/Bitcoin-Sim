@@ -51,6 +51,8 @@
 		E19D10EF2D40290A00E3A55E /* SimulationSettings+RestoreDefaults.swift in Sources */ = {isa = PBXBuildFile; fileRef = E19D10EE2D40290800E3A55E /* SimulationSettings+RestoreDefaults.swift */; };
 		E19D10F12D402BDC00E3A55E /* SimulationSettings+ToggleAll.swift in Sources */ = {isa = PBXBuildFile; fileRef = E19D10F02D402BD800E3A55E /* SimulationSettings+ToggleAll.swift */; };
 		E19D10F32D4033D600E3A55E /* SimulationSettings+HashAndRun.swift in Sources */ = {isa = PBXBuildFile; fileRef = E19D10F22D4033D400E3A55E /* SimulationSettings+HashAndRun.swift */; };
+		E19D10F52D40D10E00E3A55E /* SimulationSettings+BullishFactors.swift in Sources */ = {isa = PBXBuildFile; fileRef = E19D10F42D40D10C00E3A55E /* SimulationSettings+BullishFactors.swift */; };
+		E19D10F72D40D8E100E3A55E /* SimulationSettings+BearishFactors.swift in Sources */ = {isa = PBXBuildFile; fileRef = E19D10F62D40D8C000E3A55E /* SimulationSettings+BearishFactors.swift */; };
 		E1A1E51F2D2A7364008F7658 /* PortfolioChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A1E51E2D2A7362008F7658 /* PortfolioChartView.swift */; };
 		E1A1E5272D2E371D008F7658 /* TipsData.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A1E5262D2E371B008F7658 /* TipsData.swift */; };
 		E1A1E5292D2E38FA008F7658 /* CheckboxToggleStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A1E5282D2E38F9008F7658 /* CheckboxToggleStyle.swift */; };
@@ -109,6 +111,8 @@
 		E19D10EE2D40290800E3A55E /* SimulationSettings+RestoreDefaults.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SimulationSettings+RestoreDefaults.swift"; sourceTree = "<group>"; };
 		E19D10F02D402BD800E3A55E /* SimulationSettings+ToggleAll.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SimulationSettings+ToggleAll.swift"; sourceTree = "<group>"; };
 		E19D10F22D4033D400E3A55E /* SimulationSettings+HashAndRun.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SimulationSettings+HashAndRun.swift"; sourceTree = "<group>"; };
+		E19D10F42D40D10C00E3A55E /* SimulationSettings+BullishFactors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SimulationSettings+BullishFactors.swift"; sourceTree = "<group>"; };
+		E19D10F62D40D8C000E3A55E /* SimulationSettings+BearishFactors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SimulationSettings+BearishFactors.swift"; sourceTree = "<group>"; };
 		E1A1E51E2D2A7362008F7658 /* PortfolioChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioChartView.swift; sourceTree = "<group>"; };
 		E1A1E5262D2E371B008F7658 /* TipsData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TipsData.swift; sourceTree = "<group>"; };
 		E1A1E5282D2E38F9008F7658 /* CheckboxToggleStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckboxToggleStyle.swift; sourceTree = "<group>"; };
@@ -194,6 +198,8 @@
 				E17B2F212D26A9F000ECE087 /* SimulationCoordinator.swift */,
 				E166A8AF2CF855C20003F518 /* SimulationData.swift */,
 				E1883F392D1DD94C007AA90B /* SimulationSettings.swift */,
+				E19D10F62D40D8C000E3A55E /* SimulationSettings+BearishFactors.swift */,
+				E19D10F42D40D10C00E3A55E /* SimulationSettings+BullishFactors.swift */,
 				E19D10EC2D40279200E3A55E /* SimulationSettings+Defaults.swift */,
 				E19D10F22D4033D400E3A55E /* SimulationSettings+HashAndRun.swift */,
 				E14D240A2D3A6988007CC11A /* SimulationSettingsInit.swift */,
@@ -371,6 +377,7 @@
 				E19D10F32D4033D600E3A55E /* SimulationSettings+HashAndRun.swift in Sources */,
 				E191AD632D1B0C9400020DBE /* CSVLoaderSP500.swift in Sources */,
 				E191AD652D1B0D5700020DBE /* CSVParsingUtilities.swift in Sources */,
+				E19D10F72D40D8E100E3A55E /* SimulationSettings+BearishFactors.swift in Sources */,
 				E19D10E72D3ED96200E3A55E /* GARCHHelper.swift in Sources */,
 				E19D10EF2D40290A00E3A55E /* SimulationSettings+RestoreDefaults.swift in Sources */,
 				E1883F3C2D1DDC78007AA90B /* ParametersFormView.swift in Sources */,
@@ -384,6 +391,7 @@
 				E1A1E5272D2E371D008F7658 /* TipsData.swift in Sources */,
 				E14D240B2D3A698A007CC11A /* SimulationSettingsInit.swift in Sources */,
 				E1883F3E2D1E0D7A007AA90B /* ActiveField.swift in Sources */,
+				E19D10F52D40D10E00E3A55E /* SimulationSettings+BullishFactors.swift in Sources */,
 				E1A1E52B2D2E3975008F7658 /* InteractiveBitcoinSymbol3DSpinner.swift in Sources */,
 				E1883F3A2D1DD94F007AA90B /* SimulationSettings.swift in Sources */,
 				E14D24092D3A677F007CC11A /* SettingsPrinter.swift in Sources */,

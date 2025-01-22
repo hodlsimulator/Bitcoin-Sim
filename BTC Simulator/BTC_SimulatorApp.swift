@@ -2,7 +2,7 @@
 //  BTC_SimulatorApp.swift
 //  BTC Simulator
 //
-//  Created by . . on 20xx.
+//  Created by ... on 20/11/2024.
 //
 
 import SwiftUI
@@ -23,12 +23,11 @@ struct BTCMonteCarloApp: App {
     @StateObject private var coordinator: SimulationCoordinator
 
     init() {
-        // 1) Create all objects
+        print("** Creating SimulationSettings with loadDefaults = true")
         let newAppViewModel = AppViewModel()
         let newInputManager = PersistentInputManager()
-        let newSimSettings = SimulationSettings(loadDefaults: true)
+        let newSimSettings = SimulationSettings(loadDefaults: true)  // custom init
         let newChartDataCache = ChartDataCache()
-        
         let newSimChartSelection = SimChartSelection()
         
         let newCoordinator = SimulationCoordinator(
@@ -38,10 +37,8 @@ struct BTCMonteCarloApp: App {
             simChartSelection: newSimChartSelection
         )
 
-        // 2) Ensure simSettings has a reference to the same inputManager
         newSimSettings.inputManager = newInputManager
 
-        // 3) Assign them to @StateObject wrappers
         _appViewModel = StateObject(wrappedValue: newAppViewModel)
         _inputManager = StateObject(wrappedValue: newInputManager)
         _simSettings = StateObject(wrappedValue: newSimSettings)
@@ -91,10 +88,7 @@ struct BTCMonteCarloApp: App {
                     .preferredColorScheme(.dark)
                 }
             }
-            // We do the assignment here, outside the view-building expressions:
             .onAppear {
-                // If we've not finished onboarding, set isOnboarding=true
-                // If we have, set it to false
                 simSettings.isOnboarding = !didFinishOnboarding
             }
         }
