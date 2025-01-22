@@ -344,10 +344,6 @@ struct ContentView: View {
             .navigationDestination(isPresented: $showAbout) {
                 AboutView()
             }
-            .navigationDestination(isPresented: $showSnapshotsDebug) {
-                SnapshotsDebugView()
-                    .environmentObject(coordinator.chartDataCache)
-            }
             .onAppear {
                 // Load last viewed row + page
                 let savedWeek = UserDefaults.standard.integer(forKey: "lastViewedWeek")

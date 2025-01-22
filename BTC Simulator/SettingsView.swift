@@ -151,59 +151,6 @@ struct SettingsView: View {
     // MARK: - BULLISH FACTORS
     private var bullishFactorsSection: some View {
         Section("Bullish Factors") {
-            // Big multiline strings
-            let halvingParamDesc = """
-                Occurs roughly every four years, reducing the block reward in half.
-                Historically, halving events have coincided with substantial BTC price increases.
-                """
-            let halvingTooltipDesc = """
-                Occurs roughly every four years, reducing the block reward in half.
-                Historically, halving events have coincided with big BTC price increases.
-                """
-            let institutionDesc = """
-                Large financial institutions and corporate treasuries entering the BTC market can drive prices up.
-                Increased legitimacy and adoption by well-known firms can attract more mainstream interest.
-                """
-            let countryDesc = """
-                Nations adopting BTC as legal tender or as part of their reserves can lead to massive demand.
-                Wider government acceptance signals mainstream credibility and potential new use cases.
-                """
-            let regClarityDesc = """
-                Clear, favourable regulations can reduce uncertainty and risk for investors.
-                When watchdogs provide guidelines, more capital may flow into BTC, boosting price.
-                """
-            let etfDesc = """
-                Spot BTC ETFs allow traditional investors to gain exposure without holding actual BTC.
-                The ease of acquisition via brokers can significantly expand demand.
-                """
-            let techDesc = """
-                Major improvements in Bitcoin’s protocol or L2 networks (Lightning, etc.)
-                can spur optimism and adoption, enhancing scalability or privacy.
-                """
-            let scarcityDesc = """
-                Unusual events that reduce BTC supply—like large holders moving coins off exchanges—
-                can push prices upward by limiting sell pressure.
-                """
-            let macroDesc = """
-                BTC’s “digital gold” narrative can be strong during uncertainty.
-                Investors may seek refuge in BTC if they lose faith in fiat systems or markets.
-                """
-            let stablecoinShiftDesc = """
-                Sometimes large sums move from stablecoins directly into BTC.
-                This short-term demand spike can push prices up quickly.
-                """
-            let demoDesc = """
-                Younger, more tech-savvy generations often invest in BTC,
-                accelerating mainstream adoption over time.
-                """
-            let altcoinFlightDesc = """
-                During altcoin uncertainty or crackdowns, capital can rotate into BTC,
-                considered the ‘blue-chip’ crypto with the strongest fundamentals.
-                """
-            let adoptionFactorDesc = """
-                A slow, steady upward drift in BTC price from incremental adoption.
-                """
-            
             // HALVING
             FactorToggleRow(
                 iconName: "globe.europe.africa",
@@ -214,18 +161,15 @@ struct SettingsView: View {
                     ? 0.0875...0.6125
                     : 0.0875...0.6125,
                 defaultValue: simSettings.periodUnit == .weeks ? 0.35 : 0.35,
-                parameterDescription: halvingParamDesc,
+                parameterDescription: """
+                    Occurs roughly every four years, reducing the block reward in half.
+                    Historically, halving events have coincided with substantial BTC price increases.
+                    """,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor
             )
-            .anchorPreference(key: TooltipAnchorKey.self, value: .center) { pt in
-                if activeFactor == "Halving" {
-                    return [TooltipItem(title: "Halving",
-                                       description: halvingTooltipDesc,
-                                       anchor: pt)]
-                } else {
-                    return []
-                }
+            .onChange(of: simSettings.useHalvingUnified) { newValue in
+                print("DEBUG: UI sees useHalvingUnified changed to \(newValue)")
             }
             
             // INSTITUTIONAL DEMAND
@@ -238,10 +182,16 @@ struct SettingsView: View {
                     ? 0.00030975...0.00216825
                     : 0.00141475...0.00990322,
                 defaultValue: simSettings.periodUnit == .weeks ? 0.001239 : 0.0056589855,
-                parameterDescription: institutionDesc,
+                parameterDescription: """
+                    Large financial institutions and corporate treasuries entering the BTC market can drive prices up.
+                    Increased legitimacy and adoption by well-known firms can attract more mainstream interest.
+                    """,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor
             )
+            .onChange(of: simSettings.useInstitutionalDemandUnified) { newValue in
+                print("DEBUG: UI sees useInstitutionalDemandUnified changed to \(newValue)")
+            }
             
             // COUNTRY ADOPTION
             FactorToggleRow(
@@ -253,10 +203,16 @@ struct SettingsView: View {
                     ? 0.00024885...0.00174193
                     : 0.00137888...0.00965215,
                 defaultValue: simSettings.periodUnit == .weeks ? 0.00099539 : 0.005515515952320099,
-                parameterDescription: countryDesc,
+                parameterDescription: """
+                    Nations adopting BTC as legal tender or as part of their reserves can lead to massive demand.
+                    Wider government acceptance signals mainstream credibility and new use cases.
+                    """,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor
             )
+            .onChange(of: simSettings.useCountryAdoptionUnified) { newValue in
+                print("DEBUG: UI sees useCountryAdoptionUnified changed to \(newValue)")
+            }
             
             // REGULATORY CLARITY
             FactorToggleRow(
@@ -268,10 +224,16 @@ struct SettingsView: View {
                     ? 0.00019846...0.00138924
                     : 0.00101843...0.00712903,
                 defaultValue: simSettings.periodUnit == .weeks ? 0.00079385 : 0.0040737327,
-                parameterDescription: regClarityDesc,
+                parameterDescription: """
+                    Clear, favourable regulations can reduce uncertainty and risk for investors.
+                    When watchdogs provide guidelines, more capital may flow into BTC, boosting price.
+                    """,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor
             )
+            .onChange(of: simSettings.useRegulatoryClarityUnified) { newValue in
+                print("DEBUG: UI sees useRegulatoryClarityUnified changed to \(newValue)")
+            }
             
             // ETF APPROVAL
             FactorToggleRow(
@@ -283,10 +245,16 @@ struct SettingsView: View {
                     ? 0.0005...0.0035
                     : 0.00142857...0.01,
                 defaultValue: simSettings.periodUnit == .weeks ? 0.002 : 0.0057142851,
-                parameterDescription: etfDesc,
+                parameterDescription: """
+                    Spot BTC ETFs allow traditional investors to gain exposure without holding actual BTC.
+                    The ease of acquisition via brokers can significantly expand demand.
+                    """,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor
             )
+            .onChange(of: simSettings.useEtfApprovalUnified) { newValue in
+                print("DEBUG: UI sees useEtfApprovalUnified changed to \(newValue)")
+            }
             
             // TECH BREAKTHROUGH
             FactorToggleRow(
@@ -298,10 +266,16 @@ struct SettingsView: View {
                     ? 0.0001779...0.00124534
                     : 0.00070968...0.00496739,
                 defaultValue: simSettings.periodUnit == .weeks ? 0.00071162 : 0.0028387091,
-                parameterDescription: techDesc,
+                parameterDescription: """
+                    Major improvements in Bitcoin’s protocol or L2 networks (Lightning, etc.)
+                    can spur optimism and adoption, enhancing scalability or privacy.
+                    """,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor
             )
+            .onChange(of: simSettings.useTechBreakthroughUnified) { newValue in
+                print("DEBUG: UI sees useTechBreakthroughUnified changed to \(newValue)")
+            }
             
             // SCARCITY EVENTS
             FactorToggleRow(
@@ -313,10 +287,16 @@ struct SettingsView: View {
                     ? 0.00010327...0.00072291
                     : 0.00082322...0.00576252,
                 defaultValue: simSettings.periodUnit == .weeks ? 0.00041309 : 0.0032928705475521085,
-                parameterDescription: scarcityDesc,
+                parameterDescription: """
+                    Unusual events that reduce BTC supply—like large holders removing coins from exchanges—
+                    can push prices up by limiting sell pressure.
+                    """,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor
             )
+            .onChange(of: simSettings.useScarcityEventsUnified) { newValue in
+                print("DEBUG: UI sees useScarcityEventsUnified changed to \(newValue)")
+            }
             
             // GLOBAL MACRO HEDGE
             FactorToggleRow(
@@ -328,10 +308,16 @@ struct SettingsView: View {
                     ? 0.00010484...0.00073386
                     : 0.00081106...0.00567742,
                 defaultValue: simSettings.periodUnit == .weeks ? 0.00041935 : 0.0032442397,
-                parameterDescription: macroDesc,
+                parameterDescription: """
+                    BTC’s “digital gold” narrative can be strong during macro uncertainty.
+                    Investors may seek refuge in BTC if they lose faith in fiat or broader markets.
+                    """,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor
             )
+            .onChange(of: simSettings.useGlobalMacroHedgeUnified) { newValue in
+                print("DEBUG: UI sees useGlobalMacroHedgeUnified changed to \(newValue)")
+            }
             
             // STABLECOIN SHIFT
             FactorToggleRow(
@@ -343,10 +329,16 @@ struct SettingsView: View {
                     ? 0.00010123...0.00070863
                     : 0.00057604...0.00403226,
                 defaultValue: simSettings.periodUnit == .weeks ? 0.00040493 : 0.0023041475,
-                parameterDescription: stablecoinShiftDesc,
+                parameterDescription: """
+                    Large sums sometimes move from stablecoins into BTC.
+                    This demand spike can push prices up quickly.
+                    """,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor
             )
+            .onChange(of: simSettings.useStablecoinShiftUnified) { newValue in
+                print("DEBUG: UI sees useStablecoinShiftUnified changed to \(newValue)")
+            }
             
             // DEMOGRAPHIC ADOPTION
             FactorToggleRow(
@@ -358,10 +350,16 @@ struct SettingsView: View {
                     ? 0.00032642...0.00228494
                     : 0.00182278...0.01275947,
                 defaultValue: simSettings.periodUnit == .weeks ? 0.00130568 : 0.007291124714649915,
-                parameterDescription: demoDesc,
+                parameterDescription: """
+                    Younger, tech-savvy generations often invest in BTC,
+                    accelerating mainstream adoption over time.
+                    """,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor
             )
+            .onChange(of: simSettings.useDemographicAdoptionUnified) { newValue in
+                print("DEBUG: UI sees useDemographicAdoptionUnified changed to \(newValue)")
+            }
             
             // ALTCOIN FLIGHT
             FactorToggleRow(
@@ -373,10 +371,16 @@ struct SettingsView: View {
                     ? 0.00007005...0.00049038
                     : 0.00053917...0.00377419,
                 defaultValue: simSettings.periodUnit == .weeks ? 0.00028022 : 0.0021566817,
-                parameterDescription: altcoinFlightDesc,
+                parameterDescription: """
+                    During altcoin uncertainty, capital can rotate into BTC,
+                    the ‘blue-chip’ crypto with the strongest fundamentals.
+                    """,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor
             )
+            .onChange(of: simSettings.useAltcoinFlightUnified) { newValue in
+                print("DEBUG: UI sees useAltcoinFlightUnified changed to \(newValue)")
+            }
             
             // ADOPTION FACTOR
             FactorToggleRow(
@@ -388,10 +392,15 @@ struct SettingsView: View {
                     ? 0.00040113...0.00280789
                     : 0.00366524...0.02565668,
                 defaultValue: simSettings.periodUnit == .weeks ? 0.00160451 : 0.014660959934071304,
-                parameterDescription: adoptionFactorDesc,
+                parameterDescription: """
+                    A slow, steady upward drift in BTC price from ongoing adoption growth.
+                    """,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor
             )
+            .onChange(of: simSettings.useAdoptionFactorUnified) { newValue in
+                print("DEBUG: UI sees useAdoptionFactorUnified changed to \(newValue)")
+            }
         }
         .listRowBackground(Color(white: 0.15))
     }
@@ -399,43 +408,6 @@ struct SettingsView: View {
     // MARK: - BEARISH FACTORS
     private var bearishFactorsSection: some View {
         Section("Bearish Factors") {
-            let clampdownDesc = """
-                Strict government regulations or bans can curb adoption,
-                leading to lower demand and negative price impacts.
-                """
-            let competitorDesc = """
-                A rival cryptocurrency that promises superior tech or speed
-                may siphon capital away from BTC, reducing its dominance.
-                """
-            let breachDesc = """
-                A major hack or exploit targeting BTC or big exchanges
-                can severely damage confidence and cause panic selling.
-                """
-            let bubbleDesc = """
-                Speculative bubbles can burst, causing a rapid and sharp crash
-                once fear and profit-taking set in.
-                """
-            let meltdownDesc = """
-                Major stablecoins de-pegging or collapsing can spark a crisis of confidence
-                that spills over into BTC markets.
-                """
-            let blackSwanDesc = """
-                Highly unpredictable disasters or wars can undermine all markets,
-                including BTC, causing extreme selloffs.
-                """
-            let bearDesc = """
-                Prolonged negativity in crypto can produce a steady downward trend,
-                with capitulations and lower trading volumes.
-                """
-            let maturingDesc = """
-                As BTC matures, growth rates slow, leading to smaller returns
-                and reduced speculative enthusiasm.
-                """
-            let recessionDesc = """
-                Global economic downturns reduce risk appetite,
-                prompting investors to exit BTC to shore up liquidity.
-                """
-            
             FactorToggleRow(
                 iconName: "hand.raised.slash",
                 title: "Regulatory Clampdown",
@@ -445,10 +417,16 @@ struct SettingsView: View {
                     ? -0.00339726 ... -0.00048532
                     : -0.035 ... -0.005,
                 defaultValue: simSettings.periodUnit == .weeks ? -0.00194129 : -0.02,
-                parameterDescription: clampdownDesc,
+                parameterDescription: """
+                    Strict government regulations or bans can curb adoption,
+                    leading to lower demand and negative price impacts.
+                    """,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor
             )
+            .onChange(of: simSettings.useRegClampdownUnified) { newValue in
+                print("DEBUG: UI sees useRegClampdownUnified changed to \(newValue)")
+            }
             
             FactorToggleRow(
                 iconName: "bitcoinsign.circle",
@@ -459,10 +437,16 @@ struct SettingsView: View {
                     ? -0.00197629 ... -0.00028233
                     : -0.014 ... -0.002,
                 defaultValue: simSettings.periodUnit == .weeks ? -0.00112931 : -0.008,
-                parameterDescription: competitorDesc,
+                parameterDescription: """
+                    A rival cryptocurrency with superior tech or speed may siphon capital away from BTC,
+                    reducing its dominance.
+                    """,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor
             )
+            .onChange(of: simSettings.useCompetitorCoinUnified) { newValue in
+                print("DEBUG: UI sees useCompetitorCoinUnified changed to \(newValue)")
+            }
             
             FactorToggleRow(
                 iconName: "lock.shield",
@@ -473,10 +457,15 @@ struct SettingsView: View {
                     ? -0.00222245 ... -0.00031749
                     : -0.01225 ... -0.00175,
                 defaultValue: simSettings.periodUnit == .weeks ? -0.00126997 : -0.007,
-                parameterDescription: breachDesc,
+                parameterDescription: """
+                    A major hack or exploit can severely damage confidence and cause panic selling.
+                    """,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor
             )
+            .onChange(of: simSettings.useSecurityBreachUnified) { newValue in
+                print("DEBUG: UI sees useSecurityBreachUnified changed to \(newValue)")
+            }
             
             FactorToggleRow(
                 iconName: "bubble.left.and.bubble.right.fill",
@@ -487,10 +476,16 @@ struct SettingsView: View {
                     ? -0.00562501 ... -0.00080357
                     : -0.0175 ... -0.0025,
                 defaultValue: simSettings.periodUnit == .weeks ? -0.00321429 : -0.01,
-                parameterDescription: bubbleDesc,
+                parameterDescription: """
+                    Speculative bubbles can burst, causing a rapid and sharp crash
+                    once fear and profit-taking set in.
+                    """,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor
             )
+            .onChange(of: simSettings.useBubblePopUnified) { newValue in
+                print("DEBUG: UI sees useBubblePopUnified changed to \(newValue)")
+            }
             
             FactorToggleRow(
                 iconName: "exclamationmark.triangle.fill",
@@ -501,10 +496,16 @@ struct SettingsView: View {
                     ? -0.00296371 ... -0.00042339
                     : -0.0175 ... -0.0025,
                 defaultValue: simSettings.periodUnit == .weeks ? -0.00169355 : -0.01,
-                parameterDescription: meltdownDesc,
+                parameterDescription: """
+                    Major stablecoins de-pegging or collapsing can spark a crisis of confidence
+                    that spills over into BTC.
+                    """,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor
             )
+            .onChange(of: simSettings.useStablecoinMeltdownUnified) { newValue in
+                print("DEBUG: UI sees useStablecoinMeltdownUnified changed to \(newValue)")
+            }
             
             FactorToggleRow(
                 iconName: "tornado",
@@ -512,16 +513,19 @@ struct SettingsView: View {
                 isOn: $simSettings.useBlackSwanUnified,
                 sliderValue: $simSettings.blackSwanDropUnified,
                 sliderRange: simSettings.periodUnit == .weeks
-                    // Old weekly range unchanged
                     ? -1.196655 ... -0.398885
-                    // New monthly range: -0.8 ... 0.0, with midpoint -0.4
                     : -0.8 ... 0.0,
-                // New monthly default is -0.4 (midpoint). Weekly remains -0.79777.
                 defaultValue: simSettings.periodUnit == .weeks ? -0.79777 : -0.4,
-                parameterDescription: blackSwanDesc,
+                parameterDescription: """
+                    Highly unpredictable disasters or wars can undermine all markets,
+                    including BTC, causing extreme selloffs.
+                    """,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor
             )
+            .onChange(of: simSettings.useBlackSwanUnified) { newValue in
+                print("DEBUG: UI sees useBlackSwanUnified changed to \(newValue)")
+            }
             
             FactorToggleRow(
                 iconName: "chart.bar.xaxis",
@@ -532,10 +536,16 @@ struct SettingsView: View {
                     ? -0.00175 ... -0.00025
                     : -0.0175 ... -0.0025,
                 defaultValue: simSettings.periodUnit == .weeks ? -0.001 : -0.01,
-                parameterDescription: bearDesc,
+                parameterDescription: """
+                    Prolonged negativity in crypto can produce a steady downward trend,
+                    with capitulations and lower trading volumes.
+                    """,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor
             )
+            .onChange(of: simSettings.useBearMarketUnified) { newValue in
+                print("DEBUG: UI sees useBearMarketUnified changed to \(newValue)")
+            }
             
             FactorToggleRow(
                 iconName: "chart.line.downtrend.xyaxis",
@@ -546,10 +556,16 @@ struct SettingsView: View {
                     ? -0.00572043 ... -0.00081720
                     : -0.0175 ... -0.0025,
                 defaultValue: simSettings.periodUnit == .weeks ? -0.00326882 : -0.01,
-                parameterDescription: maturingDesc,
+                parameterDescription: """
+                    As BTC matures, growth rates slow, reducing speculative enthusiasm
+                    and leading to smaller returns.
+                    """,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor
             )
+            .onChange(of: simSettings.useMaturingMarketUnified) { newValue in
+                print("DEBUG: UI sees useMaturingMarketUnified changed to \(newValue)")
+            }
             
             FactorToggleRow(
                 iconName: "chart.line.downtrend.xyaxis.circle.fill",
@@ -560,10 +576,16 @@ struct SettingsView: View {
                     ? -0.00176280 ... -0.00025183
                     : -0.00217621 ... -0.00072540,
                 defaultValue: simSettings.periodUnit == .weeks ? -0.00100732 : -0.00145081,
-                parameterDescription: recessionDesc,
+                parameterDescription: """
+                    Global economic downturns reduce risk appetite,
+                    prompting investors to exit BTC to shore up liquidity.
+                    """,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor
             )
+            .onChange(of: simSettings.useRecessionUnified) { newValue in
+                print("DEBUG: UI sees useRecessionUnified changed to \(newValue)")
+            }
         }
         .listRowBackground(Color(white: 0.15))
     }
@@ -583,6 +605,9 @@ struct SettingsView: View {
             )
             .tint(.orange)
             .foregroundColor(.white)
+            .onChange(of: simSettings.toggleAll) { newVal in
+                print("DEBUG: UI sees toggleAll changed to \(newVal)")
+            }
         } header: {
             Text("Toggle All Factors")
         } footer: {
@@ -669,7 +694,6 @@ struct SettingsView: View {
     // MARK: - AUTOCORRELATION
     private var autocorrelationSection: some View {
         Section {
-            // Toggle
             Toggle("Use Autocorrelation", isOn: $simSettings.useAutoCorrelation)
                 // Toggle is orange when on, grey otherwise
                 .tint(simSettings.useAutoCorrelation ? .orange : .gray)
@@ -679,17 +703,13 @@ struct SettingsView: View {
             Group {
                 // Strength slider
                 HStack {
-                    // Reset button (icon) for Autocorrelation Strength
                     Button {
-                        // Assign your default value here:
-                        // e.g. if your default is 0.3, do:
                         simSettings.autoCorrelationStrength = 0.3
                     } label: {
                         Image(systemName: "arrow.uturn.backward.circle")
                             .foregroundColor(.orange)
                     }
                     .buttonStyle(.plain)
-                    // Add some spacing if you like
                     .padding(.trailing, 4)
                     
                     Text("Autocorrelation Strength")
@@ -701,10 +721,7 @@ struct SettingsView: View {
                 
                 // Mean reversion slider
                 HStack {
-                    // Reset button (icon) for Mean Reversion Target
                     Button {
-                        // Assign your default value here:
-                        // e.g. if your default is 0.0, do:
                         simSettings.meanReversionTarget = 0.0
                     } label: {
                         Image(systemName: "arrow.uturn.backward.circle")
@@ -720,7 +737,6 @@ struct SettingsView: View {
                         .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
                 }
             }
-            // Disable & dim if autocorrelation is off
             .disabled(!simSettings.useAutoCorrelation)
             .opacity(simSettings.useAutoCorrelation ? 1.0 : 0.4)
         } header: {

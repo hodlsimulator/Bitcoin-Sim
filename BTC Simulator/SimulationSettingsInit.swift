@@ -102,75 +102,114 @@ extension SimulationSettings {
 
         // 3) MARK: - Load Bullish Factors (Parent Toggles)
 
+        // Halving
         if let storedHalving = defaults.object(forKey: "useHalving") as? Bool {
             self.useHalving = storedHalving
         }
+
+        // Institutional Demand
         if let storedInstitutional = defaults.object(forKey: "useInstitutionalDemand") as? Bool {
             self.useInstitutionalDemand = storedInstitutional
         }
+
+        // Country Adoption
         if let storedCountry = defaults.object(forKey: "useCountryAdoption") as? Bool {
             self.useCountryAdoption = storedCountry
         }
+
+        // Regulatory Clarity
         if let storedRegClarity = defaults.object(forKey: "useRegulatoryClarity") as? Bool {
             self.useRegulatoryClarity = storedRegClarity
         }
+
+        // ETF Approval
         if let storedEtf = defaults.object(forKey: "useEtfApproval") as? Bool {
             self.useEtfApproval = storedEtf
         }
+
+        // Tech Breakthrough
         if let storedTech = defaults.object(forKey: "useTechBreakthrough") as? Bool {
             self.useTechBreakthrough = storedTech
         }
+
+        // Scarcity Events
         if let storedScarcity = defaults.object(forKey: "useScarcityEvents") as? Bool {
             self.useScarcityEvents = storedScarcity
         }
+
+        // Global Macro Hedge
         if let storedMacro = defaults.object(forKey: "useGlobalMacroHedge") as? Bool {
             self.useGlobalMacroHedge = storedMacro
         }
+
+        // Stablecoin Shift
         if let storedStableShift = defaults.object(forKey: "useStablecoinShift") as? Bool {
             self.useStablecoinShift = storedStableShift
         }
+
+        // Demographic Adoption
         if let storedDemo = defaults.object(forKey: "useDemographicAdoption") as? Bool {
             self.useDemographicAdoption = storedDemo
         }
+
+        // Altcoin Flight
         if let storedAltcoinFlight = defaults.object(forKey: "useAltcoinFlight") as? Bool {
             self.useAltcoinFlight = storedAltcoinFlight
         }
+
+        // Adoption Factor
         if let storedAdoption = defaults.object(forKey: "useAdoptionFactor") as? Bool {
             self.useAdoptionFactor = storedAdoption
         }
 
         // 4) MARK: - Load Bearish Factors (Parent Toggles)
 
+        // Regulatory Clampdown
         if let storedRegClamp = defaults.object(forKey: "useRegClampdown") as? Bool {
             self.useRegClampdown = storedRegClamp
         }
+
+        // Competitor Coin
         if let storedCompetitor = defaults.object(forKey: "useCompetitorCoin") as? Bool {
             self.useCompetitorCoin = storedCompetitor
         }
+
+        // Security Breach
         if let storedSecBreach = defaults.object(forKey: "useSecurityBreach") as? Bool {
             self.useSecurityBreach = storedSecBreach
         }
+
+        // Bubble Pop
         if let storedBubblePop = defaults.object(forKey: "useBubblePop") as? Bool {
             self.useBubblePop = storedBubblePop
         }
+
+        // Stablecoin Meltdown
         if let storedStableMeltdown = defaults.object(forKey: "useStablecoinMeltdown") as? Bool {
             self.useStablecoinMeltdown = storedStableMeltdown
         }
+
+        // Black Swan
         if let storedSwan = defaults.object(forKey: "useBlackSwan") as? Bool {
             self.useBlackSwan = storedSwan
         }
+
+        // Bear Market
         if let storedBearMkt = defaults.object(forKey: "useBearMarket") as? Bool {
             self.useBearMarket = storedBearMkt
         }
+
+        // Maturing Market
         if let storedMaturing = defaults.object(forKey: "useMaturingMarket") as? Bool {
             self.useMaturingMarket = storedMaturing
         }
+
+        // Recession
         if let storedRecession = defaults.object(forKey: "useRecession") as? Bool {
             self.useRecession = storedRecession
         }
 
         // 5) MARK: - Load Child Toggles (Weekly/Monthly)
-
         // Halving
         if let storedHalvingWeekly = defaults.object(forKey: "useHalvingWeekly") as? Bool {
             self.useHalvingWeekly = storedHalvingWeekly
@@ -469,19 +508,31 @@ extension SimulationSettings {
 
         // 7) Done loading from UserDefaults so far:
         self.isUpdating = false
-        self.isInitialized = true
 
-        // 9) Now sync the master toggle once
-        self.syncToggleAllState()
+        // 9) Sync toggleAll once (optional)
+        // self.// syncToggleAllState()
 
         // 10) Handle first launch scenario
         if defaults.object(forKey: "hasLaunchedBefore") == nil {
             defaults.set(true, forKey: "hasLaunchedBefore")
-            // Turn everything on (this triggers "pick weekly" in each parent's didSet).
+
+            // (A) We’re now ready to let toggles persist
+            self.isInitialized = true
+
+            // (B) If you want to avoid extra didSet triggers:
             self.isUpdating = true
-            self.toggleAll = true
+            finalizeToggleStateAfterLoad()
             self.isUpdating = false
-            self.syncToggleAllState()
+
+            // (C) We remove the line that previously forced toggleAll = true,
+            // so partial toggles won't be overwritten on the first launch.
+
+            // // syncToggleAllState()
+        } else {
+            // If not first launch, just finalize & sync
+            self.isInitialized = true
+            finalizeToggleStateAfterLoad()
+            // // syncToggleAllState()
         }
     }
 }
