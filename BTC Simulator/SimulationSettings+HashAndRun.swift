@@ -33,27 +33,8 @@ extension SimulationSettings {
         hasher.combine(currencyPreference.rawValue)
         hasher.combine(exchangeRateEURUSD)
 
-        hasher.combine(useHalving)
-        hasher.combine(useInstitutionalDemand)
-        hasher.combine(useCountryAdoption)
-        hasher.combine(useRegulatoryClarity)
-        hasher.combine(useEtfApproval)
-        hasher.combine(useTechBreakthrough)
-        hasher.combine(useScarcityEvents)
-        hasher.combine(useGlobalMacroHedge)
-        hasher.combine(useStablecoinShift)
-        hasher.combine(useDemographicAdoption)
-        hasher.combine(useAltcoinFlight)
-        hasher.combine(useAdoptionFactor)
-        hasher.combine(useRegClampdown)
-        hasher.combine(useCompetitorCoin)
-        hasher.combine(useSecurityBreach)
-        hasher.combine(useBubblePop)
-        hasher.combine(useStablecoinMeltdown)
-        hasher.combine(useBlackSwan)
-        hasher.combine(useBearMarket)
-        hasher.combine(useMaturingMarket)
-        hasher.combine(useRecession)
+        // Removed all parent toggles like useHalving, useInstitutionalDemand, etc.
+        // Keep lockHistoricalSampling if needed
         hasher.combine(lockHistoricalSampling)
 
         // Weekly/Monthly children
@@ -178,9 +159,9 @@ extension SimulationSettings {
             exchangeRateEURUSD: exchangeRateEURUSD
         )
 
-        print("// DEBUG: runSimulation() => newHash = \(newHash), storedInputsHash = unknown or not set.")
+        print("// DEBUG: runSimulation() => newHash = \(newHash)")
         
-        // Assuming you have a printAllSettings() or similar:
+        // e.g. printAllSettings() or similar
         printAllSettings()
     }
 }

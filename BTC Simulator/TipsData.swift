@@ -8,7 +8,7 @@
 import Foundation
 
 struct TipsData {
-    // ~32 original, now +32 more => ~64 total
+    // ~64 total (32 original + 32 new)
     static let loadingTips: [String] = [
         // Original 32:
         "Gathering BTC historical returns…",
@@ -79,11 +79,10 @@ struct TipsData {
         "Quietly crossing fingers for a good outcome…"
     ]
     
-    // ~32 original, now +32 more => ~64 total
+    // ~64 total (32 original + 32 new)
     static let usageTips: [String] = [
         // Original 32:
         "Tip: Drag the 3D spinner to adjust its speed. Give it a fling!",
-        // "Tip: Double-tap the spinner to flip its rotation direction.",
         "Tip: Scroll sideways in the results table to reveal extra columns.",
         "Tip: Lock the seed in Settings for repeatable outcomes.",
         "Tip: See ‘About’ for a peek at the simulation’s logic.",
@@ -116,7 +115,6 @@ struct TipsData {
         "Tip: Turn all factors off for a plain baseline simulation.",
         
         // New ~32:
-        // "Tip: Triple-tap the spinner to pause its rotation entirely.",
         "Tip: Swipe quickly on the results table to skip 10 rows at a time.",
         "Tip: Increase threshold 2 for fewer partial cash-outs.",
         "Tip: For an extreme bull scenario, turn on every bullish factor at once.",
@@ -133,8 +131,6 @@ struct TipsData {
         "Tip: Focus on best-case scenario by examining the 90th percentile run.",
         "Tip: Flip from weekly to monthly in Settings to reduce steps.",
         "Tip: If you’re short-term, reduce user periods for fewer data rows.",
-        // "Tip: Press and hold the back arrow to quickly switch toggles.",
-        // "Tip: Halving default bump is 0.48—change it if you have another guess.",
         "Tip: If random seed is locked, you’ll see the same run each time.",
         "Tip: Consider black swan events if you fear big market shocks.",
         "Tip: Scarcity events can replicate exchange outflows or lost wallets.",
@@ -150,28 +146,30 @@ struct TipsData {
         "Tip: ‘Adoption Factor’ adds a slow, constant tailwind to BTC prices."
     ]
     
-    // Filter out tips referencing factors that are turned OFF
+    // Now check only child toggles (weekly/monthly).
+    // For meltdown, for example, we use:
+    //   if !(settings.useStablecoinMeltdownWeekly || settings.useStablecoinMeltdownMonthly) { ... }
+    
     static func filteredLoadingTips(for settings: SimulationSettings) -> [String] {
         var tips = loadingTips
         
-        // (1) stablecoin meltdown references
-        if !settings.useStablecoinMeltdown {
+        // (1) stablecoin meltdown references => check meltdown weekly OR monthly
+        if !(settings.useStablecoinMeltdownWeekly || settings.useStablecoinMeltdownMonthly) {
             tips.removeAll { tip in
                 tip.lowercased().contains("stablecoin meltdown") ||
                 tip.lowercased().contains("tether collapse") ||
                 tip.lowercased().contains("stablecoin collapses") ||
                 tip.lowercased().contains("enabling or disabling stablecoin meltdown triggers")
-                
             }
         } else {
-            // (1B) If meltdown is ON, remove “turn on stablecoin meltdown” references (if any)
+            // meltdown is ON, remove “turn meltdown on” references if present
             tips.removeAll { tip in
                 tip.lowercased().contains("test tether collapse by enabling")
             }
         }
         
-        // (2) stablecoin shift references
-        if !settings.useStablecoinShift {
+        // (2) stablecoin shift => check shift weekly OR monthly
+        if !(settings.useStablecoinShiftWeekly || settings.useStablecoinShiftMonthly) {
             tips.removeAll { tip in
                 tip.lowercased().contains("stablecoin shift") ||
                 tip.lowercased().contains("stablecoin inflows") ||
@@ -179,53 +177,52 @@ struct TipsData {
             }
         }
         
-        // (3) halving references
-        if !settings.useHalving {
+        // (3) halving => check halving weekly OR monthly
+        if !(settings.useHalvingWeekly || settings.useHalvingMonthly) {
             tips.removeAll { tip in
                 tip.lowercased().contains("halving")
             }
         }
         
-        // (4) bubble pop references
-        if !settings.useBubblePop {
+        // (4) bubble pop => check bubble weekly OR monthly
+        if !(settings.useBubblePopWeekly || settings.useBubblePopMonthly) {
             tips.removeAll { tip in
                 tip.lowercased().contains("bubble") ||
                 tip.lowercased().contains("mania")
             }
         }
         
-        // (5) black swan references
-        if !settings.useBlackSwan {
+        // (5) black swan => check black swan weekly OR monthly
+        if !(settings.useBlackSwanWeekly || settings.useBlackSwanMonthly) {
             tips.removeAll { tip in
                 tip.lowercased().contains("black swan")
             }
         }
         
-        // (6) country adoption references
-        if !settings.useCountryAdoption {
+        // (6) country adoption => check country adoption weekly OR monthly
+        if !(settings.useCountryAdoptionWeekly || settings.useCountryAdoptionMonthly) {
             tips.removeAll { tip in
                 tip.lowercased().contains("country-level adoption") ||
                 tip.lowercased().contains("el salvador") ||
                 tip.lowercased().contains("country adoption")
             }
         } else {
-            // (6B) If it's ON, remove “turn on” tips
+            // If country adoption is ON, remove “turn on” references
             tips.removeAll { tip in
                 tip.lowercased().contains("want an el salvador moment") ||
                 tip.lowercased().contains("turn on ‘country adoption’")
             }
         }
         
-        // (7) competitor coin references
-        if !settings.useCompetitorCoin {
+        // (7) competitor coin => check competitor weekly OR monthly
+        if !(settings.useCompetitorCoinWeekly || settings.useCompetitorCoinMonthly) {
             tips.removeAll { tip in
-                tip.lowercased().contains("competitor coin") ||
-                tip.lowercased().contains("competitor coins")
+                tip.lowercased().contains("competitor coin")
             }
         }
         
-        // (8) security breach references
-        if !settings.useSecurityBreach {
+        // (8) security breach => check security breach weekly OR monthly
+        if !(settings.useSecurityBreachWeekly || settings.useSecurityBreachMonthly) {
             tips.removeAll { tip in
                 tip.lowercased().contains("security breach") ||
                 tip.lowercased().contains("hacking scare") ||
@@ -233,83 +230,86 @@ struct TipsData {
             }
         }
         
-        // (9) institutional demand references
-        if !settings.useInstitutionalDemand {
+        // (9) institutional demand => check inst demand weekly OR monthly
+        if !(settings.useInstitutionalDemandWeekly || settings.useInstitutionalDemandMonthly) {
             tips.removeAll { tip in
                 tip.lowercased().contains("institutional demand") ||
                 tip.lowercased().contains("fomo")
             }
         }
         
-        // (10) reg clampdown references
-        if !settings.useRegClampdown {
+        // (10) reg clampdown => check clampdown weekly OR monthly
+        if !(settings.useRegClampdownWeekly || settings.useRegClampdownMonthly) {
             tips.removeAll { tip in
                 tip.lowercased().contains("regulatory clampdown") ||
                 tip.lowercased().contains("reg clampdown")
             }
         }
         
-        // (11) altcoin flight references
-        if !settings.useAltcoinFlight {
+        // (11) altcoin flight => check altcoin flight weekly OR monthly
+        if !(settings.useAltcoinFlightWeekly || settings.useAltcoinFlightMonthly) {
             tips.removeAll { tip in
                 tip.lowercased().contains("altcoin flight") ||
                 tip.lowercased().contains("capital rotates back to btc")
             }
         }
         
-        // (12) global macro hedge references
-        if !settings.useGlobalMacroHedge {
+        // (12) global macro hedge => check macro hedge weekly OR monthly
+        if !(settings.useGlobalMacroHedgeWeekly || settings.useGlobalMacroHedgeMonthly) {
             tips.removeAll { tip in
                 tip.lowercased().contains("macro hedge")
             }
         }
         
-        // (13) scarcity events references
-        if !settings.useScarcityEvents {
+        // (13) scarcity events => check scarcity weekly OR monthly
+        if !(settings.useScarcityEventsWeekly || settings.useScarcityEventsMonthly) {
             tips.removeAll { tip in
                 tip.lowercased().contains("scarcity")
             }
         }
         
-        // (14) maturing market references
-        if !settings.useMaturingMarket {
+        // (14) maturing market => check maturing weekly OR monthly
+        if !(settings.useMaturingMarketWeekly || settings.useMaturingMarketMonthly) {
             tips.removeAll { tip in
                 tip.lowercased().contains("maturing market") ||
                 tip.lowercased().contains("slower growth")
             }
         }
         
-        // (15) bear market references
-        if !settings.useBearMarket {
+        // (15) bear market => check bear market weekly OR monthly
+        if !(settings.useBearMarketWeekly || settings.useBearMarketMonthly) {
             tips.removeAll { tip in
                 tip.lowercased().contains("bear market")
             }
         }
         
-        // (16) adoption factor references
-        if !settings.useAdoptionFactor && !settings.useDemographicAdoption {
+        // (16) adoption factor references => check both adoption factor + demographic
+        // i.e. remove if BOTH are off (weekly & monthly)
+        let adoptionOff = !(settings.useAdoptionFactorWeekly || settings.useAdoptionFactorMonthly)
+        let demoAdoptionOff = !(settings.useDemographicAdoptionWeekly || settings.useDemographicAdoptionMonthly)
+        if adoptionOff && demoAdoptionOff {
             tips.removeAll { tip in
                 tip.lowercased().contains("adoption") ||
                 tip.lowercased().contains("generational adoption") ||
-                tip.lowercased().contains("demographic switchover")
+                tip.lowercased().contains("demographic")
             }
         }
         
-        // (17) recession references
-        if !settings.useRecession {
+        // (17) recession => check recession weekly OR monthly
+        if !(settings.useRecessionWeekly || settings.useRecessionMonthly) {
             tips.removeAll { tip in
                 tip.lowercased().contains("recession")
             }
         }
         
-        // (18) random seed references
+        // (18) random seed references => same logic as before
         if settings.lockedRandomSeed {
             tips.removeAll { tip in
                 tip.lowercased().contains("random seed")
             }
         }
         
-        // (19) vol shocks references
+        // (19) vol shocks => check if user turned them off
         if !settings.useVolShocks {
             tips.removeAll { tip in
                 tip.lowercased().contains("volatility changes") ||
@@ -319,7 +319,7 @@ struct TipsData {
             }
         }
         
-        // (20) historical sampling references
+        // (20) historical sampling => check if off
         if !settings.useHistoricalSampling {
             tips.removeAll { tip in
                 tip.lowercased().contains("gathering btc historical returns") ||
@@ -329,23 +329,23 @@ struct TipsData {
             }
         }
         
-        // (21) regulatory clarity references
-        if !settings.useRegulatoryClarity {
+        // (21) regulatory clarity => check weekly OR monthly
+        if !(settings.useRegulatoryClarityWeekly || settings.useRegulatoryClarityMonthly) {
             tips.removeAll { tip in
                 tip.lowercased().contains("regulatory clarity")
             }
         }
         
-        // (22) etf approval references
-        if !settings.useEtfApproval {
+        // (22) etf approval => check weekly OR monthly
+        if !(settings.useEtfApprovalWeekly || settings.useEtfApprovalMonthly) {
             tips.removeAll { tip in
                 tip.lowercased().contains("etf approval") ||
                 tip.lowercased().contains("etf approvals")
             }
         }
         
-        // (23) tech breakthroughs references
-        if !settings.useTechBreakthrough {
+        // (23) tech breakthrough => check weekly OR monthly
+        if !(settings.useTechBreakthroughWeekly || settings.useTechBreakthroughMonthly) {
             tips.removeAll { tip in
                 tip.lowercased().contains("tech breakthrough") ||
                 tip.lowercased().contains("lightning expansions") ||
@@ -359,36 +359,36 @@ struct TipsData {
     static func filteredUsageTips(for settings: SimulationSettings) -> [String] {
         var tips = usageTips
         
-        // (1) stablecoin meltdown references
-        if !settings.useStablecoinMeltdown {
+        // (1) meltdown => check meltdown weekly OR monthly
+        if !(settings.useStablecoinMeltdownWeekly || settings.useStablecoinMeltdownMonthly) {
             tips.removeAll { tip in
                 tip.lowercased().contains("stablecoin meltdown") ||
                 tip.lowercased().contains("tether collapse")
             }
         } else {
-            // (1B) If meltdown is ON, remove “turn on meltdown” references (if any)
+            // meltdown is ON, remove “turn meltdown on” references
             tips.removeAll { tip in
                 tip.lowercased().contains("test tether collapse by enabling")
             }
         }
         
-        // (2) stablecoin shift references
-        if !settings.useStablecoinShift {
+        // (2) shift => check shift weekly OR monthly
+        if !(settings.useStablecoinShiftWeekly || settings.useStablecoinShiftMonthly) {
             tips.removeAll { tip in
                 tip.lowercased().contains("stablecoin shift") ||
                 tip.lowercased().contains("meltdown + shift toggles")
             }
         }
         
-        // (3) halving references
-        if !settings.useHalving {
+        // (3) halving => check weekly OR monthly
+        if !(settings.useHalvingWeekly || settings.useHalvingMonthly) {
             tips.removeAll { tip in
                 tip.lowercased().contains("halving")
             }
         }
         
-        // (4) bubble pop references
-        if !settings.useBubblePop {
+        // (4) bubble pop => check weekly OR monthly
+        if !(settings.useBubblePopWeekly || settings.useBubblePopMonthly) {
             tips.removeAll { tip in
                 tip.lowercased().contains("bubble pop") ||
                 tip.lowercased().contains("bubble can keep rising") ||
@@ -396,36 +396,35 @@ struct TipsData {
             }
         }
         
-        // (5) black swan references
-        if !settings.useBlackSwan {
+        // (5) black swan => check weekly OR monthly
+        if !(settings.useBlackSwanWeekly || settings.useBlackSwanMonthly) {
             tips.removeAll { tip in
                 tip.lowercased().contains("black swan")
             }
         }
         
-        // (6) country adoption references
-        if !settings.useCountryAdoption {
+        // (6) country adoption => check weekly OR monthly
+        if !(settings.useCountryAdoptionWeekly || settings.useCountryAdoptionMonthly) {
             tips.removeAll { tip in
                 tip.lowercased().contains("country adoption") ||
                 tip.lowercased().contains("el salvador")
             }
         } else {
-            // (6B) If it's ON, remove “turn on” tips
             tips.removeAll { tip in
                 tip.lowercased().contains("want an el salvador moment") ||
                 tip.lowercased().contains("turn on ‘country adoption’")
             }
         }
         
-        // (7) competitor coin references
-        if !settings.useCompetitorCoin {
+        // (7) competitor coin => check weekly OR monthly
+        if !(settings.useCompetitorCoinWeekly || settings.useCompetitorCoinMonthly) {
             tips.removeAll { tip in
                 tip.lowercased().contains("competitor coin")
             }
         }
         
-        // (8) security breach references
-        if !settings.useSecurityBreach {
+        // (8) security breach => check weekly OR monthly
+        if !(settings.useSecurityBreachWeekly || settings.useSecurityBreachMonthly) {
             tips.removeAll { tip in
                 tip.lowercased().contains("security breach") ||
                 tip.lowercased().contains("hacking scare") ||
@@ -433,74 +432,76 @@ struct TipsData {
             }
         }
         
-        // (9) institutional demand references
-        if !settings.useInstitutionalDemand {
+        // (9) institutional demand => check weekly OR monthly
+        if !(settings.useInstitutionalDemandWeekly || settings.useInstitutionalDemandMonthly) {
             tips.removeAll { tip in
                 tip.lowercased().contains("institutional demand")
             }
         }
         
-        // (10) reg clampdown references
-        if !settings.useRegClampdown {
+        // (10) reg clampdown => check weekly OR monthly
+        if !(settings.useRegClampdownWeekly || settings.useRegClampdownMonthly) {
             tips.removeAll { tip in
                 tip.lowercased().contains("reg clampdown") ||
                 tip.lowercased().contains("regulatory clampdown")
             }
         }
         
-        // (11) altcoin flight references
-        if !settings.useAltcoinFlight {
+        // (11) altcoin flight => check weekly OR monthly
+        if !(settings.useAltcoinFlightWeekly || settings.useAltcoinFlightMonthly) {
             tips.removeAll { tip in
                 tip.lowercased().contains("altcoin flight")
             }
         }
         
-        // (12) global macro hedge references
-        if !settings.useGlobalMacroHedge {
+        // (12) global macro hedge => check weekly OR monthly
+        if !(settings.useGlobalMacroHedgeWeekly || settings.useGlobalMacroHedgeMonthly) {
             tips.removeAll { tip in
                 tip.lowercased().contains("macro hedge")
             }
         }
         
-        // (13) scarcity events references
-        if !settings.useScarcityEvents {
+        // (13) scarcity events => check weekly OR monthly
+        if !(settings.useScarcityEventsWeekly || settings.useScarcityEventsMonthly) {
             tips.removeAll { tip in
                 tip.lowercased().contains("scarcity event")
             }
         }
         
-        // (14) maturing market references
-        if !settings.useMaturingMarket {
+        // (14) maturing market => check weekly OR monthly
+        if !(settings.useMaturingMarketWeekly || settings.useMaturingMarketMonthly) {
             tips.removeAll { tip in
                 tip.lowercased().contains("maturing market")
             }
         }
         
-        // (15) bear market references
-        if !settings.useBearMarket {
+        // (15) bear market => check weekly OR monthly
+        if !(settings.useBearMarketWeekly || settings.useBearMarketMonthly) {
             tips.removeAll { tip in
                 tip.lowercased().contains("bear market") ||
                 tip.lowercased().contains("2018’s drawdowns")
             }
         }
         
-        // (16) adoption factor references
-        if !settings.useAdoptionFactor && !settings.useDemographicAdoption {
+        // (16) adoption factor & demographic => remove if BOTH are off
+        let adoptionOff = !(settings.useAdoptionFactorWeekly || settings.useAdoptionFactorMonthly)
+        let demoOff = !(settings.useDemographicAdoptionWeekly || settings.useDemographicAdoptionMonthly)
+        if adoptionOff && demoOff {
             tips.removeAll { tip in
                 tip.lowercased().contains("adoption factor") ||
                 tip.lowercased().contains("demographic switchover") ||
-                tip.lowercased().contains("adoption")  // covers references to 'adoption' generally
+                tip.lowercased().contains("adoption") // covers references to adoption
             }
         }
         
-        // (17) recession references
-        if !settings.useRecession {
+        // (17) recession => check weekly OR monthly
+        if !(settings.useRecessionWeekly || settings.useRecessionMonthly) {
             tips.removeAll { tip in
                 tip.lowercased().contains("recession")
             }
         }
         
-        // (18) random seed references
+        // (18) random seed references => same logic
         if settings.lockedRandomSeed {
             tips.removeAll { tip in
                 tip.lowercased().contains("random seed") ||
@@ -508,33 +509,32 @@ struct TipsData {
             }
         }
         
-        // (19) vol shocks references
+        // (19) vol shocks => if off, remove volatility references
         if !settings.useVolShocks {
             tips.removeAll { tip in
                 tip.lowercased().contains("volatility")
             }
         }
         
-        // (20) if needed, remove historical references here (not shown, but you could do similar):
-        // e.g. if !settings.useHistoricalSampling { ... }
+        // (Optional 20) historical sampling checks if needed, similar pattern…
         
-        // (21) regulatory clarity references
-        if !settings.useRegulatoryClarity {
+        // (21) regulatory clarity => check weekly OR monthly
+        if !(settings.useRegulatoryClarityWeekly || settings.useRegulatoryClarityMonthly) {
             tips.removeAll { tip in
                 tip.lowercased().contains("regulatory clarity")
             }
         }
         
-        // (22) etf approval references
-        if !settings.useEtfApproval {
+        // (22) etf approval => check weekly OR monthly
+        if !(settings.useEtfApprovalWeekly || settings.useEtfApprovalMonthly) {
             tips.removeAll { tip in
                 tip.lowercased().contains("etf approval") ||
                 tip.lowercased().contains("etf approvals")
             }
         }
         
-        // (23) tech breakthroughs references
-        if !settings.useTechBreakthrough {
+        // (23) tech breakthroughs => check weekly OR monthly
+        if !(settings.useTechBreakthroughWeekly || settings.useTechBreakthroughMonthly) {
             tips.removeAll { tip in
                 tip.lowercased().contains("tech breakthrough") ||
                 tip.lowercased().contains("lightning expansions") ||

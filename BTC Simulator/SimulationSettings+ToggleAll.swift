@@ -8,28 +8,54 @@
 import SwiftUI
 
 extension SimulationSettings {
-    /// This is still useful if you want an easy way to check if all toggles are on.
+    /// Previously checked parent toggles.
+    /// Now we rewrite areAllFactorsEnabled to reference only weekly or monthly toggles,
+    /// based on the current periodUnit.
     var areAllFactorsEnabled: Bool {
-        useHalving &&
-        useInstitutionalDemand &&
-        useCountryAdoption &&
-        useRegulatoryClarity &&
-        useEtfApproval &&
-        useTechBreakthrough &&
-        useScarcityEvents &&
-        useGlobalMacroHedge &&
-        useStablecoinShift &&
-        useDemographicAdoption &&
-        useAltcoinFlight &&
-        useAdoptionFactor &&
-        useRegClampdown &&
-        useCompetitorCoin &&
-        useSecurityBreach &&
-        useBubblePop &&
-        useStablecoinMeltdown &&
-        useBlackSwan &&
-        useBearMarket &&
-        useMaturingMarket &&
-        useRecession
+        if periodUnit == .weeks {
+            return useHalvingWeekly
+                && useInstitutionalDemandWeekly
+                && useCountryAdoptionWeekly
+                && useRegulatoryClarityWeekly
+                && useEtfApprovalWeekly
+                && useTechBreakthroughWeekly
+                && useScarcityEventsWeekly
+                && useGlobalMacroHedgeWeekly
+                && useStablecoinShiftWeekly
+                && useDemographicAdoptionWeekly
+                && useAltcoinFlightWeekly
+                && useAdoptionFactorWeekly
+                && useRegClampdownWeekly
+                && useCompetitorCoinWeekly
+                && useSecurityBreachWeekly
+                && useBubblePopWeekly
+                && useStablecoinMeltdownWeekly
+                && useBlackSwanWeekly
+                && useBearMarketWeekly
+                && useMaturingMarketWeekly
+                && useRecessionWeekly
+        } else {
+            return useHalvingMonthly
+                && useInstitutionalDemandMonthly
+                && useCountryAdoptionMonthly
+                && useRegulatoryClarityMonthly
+                && useEtfApprovalMonthly
+                && useTechBreakthroughMonthly
+                && useScarcityEventsMonthly
+                && useGlobalMacroHedgeMonthly
+                && useStablecoinShiftMonthly
+                && useDemographicAdoptionMonthly
+                && useAltcoinFlightMonthly
+                && useAdoptionFactorMonthly
+                && useRegClampdownMonthly
+                && useCompetitorCoinMonthly
+                && useSecurityBreachMonthly
+                && useBubblePopMonthly
+                && useStablecoinMeltdownMonthly
+                && useBlackSwanMonthly
+                && useBearMarketMonthly
+                && useMaturingMarketMonthly
+                && useRecessionMonthly
+        }
     }
 }

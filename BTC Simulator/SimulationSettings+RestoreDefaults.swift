@@ -11,10 +11,12 @@ extension SimulationSettings {
     func restoreDefaults() {
         print("RESTORE DEFAULTS CALLED!")
         let defaults = UserDefaults.standard
+
+        // Keep any general toggles you want to preserve:
         defaults.set(useHistoricalSampling, forKey: "useHistoricalSampling")
         defaults.set(useVolShocks, forKey: "useVolShocks")
 
-        // Remove factor keys
+        // Remove old parent-toggle keys (we no longer use them in code)
         defaults.removeObject(forKey: "useHalving")
         defaults.removeObject(forKey: "halvingBump")
         defaults.removeObject(forKey: "useInstitutionalDemand")
@@ -59,20 +61,20 @@ extension SimulationSettings {
         defaults.removeObject(forKey: "maxRecessionDrop")
         defaults.removeObject(forKey: "lockHistoricalSampling")
 
-        // Remove your new toggles
+        // Remove or reset any new toggles you plan to revert
         defaults.removeObject(forKey: "useHistoricalSampling")
         defaults.removeObject(forKey: "useVolShocks")
 
-        // NEW: Remove GARCH toggle
+        // GARCH
         defaults.removeObject(forKey: "useGarchVolatility")
 
-        // Remove the keys from UserDefaults
+        // AutoCorrelation
         defaults.removeObject(forKey: "useAutoCorrelation")
         defaults.removeObject(forKey: "autoCorrelationStrength")
         defaults.removeObject(forKey: "meanReversionTarget")
 
-        // Now set them to your desired "reset" values
-        useAutoCorrelation = false   // default "off"
+        // Reset them to your desired defaults
+        useAutoCorrelation = false
         autoCorrelationStrength = 0.2
         meanReversionTarget = 0.0
 
@@ -182,164 +184,142 @@ extension SimulationSettings {
         defaults.removeObject(forKey: "useRecessionMonthly")
         defaults.removeObject(forKey: "maxRecessionDropMonthly")
 
-        // Also remove or reset the toggle
+        // Remove or reset the lognormal growth key
         defaults.removeObject(forKey: "useLognormalGrowth")
         useLognormalGrowth = true
 
-        // Reassign them to the NEW defaults:
+        // Reassign to the new defaults for these general toggles
         useHistoricalSampling = true
         useVolShocks = true
-
-        // NEW: Set GARCH default to true
         useGarchVolatility = true
 
-        //
-        // BULLISH FACTORS: set each parent's monthly = false by default
-        //
-
-        // Halving
-        useHalving = true
+        // -----------------------------
+        // Now set weekly/monthly toggles as you like:
+        // -----------------------------
+        
+        // Example: enable Halving Weekly by default, disable monthly
         useHalvingWeekly = true
         halvingBumpWeekly = SimulationSettings.defaultHalvingBumpWeekly
         useHalvingMonthly = false
         halvingBumpMonthly = SimulationSettings.defaultHalvingBumpMonthly
 
         // Institutional Demand
-        useInstitutionalDemand = true
         useInstitutionalDemandWeekly = true
         maxDemandBoostWeekly = SimulationSettings.defaultMaxDemandBoostWeekly
         useInstitutionalDemandMonthly = false
         maxDemandBoostMonthly = SimulationSettings.defaultMaxDemandBoostMonthly
 
         // Country Adoption
-        useCountryAdoption = true
         useCountryAdoptionWeekly = true
         maxCountryAdBoostWeekly = SimulationSettings.defaultMaxCountryAdBoostWeekly
         useCountryAdoptionMonthly = false
         maxCountryAdBoostMonthly = SimulationSettings.defaultMaxCountryAdBoostMonthly
 
         // Regulatory Clarity
-        useRegulatoryClarity = true
         useRegulatoryClarityWeekly = true
         maxClarityBoostWeekly = SimulationSettings.defaultMaxClarityBoostWeekly
         useRegulatoryClarityMonthly = false
         maxClarityBoostMonthly = SimulationSettings.defaultMaxClarityBoostMonthly
 
         // ETF Approval
-        useEtfApproval = true
         useEtfApprovalWeekly = true
         maxEtfBoostWeekly = SimulationSettings.defaultMaxEtfBoostWeekly
         useEtfApprovalMonthly = false
         maxEtfBoostMonthly = SimulationSettings.defaultMaxEtfBoostMonthly
 
         // Tech Breakthrough
-        useTechBreakthrough = true
         useTechBreakthroughWeekly = true
         maxTechBoostWeekly = SimulationSettings.defaultMaxTechBoostWeekly
         useTechBreakthroughMonthly = false
         maxTechBoostMonthly = SimulationSettings.defaultMaxTechBoostMonthly
 
         // Scarcity Events
-        useScarcityEvents = true
         useScarcityEventsWeekly = true
         maxScarcityBoostWeekly = SimulationSettings.defaultMaxScarcityBoostWeekly
         useScarcityEventsMonthly = false
         maxScarcityBoostMonthly = SimulationSettings.defaultMaxScarcityBoostMonthly
 
         // Global Macro Hedge
-        useGlobalMacroHedge = true
         useGlobalMacroHedgeWeekly = true
         maxMacroBoostWeekly = SimulationSettings.defaultMaxMacroBoostWeekly
         useGlobalMacroHedgeMonthly = false
         maxMacroBoostMonthly = SimulationSettings.defaultMaxMacroBoostMonthly
 
         // Stablecoin Shift
-        useStablecoinShift = true
         useStablecoinShiftWeekly = true
         maxStablecoinBoostWeekly = SimulationSettings.defaultMaxStablecoinBoostWeekly
         useStablecoinShiftMonthly = false
         maxStablecoinBoostMonthly = SimulationSettings.defaultMaxStablecoinBoostMonthly
 
         // Demographic Adoption
-        useDemographicAdoption = true
         useDemographicAdoptionWeekly = true
         maxDemoBoostWeekly = SimulationSettings.defaultMaxDemoBoostWeekly
         useDemographicAdoptionMonthly = false
         maxDemoBoostMonthly = SimulationSettings.defaultMaxDemoBoostMonthly
 
         // Altcoin Flight
-        useAltcoinFlight = true
         useAltcoinFlightWeekly = true
         maxAltcoinBoostWeekly = SimulationSettings.defaultMaxAltcoinBoostWeekly
         useAltcoinFlightMonthly = false
         maxAltcoinBoostMonthly = SimulationSettings.defaultMaxAltcoinBoostMonthly
 
         // Adoption Factor
-        useAdoptionFactor = true
         useAdoptionFactorWeekly = true
         adoptionBaseFactorWeekly = SimulationSettings.defaultAdoptionBaseFactorWeekly
         useAdoptionFactorMonthly = false
         adoptionBaseFactorMonthly = SimulationSettings.defaultAdoptionBaseFactorMonthly
 
-        //
-        // BEARISH FACTORS: left as is
-        //
-
-        useRegClampdown = true
+        // -----------------------------
+        // Bearish factors:
+        // -----------------------------
+        // Set them to default weekly/monthly on/off as desired:
+        
         useRegClampdownWeekly = true
         maxClampDownWeekly = SimulationSettings.defaultMaxClampDownWeekly
         useRegClampdownMonthly = true
         maxClampDownMonthly = SimulationSettings.defaultMaxClampDownMonthly
 
-        useCompetitorCoin = true
         useCompetitorCoinWeekly = true
         maxCompetitorBoostWeekly = SimulationSettings.defaultMaxCompetitorBoostWeekly
         useCompetitorCoinMonthly = true
         maxCompetitorBoostMonthly = SimulationSettings.defaultMaxCompetitorBoostMonthly
 
-        useSecurityBreach = true
         useSecurityBreachWeekly = true
         breachImpactWeekly = SimulationSettings.defaultBreachImpactWeekly
         useSecurityBreachMonthly = true
         breachImpactMonthly = SimulationSettings.defaultBreachImpactMonthly
 
-        useBubblePop = true
         useBubblePopWeekly = true
         maxPopDropWeekly = SimulationSettings.defaultMaxPopDropWeekly
         useBubblePopMonthly = true
         maxPopDropMonthly = SimulationSettings.defaultMaxPopDropMonthly
 
-        useStablecoinMeltdown = true
         useStablecoinMeltdownWeekly = true
         maxMeltdownDropWeekly = SimulationSettings.defaultMaxMeltdownDropWeekly
         useStablecoinMeltdownMonthly = true
         maxMeltdownDropMonthly = SimulationSettings.defaultMaxMeltdownDropMonthly
 
-        useBlackSwan = true
         useBlackSwanWeekly = true
         blackSwanDropWeekly = SimulationSettings.defaultBlackSwanDropWeekly
         useBlackSwanMonthly = true
         blackSwanDropMonthly = SimulationSettings.defaultBlackSwanDropMonthly
 
-        useBearMarket = true
         useBearMarketWeekly = true
         bearWeeklyDriftWeekly = SimulationSettings.defaultBearWeeklyDriftWeekly
         useBearMarketMonthly = true
         bearWeeklyDriftMonthly = SimulationSettings.defaultBearWeeklyDriftMonthly
 
-        useMaturingMarket = true
         useMaturingMarketWeekly = true
         maxMaturingDropWeekly = SimulationSettings.defaultMaxMaturingDropWeekly
         useMaturingMarketMonthly = true
         maxMaturingDropMonthly = SimulationSettings.defaultMaxMaturingDropMonthly
 
-        useRecession = true
         useRecessionWeekly = true
         maxRecessionDropWeekly = SimulationSettings.defaultMaxRecessionDropWeekly
         useRecessionMonthly = true
         maxRecessionDropMonthly = SimulationSettings.defaultMaxRecessionDropMonthly
 
-        // Finally, enable everything at once
+        // Finally, toggle everything on for the current period:
         toggleAll = true
 
         // Reset lockHistoricalSampling

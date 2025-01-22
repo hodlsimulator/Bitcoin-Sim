@@ -32,7 +32,7 @@ var historicalBTCMonthlyReturns: [Double] = []
 var sp500MonthlyReturns: [Double] = []
 
 // ──────────────────────────────────────────────────────────────────────────
-// Probability thresholds & intervals (for halving or black swan events)
+// Probability thresholds & intervals (unused legacy constants, can remain or remove)
 // ──────────────────────────────────────────────────────────────────────────
 private let halvingIntervalGuess = 210.0
 private let blackSwanIntervalGuess = 400.0
@@ -72,60 +72,97 @@ func dampenArctanMonthly(_ rawReturn: Double) -> Double {
 }
 
 // MARK: - Lump-sum Factor
+/// Adjusts a lumpsum growth factor based on toggles and volatility.
 private func lumpsumAdjustFactor(
     settings: SimulationSettings,
     annualVolatility: Double
 ) -> Double {
-    var factor = 1.0
+    // We’ll add +1 to `toggles` for each "condition" we meet, then reduce factor by 0.02 each time
     var toggles = 0
-    
+
+    // If annualVol > 5.0 => add toggles
     if annualVolatility > 5.0 {
         toggles += Int((annualVolatility - 5.0) / 5.0) + 1
     }
+    
+    // If vol shocks are on
     if settings.useVolShocks {
         toggles += 1
     }
     
-    let bullishCount = [
-        settings.useHalving,
-        settings.useInstitutionalDemand,
-        settings.useCountryAdoption,
-        settings.useRegulatoryClarity,
-        settings.useEtfApproval,
-        settings.useTechBreakthrough,
-        settings.useScarcityEvents,
-        settings.useGlobalMacroHedge,
-        settings.useStablecoinShift,
-        settings.useDemographicAdoption,
-        settings.useAltcoinFlight,
-        settings.useAdoptionFactor
-    ].filter { $0 }.count
+    // Count how many toggles are on for the *active* period (weekly or monthly)
+    // We'll sum bullish + bearish to see if *any* are on.
+    let isWeekly = (settings.periodUnit == .weeks)
     
-    let bearishCount = [
-        settings.useRegClampdown,
-        settings.useCompetitorCoin,
-        settings.useSecurityBreach,
-        settings.useBubblePop,
-        settings.useStablecoinMeltdown,
-        settings.useBlackSwan,
-        settings.useBearMarket,
-        settings.useMaturingMarket,
-        settings.useRecession
-    ].filter { $0 }.count
+    // BULLISH toggles count
+    let bullishCount = isWeekly
+        ? [
+            settings.useHalvingWeekly,
+            settings.useInstitutionalDemandWeekly,
+            settings.useCountryAdoptionWeekly,
+            settings.useRegulatoryClarityWeekly,
+            settings.useEtfApprovalWeekly,
+            settings.useTechBreakthroughWeekly,
+            settings.useScarcityEventsWeekly,
+            settings.useGlobalMacroHedgeWeekly,
+            settings.useStablecoinShiftWeekly,
+            settings.useDemographicAdoptionWeekly,
+            settings.useAltcoinFlightWeekly,
+            settings.useAdoptionFactorWeekly
+          ].filter { $0 }.count
+        : [
+            settings.useHalvingMonthly,
+            settings.useInstitutionalDemandMonthly,
+            settings.useCountryAdoptionMonthly,
+            settings.useRegulatoryClarityMonthly,
+            settings.useEtfApprovalMonthly,
+            settings.useTechBreakthroughMonthly,
+            settings.useScarcityEventsMonthly,
+            settings.useGlobalMacroHedgeMonthly,
+            settings.useStablecoinShiftMonthly,
+            settings.useDemographicAdoptionMonthly,
+            settings.useAltcoinFlightMonthly,
+            settings.useAdoptionFactorMonthly
+          ].filter { $0 }.count
     
-    if bullishCount + bearishCount > 0 {
+    // BEARISH toggles count
+    let bearishCount = isWeekly
+        ? [
+            settings.useRegClampdownWeekly,
+            settings.useCompetitorCoinWeekly,
+            settings.useSecurityBreachWeekly,
+            settings.useBubblePopWeekly,
+            settings.useStablecoinMeltdownWeekly,
+            settings.useBlackSwanWeekly,
+            settings.useBearMarketWeekly,
+            settings.useMaturingMarketWeekly,
+            settings.useRecessionWeekly
+          ].filter { $0 }.count
+        : [
+            settings.useRegClampdownMonthly,
+            settings.useCompetitorCoinMonthly,
+            settings.useSecurityBreachMonthly,
+            settings.useBubblePopMonthly,
+            settings.useStablecoinMeltdownMonthly,
+            settings.useBlackSwanMonthly,
+            settings.useBearMarketMonthly,
+            settings.useMaturingMarketMonthly,
+            settings.useRecessionMonthly
+          ].filter { $0 }.count
+    
+    if (bullishCount + bearishCount) > 0 {
         toggles += 1
     }
     
     let maxCutPerToggle = 0.02
     let totalCut = Double(toggles) * maxCutPerToggle
-    factor -= totalCut
-    
+    var factor = 1.0 - totalCut
     factor = max(factor, 0.80)
     return factor
 }
 
 // MARK: - Contribution / Deposit
+/// Applies a transaction fee, plus currency conversion, returning net BTC.
 private func computeNetDeposit(
     typedDeposit: Double,
     settings: SimulationSettings,
@@ -169,183 +206,197 @@ private func computeNetDeposit(
     }
 }
 
-// MARK: - Factor Toggles (Bullish/Bearish)
+// MARK: - Factor Toggles
+/// Applies weekly or monthly toggles to a base return.
 private func applyFactorToggles(
     baseReturn: Double,
-    week: Int,
+    stepIndex: Int,
     settings: SimulationSettings,
     mempoolDataManager: MempoolDataManager,
-    rng: GKRandomSource // needed for black swan probability
+    rng: GKRandomSource
 ) -> Double {
     var r = baseReturn
     let isWeekly = (settings.periodUnit == .weeks)
     
-    // ────────── BULLISH ──────────
-    if settings.useHalving {
-        // Probability-based approach, similar to black swan
-        let stressLevel = mempoolDataManager.stressLevel(at: week)
+    // ─────────────────────────
+    // BULLISH
+    // ─────────────────────────
+    
+    // Halving => Probability example if user specifically wants it
+    // Check only if weekly toggle is on OR monthly toggle is on
+    if isWeekly && settings.useHalvingWeekly {
+        // Probability-based approach (example)
+        let stressLevel = mempoolDataManager.stressLevel(at: stepIndex)
         let baseProb = 0.02
-        // If stress above 80, scale up
         let dynamicProb = (stressLevel > 80.0) ? baseProb * 1.5 : baseProb
         let roll = Double(rng.nextUniform())
-        
         if roll < dynamicProb {
-            if isWeekly && settings.useHalvingWeekly {
-                r += settings.halvingBumpWeekly
-            } else if !isWeekly && settings.useHalvingMonthly {
-                r += settings.halvingBumpMonthly
-            }
+            r += settings.halvingBumpWeekly
         }
-    }
-    if settings.useInstitutionalDemand {
-        if isWeekly && settings.useInstitutionalDemandWeekly {
-            r += settings.maxDemandBoostWeekly
-        } else if !isWeekly && settings.useInstitutionalDemandMonthly {
-            r += settings.maxDemandBoostMonthly
-        }
-    }
-    if settings.useCountryAdoption {
-        if isWeekly && settings.useCountryAdoptionWeekly {
-            r += settings.maxCountryAdBoostWeekly
-        } else if !isWeekly && settings.useCountryAdoptionMonthly {
-            r += settings.maxCountryAdBoostMonthly
-        }
-    }
-    if settings.useRegulatoryClarity {
-        if isWeekly && settings.useRegulatoryClarityWeekly {
-            r += settings.maxClarityBoostWeekly
-        } else if !isWeekly && settings.useRegulatoryClarityMonthly {
-            r += settings.maxClarityBoostMonthly
-        }
-    }
-    if settings.useEtfApproval {
-        if isWeekly && settings.useEtfApprovalWeekly {
-            r += settings.maxEtfBoostWeekly
-        } else if !isWeekly && settings.useEtfApprovalMonthly {
-            r += settings.maxEtfBoostMonthly
-        }
-    }
-    if settings.useTechBreakthrough {
-        if isWeekly && settings.useTechBreakthroughWeekly {
-            r += settings.maxTechBoostWeekly
-        } else if !isWeekly && settings.useTechBreakthroughMonthly {
-            r += settings.maxTechBoostMonthly
-        }
-    }
-    if settings.useScarcityEvents {
-        if isWeekly && settings.useScarcityEventsWeekly {
-            r += settings.maxScarcityBoostWeekly
-        } else if !isWeekly && settings.useScarcityEventsMonthly {
-            r += settings.maxScarcityBoostMonthly
-        }
-    }
-    if settings.useGlobalMacroHedge {
-        if isWeekly && settings.useGlobalMacroHedgeWeekly {
-            r += settings.maxMacroBoostWeekly
-        } else if !isWeekly && settings.useGlobalMacroHedgeMonthly {
-            r += settings.maxMacroBoostMonthly
-        }
-    }
-    if settings.useStablecoinShift {
-        if isWeekly && settings.useStablecoinShiftWeekly {
-            r += settings.maxStablecoinBoostWeekly
-        } else if !isWeekly && settings.useStablecoinShiftMonthly {
-            r += settings.maxStablecoinBoostMonthly
-        }
-    }
-    if settings.useDemographicAdoption {
-        if isWeekly && settings.useDemographicAdoptionWeekly {
-            r += settings.maxDemoBoostWeekly
-        } else if !isWeekly && settings.useDemographicAdoptionMonthly {
-            r += settings.maxDemoBoostMonthly
-        }
-    }
-    if settings.useAltcoinFlight {
-        if isWeekly && settings.useAltcoinFlightWeekly {
-            r += settings.maxAltcoinBoostWeekly
-        } else if !isWeekly && settings.useAltcoinFlightMonthly {
-            r += settings.maxAltcoinBoostMonthly
-        }
-    }
-    if settings.useAdoptionFactor {
-        if isWeekly && settings.useAdoptionFactorWeekly {
-            r += settings.adoptionBaseFactorWeekly
-        } else if !isWeekly && settings.useAdoptionFactorMonthly {
-            r += settings.adoptionBaseFactorMonthly
+    } else if !isWeekly && settings.useHalvingMonthly {
+        let stressLevel = mempoolDataManager.stressLevel(at: stepIndex)
+        let baseProb = 0.02
+        let dynamicProb = (stressLevel > 80.0) ? baseProb * 1.5 : baseProb
+        let roll = Double(rng.nextUniform())
+        if roll < dynamicProb {
+            r += settings.halvingBumpMonthly
         }
     }
     
-    // ────────── BEARISH ──────────
-    if settings.useRegClampdown {
-        if isWeekly && settings.useRegClampdownWeekly {
-            r += settings.maxClampDownWeekly
-        } else if !isWeekly && settings.useRegClampdownMonthly {
-            r += settings.maxClampDownMonthly
-        }
+    // Institutional Demand
+    if isWeekly && settings.useInstitutionalDemandWeekly {
+        r += settings.maxDemandBoostWeekly
+    } else if !isWeekly && settings.useInstitutionalDemandMonthly {
+        r += settings.maxDemandBoostMonthly
     }
-    if settings.useCompetitorCoin {
-        if isWeekly && settings.useCompetitorCoinWeekly {
-            r += settings.maxCompetitorBoostWeekly
-        } else if !isWeekly && settings.useCompetitorCoinMonthly {
-            r += settings.maxCompetitorBoostMonthly
-        }
+
+    // Country Adoption
+    if isWeekly && settings.useCountryAdoptionWeekly {
+        r += settings.maxCountryAdBoostWeekly
+    } else if !isWeekly && settings.useCountryAdoptionMonthly {
+        r += settings.maxCountryAdBoostMonthly
     }
-    if settings.useSecurityBreach {
-        if isWeekly && settings.useSecurityBreachWeekly {
-            r += settings.breachImpactWeekly
-        } else if !isWeekly && settings.useSecurityBreachMonthly {
-            r += settings.breachImpactMonthly
-        }
+
+    // Regulatory Clarity
+    if isWeekly && settings.useRegulatoryClarityWeekly {
+        r += settings.maxClarityBoostWeekly
+    } else if !isWeekly && settings.useRegulatoryClarityMonthly {
+        r += settings.maxClarityBoostMonthly
     }
-    if settings.useBubblePop {
-        if isWeekly && settings.useBubblePopWeekly {
-            r += settings.maxPopDropWeekly
-        } else if !isWeekly && settings.useBubblePopMonthly {
-            r += settings.maxPopDropMonthly
-        }
+
+    // ETF Approval
+    if isWeekly && settings.useEtfApprovalWeekly {
+        r += settings.maxEtfBoostWeekly
+    } else if !isWeekly && settings.useEtfApprovalMonthly {
+        r += settings.maxEtfBoostMonthly
     }
-    if settings.useStablecoinMeltdown {
-        if isWeekly && settings.useStablecoinMeltdownWeekly {
-            r += settings.maxMeltdownDropWeekly
-        } else if !isWeekly && settings.useStablecoinMeltdownMonthly {
-            r += settings.maxMeltdownDropMonthly
-        }
+
+    // Tech Breakthrough
+    if isWeekly && settings.useTechBreakthroughWeekly {
+        r += settings.maxTechBoostWeekly
+    } else if !isWeekly && settings.useTechBreakthroughMonthly {
+        r += settings.maxTechBoostMonthly
     }
-    if settings.useBlackSwan {
-        // Probability-based approach => seeded
-        let stressLevel = mempoolDataManager.stressLevel(at: week)
+
+    // Scarcity Events
+    if isWeekly && settings.useScarcityEventsWeekly {
+        r += settings.maxScarcityBoostWeekly
+    } else if !isWeekly && settings.useScarcityEventsMonthly {
+        r += settings.maxScarcityBoostMonthly
+    }
+
+    // Global Macro Hedge
+    if isWeekly && settings.useGlobalMacroHedgeWeekly {
+        r += settings.maxMacroBoostWeekly
+    } else if !isWeekly && settings.useGlobalMacroHedgeMonthly {
+        r += settings.maxMacroBoostMonthly
+    }
+
+    // Stablecoin Shift
+    if isWeekly && settings.useStablecoinShiftWeekly {
+        r += settings.maxStablecoinBoostWeekly
+    } else if !isWeekly && settings.useStablecoinShiftMonthly {
+        r += settings.maxStablecoinBoostMonthly
+    }
+
+    // Demographic Adoption
+    if isWeekly && settings.useDemographicAdoptionWeekly {
+        r += settings.maxDemoBoostWeekly
+    } else if !isWeekly && settings.useDemographicAdoptionMonthly {
+        r += settings.maxDemoBoostMonthly
+    }
+
+    // Altcoin Flight
+    if isWeekly && settings.useAltcoinFlightWeekly {
+        r += settings.maxAltcoinBoostWeekly
+    } else if !isWeekly && settings.useAltcoinFlightMonthly {
+        r += settings.maxAltcoinBoostMonthly
+    }
+
+    // Adoption Factor
+    if isWeekly && settings.useAdoptionFactorWeekly {
+        r += settings.adoptionBaseFactorWeekly
+    } else if !isWeekly && settings.useAdoptionFactorMonthly {
+        r += settings.adoptionBaseFactorMonthly
+    }
+    
+    // ─────────────────────────
+    // BEARISH
+    // ─────────────────────────
+    
+    // Reg Clampdown
+    if isWeekly && settings.useRegClampdownWeekly {
+        r += settings.maxClampDownWeekly
+    } else if !isWeekly && settings.useRegClampdownMonthly {
+        r += settings.maxClampDownMonthly
+    }
+
+    // Competitor Coin
+    if isWeekly && settings.useCompetitorCoinWeekly {
+        r += settings.maxCompetitorBoostWeekly
+    } else if !isWeekly && settings.useCompetitorCoinMonthly {
+        r += settings.maxCompetitorBoostMonthly
+    }
+
+    // Security Breach
+    if isWeekly && settings.useSecurityBreachWeekly {
+        r += settings.breachImpactWeekly
+    } else if !isWeekly && settings.useSecurityBreachMonthly {
+        r += settings.breachImpactMonthly
+    }
+
+    // Bubble Pop
+    if isWeekly && settings.useBubblePopWeekly {
+        r += settings.maxPopDropWeekly
+    } else if !isWeekly && settings.useBubblePopMonthly {
+        r += settings.maxPopDropMonthly
+    }
+
+    // Stablecoin Meltdown
+    if isWeekly && settings.useStablecoinMeltdownWeekly {
+        r += settings.maxMeltdownDropWeekly
+    } else if !isWeekly && settings.useStablecoinMeltdownMonthly {
+        r += settings.maxMeltdownDropMonthly
+    }
+
+    // Black Swan => Probability-based approach
+    if isWeekly && settings.useBlackSwanWeekly {
+        let stressLevel = mempoolDataManager.stressLevel(at: stepIndex)
         let baseProb = 0.028
-        let dynamicProb = (stressLevel > 80.0) ? baseProb * 2 : baseProb
-        // Instead of Double.random(in: 0...1), we do:
+        let dynamicProb = (stressLevel > 80.0) ? baseProb * 2.0 : baseProb
         let roll = Double(rng.nextUniform())
         if roll < dynamicProb {
-            if isWeekly {
-                r += settings.blackSwanDropWeekly
-            } else {
-                r += settings.blackSwanDropMonthly
-            }
+            r += settings.blackSwanDropWeekly
+        }
+    } else if !isWeekly && settings.useBlackSwanMonthly {
+        let stressLevel = mempoolDataManager.stressLevel(at: stepIndex)
+        let baseProb = 0.028
+        let dynamicProb = (stressLevel > 80.0) ? baseProb * 2.0 : baseProb
+        let roll = Double(rng.nextUniform())
+        if roll < dynamicProb {
+            r += settings.blackSwanDropMonthly
         }
     }
-    if settings.useBearMarket {
-        if isWeekly && settings.useBearMarketWeekly {
-            r += settings.bearWeeklyDriftWeekly
-        } else if !isWeekly && settings.useBearMarketMonthly {
-            r += settings.bearWeeklyDriftMonthly
-        }
+
+    // Bear Market
+    if isWeekly && settings.useBearMarketWeekly {
+        r += settings.bearWeeklyDriftWeekly
+    } else if !isWeekly && settings.useBearMarketMonthly {
+        r += settings.bearWeeklyDriftMonthly
     }
-    if settings.useMaturingMarket {
-        if isWeekly && settings.useMaturingMarketWeekly {
-            r += settings.maxMaturingDropWeekly
-        } else if !isWeekly && settings.useMaturingMarketMonthly {
-            r += settings.maxMaturingDropMonthly
-        }
+
+    // Maturing Market
+    if isWeekly && settings.useMaturingMarketWeekly {
+        r += settings.maxMaturingDropWeekly
+    } else if !isWeekly && settings.useMaturingMarketMonthly {
+        r += settings.maxMaturingDropMonthly
     }
-    if settings.useRecession {
-        if isWeekly && settings.useRecessionWeekly {
-            r += settings.maxRecessionDropWeekly
-        } else if !isWeekly && settings.useRecessionMonthly {
-            r += settings.maxRecessionDropMonthly
-        }
+
+    // Recession
+    if isWeekly && settings.useRecessionWeekly {
+        r += settings.maxRecessionDropWeekly
+    } else if !isWeekly && settings.useRecessionMonthly {
+        r += settings.maxRecessionDropMonthly
     }
     
     return r
@@ -396,7 +447,7 @@ private func runWeeklySimulation(
             : baseWeeklyVol
         
         if lumpsum {
-            // Once every 52 weeks
+            // Once every 52 weeks => do lumpsum growth
             if Double(currentWeek).truncatingRemainder(dividingBy: 52.0) == 0 {
                 var lumpsumGrowth = cagrDecimal
                 if settings.useVolShocks && annualVolatility > 0 {
@@ -411,10 +462,10 @@ private func runWeeklySimulation(
                     let phi = settings.autoCorrelationStrength
                     lumpsumGrowth = (1 - phi) * lumpsumGrowth + phi * lastAutoReturn
                 }
-                // ─── Replaced halvingWeeks with probability-based approach in applyFactorToggles ───
+                // Apply toggles
                 lumpsumGrowth = applyFactorToggles(
                     baseReturn: lumpsumGrowth,
-                    week: currentWeek,
+                    stepIndex: currentWeek,
                     settings: settings,
                     mempoolDataManager: mempoolDataManager,
                     rng: rng
@@ -445,10 +496,10 @@ private func runWeeklySimulation(
                 let phi = settings.autoCorrelationStrength
                 totalReturn = (1 - phi) * totalReturn + phi * lastAutoReturn
             }
-            // ─── Replaced halvingWeeks with probability-based approach in applyFactorToggles ───
+            // Apply toggles
             let toggled = applyFactorToggles(
                 baseReturn: totalReturn,
-                week: currentWeek,
+                stepIndex: currentWeek,
                 settings: settings,
                 mempoolDataManager: mempoolDataManager,
                 rng: rng
@@ -498,6 +549,7 @@ private func runWeeklySimulation(
         let portfolioValueEUR = finalHoldings * newPriceEUR
         let portfolioValueUSD = finalHoldings * newPriceUSD
         
+        // Update GARCH variance
         if settings.useGarchVolatility {
             garchModel.updateVariance(lastReturn: lastStepLogReturn)
         }
@@ -580,10 +632,10 @@ private func runMonthlySimulation(
                     let phi = settings.autoCorrelationStrength
                     lumpsumGrowth = (1 - phi) * lumpsumGrowth + phi * lastAutoReturn
                 }
-                // ─── Replaced halvingMonths with probability-based approach in applyFactorToggles ───
+                // Apply toggles
                 lumpsumGrowth = applyFactorToggles(
                     baseReturn: lumpsumGrowth,
-                    week: currentMonth,
+                    stepIndex: currentMonth,
                     settings: settings,
                     mempoolDataManager: mempoolDataManager,
                     rng: rng
@@ -614,10 +666,10 @@ private func runMonthlySimulation(
                 let phi = settings.autoCorrelationStrength
                 totalReturn = (1 - phi) * totalReturn + (phi * lastAutoReturn)
             }
-            // ─── Replaced halvingMonths with probability-based approach in applyFactorToggles ───
+            // Apply toggles
             let toggled = applyFactorToggles(
                 baseReturn: totalReturn,
-                week: currentMonth,
+                stepIndex: currentMonth,
                 settings: settings,
                 mempoolDataManager: mempoolDataManager,
                 rng: rng
@@ -672,7 +724,7 @@ private func runMonthlySimulation(
         }
 
         let dataPoint = SimulationData(
-            week: currentMonth, // storing month in 'week' field
+            week: currentMonth, // reusing 'week' field to store month
             startingBTC: prevBTCHoldings,
             netBTCHoldings: finalHoldings,
             btcPriceUSD: Decimal(newPriceUSD),
@@ -709,9 +761,8 @@ func runOneFullSimulation(
 ) -> [SimulationData] {
 
     if settings.periodUnit == .months {
+        // userWeeks is actually "months" in that scenario
         let totalMonths = userWeeks
-        
-        // No more random halving months!
         let monthlyResult = runMonthlySimulation(
             settings: settings,
             annualCAGR: annualCAGR,
@@ -724,11 +775,9 @@ func runOneFullSimulation(
             rng: rng
         )
         return monthlyResult
-
     } else {
+        // Otherwise weekly
         let totalWeeks = userWeeks
-        
-        // No more random halving weeks!
         let weeklyResult = runWeeklySimulation(
             settings: settings,
             annualCAGR: annualCAGR,
@@ -811,7 +860,7 @@ func runMonteCarloSimulationsWithProgress(
         // optional sim delay
         Thread.sleep(forTimeInterval: 0.01)
 
-        // Each iteration -> runOneFullSimulation with the same rng (it advances each time)
+        // Each iteration -> runOneFullSimulation with same rng (it advances each time)
         let simRun = runOneFullSimulation(
             settings: settings,
             annualCAGR: annualCAGR,
