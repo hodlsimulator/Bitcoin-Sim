@@ -10,31 +10,26 @@ import SwiftUI
 class SimulationSettings: ObservableObject {
     
     init() {
-        // No heavy loading here; see SimulationSettingsInit.swift
+        // Initialization
         isUpdating = false
         isInitialized = false
     }
-    
+
     var inputManager: PersistentInputManager?
     
     @Published var userIsActuallyTogglingAll = false
-    @Published var isOnboarding: Bool = false  // used to allow periodUnit changes
+    @Published var isOnboarding: Bool = false
     @Published var periodUnit: PeriodUnit = .weeks {
         didSet {
             print("didSet: periodUnit changed to \(periodUnit). isInitialized=\(isInitialized)")
             guard isInitialized else { return }
-            
-            // (Removed calls that forced toggles off for the non-active period)
         }
     }
     
     @Published var userPeriods: Int = 52
     @Published var initialBTCPriceUSD: Double = 58000.0
-    
-    // Onboarding
     @Published var startingBalance: Double = 0.0
     @Published var averageCostBasis: Double = 25000.0
-    
     @Published var currencyPreference: PreferredCurrency = .eur {
         didSet {
             print("didSet: currencyPreference changed to \(currencyPreference). isInitialized=\(isInitialized)")
@@ -43,18 +38,15 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    
     @Published var contributionCurrencyWhenBoth: PreferredCurrency = .eur
     @Published var startingBalanceCurrencyWhenBoth: PreferredCurrency = .usd
-    
-    // Results
     @Published var lastRunResults: [SimulationData] = []
     @Published var allRuns: [[SimulationData]] = []
     
     var isInitialized = false
     var isUpdating = false
     
-    // Lognormal Growth
+    // MARK: Settings Toggles
     @Published var useLognormalGrowth: Bool = true {
         didSet {
             print("didSet: useLognormalGrowth changed to \(useLognormalGrowth).")
@@ -62,7 +54,6 @@ class SimulationSettings: ObservableObject {
         }
     }
     
-    // Random Seed
     @Published var lockedRandomSeed: Bool = false {
         didSet {
             print("didSet: lockedRandomSeed changed to \(lockedRandomSeed). isInitialized=\(isInitialized)")
@@ -143,11 +134,6 @@ class SimulationSettings: ObservableObject {
     }
     
     @Published var lastUsedSeed: UInt64 = 0
-    
-    // ========================================
-    // REMOVED BULLISH AND BEARISH FACTORS
-    // ========================================
-    
     @Published var lockHistoricalSampling: Bool = false {
         didSet {
             print("didSet: lockHistoricalSampling changed to \(lockHistoricalSampling). isInitialized=\(isInitialized)")
@@ -156,9 +142,8 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-
+    
     func finalizeToggleStateAfterLoad() {
-        // Currently no forced changes here
         isUpdating = false
     }
     
@@ -308,5 +293,38 @@ class SimulationSettings: ObservableObject {
             }
             isUpdating = false
         }
+    }
+
+    // MARK: - UserDefaults Handling
+
+    func loadFromUserDefaults() {
+        let defaults = UserDefaults.standard
+        useLognormalGrowth = defaults.bool(forKey: "useLognormalGrowth")
+        lockedRandomSeed = defaults.bool(forKey: "lockedRandomSeed")
+        seedValue = defaults.object(forKey: "seedValue") as? UInt64 ?? 0
+        useRandomSeed = defaults.bool(forKey: "useRandomSeed")
+        useHistoricalSampling = defaults.bool(forKey: "useHistoricalSampling")
+        useVolShocks = defaults.bool(forKey: "useVolShocks")
+        useGarchVolatility = defaults.bool(forKey: "useGarchVolatility")
+        useAutoCorrelation = defaults.bool(forKey: "useAutoCorrelation")
+        autoCorrelationStrength = defaults.double(forKey: "autoCorrelationStrength")
+        meanReversionTarget = defaults.double(forKey: "meanReversionTarget")
+        lockHistoricalSampling = defaults.bool(forKey: "lockHistoricalSampling")
+    }
+
+    func saveToUserDefaults() {
+        let defaults = UserDefaults.standard
+        defaults.set(useLognormalGrowth, forKey: "useLognormalGrowth")
+        defaults.set(lockedRandomSeed, forKey: "lockedRandomSeed")
+        defaults.set(seedValue, forKey: "seedValue")
+        defaults.set(useRandomSeed, forKey: "useRandomSeed")
+        defaults.set(useHistoricalSampling, forKey: "useHistoricalSampling")
+        defaults.set(useVolShocks, forKey: "useVolShocks")
+        defaults.set(useGarchVolatility, forKey: "useGarchVolatility")
+        defaults.set(useAutoCorrelation, forKey: "useAutoCorrelation")
+        defaults.set(autoCorrelationStrength, forKey: "autoCorrelationStrength")
+        defaults.set(meanReversionTarget, forKey: "meanReversionTarget")
+        defaults.set(lockHistoricalSampling, forKey: "lockHistoricalSampling")
+        defaults.synchronize()
     }
 }

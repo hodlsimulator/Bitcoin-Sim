@@ -13,6 +13,9 @@ class SimChartSelection: ObservableObject {
 
 @main
 struct BTCMonteCarloApp: App {
+    // Listen for scene phase changes (active, background, etc.)
+    @Environment(\.scenePhase) private var scenePhase
+
     @AppStorage("hasOnboarded") private var didFinishOnboarding = false
 
     @StateObject private var appViewModel: AppViewModel
@@ -89,7 +92,18 @@ struct BTCMonteCarloApp: App {
                 }
             }
             .onAppear {
+                simSettings.loadFromUserDefaults() // Ensure settings are loaded
                 simSettings.isOnboarding = !didFinishOnboarding
+            }
+            // Save to UserDefaults when the app goes inactive or background
+            .onChange(of: scenePhase) { newPhase in
+                switch newPhase {
+                case .inactive, .background:
+                    simSettings.saveToUserDefaults()
+                    print("// DEBUG: scenePhase -> \(newPhase), saving settings")
+                default:
+                    break
+                }
             }
         }
     }
