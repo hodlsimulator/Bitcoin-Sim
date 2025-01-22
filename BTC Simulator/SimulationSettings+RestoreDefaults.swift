@@ -197,76 +197,76 @@ extension SimulationSettings {
         // Now set weekly/monthly toggles as desired:
         // -----------------------------
 
-        // Example: Halving on weekly, off monthly
+        // Halving
         useHalvingWeekly = true
         halvingBumpWeekly = SimulationSettings.defaultHalvingBumpWeekly
-        useHalvingMonthly = false
+        useHalvingMonthly = true  // CHANGED TO TRUE
         halvingBumpMonthly = SimulationSettings.defaultHalvingBumpMonthly
 
         // Institutional Demand
         useInstitutionalDemandWeekly = true
         maxDemandBoostWeekly = SimulationSettings.defaultMaxDemandBoostWeekly
-        useInstitutionalDemandMonthly = false
+        useInstitutionalDemandMonthly = true  // CHANGED TO TRUE
         maxDemandBoostMonthly = SimulationSettings.defaultMaxDemandBoostMonthly
 
         // Country Adoption
         useCountryAdoptionWeekly = true
         maxCountryAdBoostWeekly = SimulationSettings.defaultMaxCountryAdBoostWeekly
-        useCountryAdoptionMonthly = false
+        useCountryAdoptionMonthly = true  // CHANGED TO TRUE
         maxCountryAdBoostMonthly = SimulationSettings.defaultMaxCountryAdBoostMonthly
 
         // Regulatory Clarity
         useRegulatoryClarityWeekly = true
         maxClarityBoostWeekly = SimulationSettings.defaultMaxClarityBoostWeekly
-        useRegulatoryClarityMonthly = false
+        useRegulatoryClarityMonthly = true  // CHANGED TO TRUE
         maxClarityBoostMonthly = SimulationSettings.defaultMaxClarityBoostMonthly
 
         // ETF Approval
         useEtfApprovalWeekly = true
         maxEtfBoostWeekly = SimulationSettings.defaultMaxEtfBoostWeekly
-        useEtfApprovalMonthly = false
+        useEtfApprovalMonthly = true  // CHANGED TO TRUE
         maxEtfBoostMonthly = SimulationSettings.defaultMaxEtfBoostMonthly
 
         // Tech Breakthrough
         useTechBreakthroughWeekly = true
         maxTechBoostWeekly = SimulationSettings.defaultMaxTechBoostWeekly
-        useTechBreakthroughMonthly = false
+        useTechBreakthroughMonthly = true  // CHANGED TO TRUE
         maxTechBoostMonthly = SimulationSettings.defaultMaxTechBoostMonthly
 
         // Scarcity Events
         useScarcityEventsWeekly = true
         maxScarcityBoostWeekly = SimulationSettings.defaultMaxScarcityBoostWeekly
-        useScarcityEventsMonthly = false
+        useScarcityEventsMonthly = true  // CHANGED TO TRUE
         maxScarcityBoostMonthly = SimulationSettings.defaultMaxScarcityBoostMonthly
 
         // Global Macro Hedge
         useGlobalMacroHedgeWeekly = true
         maxMacroBoostWeekly = SimulationSettings.defaultMaxMacroBoostWeekly
-        useGlobalMacroHedgeMonthly = false
+        useGlobalMacroHedgeMonthly = true  // CHANGED TO TRUE
         maxMacroBoostMonthly = SimulationSettings.defaultMaxMacroBoostMonthly
 
         // Stablecoin Shift
         useStablecoinShiftWeekly = true
         maxStablecoinBoostWeekly = SimulationSettings.defaultMaxStablecoinBoostWeekly
-        useStablecoinShiftMonthly = false
+        useStablecoinShiftMonthly = true  // CHANGED TO TRUE
         maxStablecoinBoostMonthly = SimulationSettings.defaultMaxStablecoinBoostMonthly
 
         // Demographic Adoption
         useDemographicAdoptionWeekly = true
         maxDemoBoostWeekly = SimulationSettings.defaultMaxDemoBoostWeekly
-        useDemographicAdoptionMonthly = false
+        useDemographicAdoptionMonthly = true  // CHANGED TO TRUE
         maxDemoBoostMonthly = SimulationSettings.defaultMaxDemoBoostMonthly
 
         // Altcoin Flight
         useAltcoinFlightWeekly = true
         maxAltcoinBoostWeekly = SimulationSettings.defaultMaxAltcoinBoostWeekly
-        useAltcoinFlightMonthly = false
+        useAltcoinFlightMonthly = true  // CHANGED TO TRUE
         maxAltcoinBoostMonthly = SimulationSettings.defaultMaxAltcoinBoostMonthly
 
         // Adoption Factor
         useAdoptionFactorWeekly = true
         adoptionBaseFactorWeekly = SimulationSettings.defaultAdoptionBaseFactorWeekly
-        useAdoptionFactorMonthly = false
+        useAdoptionFactorMonthly = true  // CHANGED TO TRUE
         adoptionBaseFactorMonthly = SimulationSettings.defaultAdoptionBaseFactorMonthly
 
         // -----------------------------
