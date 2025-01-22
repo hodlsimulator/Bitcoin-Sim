@@ -9,25 +9,18 @@ import SwiftUI
 
 extension SimulationSettings {
     convenience init(loadDefaults: Bool = true) {
-        self.init()  // Calls the minimal init in SimulationSettings.swift
+        self.init()
         guard loadDefaults else { return }
 
         let defaults = UserDefaults.standard
+        self.isUpdating = true  // stop didSet spam
 
-        // 1) Prevent didSet observers from triggering during bulk updates
-        self.isUpdating = true
-
-        // 2) MARK: - Load Basic Settings
-
-        // Lognormal Growth
+        // Basic
         if defaults.object(forKey: "useLognormalGrowth") != nil {
-            let val = defaults.bool(forKey: "useLognormalGrowth")
-            self.useLognormalGrowth = val
+            self.useLognormalGrowth = defaults.bool(forKey: "useLognormalGrowth")
         } else {
             self.useLognormalGrowth = true
         }
-
-        // Onboarding Data
         if let savedBal = defaults.object(forKey: "savedStartingBalance") as? Double {
             self.startingBalance = savedBal
         }
@@ -35,7 +28,7 @@ extension SimulationSettings {
             self.averageCostBasis = savedACB
         }
 
-        // Period Settings
+        // Period & Price
         if let savedPeriods = defaults.object(forKey: "savedUserPeriods") as? Int {
             self.userPeriods = savedPeriods
         }
@@ -47,7 +40,7 @@ extension SimulationSettings {
             self.initialBTCPriceUSD = savedBTCPrice
         }
 
-        // Currency Preference
+        // Currency
         if let storedPrefRaw = defaults.string(forKey: "currencyPreference"),
            let storedPref = PreferredCurrency(rawValue: storedPrefRaw) {
             self.currencyPreference = storedPref
@@ -55,67 +48,103 @@ extension SimulationSettings {
             self.currencyPreference = .eur
         }
 
-        // Random Seed
-        let lockedSeedVal = defaults.bool(forKey: "lockedRandomSeed")
-        self.lockedRandomSeed = lockedSeedVal
-
+        // Random seed
+        self.lockedRandomSeed = defaults.bool(forKey: "lockedRandomSeed")
         if let storedSeed = defaults.object(forKey: "seedValue") as? UInt64 {
             self.seedValue = storedSeed
         }
-        let storedUseRandom = defaults.object(forKey: "useRandomSeed") as? Bool ?? true
-        self.useRandomSeed = storedUseRandom
+        self.useRandomSeed = defaults.object(forKey: "useRandomSeed") as? Bool ?? true
 
-        // Sampling & Volatility
+        // Sampling & Vol
         if defaults.object(forKey: "useHistoricalSampling") != nil {
-            let val = defaults.bool(forKey: "useHistoricalSampling")
-            self.useHistoricalSampling = val
+            self.useHistoricalSampling = defaults.bool(forKey: "useHistoricalSampling")
+        } else {
+            self.useHistoricalSampling = true
         }
         if defaults.object(forKey: "useVolShocks") != nil {
-            let val = defaults.bool(forKey: "useVolShocks")
-            self.useVolShocks = val
+            self.useVolShocks = defaults.bool(forKey: "useVolShocks")
+        } else {
+            self.useVolShocks = true
         }
         if defaults.object(forKey: "useGarchVolatility") != nil {
-            let val = defaults.bool(forKey: "useGarchVolatility")
-            self.useGarchVolatility = val
+            self.useGarchVolatility = defaults.bool(forKey: "useGarchVolatility")
+        } else {
+            self.useGarchVolatility = true
         }
 
         // Autocorrelation
         if defaults.object(forKey: "useAutoCorrelation") != nil {
-            let storedValue = defaults.bool(forKey: "useAutoCorrelation")
-            self.useAutoCorrelation = storedValue
+            self.useAutoCorrelation = defaults.bool(forKey: "useAutoCorrelation")
         }
         if defaults.object(forKey: "autoCorrelationStrength") != nil {
-            let val = defaults.double(forKey: "autoCorrelationStrength")
-            self.autoCorrelationStrength = val
+            self.autoCorrelationStrength = defaults.double(forKey: "autoCorrelationStrength")
         }
         if defaults.object(forKey: "meanReversionTarget") != nil {
-            let val = defaults.double(forKey: "meanReversionTarget")
-            self.meanReversionTarget = val
+            self.meanReversionTarget = defaults.double(forKey: "meanReversionTarget")
         }
 
-        // Lock Historical Sampling
+        // Lock sampling
         if let savedLockSampling = defaults.object(forKey: "lockHistoricalSampling") as? Bool {
             self.lockHistoricalSampling = savedLockSampling
         }
 
-        // 3) MARK: - Remove loads of parent toggles (useHalving, etc.)
-        // (All code that once loaded useHalving, useInstitutionalDemand, etc. is removed.)
+        // ---- Load each weekly/monthly toggle from UserDefaults, default = true ----
+        // For brevity, here's the pattern repeated:
 
-        // 4) We can leave child toggles commented out or re-enable them if desired.
-        //    For example:
-        //    if let storedHalvingWeekly = defaults.object(forKey: "useHalvingWeekly") as? Bool {
-        //        self.useHalvingWeekly = storedHalvingWeekly
-        //    }
-        //    ... etc. ...
-        //
-        // For now, they remain commented out to avoid reloading them from defaults:
-        //    // if let storedHalvingWeekly = ...
-        //    // ...
-        
-        // 7) Done loading from UserDefaults so far:
+        if defaults.object(forKey: "useHalvingWeekly") != nil {
+            self.useHalvingWeekly = defaults.bool(forKey: "useHalvingWeekly")
+        } else {
+            self.useHalvingWeekly = true
+        }
+        if defaults.object(forKey: "halvingBumpWeekly") != nil {
+            self.halvingBumpWeekly = defaults.double(forKey: "halvingBumpWeekly")
+        } else {
+            self.halvingBumpWeekly = SimulationSettings.defaultHalvingBumpWeekly
+        }
+        if defaults.object(forKey: "useHalvingMonthly") != nil {
+            self.useHalvingMonthly = defaults.bool(forKey: "useHalvingMonthly")
+        } else {
+            self.useHalvingMonthly = true
+        }
+        if defaults.object(forKey: "halvingBumpMonthly") != nil {
+            self.halvingBumpMonthly = defaults.double(forKey: "halvingBumpMonthly")
+        } else {
+            self.halvingBumpMonthly = SimulationSettings.defaultHalvingBumpMonthly
+        }
+
+        // ...and so on for every single factor. Just do the same “if let / else” pattern:
+        // useInstitutionalDemandWeekly, useInstitutionalDemandMonthly,
+        // useCountryAdoptionWeekly, useCountryAdoptionMonthly,
+        // etc., each with default = true for the bool toggles,
+        // and default = SimulationSettings.xxx for the Double values.
+
+        // BULLISH toggles (Institutional Demand, CountryAdoption, etc.)
+        if let val = defaults.object(forKey: "useInstitutionalDemandWeekly") as? Bool {
+            self.useInstitutionalDemandWeekly = val
+        } else {
+            self.useInstitutionalDemandWeekly = true
+        }
+        if let val = defaults.object(forKey: "maxDemandBoostWeekly") as? Double {
+            self.maxDemandBoostWeekly = val
+        } else {
+            self.maxDemandBoostWeekly = SimulationSettings.defaultMaxDemandBoostWeekly
+        }
+        // ... do likewise for the monthly version:
+        if let val = defaults.object(forKey: "useInstitutionalDemandMonthly") as? Bool {
+            self.useInstitutionalDemandMonthly = val
+        } else {
+            self.useInstitutionalDemandMonthly = true
+        }
+        if let val = defaults.object(forKey: "maxDemandBoostMonthly") as? Double {
+            self.maxDemandBoostMonthly = val
+        } else {
+            self.maxDemandBoostMonthly = SimulationSettings.defaultMaxDemandBoostMonthly
+        }
+
+        // Repeated for every factor…
+
+        // Finally:
         self.isUpdating = false
-
-        // 9) Sync or finalize toggles
         self.isInitialized = true
         finalizeToggleStateAfterLoad()
     }

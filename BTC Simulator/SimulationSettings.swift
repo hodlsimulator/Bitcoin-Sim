@@ -7,23 +7,867 @@
 
 import SwiftUI
 
-/// A class for storing user toggles and results
 class SimulationSettings: ObservableObject {
     
     init() {
-        // No UserDefaults loading here; handled in SimulationSettingsInit.swift
+        // No heavy loading here; see SimulationSettingsInit.swift
         isUpdating = false
         isInitialized = false
     }
     
+    var inputManager: PersistentInputManager?
+    
     @Published var userIsActuallyTogglingAll = false
+    @Published var isOnboarding: Bool = false  // used to allow periodUnit changes
+    @Published var periodUnit: PeriodUnit = .weeks {
+        didSet {
+            print("didSet: periodUnit changed to \(periodUnit). isInitialized=\(isInitialized)")
+            guard isInitialized else { return }
+            
+            // (Removed calls that forced toggles off for the non-active period)
+        }
+    }
     
-    // Mark when we’re in onboarding mode (to allow changing periodUnit)
-    @Published var isOnboarding: Bool = false
+    @Published var userPeriods: Int = 52
+    @Published var initialBTCPriceUSD: Double = 58000.0
     
-    // -----------------------------
-    // toggleAll now only checks/sets weekly/monthly factors:
-    // -----------------------------
+    // Onboarding
+    @Published var startingBalance: Double = 0.0
+    @Published var averageCostBasis: Double = 25000.0
+    
+    @Published var currencyPreference: PreferredCurrency = .eur {
+        didSet {
+            print("didSet: currencyPreference changed to \(currencyPreference). isInitialized=\(isInitialized)")
+            if isInitialized {
+                UserDefaults.standard.set(currencyPreference.rawValue, forKey: "currencyPreference")
+            }
+        }
+    }
+    
+    @Published var contributionCurrencyWhenBoth: PreferredCurrency = .eur
+    @Published var startingBalanceCurrencyWhenBoth: PreferredCurrency = .usd
+    
+    // Results
+    @Published var lastRunResults: [SimulationData] = []
+    @Published var allRuns: [[SimulationData]] = []
+    
+    var isInitialized = false
+    var isUpdating = false
+    
+    // Lognormal Growth
+    @Published var useLognormalGrowth: Bool = true {
+        didSet {
+            print("didSet: useLognormalGrowth changed to \(useLognormalGrowth).")
+            UserDefaults.standard.set(useLognormalGrowth, forKey: "useLognormalGrowth")
+        }
+    }
+    
+    // Random Seed
+    @Published var lockedRandomSeed: Bool = false {
+        didSet {
+            print("didSet: lockedRandomSeed changed to \(lockedRandomSeed). isInitialized=\(isInitialized)")
+            if isInitialized {
+                UserDefaults.standard.set(lockedRandomSeed, forKey: "lockedRandomSeed")
+            }
+        }
+    }
+    
+    @Published var seedValue: UInt64 = 0 {
+        didSet {
+            print("didSet: seedValue changed to \(seedValue). isInitialized=\(isInitialized)")
+            if isInitialized {
+                UserDefaults.standard.set(seedValue, forKey: "seedValue")
+            }
+        }
+    }
+    
+    @Published var useRandomSeed: Bool = true {
+        didSet {
+            print("didSet: useRandomSeed changed to \(useRandomSeed). isInitialized=\(isInitialized)")
+            if isInitialized {
+                UserDefaults.standard.set(useRandomSeed, forKey: "useRandomSeed")
+            }
+        }
+    }
+    
+    @Published var useHistoricalSampling: Bool = true {
+        didSet {
+            print("didSet: useHistoricalSampling changed to \(useHistoricalSampling). isInitialized=\(isInitialized)")
+            if isInitialized {
+                UserDefaults.standard.set(useHistoricalSampling, forKey: "useHistoricalSampling")
+            }
+        }
+    }
+    
+    @Published var useVolShocks: Bool = true {
+        didSet {
+            print("didSet: useVolShocks changed to \(useVolShocks). isInitialized=\(isInitialized)")
+            if isInitialized {
+                UserDefaults.standard.set(useVolShocks, forKey: "useVolShocks")
+            }
+        }
+    }
+    
+    @Published var useGarchVolatility: Bool = true {
+        didSet {
+            print("didSet: useGarchVolatility changed to \(useGarchVolatility). isInitialized=\(isInitialized)")
+            if isInitialized {
+                UserDefaults.standard.set(useGarchVolatility, forKey: "useGarchVolatility")
+            }
+        }
+    }
+    
+    @Published var useAutoCorrelation: Bool = false {
+        didSet {
+            print("didSet: useAutoCorrelation changed to \(useAutoCorrelation).")
+            UserDefaults.standard.set(useAutoCorrelation, forKey: "useAutoCorrelation")
+        }
+    }
+    
+    @Published var autoCorrelationStrength: Double = 0.2 {
+        didSet {
+            print("didSet: autoCorrelationStrength changed to \(autoCorrelationStrength). isInitialized=\(isInitialized)")
+            if isInitialized {
+                UserDefaults.standard.set(autoCorrelationStrength, forKey: "autoCorrelationStrength")
+            }
+        }
+    }
+    
+    @Published var meanReversionTarget: Double = 0.0 {
+        didSet {
+            print("didSet: meanReversionTarget changed to \(meanReversionTarget). isInitialized=\(isInitialized)")
+            if isInitialized {
+                UserDefaults.standard.set(meanReversionTarget, forKey: "meanReversionTarget")
+            }
+        }
+    }
+    
+    @Published var lastUsedSeed: UInt64 = 0
+    
+    // =============================
+    // MARK: BULLISH FACTORS (weekly/monthly)
+    // =============================
+    
+    @Published var useHalvingWeekly: Bool = true {
+        didSet {
+            print("didSet: useHalvingWeekly changed to \(useHalvingWeekly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            guard isInitialized, !isUpdating, oldValue != useHalvingWeekly else { return }
+            UserDefaults.standard.set(useHalvingWeekly, forKey: "useHalvingWeekly")
+        }
+    }
+    @Published var halvingBumpWeekly: Double = SimulationSettings.defaultHalvingBumpWeekly {
+        didSet {
+            print("didSet: halvingBumpWeekly changed to \(halvingBumpWeekly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            if isInitialized && !isUpdating && oldValue != halvingBumpWeekly {
+                UserDefaults.standard.set(halvingBumpWeekly, forKey: "halvingBumpWeekly")
+            }
+        }
+    }
+    @Published var useHalvingMonthly: Bool = true {
+        didSet {
+            print("didSet: useHalvingMonthly changed to \(useHalvingMonthly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            guard isInitialized, !isUpdating, oldValue != useHalvingMonthly else { return }
+            UserDefaults.standard.set(useHalvingMonthly, forKey: "useHalvingMonthly")
+        }
+    }
+    @Published var halvingBumpMonthly: Double = SimulationSettings.defaultHalvingBumpMonthly {
+        didSet {
+            print("didSet: halvingBumpMonthly changed to \(halvingBumpMonthly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            if isInitialized && !isUpdating && oldValue != halvingBumpMonthly {
+                UserDefaults.standard.set(halvingBumpMonthly, forKey: "halvingBumpMonthly")
+            }
+        }
+    }
+    
+    @Published var useInstitutionalDemandWeekly: Bool = true {
+        didSet {
+            print("didSet: useInstitutionalDemandWeekly changed to \(useInstitutionalDemandWeekly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            guard isInitialized, !isUpdating, oldValue != useInstitutionalDemandWeekly else { return }
+            UserDefaults.standard.set(useInstitutionalDemandWeekly, forKey: "useInstitutionalDemandWeekly")
+        }
+    }
+    @Published var maxDemandBoostWeekly: Double = SimulationSettings.defaultMaxDemandBoostWeekly {
+        didSet {
+            print("didSet: maxDemandBoostWeekly changed to \(maxDemandBoostWeekly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            if isInitialized && !isUpdating && oldValue != maxDemandBoostWeekly {
+                UserDefaults.standard.set(maxDemandBoostWeekly, forKey: "maxDemandBoostWeekly")
+            }
+        }
+    }
+    @Published var useInstitutionalDemandMonthly: Bool = true {
+        didSet {
+            print("didSet: useInstitutionalDemandMonthly changed to \(useInstitutionalDemandMonthly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            guard isInitialized, !isUpdating, oldValue != useInstitutionalDemandMonthly else { return }
+            UserDefaults.standard.set(useInstitutionalDemandMonthly, forKey: "useInstitutionalDemandMonthly")
+        }
+    }
+    @Published var maxDemandBoostMonthly: Double = SimulationSettings.defaultMaxDemandBoostMonthly {
+        didSet {
+            print("didSet: maxDemandBoostMonthly changed to \(maxDemandBoostMonthly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            if isInitialized && !isUpdating && oldValue != maxDemandBoostMonthly {
+                UserDefaults.standard.set(maxDemandBoostMonthly, forKey: "maxDemandBoostMonthly")
+            }
+        }
+    }
+    
+    @Published var useCountryAdoptionWeekly: Bool = true {
+        didSet {
+            print("didSet: useCountryAdoptionWeekly changed to \(useCountryAdoptionWeekly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            guard isInitialized, !isUpdating, oldValue != useCountryAdoptionWeekly else { return }
+            UserDefaults.standard.set(useCountryAdoptionWeekly, forKey: "useCountryAdoptionWeekly")
+        }
+    }
+    @Published var maxCountryAdBoostWeekly: Double = SimulationSettings.defaultMaxCountryAdBoostWeekly {
+        didSet {
+            print("didSet: maxCountryAdBoostWeekly changed to \(maxCountryAdBoostWeekly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            if isInitialized && !isUpdating && oldValue != maxCountryAdBoostWeekly {
+                UserDefaults.standard.set(maxCountryAdBoostWeekly, forKey: "maxCountryAdBoostWeekly")
+            }
+        }
+    }
+    @Published var useCountryAdoptionMonthly: Bool = true {
+        didSet {
+            print("didSet: useCountryAdoptionMonthly changed to \(useCountryAdoptionMonthly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            guard isInitialized, !isUpdating, oldValue != useCountryAdoptionMonthly else { return }
+            UserDefaults.standard.set(useCountryAdoptionMonthly, forKey: "useCountryAdoptionMonthly")
+        }
+    }
+    @Published var maxCountryAdBoostMonthly: Double = SimulationSettings.defaultMaxCountryAdBoostMonthly {
+        didSet {
+            print("didSet: maxCountryAdBoostMonthly changed to \(maxCountryAdBoostMonthly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            if isInitialized && !isUpdating && oldValue != maxCountryAdBoostMonthly {
+                UserDefaults.standard.set(maxCountryAdBoostMonthly, forKey: "maxCountryAdBoostMonthly")
+            }
+        }
+    }
+    
+    @Published var useRegulatoryClarityWeekly: Bool = true {
+        didSet {
+            print("didSet: useRegulatoryClarityWeekly changed to \(useRegulatoryClarityWeekly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            guard isInitialized, !isUpdating, oldValue != useRegulatoryClarityWeekly else { return }
+            UserDefaults.standard.set(useRegulatoryClarityWeekly, forKey: "useRegulatoryClarityWeekly")
+        }
+    }
+    @Published var maxClarityBoostWeekly: Double = SimulationSettings.defaultMaxClarityBoostWeekly {
+        didSet {
+            print("didSet: maxClarityBoostWeekly changed to \(maxClarityBoostWeekly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            if isInitialized && !isUpdating && oldValue != maxClarityBoostWeekly {
+                UserDefaults.standard.set(maxClarityBoostWeekly, forKey: "maxClarityBoostWeekly")
+            }
+        }
+    }
+    @Published var useRegulatoryClarityMonthly: Bool = true {
+        didSet {
+            print("didSet: useRegulatoryClarityMonthly changed to \(useRegulatoryClarityMonthly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            guard isInitialized, !isUpdating, oldValue != useRegulatoryClarityMonthly else { return }
+            UserDefaults.standard.set(useRegulatoryClarityMonthly, forKey: "useRegulatoryClarityMonthly")
+        }
+    }
+    @Published var maxClarityBoostMonthly: Double = SimulationSettings.defaultMaxClarityBoostMonthly {
+        didSet {
+            print("didSet: maxClarityBoostMonthly changed to \(maxClarityBoostMonthly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            if isInitialized && !isUpdating && oldValue != maxClarityBoostMonthly {
+                UserDefaults.standard.set(maxClarityBoostMonthly, forKey: "maxClarityBoostMonthly")
+            }
+        }
+    }
+    
+    @Published var useEtfApprovalWeekly: Bool = true {
+        didSet {
+            print("didSet: useEtfApprovalWeekly changed to \(useEtfApprovalWeekly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            guard isInitialized, !isUpdating, oldValue != useEtfApprovalWeekly else { return }
+            UserDefaults.standard.set(useEtfApprovalWeekly, forKey: "useEtfApprovalWeekly")
+        }
+    }
+    @Published var maxEtfBoostWeekly: Double = SimulationSettings.defaultMaxEtfBoostWeekly {
+        didSet {
+            print("didSet: maxEtfBoostWeekly changed to \(maxEtfBoostWeekly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            if isInitialized && !isUpdating && oldValue != maxEtfBoostWeekly {
+                UserDefaults.standard.set(maxEtfBoostWeekly, forKey: "maxEtfBoostWeekly")
+            }
+        }
+    }
+    @Published var useEtfApprovalMonthly: Bool = true {
+        didSet {
+            print("didSet: useEtfApprovalMonthly changed to \(useEtfApprovalMonthly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            guard isInitialized, !isUpdating, oldValue != useEtfApprovalMonthly else { return }
+            UserDefaults.standard.set(useEtfApprovalMonthly, forKey: "useEtfApprovalMonthly")
+        }
+    }
+    @Published var maxEtfBoostMonthly: Double = SimulationSettings.defaultMaxEtfBoostMonthly {
+        didSet {
+            print("didSet: maxEtfBoostMonthly changed to \(maxEtfBoostMonthly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            if isInitialized && !isUpdating && oldValue != maxEtfBoostMonthly {
+                UserDefaults.standard.set(maxEtfBoostMonthly, forKey: "maxEtfBoostMonthly")
+            }
+        }
+    }
+    
+    @Published var useTechBreakthroughWeekly: Bool = true {
+        didSet {
+            print("didSet: useTechBreakthroughWeekly changed to \(useTechBreakthroughWeekly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            guard isInitialized, !isUpdating, oldValue != useTechBreakthroughWeekly else { return }
+            UserDefaults.standard.set(useTechBreakthroughWeekly, forKey: "useTechBreakthroughWeekly")
+        }
+    }
+    @Published var maxTechBoostWeekly: Double = SimulationSettings.defaultMaxTechBoostWeekly {
+        didSet {
+            print("didSet: maxTechBoostWeekly changed to \(maxTechBoostWeekly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            if isInitialized && !isUpdating && oldValue != maxTechBoostWeekly {
+                UserDefaults.standard.set(maxTechBoostWeekly, forKey: "maxTechBoostWeekly")
+            }
+        }
+    }
+    @Published var useTechBreakthroughMonthly: Bool = true {
+        didSet {
+            print("didSet: useTechBreakthroughMonthly changed to \(useTechBreakthroughMonthly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            guard isInitialized, !isUpdating, oldValue != useTechBreakthroughMonthly else { return }
+            UserDefaults.standard.set(useTechBreakthroughMonthly, forKey: "useTechBreakthroughMonthly")
+        }
+    }
+    @Published var maxTechBoostMonthly: Double = SimulationSettings.defaultMaxTechBoostMonthly {
+        didSet {
+            print("didSet: maxTechBoostMonthly changed to \(maxTechBoostMonthly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            if isInitialized && !isUpdating && oldValue != maxTechBoostMonthly {
+                UserDefaults.standard.set(maxTechBoostMonthly, forKey: "maxTechBoostMonthly")
+            }
+        }
+    }
+    
+    @Published var useScarcityEventsWeekly: Bool = true {
+        didSet {
+            print("didSet: useScarcityEventsWeekly changed to \(useScarcityEventsWeekly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            guard isInitialized, !isUpdating, oldValue != useScarcityEventsWeekly else { return }
+            UserDefaults.standard.set(useScarcityEventsWeekly, forKey: "useScarcityEventsWeekly")
+        }
+    }
+    @Published var maxScarcityBoostWeekly: Double = SimulationSettings.defaultMaxScarcityBoostWeekly {
+        didSet {
+            print("didSet: maxScarcityBoostWeekly changed to \(maxScarcityBoostWeekly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            if isInitialized && !isUpdating && oldValue != maxScarcityBoostWeekly {
+                UserDefaults.standard.set(maxScarcityBoostWeekly, forKey: "maxScarcityBoostWeekly")
+            }
+        }
+    }
+    @Published var useScarcityEventsMonthly: Bool = true {
+        didSet {
+            print("didSet: useScarcityEventsMonthly changed to \(useScarcityEventsMonthly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            guard isInitialized, !isUpdating, oldValue != useScarcityEventsMonthly else { return }
+            UserDefaults.standard.set(useScarcityEventsMonthly, forKey: "useScarcityEventsMonthly")
+        }
+    }
+    @Published var maxScarcityBoostMonthly: Double = SimulationSettings.defaultMaxScarcityBoostMonthly {
+        didSet {
+            print("didSet: maxScarcityBoostMonthly changed to \(maxScarcityBoostMonthly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            if isInitialized && !isUpdating && oldValue != maxScarcityBoostMonthly {
+                UserDefaults.standard.set(maxScarcityBoostMonthly, forKey: "maxScarcityBoostMonthly")
+            }
+        }
+    }
+    
+    @Published var useGlobalMacroHedgeWeekly: Bool = true {
+        didSet {
+            print("didSet: useGlobalMacroHedgeWeekly changed to \(useGlobalMacroHedgeWeekly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            guard isInitialized, !isUpdating, oldValue != useGlobalMacroHedgeWeekly else { return }
+            UserDefaults.standard.set(useGlobalMacroHedgeWeekly, forKey: "useGlobalMacroHedgeWeekly")
+        }
+    }
+    @Published var maxMacroBoostWeekly: Double = SimulationSettings.defaultMaxMacroBoostWeekly {
+        didSet {
+            print("didSet: maxMacroBoostWeekly changed to \(maxMacroBoostWeekly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            if isInitialized && !isUpdating && oldValue != maxMacroBoostWeekly {
+                UserDefaults.standard.set(maxMacroBoostWeekly, forKey: "maxMacroBoostWeekly")
+            }
+        }
+    }
+    @Published var useGlobalMacroHedgeMonthly: Bool = true {
+        didSet {
+            print("didSet: useGlobalMacroHedgeMonthly changed to \(useGlobalMacroHedgeMonthly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            guard isInitialized, !isUpdating, oldValue != useGlobalMacroHedgeMonthly else { return }
+            UserDefaults.standard.set(useGlobalMacroHedgeMonthly, forKey: "useGlobalMacroHedgeMonthly")
+        }
+    }
+    @Published var maxMacroBoostMonthly: Double = SimulationSettings.defaultMaxMacroBoostMonthly {
+        didSet {
+            print("didSet: maxMacroBoostMonthly changed to \(maxMacroBoostMonthly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            if isInitialized && !isUpdating && oldValue != maxMacroBoostMonthly {
+                UserDefaults.standard.set(maxMacroBoostMonthly, forKey: "maxMacroBoostMonthly")
+            }
+        }
+    }
+    
+    @Published var useStablecoinShiftWeekly: Bool = true {
+        didSet {
+            print("didSet: useStablecoinShiftWeekly changed to \(useStablecoinShiftWeekly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            guard isInitialized, !isUpdating, oldValue != useStablecoinShiftWeekly else { return }
+            UserDefaults.standard.set(useStablecoinShiftWeekly, forKey: "useStablecoinShiftWeekly")
+        }
+    }
+    @Published var maxStablecoinBoostWeekly: Double = SimulationSettings.defaultMaxStablecoinBoostWeekly {
+        didSet {
+            print("didSet: maxStablecoinBoostWeekly changed to \(maxStablecoinBoostWeekly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            if isInitialized && !isUpdating && oldValue != maxStablecoinBoostWeekly {
+                UserDefaults.standard.set(maxStablecoinBoostWeekly, forKey: "maxStablecoinBoostWeekly")
+            }
+        }
+    }
+    @Published var useStablecoinShiftMonthly: Bool = true {
+        didSet {
+            print("didSet: useStablecoinShiftMonthly changed to \(useStablecoinShiftMonthly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            guard isInitialized, !isUpdating, oldValue != useStablecoinShiftMonthly else { return }
+            UserDefaults.standard.set(useStablecoinShiftMonthly, forKey: "useStablecoinShiftMonthly")
+        }
+    }
+    @Published var maxStablecoinBoostMonthly: Double = SimulationSettings.defaultMaxStablecoinBoostMonthly {
+        didSet {
+            print("didSet: maxStablecoinBoostMonthly changed to \(maxStablecoinBoostMonthly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            if isInitialized && !isUpdating && oldValue != maxStablecoinBoostMonthly {
+                UserDefaults.standard.set(maxStablecoinBoostMonthly, forKey: "maxStablecoinBoostMonthly")
+            }
+        }
+    }
+    
+    @Published var useDemographicAdoptionWeekly: Bool = true {
+        didSet {
+            print("didSet: useDemographicAdoptionWeekly changed to \(useDemographicAdoptionWeekly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            guard isInitialized, !isUpdating, oldValue != useDemographicAdoptionWeekly else { return }
+            UserDefaults.standard.set(useDemographicAdoptionWeekly, forKey: "useDemographicAdoptionWeekly")
+        }
+    }
+    @Published var maxDemoBoostWeekly: Double = SimulationSettings.defaultMaxDemoBoostWeekly {
+        didSet {
+            print("didSet: maxDemoBoostWeekly changed to \(maxDemoBoostWeekly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            if isInitialized && !isUpdating && oldValue != maxDemoBoostWeekly {
+                UserDefaults.standard.set(maxDemoBoostWeekly, forKey: "maxDemoBoostWeekly")
+            }
+        }
+    }
+    @Published var useDemographicAdoptionMonthly: Bool = true {
+        didSet {
+            print("didSet: useDemographicAdoptionMonthly changed to \(useDemographicAdoptionMonthly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            guard isInitialized, !isUpdating, oldValue != useDemographicAdoptionMonthly else { return }
+            UserDefaults.standard.set(useDemographicAdoptionMonthly, forKey: "useDemographicAdoptionMonthly")
+        }
+    }
+    @Published var maxDemoBoostMonthly: Double = SimulationSettings.defaultMaxDemoBoostMonthly {
+        didSet {
+            print("didSet: maxDemoBoostMonthly changed to \(maxDemoBoostMonthly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            if isInitialized && !isUpdating && oldValue != maxDemoBoostMonthly {
+                UserDefaults.standard.set(maxDemoBoostMonthly, forKey: "maxDemoBoostMonthly")
+            }
+        }
+    }
+    
+    @Published var useAltcoinFlightWeekly: Bool = true {
+        didSet {
+            print("didSet: useAltcoinFlightWeekly changed to \(useAltcoinFlightWeekly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            guard isInitialized, !isUpdating, oldValue != useAltcoinFlightWeekly else { return }
+            UserDefaults.standard.set(useAltcoinFlightWeekly, forKey: "useAltcoinFlightWeekly")
+        }
+    }
+    @Published var maxAltcoinBoostWeekly: Double = SimulationSettings.defaultMaxAltcoinBoostWeekly {
+        didSet {
+            print("didSet: maxAltcoinBoostWeekly changed to \(maxAltcoinBoostWeekly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            if isInitialized && !isUpdating && oldValue != maxAltcoinBoostWeekly {
+                UserDefaults.standard.set(maxAltcoinBoostWeekly, forKey: "maxAltcoinBoostWeekly")
+            }
+        }
+    }
+    @Published var useAltcoinFlightMonthly: Bool = true {
+        didSet {
+            print("didSet: useAltcoinFlightMonthly changed to \(useAltcoinFlightMonthly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            guard isInitialized, !isUpdating, oldValue != useAltcoinFlightMonthly else { return }
+            UserDefaults.standard.set(useAltcoinFlightMonthly, forKey: "useAltcoinFlightMonthly")
+        }
+    }
+    @Published var maxAltcoinBoostMonthly: Double = SimulationSettings.defaultMaxAltcoinBoostMonthly {
+        didSet {
+            print("didSet: maxAltcoinBoostMonthly changed to \(maxAltcoinBoostMonthly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            if isInitialized && !isUpdating && oldValue != maxAltcoinBoostMonthly {
+                UserDefaults.standard.set(maxAltcoinBoostMonthly, forKey: "maxAltcoinBoostMonthly")
+            }
+        }
+    }
+    
+    @Published var useAdoptionFactorWeekly: Bool = true {
+        didSet {
+            print("didSet: useAdoptionFactorWeekly changed to \(useAdoptionFactorWeekly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            guard isInitialized, !isUpdating, oldValue != useAdoptionFactorWeekly else { return }
+            UserDefaults.standard.set(useAdoptionFactorWeekly, forKey: "useAdoptionFactorWeekly")
+        }
+    }
+    @Published var adoptionBaseFactorWeekly: Double = SimulationSettings.defaultAdoptionBaseFactorWeekly {
+        didSet {
+            print("didSet: adoptionBaseFactorWeekly changed to \(adoptionBaseFactorWeekly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            if isInitialized && !isUpdating && oldValue != adoptionBaseFactorWeekly {
+                UserDefaults.standard.set(adoptionBaseFactorWeekly, forKey: "adoptionBaseFactorWeekly")
+            }
+        }
+    }
+    @Published var useAdoptionFactorMonthly: Bool = true {
+        didSet {
+            print("didSet: useAdoptionFactorMonthly changed to \(useAdoptionFactorMonthly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            guard isInitialized, !isUpdating, oldValue != useAdoptionFactorMonthly else { return }
+            UserDefaults.standard.set(useAdoptionFactorMonthly, forKey: "useAdoptionFactorMonthly")
+        }
+    }
+    @Published var adoptionBaseFactorMonthly: Double = SimulationSettings.defaultAdoptionBaseFactorMonthly {
+        didSet {
+            print("didSet: adoptionBaseFactorMonthly changed to \(adoptionBaseFactorMonthly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            if isInitialized && !isUpdating && oldValue != adoptionBaseFactorMonthly {
+                UserDefaults.standard.set(adoptionBaseFactorMonthly, forKey: "adoptionBaseFactorMonthly")
+            }
+        }
+    }
+    
+    // =============================
+    // MARK: BEARISH FACTORS (weekly/monthly)
+    // =============================
+    
+    @Published var useRegClampdownWeekly: Bool = true {
+        didSet {
+            print("didSet: useRegClampdownWeekly changed to \(useRegClampdownWeekly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            guard isInitialized, !isUpdating, oldValue != useRegClampdownWeekly else { return }
+            UserDefaults.standard.set(useRegClampdownWeekly, forKey: "useRegClampdownWeekly")
+        }
+    }
+    @Published var maxClampDownWeekly: Double = SimulationSettings.defaultMaxClampDownWeekly {
+        didSet {
+            print("didSet: maxClampDownWeekly changed to \(maxClampDownWeekly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            if isInitialized && !isUpdating && oldValue != maxClampDownWeekly {
+                UserDefaults.standard.set(maxClampDownWeekly, forKey: "maxClampDownWeekly")
+            }
+        }
+    }
+    @Published var useRegClampdownMonthly: Bool = true {
+        didSet {
+            print("didSet: useRegClampdownMonthly changed to \(useRegClampdownMonthly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            guard isInitialized, !isUpdating, oldValue != useRegClampdownMonthly else { return }
+            UserDefaults.standard.set(useRegClampdownMonthly, forKey: "useRegClampdownMonthly")
+        }
+    }
+    @Published var maxClampDownMonthly: Double = SimulationSettings.defaultMaxClampDownMonthly {
+        didSet {
+            print("didSet: maxClampDownMonthly changed to \(maxClampDownMonthly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            if isInitialized && !isUpdating && oldValue != maxClampDownMonthly {
+                UserDefaults.standard.set(maxClampDownMonthly, forKey: "maxClampDownMonthly")
+            }
+        }
+    }
+    
+    @Published var useCompetitorCoinWeekly: Bool = true {
+        didSet {
+            print("didSet: useCompetitorCoinWeekly changed to \(useCompetitorCoinWeekly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            guard isInitialized, !isUpdating, oldValue != useCompetitorCoinWeekly else { return }
+            UserDefaults.standard.set(useCompetitorCoinWeekly, forKey: "useCompetitorCoinWeekly")
+        }
+    }
+    @Published var maxCompetitorBoostWeekly: Double = SimulationSettings.defaultMaxCompetitorBoostWeekly {
+        didSet {
+            print("didSet: maxCompetitorBoostWeekly changed to \(maxCompetitorBoostWeekly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            if isInitialized && !isUpdating && oldValue != maxCompetitorBoostWeekly {
+                UserDefaults.standard.set(maxCompetitorBoostWeekly, forKey: "maxCompetitorBoostWeekly")
+            }
+        }
+    }
+    @Published var useCompetitorCoinMonthly: Bool = true {
+        didSet {
+            print("didSet: useCompetitorCoinMonthly changed to \(useCompetitorCoinMonthly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            guard isInitialized, !isUpdating, oldValue != useCompetitorCoinMonthly else { return }
+            UserDefaults.standard.set(useCompetitorCoinMonthly, forKey: "useCompetitorCoinMonthly")
+        }
+    }
+    @Published var maxCompetitorBoostMonthly: Double = SimulationSettings.defaultMaxCompetitorBoostMonthly {
+        didSet {
+            print("didSet: maxCompetitorBoostMonthly changed to \(maxCompetitorBoostMonthly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            if isInitialized && !isUpdating && oldValue != maxCompetitorBoostMonthly {
+                UserDefaults.standard.set(maxCompetitorBoostMonthly, forKey: "maxCompetitorBoostMonthly")
+            }
+        }
+    }
+    
+    @Published var useSecurityBreachWeekly: Bool = true {
+        didSet {
+            print("didSet: useSecurityBreachWeekly changed to \(useSecurityBreachWeekly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            guard isInitialized, !isUpdating, oldValue != useSecurityBreachWeekly else { return }
+            UserDefaults.standard.set(useSecurityBreachWeekly, forKey: "useSecurityBreachWeekly")
+        }
+    }
+    @Published var breachImpactWeekly: Double = SimulationSettings.defaultBreachImpactWeekly {
+        didSet {
+            print("didSet: breachImpactWeekly changed to \(breachImpactWeekly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            if isInitialized && !isUpdating && oldValue != breachImpactWeekly {
+                UserDefaults.standard.set(breachImpactWeekly, forKey: "breachImpactWeekly")
+            }
+        }
+    }
+    @Published var useSecurityBreachMonthly: Bool = true {
+        didSet {
+            print("didSet: useSecurityBreachMonthly changed to \(useSecurityBreachMonthly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            guard isInitialized, !isUpdating, oldValue != useSecurityBreachMonthly else { return }
+            UserDefaults.standard.set(useSecurityBreachMonthly, forKey: "useSecurityBreachMonthly")
+        }
+    }
+    @Published var breachImpactMonthly: Double = SimulationSettings.defaultBreachImpactMonthly {
+        didSet {
+            print("didSet: breachImpactMonthly changed to \(breachImpactMonthly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            if isInitialized && !isUpdating && oldValue != breachImpactMonthly {
+                UserDefaults.standard.set(breachImpactMonthly, forKey: "breachImpactMonthly")
+            }
+        }
+    }
+    
+    @Published var useBubblePopWeekly: Bool = true {
+        didSet {
+            print("didSet: useBubblePopWeekly changed to \(useBubblePopWeekly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            guard isInitialized, !isUpdating, oldValue != useBubblePopWeekly else { return }
+            UserDefaults.standard.set(useBubblePopWeekly, forKey: "useBubblePopWeekly")
+        }
+    }
+    @Published var maxPopDropWeekly: Double = SimulationSettings.defaultMaxPopDropWeekly {
+        didSet {
+            print("didSet: maxPopDropWeekly changed to \(maxPopDropWeekly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            if isInitialized && !isUpdating && oldValue != maxPopDropWeekly {
+                UserDefaults.standard.set(maxPopDropWeekly, forKey: "maxPopDropWeekly")
+            }
+        }
+    }
+    @Published var useBubblePopMonthly: Bool = true {
+        didSet {
+            print("didSet: useBubblePopMonthly changed to \(useBubblePopMonthly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            guard isInitialized, !isUpdating, oldValue != useBubblePopMonthly else { return }
+            UserDefaults.standard.set(useBubblePopMonthly, forKey: "useBubblePopMonthly")
+        }
+    }
+    @Published var maxPopDropMonthly: Double = SimulationSettings.defaultMaxPopDropMonthly {
+        didSet {
+            print("didSet: maxPopDropMonthly changed to \(maxPopDropMonthly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            if isInitialized && !isUpdating && oldValue != maxPopDropMonthly {
+                UserDefaults.standard.set(maxPopDropMonthly, forKey: "maxPopDropMonthly")
+            }
+        }
+    }
+    
+    @Published var useStablecoinMeltdownWeekly: Bool = true {
+        didSet {
+            print("didSet: useStablecoinMeltdownWeekly changed to \(useStablecoinMeltdownWeekly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            guard isInitialized, !isUpdating, oldValue != useStablecoinMeltdownWeekly else { return }
+            UserDefaults.standard.set(useStablecoinMeltdownWeekly, forKey: "useStablecoinMeltdownWeekly")
+        }
+    }
+    @Published var maxMeltdownDropWeekly: Double = SimulationSettings.defaultMaxMeltdownDropWeekly {
+        didSet {
+            print("didSet: maxMeltdownDropWeekly changed to \(maxMeltdownDropWeekly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            if isInitialized && !isUpdating && oldValue != maxMeltdownDropWeekly {
+                UserDefaults.standard.set(maxMeltdownDropWeekly, forKey: "maxMeltdownDropWeekly")
+            }
+        }
+    }
+    @Published var useStablecoinMeltdownMonthly: Bool = true {
+        didSet {
+            print("didSet: useStablecoinMeltdownMonthly changed to \(useStablecoinMeltdownMonthly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            guard isInitialized, !isUpdating, oldValue != useStablecoinMeltdownMonthly else { return }
+            UserDefaults.standard.set(useStablecoinMeltdownMonthly, forKey: "useStablecoinMeltdownMonthly")
+        }
+    }
+    @Published var maxMeltdownDropMonthly: Double = SimulationSettings.defaultMaxMeltdownDropMonthly {
+        didSet {
+            print("didSet: maxMeltdownDropMonthly changed to \(maxMeltdownDropMonthly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            if isInitialized && !isUpdating && oldValue != maxMeltdownDropMonthly {
+                UserDefaults.standard.set(maxMeltdownDropMonthly, forKey: "maxMeltdownDropMonthly")
+            }
+        }
+    }
+    
+    @Published var useBlackSwanWeekly: Bool = true {
+        didSet {
+            print("didSet: useBlackSwanWeekly changed to \(useBlackSwanWeekly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            guard isInitialized, !isUpdating, oldValue != useBlackSwanWeekly else { return }
+            UserDefaults.standard.set(useBlackSwanWeekly, forKey: "useBlackSwanWeekly")
+        }
+    }
+    @Published var blackSwanDropWeekly: Double = SimulationSettings.defaultBlackSwanDropWeekly {
+        didSet {
+            print("didSet: blackSwanDropWeekly changed to \(blackSwanDropWeekly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            if isInitialized && !isUpdating && oldValue != blackSwanDropWeekly {
+                UserDefaults.standard.set(blackSwanDropWeekly, forKey: "blackSwanDropWeekly")
+            }
+        }
+    }
+    @Published var useBlackSwanMonthly: Bool = true {
+        didSet {
+            print("didSet: useBlackSwanMonthly changed to \(useBlackSwanMonthly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            guard isInitialized, !isUpdating, oldValue != useBlackSwanMonthly else { return }
+            UserDefaults.standard.set(useBlackSwanMonthly, forKey: "useBlackSwanMonthly")
+        }
+    }
+    @Published var blackSwanDropMonthly: Double = SimulationSettings.defaultBlackSwanDropMonthly {
+        didSet {
+            print("didSet: blackSwanDropMonthly changed to \(blackSwanDropMonthly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            if isInitialized && !isUpdating && oldValue != blackSwanDropMonthly {
+                UserDefaults.standard.set(blackSwanDropMonthly, forKey: "blackSwanDropMonthly")
+            }
+        }
+    }
+    
+    @Published var useBearMarketWeekly: Bool = true {
+        didSet {
+            print("didSet: useBearMarketWeekly changed to \(useBearMarketWeekly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            guard isInitialized, !isUpdating, oldValue != useBearMarketWeekly else { return }
+            UserDefaults.standard.set(useBearMarketWeekly, forKey: "useBearMarketWeekly")
+        }
+    }
+    @Published var bearWeeklyDriftWeekly: Double = SimulationSettings.defaultBearWeeklyDriftWeekly {
+        didSet {
+            print("didSet: bearWeeklyDriftWeekly changed to \(bearWeeklyDriftWeekly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            if isInitialized && !isUpdating && oldValue != bearWeeklyDriftWeekly {
+                UserDefaults.standard.set(bearWeeklyDriftWeekly, forKey: "bearWeeklyDriftWeekly")
+            }
+        }
+    }
+    @Published var useBearMarketMonthly: Bool = true {
+        didSet {
+            print("didSet: useBearMarketMonthly changed to \(useBearMarketMonthly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            guard isInitialized, !isUpdating, oldValue != useBearMarketMonthly else { return }
+            UserDefaults.standard.set(useBearMarketMonthly, forKey: "useBearMarketMonthly")
+        }
+    }
+    @Published var bearWeeklyDriftMonthly: Double = SimulationSettings.defaultBearWeeklyDriftMonthly {
+        didSet {
+            print("didSet: bearWeeklyDriftMonthly changed to \(bearWeeklyDriftMonthly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            if isInitialized && !isUpdating && oldValue != bearWeeklyDriftMonthly {
+                UserDefaults.standard.set(bearWeeklyDriftMonthly, forKey: "bearWeeklyDriftMonthly")
+            }
+        }
+    }
+    
+    @Published var useMaturingMarketWeekly: Bool = true {
+        didSet {
+            print("didSet: useMaturingMarketWeekly changed to \(useMaturingMarketWeekly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            guard isInitialized, !isUpdating, oldValue != useMaturingMarketWeekly else { return }
+            UserDefaults.standard.set(useMaturingMarketWeekly, forKey: "useMaturingMarketWeekly")
+        }
+    }
+    @Published var maxMaturingDropWeekly: Double = SimulationSettings.defaultMaxMaturingDropWeekly {
+        didSet {
+            print("didSet: maxMaturingDropWeekly changed to \(maxMaturingDropWeekly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            if isInitialized && !isUpdating && oldValue != maxMaturingDropWeekly {
+                UserDefaults.standard.set(maxMaturingDropWeekly, forKey: "maxMaturingDropWeekly")
+            }
+        }
+    }
+    @Published var useMaturingMarketMonthly: Bool = true {
+        didSet {
+            print("didSet: useMaturingMarketMonthly changed to \(useMaturingMarketMonthly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            guard isInitialized, !isUpdating, oldValue != useMaturingMarketMonthly else { return }
+            UserDefaults.standard.set(useMaturingMarketMonthly, forKey: "useMaturingMarketMonthly")
+        }
+    }
+    @Published var maxMaturingDropMonthly: Double = SimulationSettings.defaultMaxMaturingDropMonthly {
+        didSet {
+            print("didSet: maxMaturingDropMonthly changed to \(maxMaturingDropMonthly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            if isInitialized && !isUpdating && oldValue != maxMaturingDropMonthly {
+                UserDefaults.standard.set(maxMaturingDropMonthly, forKey: "maxMaturingDropMonthly")
+            }
+        }
+    }
+    
+    @Published var useRecessionWeekly: Bool = true {
+        didSet {
+            print("didSet: useRecessionWeekly changed to \(useRecessionWeekly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            guard isInitialized, !isUpdating, oldValue != useRecessionWeekly else { return }
+            UserDefaults.standard.set(useRecessionWeekly, forKey: "useRecessionWeekly")
+        }
+    }
+    @Published var maxRecessionDropWeekly: Double = SimulationSettings.defaultMaxRecessionDropWeekly {
+        didSet {
+            print("didSet: maxRecessionDropWeekly changed to \(maxRecessionDropWeekly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            if isInitialized && !isUpdating && oldValue != maxRecessionDropWeekly {
+                UserDefaults.standard.set(maxRecessionDropWeekly, forKey: "maxRecessionDropWeekly")
+            }
+        }
+    }
+    @Published var useRecessionMonthly: Bool = true {
+        didSet {
+            print("didSet: useRecessionMonthly changed to \(useRecessionMonthly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            guard isInitialized, !isUpdating, oldValue != useRecessionMonthly else { return }
+            UserDefaults.standard.set(useRecessionMonthly, forKey: "useRecessionMonthly")
+        }
+    }
+    @Published var maxRecessionDropMonthly: Double = SimulationSettings.defaultMaxRecessionDropMonthly {
+        didSet {
+            print("didSet: maxRecessionDropMonthly changed to \(maxRecessionDropMonthly). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            if isInitialized && !isUpdating && oldValue != maxRecessionDropMonthly {
+                UserDefaults.standard.set(maxRecessionDropMonthly, forKey: "maxRecessionDropMonthly")
+            }
+        }
+    }
+    
+    @Published var lockHistoricalSampling: Bool = false {
+        didSet {
+            print("didSet: lockHistoricalSampling changed to \(lockHistoricalSampling). isInitialized=\(isInitialized)")
+            if isInitialized {
+                UserDefaults.standard.set(lockHistoricalSampling, forKey: "lockHistoricalSampling")
+            }
+        }
+    }
+
+    func finalizeToggleStateAfterLoad() {
+        // Currently no forced changes here
+        isUpdating = false
+    }
+    
+    // We won't call these from periodUnit.didSet anymore, since we no longer forcibly turn off toggles.
+    // But we'll leave the methods here in case they're needed in some other context.
+    private func turnOffMonthlyToggles() {
+        useHalvingMonthly = false
+        useInstitutionalDemandMonthly = false
+        useCountryAdoptionMonthly = false
+        useRegulatoryClarityMonthly = false
+        useEtfApprovalMonthly = false
+        useTechBreakthroughMonthly = false
+        useScarcityEventsMonthly = false
+        useGlobalMacroHedgeMonthly = false
+        useStablecoinShiftMonthly = false
+        useDemographicAdoptionMonthly = false
+        useAltcoinFlightMonthly = false
+        useAdoptionFactorMonthly = false
+        useRegClampdownMonthly = false
+        useCompetitorCoinMonthly = false
+        useSecurityBreachMonthly = false
+        useBubblePopMonthly = false
+        useStablecoinMeltdownMonthly = false
+        useBlackSwanMonthly = false
+        useBearMarketMonthly = false
+        useMaturingMarketMonthly = false
+        useRecessionMonthly = false
+    }
+
+    private func turnOffWeeklyToggles() {
+        useHalvingWeekly = false
+        useInstitutionalDemandWeekly = false
+        useCountryAdoptionWeekly = false
+        useRegulatoryClarityWeekly = false
+        useEtfApprovalWeekly = false
+        useTechBreakthroughWeekly = false
+        useScarcityEventsWeekly = false
+        useGlobalMacroHedgeWeekly = false
+        useStablecoinShiftWeekly = false
+        useDemographicAdoptionWeekly = false
+        useAltcoinFlightWeekly = false
+        useAdoptionFactorWeekly = false
+        useRegClampdownWeekly = false
+        useCompetitorCoinWeekly = false
+        useSecurityBreachWeekly = false
+        useBubblePopWeekly = false
+        useStablecoinMeltdownWeekly = false
+        useBlackSwanWeekly = false
+        useBearMarketWeekly = false
+        useMaturingMarketWeekly = false
+        useRecessionWeekly = false
+    }
+
+    // The big combined check:
     var toggleAll: Bool {
         get {
             if periodUnit == .weeks {
@@ -73,6 +917,7 @@ class SimulationSettings: ObservableObject {
             }
         }
         set {
+            print("toggleAll set to \(newValue) for \(periodUnit). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
             isUpdating = true
             if periodUnit == .weeks {
                 useHalvingWeekly = newValue
@@ -121,960 +966,5 @@ class SimulationSettings: ObservableObject {
             }
             isUpdating = false
         }
-    }
-    // ------------------------------------------------------------
-    
-    var inputManager: PersistentInputManager? = nil
-    
-    // MARK: - Weekly vs. Monthly
-    @Published var periodUnit: PeriodUnit = .weeks {
-        didSet {
-            guard isInitialized else { return }
-
-            // If user tries changing periodUnit outside of onboarding, revert it
-            if !isOnboarding && periodUnit != oldValue {
-                let revertValue = oldValue
-                DispatchQueue.main.async {
-                    self.periodUnit = revertValue
-                }
-                return
-            }
-
-            // Otherwise, if changed properly (or in onboarding), switch off toggles
-            if periodUnit == .weeks {
-                turnOffMonthlyToggles()
-            } else {
-                turnOffWeeklyToggles()
-            }
-        }
-    }
-    
-    @Published var userPeriods: Int = 52
-    @Published var initialBTCPriceUSD: Double = 58000.0
-    
-    // Onboarding
-    @Published var startingBalance: Double = 0.0
-    @Published var averageCostBasis: Double = 25000.0
-    
-    @Published var currencyPreference: PreferredCurrency = .eur {
-        didSet {
-            if isInitialized {
-                print("didSet: currencyPreference changed to \(currencyPreference)")
-                UserDefaults.standard.set(currencyPreference.rawValue, forKey: "currencyPreference")
-            }
-        }
-    }
-    
-    @Published var contributionCurrencyWhenBoth: PreferredCurrency = .eur
-    @Published var startingBalanceCurrencyWhenBoth: PreferredCurrency = .usd
-    
-    // Results
-    @Published var lastRunResults: [SimulationData] = []
-    @Published var allRuns: [[SimulationData]] = []
-    
-    var isInitialized = false
-    var isUpdating = false
-    
-    // Lognormal Growth
-    @Published var useLognormalGrowth: Bool = true {
-        didSet {
-            print("didSet: useLognormalGrowth changed to \(useLognormalGrowth)")
-            UserDefaults.standard.set(useLognormalGrowth, forKey: "useLognormalGrowth")
-        }
-    }
-    
-    // Random Seed
-    @Published var lockedRandomSeed: Bool = false {
-        didSet {
-            if isInitialized {
-                print("didSet: lockedRandomSeed changed to \(lockedRandomSeed)")
-                UserDefaults.standard.set(lockedRandomSeed, forKey: "lockedRandomSeed")
-            }
-        }
-    }
-    
-    @Published var seedValue: UInt64 = 0 {
-        didSet {
-            if isInitialized {
-                print("didSet: seedValue changed to \(seedValue)")
-                UserDefaults.standard.set(seedValue, forKey: "seedValue")
-            }
-        }
-    }
-    
-    @Published var useRandomSeed: Bool = true {
-        didSet {
-            if isInitialized {
-                print("didSet: useRandomSeed changed to \(useRandomSeed)")
-                UserDefaults.standard.set(useRandomSeed, forKey: "useRandomSeed")
-            }
-        }
-    }
-    
-    @Published var useHistoricalSampling: Bool = true {
-        didSet {
-            if isInitialized {
-                print("didSet: useHistoricalSampling changed to \(useHistoricalSampling)")
-                UserDefaults.standard.set(useHistoricalSampling, forKey: "useHistoricalSampling")
-            }
-        }
-    }
-    
-    @Published var useVolShocks: Bool = true {
-        didSet {
-            if isInitialized {
-                print("didSet: useVolShocks changed to \(useVolShocks)")
-                UserDefaults.standard.set(useVolShocks, forKey: "useVolShocks")
-            }
-        }
-    }
-    
-    @Published var useGarchVolatility: Bool = true {
-        didSet {
-            if isInitialized {
-                print("didSet: useGarchVolatility changed to \(useGarchVolatility)")
-                UserDefaults.standard.set(useGarchVolatility, forKey: "useGarchVolatility")
-            }
-        }
-    }
-    
-    @Published var useAutoCorrelation: Bool = false {
-        didSet {
-            print("didSet: useAutoCorrelation = \(useAutoCorrelation)")
-            UserDefaults.standard.set(useAutoCorrelation, forKey: "useAutoCorrelation")
-        }
-    }
-    
-    @Published var autoCorrelationStrength: Double = 0.2 {
-        didSet {
-            if isInitialized {
-                print("didSet: autoCorrelationStrength changed to \(autoCorrelationStrength)")
-                UserDefaults.standard.set(autoCorrelationStrength, forKey: "autoCorrelationStrength")
-            }
-        }
-    }
-    
-    @Published var meanReversionTarget: Double = 0.0 {
-        didSet {
-            if isInitialized {
-                print("didSet: meanReversionTarget changed to \(meanReversionTarget)")
-                UserDefaults.standard.set(meanReversionTarget, forKey: "meanReversionTarget")
-            }
-        }
-    }
-    
-    @Published var lastUsedSeed: UInt64 = 0
-    
-    // =============================
-    // MARK: - BULLISH FACTORS
-    // =============================
-    
-    // -- Parent toggles removed/commented out --
-    // @Published var useHalving: Bool = true { ... }
-    // @Published var useInstitutionalDemand: Bool = true { ... }
-    // @Published var useCountryAdoption: Bool = true { ... }
-    // @Published var useRegulatoryClarity: Bool = true { ... }
-    // @Published var useEtfApproval: Bool = true { ... }
-    // @Published var useTechBreakthrough: Bool = true { ... }
-    // @Published var useScarcityEvents: Bool = true { ... }
-    // @Published var useGlobalMacroHedge: Bool = true { ... }
-    // @Published var useStablecoinShift: Bool = true { ... }
-    // @Published var useDemographicAdoption: Bool = true { ... }
-    // @Published var useAltcoinFlight: Bool = true { ... }
-    // @Published var useAdoptionFactor: Bool = true { ... }
-    
-    @Published var useHalvingWeekly: Bool = false {
-        didSet {
-            guard isInitialized, !isUpdating, oldValue != useHalvingWeekly else { return }
-            print("didSet: useHalvingWeekly changed to \(useHalvingWeekly)")
-            UserDefaults.standard.set(useHalvingWeekly, forKey: "useHalvingWeekly")
-        }
-    }
-    
-    @Published var halvingBumpWeekly: Double = SimulationSettings.defaultHalvingBumpWeekly {
-        didSet {
-            if isInitialized && !isUpdating && oldValue != halvingBumpWeekly {
-                print("didSet: halvingBumpWeekly changed to \(halvingBumpWeekly)")
-                UserDefaults.standard.set(halvingBumpWeekly, forKey: "halvingBumpWeekly")
-            }
-        }
-    }
-    
-    @Published var useHalvingMonthly: Bool = false {
-        didSet {
-            guard isInitialized, !isUpdating, oldValue != useHalvingMonthly else { return }
-            print("didSet: useHalvingMonthly changed to \(useHalvingMonthly)")
-            UserDefaults.standard.set(useHalvingMonthly, forKey: "useHalvingMonthly")
-        }
-    }
-    
-    @Published var halvingBumpMonthly: Double = SimulationSettings.defaultHalvingBumpMonthly {
-        didSet {
-            if isInitialized && !isUpdating && oldValue != halvingBumpMonthly {
-                print("didSet: halvingBumpMonthly changed to \(halvingBumpMonthly)")
-                UserDefaults.standard.set(halvingBumpMonthly, forKey: "halvingBumpMonthly")
-            }
-        }
-    }
-    
-    @Published var useInstitutionalDemandWeekly: Bool = false {
-        didSet {
-            guard isInitialized, !isUpdating, oldValue != useInstitutionalDemandWeekly else { return }
-            print("didSet: useInstitutionalDemandWeekly changed to \(useInstitutionalDemandWeekly)")
-            UserDefaults.standard.set(useInstitutionalDemandWeekly, forKey: "useInstitutionalDemandWeekly")
-        }
-    }
-    
-    @Published var maxDemandBoostWeekly: Double = SimulationSettings.defaultMaxDemandBoostWeekly {
-        didSet {
-            if isInitialized && !isUpdating && oldValue != maxDemandBoostWeekly {
-                print("didSet: maxDemandBoostWeekly changed to \(maxDemandBoostWeekly)")
-                UserDefaults.standard.set(maxDemandBoostWeekly, forKey: "maxDemandBoostWeekly")
-            }
-        }
-    }
-    
-    @Published var useInstitutionalDemandMonthly: Bool = false {
-        didSet {
-            guard isInitialized, !isUpdating, oldValue != useInstitutionalDemandMonthly else { return }
-            print("didSet: useInstitutionalDemandMonthly changed to \(useInstitutionalDemandMonthly)")
-            UserDefaults.standard.set(useInstitutionalDemandMonthly, forKey: "useInstitutionalDemandMonthly")
-        }
-    }
-    
-    @Published var maxDemandBoostMonthly: Double = SimulationSettings.defaultMaxDemandBoostMonthly {
-        didSet {
-            if isInitialized && !isUpdating && oldValue != maxDemandBoostMonthly {
-                print("didSet: maxDemandBoostMonthly changed to \(maxDemandBoostMonthly)")
-                UserDefaults.standard.set(maxDemandBoostMonthly, forKey: "maxDemandBoostMonthly")
-            }
-        }
-    }
-    
-    @Published var useCountryAdoptionWeekly: Bool = false {
-        didSet {
-            guard isInitialized, !isUpdating, oldValue != useCountryAdoptionWeekly else { return }
-            print("didSet: useCountryAdoptionWeekly changed to \(useCountryAdoptionWeekly)")
-            UserDefaults.standard.set(useCountryAdoptionWeekly, forKey: "useCountryAdoptionWeekly")
-        }
-    }
-    
-    @Published var maxCountryAdBoostWeekly: Double = SimulationSettings.defaultMaxCountryAdBoostWeekly {
-        didSet {
-            if isInitialized && !isUpdating && oldValue != maxCountryAdBoostWeekly {
-                print("didSet: maxCountryAdBoostWeekly changed to \(maxCountryAdBoostWeekly)")
-                UserDefaults.standard.set(maxCountryAdBoostWeekly, forKey: "maxCountryAdBoostWeekly")
-            }
-        }
-    }
-    
-    @Published var useCountryAdoptionMonthly: Bool = false {
-        didSet {
-            guard isInitialized, !isUpdating, oldValue != useCountryAdoptionMonthly else { return }
-            print("didSet: useCountryAdoptionMonthly changed to \(useCountryAdoptionMonthly)")
-            UserDefaults.standard.set(useCountryAdoptionMonthly, forKey: "useCountryAdoptionMonthly")
-        }
-    }
-    
-    @Published var maxCountryAdBoostMonthly: Double = SimulationSettings.defaultMaxCountryAdBoostMonthly {
-        didSet {
-            if isInitialized && !isUpdating && oldValue != maxCountryAdBoostMonthly {
-                print("didSet: maxCountryAdBoostMonthly changed to \(maxCountryAdBoostMonthly)")
-                UserDefaults.standard.set(maxCountryAdBoostMonthly, forKey: "maxCountryAdBoostMonthly")
-            }
-        }
-    }
-    
-    @Published var useRegulatoryClarityWeekly: Bool = false {
-        didSet {
-            guard isInitialized, !isUpdating, oldValue != useRegulatoryClarityWeekly else { return }
-            print("didSet: useRegulatoryClarityWeekly changed to \(useRegulatoryClarityWeekly)")
-            UserDefaults.standard.set(useRegulatoryClarityWeekly, forKey: "useRegulatoryClarityWeekly")
-        }
-    }
-    
-    @Published var maxClarityBoostWeekly: Double = SimulationSettings.defaultMaxClarityBoostWeekly {
-        didSet {
-            if isInitialized && !isUpdating && oldValue != maxClarityBoostWeekly {
-                print("didSet: maxClarityBoostWeekly changed to \(maxClarityBoostWeekly)")
-                UserDefaults.standard.set(maxClarityBoostWeekly, forKey: "maxClarityBoostWeekly")
-            }
-        }
-    }
-    
-    @Published var useRegulatoryClarityMonthly: Bool = false {
-        didSet {
-            guard isInitialized, !isUpdating, oldValue != useRegulatoryClarityMonthly else { return }
-            print("didSet: useRegulatoryClarityMonthly changed to \(useRegulatoryClarityMonthly)")
-            UserDefaults.standard.set(useRegulatoryClarityMonthly, forKey: "useRegulatoryClarityMonthly")
-        }
-    }
-    
-    @Published var maxClarityBoostMonthly: Double = SimulationSettings.defaultMaxClarityBoostMonthly {
-        didSet {
-            if isInitialized && !isUpdating && oldValue != maxClarityBoostMonthly {
-                print("didSet: maxClarityBoostMonthly changed to \(maxClarityBoostMonthly)")
-                UserDefaults.standard.set(maxClarityBoostMonthly, forKey: "maxClarityBoostMonthly")
-            }
-        }
-    }
-    
-    @Published var useEtfApprovalWeekly: Bool = false {
-        didSet {
-            guard isInitialized, !isUpdating, oldValue != useEtfApprovalWeekly else { return }
-            print("didSet: useEtfApprovalWeekly changed to \(useEtfApprovalWeekly)")
-            UserDefaults.standard.set(useEtfApprovalWeekly, forKey: "useEtfApprovalWeekly")
-        }
-    }
-    
-    @Published var maxEtfBoostWeekly: Double = SimulationSettings.defaultMaxEtfBoostWeekly {
-        didSet {
-            if isInitialized && !isUpdating && oldValue != maxEtfBoostWeekly {
-                print("didSet: maxEtfBoostWeekly changed to \(maxEtfBoostWeekly)")
-                UserDefaults.standard.set(maxEtfBoostWeekly, forKey: "maxEtfBoostWeekly")
-            }
-        }
-    }
-    
-    @Published var useEtfApprovalMonthly: Bool = false {
-        didSet {
-            guard isInitialized, !isUpdating, oldValue != useEtfApprovalMonthly else { return }
-            print("didSet: useEtfApprovalMonthly changed to \(useEtfApprovalMonthly)")
-            UserDefaults.standard.set(useEtfApprovalMonthly, forKey: "useEtfApprovalMonthly")
-        }
-    }
-    
-    @Published var maxEtfBoostMonthly: Double = SimulationSettings.defaultMaxEtfBoostMonthly {
-        didSet {
-            if isInitialized && !isUpdating && oldValue != maxEtfBoostMonthly {
-                print("didSet: maxEtfBoostMonthly changed to \(maxEtfBoostMonthly)")
-                UserDefaults.standard.set(maxEtfBoostMonthly, forKey: "maxEtfBoostMonthly")
-            }
-        }
-    }
-    
-    @Published var useTechBreakthroughWeekly: Bool = false {
-        didSet {
-            guard isInitialized, !isUpdating, oldValue != useTechBreakthroughWeekly else { return }
-            print("didSet: useTechBreakthroughWeekly changed to \(useTechBreakthroughWeekly)")
-            UserDefaults.standard.set(useTechBreakthroughWeekly, forKey: "useTechBreakthroughWeekly")
-        }
-    }
-    
-    @Published var maxTechBoostWeekly: Double = SimulationSettings.defaultMaxTechBoostWeekly {
-        didSet {
-            if isInitialized && !isUpdating && oldValue != maxTechBoostWeekly {
-                print("didSet: maxTechBoostWeekly changed to \(maxTechBoostWeekly)")
-                UserDefaults.standard.set(maxTechBoostWeekly, forKey: "maxTechBoostWeekly")
-            }
-        }
-    }
-    
-    @Published var useTechBreakthroughMonthly: Bool = false {
-        didSet {
-            guard isInitialized, !isUpdating, oldValue != useTechBreakthroughMonthly else { return }
-            print("didSet: useTechBreakthroughMonthly changed to \(useTechBreakthroughMonthly)")
-            UserDefaults.standard.set(useTechBreakthroughMonthly, forKey: "useTechBreakthroughMonthly")
-        }
-    }
-    
-    @Published var maxTechBoostMonthly: Double = SimulationSettings.defaultMaxTechBoostMonthly {
-        didSet {
-            if isInitialized && !isUpdating && oldValue != maxTechBoostMonthly {
-                print("didSet: maxTechBoostMonthly changed to \(maxTechBoostMonthly)")
-                UserDefaults.standard.set(maxTechBoostMonthly, forKey: "maxTechBoostMonthly")
-            }
-        }
-    }
-    
-    @Published var useScarcityEventsWeekly: Bool = false {
-        didSet {
-            guard isInitialized, !isUpdating, oldValue != useScarcityEventsWeekly else { return }
-            print("didSet: useScarcityEventsWeekly changed to \(useScarcityEventsWeekly)")
-            UserDefaults.standard.set(useScarcityEventsWeekly, forKey: "useScarcityEventsWeekly")
-        }
-    }
-    
-    @Published var maxScarcityBoostWeekly: Double = SimulationSettings.defaultMaxScarcityBoostWeekly {
-        didSet {
-            if isInitialized && !isUpdating && oldValue != maxScarcityBoostWeekly {
-                print("didSet: maxScarcityBoostWeekly changed to \(maxScarcityBoostWeekly)")
-                UserDefaults.standard.set(maxScarcityBoostWeekly, forKey: "maxScarcityBoostWeekly")
-            }
-        }
-    }
-    
-    @Published var useScarcityEventsMonthly: Bool = false {
-        didSet {
-            guard isInitialized, !isUpdating, oldValue != useScarcityEventsMonthly else { return }
-            print("didSet: useScarcityEventsMonthly changed to \(useScarcityEventsMonthly)")
-            UserDefaults.standard.set(useScarcityEventsMonthly, forKey: "useScarcityEventsMonthly")
-        }
-    }
-    
-    @Published var maxScarcityBoostMonthly: Double = SimulationSettings.defaultMaxScarcityBoostMonthly {
-        didSet {
-            if isInitialized && !isUpdating && oldValue != maxScarcityBoostMonthly {
-                print("didSet: maxScarcityBoostMonthly changed to \(maxScarcityBoostMonthly)")
-                UserDefaults.standard.set(maxScarcityBoostMonthly, forKey: "maxScarcityBoostMonthly")
-            }
-        }
-    }
-    
-    @Published var useGlobalMacroHedgeWeekly: Bool = false {
-        didSet {
-            guard isInitialized, !isUpdating, oldValue != useGlobalMacroHedgeWeekly else { return }
-            print("didSet: useGlobalMacroHedgeWeekly changed to \(useGlobalMacroHedgeWeekly)")
-            UserDefaults.standard.set(useGlobalMacroHedgeWeekly, forKey: "useGlobalMacroHedgeWeekly")
-        }
-    }
-    
-    @Published var maxMacroBoostWeekly: Double = SimulationSettings.defaultMaxMacroBoostWeekly {
-        didSet {
-            if isInitialized && !isUpdating && oldValue != maxMacroBoostWeekly {
-                print("didSet: maxMacroBoostWeekly changed to \(maxMacroBoostWeekly)")
-                UserDefaults.standard.set(maxMacroBoostWeekly, forKey: "maxMacroBoostWeekly")
-            }
-        }
-    }
-    
-    @Published var useGlobalMacroHedgeMonthly: Bool = false {
-        didSet {
-            guard isInitialized, !isUpdating, oldValue != useGlobalMacroHedgeMonthly else { return }
-            print("didSet: useGlobalMacroHedgeMonthly changed to \(useGlobalMacroHedgeMonthly)")
-            UserDefaults.standard.set(useGlobalMacroHedgeMonthly, forKey: "useGlobalMacroHedgeMonthly")
-        }
-    }
-    
-    @Published var maxMacroBoostMonthly: Double = SimulationSettings.defaultMaxMacroBoostMonthly {
-        didSet {
-            if isInitialized && !isUpdating && oldValue != maxMacroBoostMonthly {
-                print("didSet: maxMacroBoostMonthly changed to \(maxMacroBoostMonthly)")
-                UserDefaults.standard.set(maxMacroBoostMonthly, forKey: "maxMacroBoostMonthly")
-            }
-        }
-    }
-    
-    @Published var useStablecoinShiftWeekly: Bool = false {
-        didSet {
-            guard isInitialized, !isUpdating, oldValue != useStablecoinShiftWeekly else { return }
-            print("didSet: useStablecoinShiftWeekly changed to \(useStablecoinShiftWeekly)")
-            UserDefaults.standard.set(useStablecoinShiftWeekly, forKey: "useStablecoinShiftWeekly")
-        }
-    }
-    
-    @Published var maxStablecoinBoostWeekly: Double = SimulationSettings.defaultMaxStablecoinBoostWeekly {
-        didSet {
-            if isInitialized && !isUpdating && oldValue != maxStablecoinBoostWeekly {
-                print("didSet: maxStablecoinBoostWeekly changed to \(maxStablecoinBoostWeekly)")
-                UserDefaults.standard.set(maxStablecoinBoostWeekly, forKey: "maxStablecoinBoostWeekly")
-            }
-        }
-    }
-    
-    @Published var useStablecoinShiftMonthly: Bool = false {
-        didSet {
-            guard isInitialized, !isUpdating, oldValue != useStablecoinShiftMonthly else { return }
-            print("didSet: useStablecoinShiftMonthly changed to \(useStablecoinShiftMonthly)")
-            UserDefaults.standard.set(useStablecoinShiftMonthly, forKey: "useStablecoinShiftMonthly")
-        }
-    }
-    
-    @Published var maxStablecoinBoostMonthly: Double = SimulationSettings.defaultMaxStablecoinBoostMonthly {
-        didSet {
-            if isInitialized && !isUpdating && oldValue != maxStablecoinBoostMonthly {
-                print("didSet: maxStablecoinBoostMonthly changed to \(maxStablecoinBoostMonthly)")
-                UserDefaults.standard.set(maxStablecoinBoostMonthly, forKey: "maxStablecoinBoostMonthly")
-            }
-        }
-    }
-    
-    @Published var useDemographicAdoptionWeekly: Bool = false {
-        didSet {
-            guard isInitialized, !isUpdating, oldValue != useDemographicAdoptionWeekly else { return }
-            print("didSet: useDemographicAdoptionWeekly changed to \(useDemographicAdoptionWeekly)")
-            UserDefaults.standard.set(useDemographicAdoptionWeekly, forKey: "useDemographicAdoptionWeekly")
-        }
-    }
-    
-    @Published var maxDemoBoostWeekly: Double = SimulationSettings.defaultMaxDemoBoostWeekly {
-        didSet {
-            if isInitialized && !isUpdating && oldValue != maxDemoBoostWeekly {
-                print("didSet: maxDemoBoostWeekly changed to \(maxDemoBoostWeekly)")
-                UserDefaults.standard.set(maxDemoBoostWeekly, forKey: "maxDemoBoostWeekly")
-            }
-        }
-    }
-    
-    @Published var useDemographicAdoptionMonthly: Bool = false {
-        didSet {
-            guard isInitialized, !isUpdating, oldValue != useDemographicAdoptionMonthly else { return }
-            print("didSet: useDemographicAdoptionMonthly changed to \(useDemographicAdoptionMonthly)")
-            UserDefaults.standard.set(useDemographicAdoptionMonthly, forKey: "useDemographicAdoptionMonthly")
-        }
-    }
-    
-    @Published var maxDemoBoostMonthly: Double = SimulationSettings.defaultMaxDemoBoostMonthly {
-        didSet {
-            if isInitialized && !isUpdating && oldValue != maxDemoBoostMonthly {
-                print("didSet: maxDemoBoostMonthly changed to \(maxDemoBoostMonthly)")
-                UserDefaults.standard.set(maxDemoBoostMonthly, forKey: "maxDemoBoostMonthly")
-            }
-        }
-    }
-    
-    @Published var useAltcoinFlightWeekly: Bool = false {
-        didSet {
-            guard isInitialized, !isUpdating, oldValue != useAltcoinFlightWeekly else { return }
-            print("didSet: useAltcoinFlightWeekly changed to \(useAltcoinFlightWeekly)")
-            UserDefaults.standard.set(useAltcoinFlightWeekly, forKey: "useAltcoinFlightWeekly")
-        }
-    }
-    
-    @Published var maxAltcoinBoostWeekly: Double = SimulationSettings.defaultMaxAltcoinBoostWeekly {
-        didSet {
-            if isInitialized && !isUpdating && oldValue != maxAltcoinBoostWeekly {
-                print("didSet: maxAltcoinBoostWeekly changed to \(maxAltcoinBoostWeekly)")
-                UserDefaults.standard.set(maxAltcoinBoostWeekly, forKey: "maxAltcoinBoostWeekly")
-            }
-        }
-    }
-    
-    @Published var useAltcoinFlightMonthly: Bool = false {
-        didSet {
-            guard isInitialized, !isUpdating, oldValue != useAltcoinFlightMonthly else { return }
-            print("didSet: useAltcoinFlightMonthly changed to \(useAltcoinFlightMonthly)")
-            UserDefaults.standard.set(useAltcoinFlightMonthly, forKey: "useAltcoinFlightMonthly")
-        }
-    }
-    
-    @Published var maxAltcoinBoostMonthly: Double = SimulationSettings.defaultMaxAltcoinBoostMonthly {
-        didSet {
-            if isInitialized && !isUpdating && oldValue != maxAltcoinBoostMonthly {
-                print("didSet: maxAltcoinBoostMonthly changed to \(maxAltcoinBoostMonthly)")
-                UserDefaults.standard.set(maxAltcoinBoostMonthly, forKey: "maxAltcoinBoostMonthly")
-            }
-        }
-    }
-    
-    @Published var useAdoptionFactorWeekly: Bool = false {
-        didSet {
-            guard isInitialized, !isUpdating, oldValue != useAdoptionFactorWeekly else { return }
-            print("didSet: useAdoptionFactorWeekly changed to \(useAdoptionFactorWeekly)")
-            UserDefaults.standard.set(useAdoptionFactorWeekly, forKey: "useAdoptionFactorWeekly")
-        }
-    }
-    
-    @Published var adoptionBaseFactorWeekly: Double = SimulationSettings.defaultAdoptionBaseFactorWeekly {
-        didSet {
-            if isInitialized && !isUpdating && oldValue != adoptionBaseFactorWeekly {
-                print("didSet: adoptionBaseFactorWeekly changed to \(adoptionBaseFactorWeekly)")
-                UserDefaults.standard.set(adoptionBaseFactorWeekly, forKey: "adoptionBaseFactorWeekly")
-            }
-        }
-    }
-    
-    @Published var useAdoptionFactorMonthly: Bool = false {
-        didSet {
-            guard isInitialized, !isUpdating, oldValue != useAdoptionFactorMonthly else { return }
-            print("didSet: useAdoptionFactorMonthly changed to \(useAdoptionFactorMonthly)")
-            UserDefaults.standard.set(useAdoptionFactorMonthly, forKey: "useAdoptionFactorMonthly")
-        }
-    }
-    
-    @Published var adoptionBaseFactorMonthly: Double = SimulationSettings.defaultAdoptionBaseFactorMonthly {
-        didSet {
-            if isInitialized && !isUpdating && oldValue != adoptionBaseFactorMonthly {
-                print("didSet: adoptionBaseFactorMonthly changed to \(adoptionBaseFactorMonthly)")
-                UserDefaults.standard.set(adoptionBaseFactorMonthly, forKey: "adoptionBaseFactorMonthly")
-            }
-        }
-    }
-    
-    // =============================
-    // MARK: - BEARISH FACTORS
-    // =============================
-    
-    // -- Parent toggles removed/commented out --
-    // @Published var useRegClampdown: Bool = true { ... }
-    // @Published var useCompetitorCoin: Bool = true { ... }
-    // @Published var useSecurityBreach: Bool = true { ... }
-    // @Published var useBubblePop: Bool = true { ... }
-    // @Published var useStablecoinMeltdown: Bool = true { ... }
-    // @Published var useBlackSwan: Bool = false { ... }
-    // @Published var useBearMarket: Bool = true { ... }
-    // @Published var useMaturingMarket: Bool = true { ... }
-    // @Published var useRecession: Bool = true { ... }
-    
-    @Published var useRegClampdownWeekly: Bool = false {
-        didSet {
-            guard isInitialized, !isUpdating, oldValue != useRegClampdownWeekly else { return }
-            print("didSet: useRegClampdownWeekly changed to \(useRegClampdownWeekly)")
-            UserDefaults.standard.set(useRegClampdownWeekly, forKey: "useRegClampdownWeekly")
-        }
-    }
-    
-    @Published var maxClampDownWeekly: Double = SimulationSettings.defaultMaxClampDownWeekly {
-        didSet {
-            if isInitialized && !isUpdating && oldValue != maxClampDownWeekly {
-                print("didSet: maxClampDownWeekly changed to \(maxClampDownWeekly)")
-                UserDefaults.standard.set(maxClampDownWeekly, forKey: "maxClampDownWeekly")
-            }
-        }
-    }
-    
-    @Published var useRegClampdownMonthly: Bool = false {
-        didSet {
-            guard isInitialized, !isUpdating, oldValue != useRegClampdownMonthly else { return }
-            print("didSet: useRegClampdownMonthly changed to \(useRegClampdownMonthly)")
-            UserDefaults.standard.set(useRegClampdownMonthly, forKey: "useRegClampdownMonthly")
-        }
-    }
-    
-    @Published var maxClampDownMonthly: Double = SimulationSettings.defaultMaxClampDownMonthly {
-        didSet {
-            if isInitialized && !isUpdating && oldValue != maxClampDownMonthly {
-                print("didSet: maxClampDownMonthly changed to \(maxClampDownMonthly)")
-                UserDefaults.standard.set(maxClampDownMonthly, forKey: "maxClampDownMonthly")
-            }
-        }
-    }
-    
-    @Published var useCompetitorCoinWeekly: Bool = false {
-        didSet {
-            guard isInitialized, !isUpdating, oldValue != useCompetitorCoinWeekly else { return }
-            print("didSet: useCompetitorCoinWeekly changed to \(useCompetitorCoinWeekly)")
-            UserDefaults.standard.set(useCompetitorCoinWeekly, forKey: "useCompetitorCoinWeekly")
-        }
-    }
-    
-    @Published var maxCompetitorBoostWeekly: Double = SimulationSettings.defaultMaxCompetitorBoostWeekly {
-        didSet {
-            if isInitialized && !isUpdating && oldValue != maxCompetitorBoostWeekly {
-                print("didSet: maxCompetitorBoostWeekly changed to \(maxCompetitorBoostWeekly)")
-                UserDefaults.standard.set(maxCompetitorBoostWeekly, forKey: "maxCompetitorBoostWeekly")
-            }
-        }
-    }
-    
-    @Published var useCompetitorCoinMonthly: Bool = false {
-        didSet {
-            guard isInitialized, !isUpdating, oldValue != useCompetitorCoinMonthly else { return }
-            print("didSet: useCompetitorCoinMonthly changed to \(useCompetitorCoinMonthly)")
-            UserDefaults.standard.set(useCompetitorCoinMonthly, forKey: "useCompetitorCoinMonthly")
-        }
-    }
-    
-    @Published var maxCompetitorBoostMonthly: Double = SimulationSettings.defaultMaxCompetitorBoostMonthly {
-        didSet {
-            if isInitialized && !isUpdating && oldValue != maxCompetitorBoostMonthly {
-                print("didSet: maxCompetitorBoostMonthly changed to \(maxCompetitorBoostMonthly)")
-                UserDefaults.standard.set(maxCompetitorBoostMonthly, forKey: "maxCompetitorBoostMonthly")
-            }
-        }
-    }
-    
-    @Published var useSecurityBreachWeekly: Bool = false {
-        didSet {
-            guard isInitialized, !isUpdating, oldValue != useSecurityBreachWeekly else { return }
-            print("didSet: useSecurityBreachWeekly changed to \(useSecurityBreachWeekly)")
-            UserDefaults.standard.set(useSecurityBreachWeekly, forKey: "useSecurityBreachWeekly")
-        }
-    }
-    
-    @Published var breachImpactWeekly: Double = SimulationSettings.defaultBreachImpactWeekly {
-        didSet {
-            if isInitialized && !isUpdating && oldValue != breachImpactWeekly {
-                print("didSet: breachImpactWeekly changed to \(breachImpactWeekly)")
-                UserDefaults.standard.set(breachImpactWeekly, forKey: "breachImpactWeekly")
-            }
-        }
-    }
-    
-    @Published var useSecurityBreachMonthly: Bool = false {
-        didSet {
-            guard isInitialized, !isUpdating, oldValue != useSecurityBreachMonthly else { return }
-            print("didSet: useSecurityBreachMonthly changed to \(useSecurityBreachMonthly)")
-            UserDefaults.standard.set(useSecurityBreachMonthly, forKey: "useSecurityBreachMonthly")
-        }
-    }
-    
-    @Published var breachImpactMonthly: Double = SimulationSettings.defaultBreachImpactMonthly {
-        didSet {
-            if isInitialized && !isUpdating && oldValue != breachImpactMonthly {
-                print("didSet: breachImpactMonthly changed to \(breachImpactMonthly)")
-                UserDefaults.standard.set(breachImpactMonthly, forKey: "breachImpactMonthly")
-            }
-        }
-    }
-    
-    @Published var useBubblePopWeekly: Bool = false {
-        didSet {
-            guard isInitialized, !isUpdating, oldValue != useBubblePopWeekly else { return }
-            print("didSet: useBubblePopWeekly changed to \(useBubblePopWeekly)")
-            UserDefaults.standard.set(useBubblePopWeekly, forKey: "useBubblePopWeekly")
-        }
-    }
-    
-    @Published var maxPopDropWeekly: Double = SimulationSettings.defaultMaxPopDropWeekly {
-        didSet {
-            if isInitialized && !isUpdating && oldValue != maxPopDropWeekly {
-                print("didSet: maxPopDropWeekly changed to \(maxPopDropWeekly)")
-                UserDefaults.standard.set(maxPopDropWeekly, forKey: "maxPopDropWeekly")
-            }
-        }
-    }
-    
-    @Published var useBubblePopMonthly: Bool = false {
-        didSet {
-            guard isInitialized, !isUpdating, oldValue != useBubblePopMonthly else { return }
-            print("didSet: useBubblePopMonthly changed to \(useBubblePopMonthly)")
-            UserDefaults.standard.set(useBubblePopMonthly, forKey: "useBubblePopMonthly")
-        }
-    }
-    
-    @Published var maxPopDropMonthly: Double = SimulationSettings.defaultMaxPopDropMonthly {
-        didSet {
-            if isInitialized && !isUpdating && oldValue != maxPopDropMonthly {
-                print("didSet: maxPopDropMonthly changed to \(maxPopDropMonthly)")
-                UserDefaults.standard.set(maxPopDropMonthly, forKey: "maxPopDropMonthly")
-            }
-        }
-    }
-    
-    @Published var useStablecoinMeltdownWeekly: Bool = false {
-        didSet {
-            guard isInitialized, !isUpdating, oldValue != useStablecoinMeltdownWeekly else { return }
-            print("didSet: useStablecoinMeltdownWeekly changed to \(useStablecoinMeltdownWeekly)")
-            UserDefaults.standard.set(useStablecoinMeltdownWeekly, forKey: "useStablecoinMeltdownWeekly")
-        }
-    }
-    
-    @Published var maxMeltdownDropWeekly: Double = SimulationSettings.defaultMaxMeltdownDropWeekly {
-        didSet {
-            if isInitialized && !isUpdating && oldValue != maxMeltdownDropWeekly {
-                print("didSet: maxMeltdownDropWeekly changed to \(maxMeltdownDropWeekly)")
-                UserDefaults.standard.set(maxMeltdownDropWeekly, forKey: "maxMeltdownDropWeekly")
-            }
-        }
-    }
-    
-    @Published var useStablecoinMeltdownMonthly: Bool = false {
-        didSet {
-            guard isInitialized, !isUpdating, oldValue != useStablecoinMeltdownMonthly else { return }
-            print("didSet: useStablecoinMeltdownMonthly changed to \(useStablecoinMeltdownMonthly)")
-            UserDefaults.standard.set(useStablecoinMeltdownMonthly, forKey: "useStablecoinMeltdownMonthly")
-        }
-    }
-    
-    @Published var maxMeltdownDropMonthly: Double = SimulationSettings.defaultMaxMeltdownDropMonthly {
-        didSet {
-            if isInitialized && !isUpdating && oldValue != maxMeltdownDropMonthly {
-                print("didSet: maxMeltdownDropMonthly changed to \(maxMeltdownDropMonthly)")
-                UserDefaults.standard.set(maxMeltdownDropMonthly, forKey: "maxMeltdownDropMonthly")
-            }
-        }
-    }
-    
-    @Published var useBlackSwanWeekly: Bool = false {
-        didSet {
-            guard isInitialized, !isUpdating, oldValue != useBlackSwanWeekly else { return }
-            print("didSet: useBlackSwanWeekly changed to \(useBlackSwanWeekly)")
-            UserDefaults.standard.set(useBlackSwanWeekly, forKey: "useBlackSwanWeekly")
-        }
-    }
-    
-    @Published var blackSwanDropWeekly: Double = SimulationSettings.defaultBlackSwanDropWeekly {
-        didSet {
-            if isInitialized && !isUpdating && oldValue != blackSwanDropWeekly {
-                print("didSet: blackSwanDropWeekly changed to \(blackSwanDropWeekly)")
-                UserDefaults.standard.set(blackSwanDropWeekly, forKey: "blackSwanDropWeekly")
-            }
-        }
-    }
-    
-    @Published var useBlackSwanMonthly: Bool = false {
-        didSet {
-            guard isInitialized, !isUpdating, oldValue != useBlackSwanMonthly else { return }
-            print("didSet: useBlackSwanMonthly changed to \(useBlackSwanMonthly)")
-            UserDefaults.standard.set(useBlackSwanMonthly, forKey: "useBlackSwanMonthly")
-        }
-    }
-    
-    @Published var blackSwanDropMonthly: Double = SimulationSettings.defaultBlackSwanDropMonthly {
-        didSet {
-            if isInitialized && !isUpdating && oldValue != blackSwanDropMonthly {
-                print("didSet: blackSwanDropMonthly changed to \(blackSwanDropMonthly)")
-                UserDefaults.standard.set(blackSwanDropMonthly, forKey: "blackSwanDropMonthly")
-            }
-        }
-    }
-    
-    @Published var useBearMarketWeekly: Bool = false {
-        didSet {
-            guard isInitialized, !isUpdating, oldValue != useBearMarketWeekly else { return }
-            print("didSet: useBearMarketWeekly changed to \(useBearMarketWeekly)")
-            UserDefaults.standard.set(useBearMarketWeekly, forKey: "useBearMarketWeekly")
-        }
-    }
-    
-    @Published var bearWeeklyDriftWeekly: Double = SimulationSettings.defaultBearWeeklyDriftWeekly {
-        didSet {
-            if isInitialized && !isUpdating && oldValue != bearWeeklyDriftWeekly {
-                print("didSet: bearWeeklyDriftWeekly changed to \(bearWeeklyDriftWeekly)")
-                UserDefaults.standard.set(bearWeeklyDriftWeekly, forKey: "bearWeeklyDriftWeekly")
-            }
-        }
-    }
-    
-    @Published var useBearMarketMonthly: Bool = false {
-        didSet {
-            guard isInitialized, !isUpdating, oldValue != useBearMarketMonthly else { return }
-            print("didSet: useBearMarketMonthly changed to \(useBearMarketMonthly)")
-            UserDefaults.standard.set(useBearMarketMonthly, forKey: "useBearMarketMonthly")
-        }
-    }
-    
-    @Published var bearWeeklyDriftMonthly: Double = SimulationSettings.defaultBearWeeklyDriftMonthly {
-        didSet {
-            if isInitialized && !isUpdating && oldValue != bearWeeklyDriftMonthly {
-                print("didSet: bearWeeklyDriftMonthly changed to \(bearWeeklyDriftMonthly)")
-                UserDefaults.standard.set(bearWeeklyDriftMonthly, forKey: "bearWeeklyDriftMonthly")
-            }
-        }
-    }
-    
-    @Published var useMaturingMarketWeekly: Bool = false {
-        didSet {
-            guard isInitialized, !isUpdating, oldValue != useMaturingMarketWeekly else { return }
-            print("didSet: useMaturingMarketWeekly changed to \(useMaturingMarketWeekly)")
-            UserDefaults.standard.set(useMaturingMarketWeekly, forKey: "useMaturingMarketWeekly")
-        }
-    }
-    
-    @Published var maxMaturingDropWeekly: Double = SimulationSettings.defaultMaxMaturingDropWeekly {
-        didSet {
-            if isInitialized && !isUpdating && oldValue != maxMaturingDropWeekly {
-                print("didSet: maxMaturingDropWeekly changed to \(maxMaturingDropWeekly)")
-                UserDefaults.standard.set(maxMaturingDropWeekly, forKey: "maxMaturingDropWeekly")
-            }
-        }
-    }
-    
-    @Published var useMaturingMarketMonthly: Bool = false {
-        didSet {
-            guard isInitialized, !isUpdating, oldValue != useMaturingMarketMonthly else { return }
-            print("didSet: useMaturingMarketMonthly changed to \(useMaturingMarketMonthly)")
-            UserDefaults.standard.set(useMaturingMarketMonthly, forKey: "useMaturingMarketMonthly")
-        }
-    }
-    
-    @Published var maxMaturingDropMonthly: Double = SimulationSettings.defaultMaxMaturingDropMonthly {
-        didSet {
-            if isInitialized && !isUpdating && oldValue != maxMaturingDropMonthly {
-                print("didSet: maxMaturingDropMonthly changed to \(maxMaturingDropMonthly)")
-                UserDefaults.standard.set(maxMaturingDropMonthly, forKey: "maxMaturingDropMonthly")
-            }
-        }
-    }
-    
-    @Published var useRecessionWeekly: Bool = false {
-        didSet {
-            guard isInitialized, !isUpdating, oldValue != useRecessionWeekly else { return }
-            print("didSet: useRecessionWeekly changed to \(useRecessionWeekly)")
-            UserDefaults.standard.set(useRecessionWeekly, forKey: "useRecessionWeekly")
-        }
-    }
-    
-    @Published var maxRecessionDropWeekly: Double = SimulationSettings.defaultMaxRecessionDropWeekly {
-        didSet {
-            if isInitialized && !isUpdating && oldValue != maxRecessionDropWeekly {
-                print("didSet: maxRecessionDropWeekly changed to \(maxRecessionDropWeekly)")
-                UserDefaults.standard.set(maxRecessionDropWeekly, forKey: "maxRecessionDropWeekly")
-            }
-        }
-    }
-    
-    @Published var useRecessionMonthly: Bool = false {
-        didSet {
-            guard isInitialized, !isUpdating, oldValue != useRecessionMonthly else { return }
-            print("didSet: useRecessionMonthly changed to \(useRecessionMonthly)")
-            UserDefaults.standard.set(useRecessionMonthly, forKey: "useRecessionMonthly")
-        }
-    }
-    
-    @Published var maxRecessionDropMonthly: Double = SimulationSettings.defaultMaxRecessionDropMonthly {
-        didSet {
-            if isInitialized && !isUpdating && oldValue != maxRecessionDropMonthly {
-                print("didSet: maxRecessionDropMonthly changed to \(maxRecessionDropMonthly)")
-                UserDefaults.standard.set(maxRecessionDropMonthly, forKey: "maxRecessionDropMonthly")
-            }
-        }
-    }
-    
-    // NEW TOGGLE: LOCK HISTORICAL SAMPLING
-    @Published var lockHistoricalSampling: Bool = false {
-        didSet {
-            if isInitialized {
-                print("didSet: lockHistoricalSampling changed to \(lockHistoricalSampling)")
-                UserDefaults.standard.set(lockHistoricalSampling, forKey: "lockHistoricalSampling")
-            }
-        }
-    }
-    
-    func finalizeToggleStateAfterLoad() {
-        isUpdating = true
-        // Any older logic that forced parent toggles off/on is removed.
-        isUpdating = false
-    }
-    
-    // Turn off all monthly toggles
-    private func turnOffMonthlyToggles() {
-        useHalvingMonthly = false
-        useInstitutionalDemandMonthly = false
-        useCountryAdoptionMonthly = false
-        useRegulatoryClarityMonthly = false
-        useEtfApprovalMonthly = false
-        useTechBreakthroughMonthly = false
-        useScarcityEventsMonthly = false
-        useGlobalMacroHedgeMonthly = false
-        useStablecoinShiftMonthly = false
-        useDemographicAdoptionMonthly = false
-        useAltcoinFlightMonthly = false
-        useAdoptionFactorMonthly = false
-        useRegClampdownMonthly = false
-        useCompetitorCoinMonthly = false
-        useSecurityBreachMonthly = false
-        useBubblePopMonthly = false
-        useStablecoinMeltdownMonthly = false
-        useBlackSwanMonthly = false
-        useBearMarketMonthly = false
-        useMaturingMarketMonthly = false
-        useRecessionMonthly = false
-    }
-    
-    // Turn off all weekly toggles
-    private func turnOffWeeklyToggles() {
-        useHalvingWeekly = false
-        useInstitutionalDemandWeekly = false
-        useCountryAdoptionWeekly = false
-        useRegulatoryClarityWeekly = false
-        useEtfApprovalWeekly = false
-        useTechBreakthroughWeekly = false
-        useScarcityEventsWeekly = false
-        useGlobalMacroHedgeWeekly = false
-        useStablecoinShiftWeekly = false
-        useDemographicAdoptionWeekly = false
-        useAltcoinFlightWeekly = false
-        useAdoptionFactorWeekly = false
-        useRegClampdownWeekly = false
-        useCompetitorCoinWeekly = false
-        useSecurityBreachWeekly = false
-        useBubblePopWeekly = false
-        useStablecoinMeltdownWeekly = false
-        useBlackSwanWeekly = false
-        useBearMarketWeekly = false
-        useMaturingMarketWeekly = false
-        useRecessionWeekly = false
     }
 }

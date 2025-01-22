@@ -8,9 +8,6 @@
 import SwiftUI
 
 extension SimulationSettings {
-    /// Previously checked parent toggles.
-    /// Now we rewrite areAllFactorsEnabled to reference only weekly or monthly toggles,
-    /// based on the current periodUnit.
     var areAllFactorsEnabled: Bool {
         if periodUnit == .weeks {
             return useHalvingWeekly

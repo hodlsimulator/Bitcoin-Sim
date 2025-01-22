@@ -2,6 +2,8 @@
 //  BTC_SimulatorApp.swift
 //  BTC Simulator
 //
+//  Created by . . on 20xx.
+//
 
 import SwiftUI
 
@@ -27,10 +29,8 @@ struct BTCMonteCarloApp: App {
         let newSimSettings = SimulationSettings(loadDefaults: true)
         let newChartDataCache = ChartDataCache()
         
-        // Rename from ChartSelection => SimChartSelection
         let newSimChartSelection = SimChartSelection()
         
-        // Coordinator must now accept simChartSelection
         let newCoordinator = SimulationCoordinator(
             chartDataCache: newChartDataCache,
             simSettings: newSimSettings,
@@ -59,6 +59,7 @@ struct BTCMonteCarloApp: App {
                     Color.clear
                         .onAppear {
                             appViewModel.windowSize = geo.size
+                            print("// DEBUG: windowSize initial \(geo.size)")
                         }
                         .onChange(of: geo.size) { newSize in
                             appViewModel.windowSize = newSize
@@ -72,7 +73,6 @@ struct BTCMonteCarloApp: App {
                             .environmentObject(inputManager)
                             .environmentObject(simSettings)
                             .environmentObject(chartDataCache)
-                            // Pass simChartSelection instead of chartSelection
                             .environmentObject(simChartSelection)
                             .environmentObject(coordinator)
                             .environmentObject(appViewModel)
@@ -90,6 +90,12 @@ struct BTCMonteCarloApp: App {
                     }
                     .preferredColorScheme(.dark)
                 }
+            }
+            // We do the assignment here, outside the view-building expressions:
+            .onAppear {
+                // If we've not finished onboarding, set isOnboarding=true
+                // If we have, set it to false
+                simSettings.isOnboarding = !didFinishOnboarding
             }
         }
     }

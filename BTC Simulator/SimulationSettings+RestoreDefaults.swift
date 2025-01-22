@@ -194,10 +194,10 @@ extension SimulationSettings {
         useGarchVolatility = true
 
         // -----------------------------
-        // Now set weekly/monthly toggles as you like:
+        // Now set weekly/monthly toggles as desired:
         // -----------------------------
-        
-        // Example: enable Halving Weekly by default, disable monthly
+
+        // Example: Halving on weekly, off monthly
         useHalvingWeekly = true
         halvingBumpWeekly = SimulationSettings.defaultHalvingBumpWeekly
         useHalvingMonthly = false
@@ -270,10 +270,9 @@ extension SimulationSettings {
         adoptionBaseFactorMonthly = SimulationSettings.defaultAdoptionBaseFactorMonthly
 
         // -----------------------------
-        // Bearish factors:
+        // Bearish factors default on for both
         // -----------------------------
-        // Set them to default weekly/monthly on/off as desired:
-        
+
         useRegClampdownWeekly = true
         maxClampDownWeekly = SimulationSettings.defaultMaxClampDownWeekly
         useRegClampdownMonthly = true
@@ -319,7 +318,7 @@ extension SimulationSettings {
         useRecessionMonthly = true
         maxRecessionDropMonthly = SimulationSettings.defaultMaxRecessionDropMonthly
 
-        // Finally, toggle everything on for the current period:
+        // Finally, toggle everything on for the *current* period:
         toggleAll = true
 
         // Reset lockHistoricalSampling
