@@ -30,13 +30,6 @@ extension View {
             controller.view.drawHierarchy(in: controller.view.bounds, afterScreenUpdates: true)
         }
         
-        // Print debug info if desired
-        if let label = label {
-            print("// DEBUG: snapshot(\(label)) => image size = \(image.size)")
-        } else {
-            print("// DEBUG: snapshot() => image size = \(image.size)")
-        }
-        
         return image
     }
 }

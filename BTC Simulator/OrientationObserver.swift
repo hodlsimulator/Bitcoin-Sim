@@ -27,16 +27,11 @@ class OrientationObserver: ObservableObject {
     @objc private func handleOrientationChange() {
         let orientation = UIDevice.current.orientation
         
-        // DEBUG: Print the raw orientation value to help debugging
-        print("// DEBUG: OrientationObserver => device rotated => orientation.rawValue = \(orientation.rawValue)")
-        
         // Only treat .landscapeLeft / .landscapeRight as landscape
         if orientation == .landscapeLeft || orientation == .landscapeRight {
             isLandscape = true
-            print("// DEBUG: OrientationObserver => isLandscape set to true.")
         } else {
             isLandscape = false
-            print("// DEBUG: OrientationObserver => isLandscape set to false.")
         }
     }
 }

@@ -21,8 +21,8 @@ class SimulationSettings: ObservableObject {
     @Published var isOnboarding: Bool = false
     @Published var periodUnit: PeriodUnit = .weeks {
         didSet {
-            print("didSet: periodUnit changed to \(periodUnit). isInitialized=\(isInitialized)")
             guard isInitialized else { return }
+            print("didSet: periodUnit changed to \(periodUnit)")
         }
     }
     
@@ -32,10 +32,9 @@ class SimulationSettings: ObservableObject {
     @Published var averageCostBasis: Double = 25000.0
     @Published var currencyPreference: PreferredCurrency = .eur {
         didSet {
-            print("didSet: currencyPreference changed to \(currencyPreference). isInitialized=\(isInitialized)")
-            if isInitialized {
-                UserDefaults.standard.set(currencyPreference.rawValue, forKey: "currencyPreference")
-            }
+            guard isInitialized else { return }
+            print("didSet: currencyPreference changed to \(currencyPreference)")
+            UserDefaults.standard.set(currencyPreference.rawValue, forKey: "currencyPreference")
         }
     }
     @Published var contributionCurrencyWhenBoth: PreferredCurrency = .eur
@@ -49,97 +48,90 @@ class SimulationSettings: ObservableObject {
     // MARK: Settings Toggles
     @Published var useLognormalGrowth: Bool = true {
         didSet {
-            print("didSet: useLognormalGrowth changed to \(useLognormalGrowth).")
+            guard isInitialized else { return }
+            print("didSet: useLognormalGrowth changed to \(useLognormalGrowth)")
             UserDefaults.standard.set(useLognormalGrowth, forKey: "useLognormalGrowth")
         }
     }
     
     @Published var lockedRandomSeed: Bool = false {
         didSet {
-            print("didSet: lockedRandomSeed changed to \(lockedRandomSeed). isInitialized=\(isInitialized)")
-            if isInitialized {
-                UserDefaults.standard.set(lockedRandomSeed, forKey: "lockedRandomSeed")
-            }
+            guard isInitialized else { return }
+            print("didSet: lockedRandomSeed changed to \(lockedRandomSeed)")
+            UserDefaults.standard.set(lockedRandomSeed, forKey: "lockedRandomSeed")
         }
     }
     
     @Published var seedValue: UInt64 = 0 {
         didSet {
-            print("didSet: seedValue changed to \(seedValue). isInitialized=\(isInitialized)")
-            if isInitialized {
-                UserDefaults.standard.set(seedValue, forKey: "seedValue")
-            }
+            guard isInitialized else { return }
+            print("didSet: seedValue changed to \(seedValue)")
+            UserDefaults.standard.set(seedValue, forKey: "seedValue")
         }
     }
     
     @Published var useRandomSeed: Bool = true {
         didSet {
-            print("didSet: useRandomSeed changed to \(useRandomSeed). isInitialized=\(isInitialized)")
-            if isInitialized {
-                UserDefaults.standard.set(useRandomSeed, forKey: "useRandomSeed")
-            }
+            guard isInitialized else { return }
+            print("didSet: useRandomSeed changed to \(useRandomSeed)")
+            UserDefaults.standard.set(useRandomSeed, forKey: "useRandomSeed")
         }
     }
     
     @Published var useHistoricalSampling: Bool = true {
         didSet {
-            print("didSet: useHistoricalSampling changed to \(useHistoricalSampling). isInitialized=\(isInitialized)")
-            if isInitialized {
-                UserDefaults.standard.set(useHistoricalSampling, forKey: "useHistoricalSampling")
-            }
+            guard isInitialized else { return }
+            print("didSet: useHistoricalSampling changed to \(useHistoricalSampling)")
+            UserDefaults.standard.set(useHistoricalSampling, forKey: "useHistoricalSampling")
         }
     }
     
     @Published var useVolShocks: Bool = true {
         didSet {
-            print("didSet: useVolShocks changed to \(useVolShocks). isInitialized=\(isInitialized)")
-            if isInitialized {
-                UserDefaults.standard.set(useVolShocks, forKey: "useVolShocks")
-            }
+            guard isInitialized else { return }
+            print("didSet: useVolShocks changed to \(useVolShocks)")
+            UserDefaults.standard.set(useVolShocks, forKey: "useVolShocks")
         }
     }
     
     @Published var useGarchVolatility: Bool = true {
         didSet {
-            print("didSet: useGarchVolatility changed to \(useGarchVolatility). isInitialized=\(isInitialized)")
-            if isInitialized {
-                UserDefaults.standard.set(useGarchVolatility, forKey: "useGarchVolatility")
-            }
+            guard isInitialized else { return }
+            print("didSet: useGarchVolatility changed to \(useGarchVolatility)")
+            UserDefaults.standard.set(useGarchVolatility, forKey: "useGarchVolatility")
         }
     }
     
     @Published var useAutoCorrelation: Bool = false {
         didSet {
-            print("didSet: useAutoCorrelation changed to \(useAutoCorrelation).")
+            guard isInitialized else { return }
+            print("didSet: useAutoCorrelation changed to \(useAutoCorrelation)")
             UserDefaults.standard.set(useAutoCorrelation, forKey: "useAutoCorrelation")
         }
     }
     
     @Published var autoCorrelationStrength: Double = 0.2 {
         didSet {
-            print("didSet: autoCorrelationStrength changed to \(autoCorrelationStrength). isInitialized=\(isInitialized)")
-            if isInitialized {
-                UserDefaults.standard.set(autoCorrelationStrength, forKey: "autoCorrelationStrength")
-            }
+            guard isInitialized else { return }
+            print("didSet: autoCorrelationStrength changed to \(autoCorrelationStrength)")
+            UserDefaults.standard.set(autoCorrelationStrength, forKey: "autoCorrelationStrength")
         }
     }
     
     @Published var meanReversionTarget: Double = 0.0 {
         didSet {
-            print("didSet: meanReversionTarget changed to \(meanReversionTarget). isInitialized=\(isInitialized)")
-            if isInitialized {
-                UserDefaults.standard.set(meanReversionTarget, forKey: "meanReversionTarget")
-            }
+            guard isInitialized else { return }
+            print("didSet: meanReversionTarget changed to \(meanReversionTarget)")
+            UserDefaults.standard.set(meanReversionTarget, forKey: "meanReversionTarget")
         }
     }
     
     @Published var lastUsedSeed: UInt64 = 0
     @Published var lockHistoricalSampling: Bool = false {
         didSet {
-            print("didSet: lockHistoricalSampling changed to \(lockHistoricalSampling). isInitialized=\(isInitialized)")
-            if isInitialized {
-                UserDefaults.standard.set(lockHistoricalSampling, forKey: "lockHistoricalSampling")
-            }
+            guard isInitialized else { return }
+            print("didSet: lockHistoricalSampling changed to \(lockHistoricalSampling)")
+            UserDefaults.standard.set(lockHistoricalSampling, forKey: "lockHistoricalSampling")
         }
     }
     
@@ -244,7 +236,8 @@ class SimulationSettings: ObservableObject {
             }
         }
         set {
-            print("toggleAll set to \(newValue) for \(periodUnit). isInitialized=\(isInitialized), isUpdating=\(isUpdating)")
+            guard isInitialized else { return }
+            print("toggleAll set to \(newValue) for \(periodUnit)")
             isUpdating = true
             if periodUnit == .weeks {
                 useHalvingWeekly = newValue

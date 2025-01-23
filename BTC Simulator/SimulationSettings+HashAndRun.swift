@@ -158,8 +158,6 @@ extension SimulationSettings {
             iterations: iterations,
             exchangeRateEURUSD: exchangeRateEURUSD
         )
-
-        print("// DEBUG: runSimulation() => newHash = \(newHash)")
         
         // e.g. printAllSettings() or similar
         printAllSettings()

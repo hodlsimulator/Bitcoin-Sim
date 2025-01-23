@@ -563,7 +563,6 @@ struct ContentView: View {
     private func invalidateChartIfInputChanged() {
         coordinator.chartDataCache.allRuns = nil
         coordinator.chartDataCache.storedInputsHash = nil
-        print("// DEBUG: invalidateChartIfInputChanged => cleared chart cache.")
     }
 
     // MARK: - Bottom icons (gear, info)
@@ -609,7 +608,6 @@ struct ContentView: View {
                     HStack {
                         // Back button
                         Button(action: {
-                            print("// DEBUG: Back button tapped in simulationResultsView.")
                             UserDefaults.standard.set(lastViewedWeek, forKey: "lastViewedWeek")
                             UserDefaults.standard.set(currentPage, forKey: "lastViewedPage")
                             lastViewedPage = currentPage
@@ -633,7 +631,6 @@ struct ContentView: View {
 
                         // Chart button
                         Button(action: {
-                            print("// DEBUG: Chart button pressed.")
                             showHistograms = true
                         }) {
                             Image(systemName: "chart.line.uptrend.xyaxis")
@@ -836,7 +833,6 @@ struct ContentView: View {
                     contentScrollProxy = scrollProxy
                 }
                 .onDisappear {
-                    print("// DEBUG: simulationResultsView onDisappear => saving lastViewedWeek=\(lastViewedWeek), lastViewedPage=\(currentPage)")
                     UserDefaults.standard.set(lastViewedWeek, forKey: "lastViewedWeek")
                     UserDefaults.standard.set(currentPage, forKey: "lastViewedPage")
                 }
@@ -904,7 +900,6 @@ struct ContentView: View {
             HStack {
                 Spacer()
                 Button(action: {
-                    print("// DEBUG: transitionToResultsButton tapped => showing simulation screen.")
                     coordinator.isSimulationRun = true
                     currentPage = lastViewedPage
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -942,7 +937,6 @@ struct ContentView: View {
                     Spacer()
                     if coordinator.isLoading && !coordinator.isChartBuilding {
                         Button(action: {
-                            print("// DEBUG: Cancel button tapped in combined overlay.")
                             coordinator.isCancelled = true
                             coordinator.isLoading = false
                         }) {

@@ -546,8 +546,6 @@ struct OnboardingView: View {
         print("// DEBUG: currencyPreference=\(currencyPreference.rawValue)")
         print("// DEBUG: startingBalance=\(startingBalanceDouble)")
         print("// DEBUG: contributionPerStep=\(contributionPerStep)")
-        print("// DEBUG: threshold1=\(threshold1), withdraw1=\(withdraw1)")
-        print("// DEBUG: threshold2=\(threshold2), withdraw2=\(withdraw2)")
     }
     
     // MARK: - finalBTCPrice

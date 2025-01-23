@@ -59,11 +59,9 @@ struct BTCMonteCarloApp: App {
                     Color.clear
                         .onAppear {
                             appViewModel.windowSize = geo.size
-                            print("// DEBUG: windowSize initial \(geo.size)")
                         }
                         .onChange(of: geo.size) { newSize in
                             appViewModel.windowSize = newSize
-                            print("// DEBUG: windowSize updated to \(newSize)")
                         }
                 }
 
@@ -100,7 +98,6 @@ struct BTCMonteCarloApp: App {
                 switch newPhase {
                 case .inactive, .background:
                     simSettings.saveToUserDefaults()
-                    print("// DEBUG: scenePhase -> \(newPhase), saving settings")
                 default:
                     break
                 }

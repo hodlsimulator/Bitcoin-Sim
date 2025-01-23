@@ -58,7 +58,6 @@ class SimulationCoordinator: ObservableObject {
         simSettings.lockedRandomSeed = lockRandomSeed
 
         let newHash = computeInputsHash()
-        print("// DEBUG: runSimulation() => newHash = \(newHash), storedInputsHash = \(String(describing: chartDataCache.storedInputsHash))")
         simSettings.printAllSettings()
 
         // 2) Decide whether to load monthly or weekly returns
@@ -74,7 +73,6 @@ class SimulationCoordinator: ObservableObject {
             sp500MonthlyReturns         = []
         }
 
-        print("// DEBUG: Setting up for new simulation run. isLoading=true.")
         isCancelled = false
         isLoading = true
         isChartBuilding = false
@@ -86,25 +84,13 @@ class SimulationCoordinator: ObservableObject {
         if simSettings.lockedRandomSeed {
             finalSeed = simSettings.seedValue
             simSettings.lastUsedSeed = simSettings.seedValue
-            print("// DEBUG: Using lockedRandomSeed: \(finalSeed ?? 0)")
         } else if simSettings.useRandomSeed {
             let newRandomSeed = UInt64.random(in: 0..<UInt64.max)
             finalSeed = newRandomSeed
             simSettings.lastUsedSeed = newRandomSeed
-            print("// DEBUG: Using a fresh random seed: \(finalSeed ?? 0)")
         } else {
             finalSeed = nil
             simSettings.lastUsedSeed = 0
-            print("// DEBUG: No seed locked or random => finalSeed is nil.")
-        }
-
-        // Optional debug info for inputManager
-        if let mgr = simSettings.inputManager {
-            print("// DEBUG: runSimulation => firstYearContribution=\(mgr.firstYearContribution), subsequentContribution=\(mgr.subsequentContribution)")
-            print("// DEBUG: runSimulation => threshold1=\(mgr.threshold1), withdraw1=\(mgr.withdrawAmount1)")
-            print("// DEBUG: runSimulation => threshold2=\(mgr.threshold2), withdraw2=\(mgr.withdrawAmount2)")
-        } else {
-            print("// DEBUG: runSimulation => simSettings.inputManager is nil.")
         }
 
         // Example: Create/Load mempool data
@@ -115,7 +101,6 @@ class SimulationCoordinator: ObservableObject {
         DispatchQueue.global(qos: .userInitiated).async {
             // Check iterations
             guard let total = self.inputManager.getParsedIterations(), total > 0 else {
-                print("// DEBUG: No valid iteration => bailing out.")
                 DispatchQueue.main.async {
                     self.isLoading = false
                 }
@@ -130,9 +115,6 @@ class SimulationCoordinator: ObservableObject {
             // Parse user’s CAGR and Volatility
             let userInputCAGR = self.inputManager.getParsedAnnualCAGR()
             let userInputVolatility = Double(self.inputManager.annualVolatility) ?? 1.0
-
-            print("// DEBUG: userInputCAGR => \(userInputCAGR)%")
-            print("// DEBUG: userInputVolatility => \(userInputVolatility)%")
 
             let finalWeeks = self.simSettings.userPeriods
             let userPriceUSDAsDouble = NSDecimalNumber(decimal: Decimal(self.simSettings.initialBTCPriceUSD)).doubleValue
@@ -161,7 +143,6 @@ class SimulationCoordinator: ObservableObject {
             
             // Check for cancellation
             if self.isCancelled {
-                print("// DEBUG: user cancelled => stopping.")
                 DispatchQueue.main.async { self.isLoading = false }
                 return
             }
@@ -173,7 +154,6 @@ class SimulationCoordinator: ObservableObject {
 
             // If no runs, end
             if allIterations.isEmpty {
-                print("// DEBUG: No runs => done.")
                 DispatchQueue.main.async {
                     self.isLoading = false
                 }
@@ -184,17 +164,14 @@ class SimulationCoordinator: ObservableObject {
             DispatchQueue.main.async {
                 self.isLoading = false
                 self.isChartBuilding = true
-                print("// DEBUG: Simulation finished => isChartBuilding=true now.")
-                
+        
                 let finalRuns = allIterations.enumerated().map {
                     ($0.offset, $0.element.last?.btcPriceUSD ?? Decimal.zero, $0.element)
                 }
                 let sortedRuns = finalRuns.sorted { $0.1 < $1.1 }
 
-                print("// DEBUG: sortedRuns => \(sortedRuns.count) runs.")
-
                 if sortedRuns.isEmpty {
-                    print("// DEBUG: sortedRuns empty => done.")
+
                     self.isChartBuilding = false
                     return
                 }
@@ -227,9 +204,7 @@ class SimulationCoordinator: ObservableObject {
                 self.allSimData = allIterations
 
                 // Debug logs
-                print("// DEBUG: Tenth run => iteration #\(tenthRunIndex), final BTC => \(sortedRuns[tenthIndex].1)")
                 print("// DEBUG: 'median final BTC' => iteration #\(medianRunIndex), final BTC => \(sortedRuns[medianIndex].1)")
-                print("// DEBUG: Ninetieth run => iteration #\(ninetiethRunIndex), final BTC => \(sortedRuns[ninetiethIndex].1)")
                 print("// DEBUG: bestFitRun => iteration #\(bestFitRunIndex) chosen by distance.")
                 
                 // **ADDED LINE**: print the final BTC price for the best-fit run
@@ -253,10 +228,8 @@ class SimulationCoordinator: ObservableObject {
 
                 // Clear old chart snapshots
                 if self.chartDataCache.chartSnapshot != nil {
-                    print("// DEBUG: clearing old BTC chartSnapshot.")
                 }
                 if self.chartDataCache.chartSnapshotPortfolio != nil {
-                    print("// DEBUG: clearing old Portfolio chartSnapshot.")
                 }
                 self.chartDataCache.chartSnapshot = nil
                 self.chartDataCache.chartSnapshotLandscape = nil
@@ -275,11 +248,9 @@ class SimulationCoordinator: ObservableObject {
                 self.chartDataCache.storedInputsHash = newHash
                 
                 let oldSelection = self.simChartSelection.selectedChart
-                print("// CHANGED: oldSelection => \(oldSelection)")
 
                 // If user doesn’t want charts, skip
                 if !generateGraphs {
-                    print("// DEBUG: Skipping chart building because generateGraphs == false.")
                     self.isChartBuilding = false
                     self.isSimulationRun = true
                     return
@@ -320,7 +291,6 @@ class SimulationCoordinator: ObservableObject {
                             self.chartDataCache.chartSnapshotPortfolio = portfolioSnapshot
                             
                             self.simChartSelection.selectedChart = oldSelection
-                            print("// CHANGED: restored oldSelection => \(oldSelection)")
 
                             self.isChartBuilding = false
                             self.isSimulationRun = true
@@ -370,7 +340,6 @@ class SimulationCoordinator: ObservableObject {
     }
 
     private func processAllResults(_ allResults: [[SimulationData]]) {
-        print("// DEBUG: processAllResults() => got \(allResults.count) runs.")
     }
 }
 
