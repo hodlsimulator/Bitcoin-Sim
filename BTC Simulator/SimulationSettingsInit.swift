@@ -19,16 +19,19 @@ extension SimulationSettings {
         // BASIC EXAMPLE PROPERTIES
         // =========================================================
 
+        // Lognormal Growth
         if defaults.object(forKey: "useLognormalGrowth") != nil {
             self.useLognormalGrowth = defaults.bool(forKey: "useLognormalGrowth")
         } else {
             self.useLognormalGrowth = true
         }
 
+        // Starting Balance
         if let savedBal = defaults.object(forKey: "savedStartingBalance") as? Double {
             self.startingBalance = savedBal
         }
 
+        // Average Cost Basis
         if let savedACB = defaults.object(forKey: "savedAverageCostBasis") as? Double {
             self.averageCostBasis = savedACB
         }
@@ -47,7 +50,7 @@ extension SimulationSettings {
             self.initialBTCPriceUSD = savedBTCPrice
         }
 
-        // Currency
+        // Currency Preference
         if let storedPrefRaw = defaults.string(forKey: "currencyPreference"),
            let storedPref = PreferredCurrency(rawValue: storedPrefRaw) {
             self.currencyPreference = storedPref
@@ -101,6 +104,19 @@ extension SimulationSettings {
             self.lockHistoricalSampling = savedLockSampling
         }
 
+        // Regime Switching
+        let hasRegimeSwitchingKey = defaults.object(forKey: "useRegimeSwitching") != nil
+        print("DEBUG: 'useRegimeSwitching' in defaults? \(hasRegimeSwitchingKey)")
+
+        if hasRegimeSwitchingKey {
+            let storedValue = defaults.bool(forKey: "useRegimeSwitching")
+            print("DEBUG: Found stored useRegimeSwitching=\(storedValue)")
+            self.useRegimeSwitching = storedValue
+        } else {
+            print("DEBUG: No stored value. Defaulting useRegimeSwitching to TRUE.")
+            self.useRegimeSwitching = true
+        }
+
         // =========================================================
         // BULLISH FACTORS (Weekly & Monthly)
         // =========================================================
@@ -109,7 +125,6 @@ extension SimulationSettings {
         if let val = defaults.object(forKey: "useHalvingWeekly") as? Bool {
             self.useHalvingWeekly = val
         }
-
         if let val = defaults.object(forKey: "halvingBumpWeekly") as? Double {
             self.halvingBumpWeekly = val
         } else {
@@ -119,7 +134,6 @@ extension SimulationSettings {
         if let val = defaults.object(forKey: "useHalvingMonthly") as? Bool {
             self.useHalvingMonthly = val
         }
-
         if let val = defaults.object(forKey: "halvingBumpMonthly") as? Double {
             self.halvingBumpMonthly = val
         } else {
@@ -130,7 +144,6 @@ extension SimulationSettings {
         if let val = defaults.object(forKey: "useInstitutionalDemandWeekly") as? Bool {
             self.useInstitutionalDemandWeekly = val
         }
-
         if let val = defaults.object(forKey: "maxDemandBoostWeekly") as? Double {
             self.maxDemandBoostWeekly = val
         } else {
@@ -140,7 +153,6 @@ extension SimulationSettings {
         if let val = defaults.object(forKey: "useInstitutionalDemandMonthly") as? Bool {
             self.useInstitutionalDemandMonthly = val
         }
-
         if let val = defaults.object(forKey: "maxDemandBoostMonthly") as? Double {
             self.maxDemandBoostMonthly = val
         } else {
@@ -151,7 +163,6 @@ extension SimulationSettings {
         if let val = defaults.object(forKey: "useCountryAdoptionWeekly") as? Bool {
             self.useCountryAdoptionWeekly = val
         }
-
         if let val = defaults.object(forKey: "maxCountryAdBoostWeekly") as? Double {
             self.maxCountryAdBoostWeekly = val
         } else {
@@ -161,7 +172,6 @@ extension SimulationSettings {
         if let val = defaults.object(forKey: "useCountryAdoptionMonthly") as? Bool {
             self.useCountryAdoptionMonthly = val
         }
-
         if let val = defaults.object(forKey: "maxCountryAdBoostMonthly") as? Double {
             self.maxCountryAdBoostMonthly = val
         } else {
@@ -172,7 +182,6 @@ extension SimulationSettings {
         if let val = defaults.object(forKey: "useRegulatoryClarityWeekly") as? Bool {
             self.useRegulatoryClarityWeekly = val
         }
-
         if let val = defaults.object(forKey: "maxClarityBoostWeekly") as? Double {
             self.maxClarityBoostWeekly = val
         } else {
@@ -182,7 +191,6 @@ extension SimulationSettings {
         if let val = defaults.object(forKey: "useRegulatoryClarityMonthly") as? Bool {
             self.useRegulatoryClarityMonthly = val
         }
-
         if let val = defaults.object(forKey: "maxClarityBoostMonthly") as? Double {
             self.maxClarityBoostMonthly = val
         } else {
@@ -193,7 +201,6 @@ extension SimulationSettings {
         if let val = defaults.object(forKey: "useEtfApprovalWeekly") as? Bool {
             self.useEtfApprovalWeekly = val
         }
-
         if let val = defaults.object(forKey: "maxEtfBoostWeekly") as? Double {
             self.maxEtfBoostWeekly = val
         } else {
@@ -203,7 +210,6 @@ extension SimulationSettings {
         if let val = defaults.object(forKey: "useEtfApprovalMonthly") as? Bool {
             self.useEtfApprovalMonthly = val
         }
-
         if let val = defaults.object(forKey: "maxEtfBoostMonthly") as? Double {
             self.maxEtfBoostMonthly = val
         } else {
@@ -214,7 +220,6 @@ extension SimulationSettings {
         if let val = defaults.object(forKey: "useTechBreakthroughWeekly") as? Bool {
             self.useTechBreakthroughWeekly = val
         }
-
         if let val = defaults.object(forKey: "maxTechBoostWeekly") as? Double {
             self.maxTechBoostWeekly = val
         } else {
@@ -224,7 +229,6 @@ extension SimulationSettings {
         if let val = defaults.object(forKey: "useTechBreakthroughMonthly") as? Bool {
             self.useTechBreakthroughMonthly = val
         }
-
         if let val = defaults.object(forKey: "maxTechBoostMonthly") as? Double {
             self.maxTechBoostMonthly = val
         } else {
@@ -235,7 +239,6 @@ extension SimulationSettings {
         if let val = defaults.object(forKey: "useScarcityEventsWeekly") as? Bool {
             self.useScarcityEventsWeekly = val
         }
-
         if let val = defaults.object(forKey: "maxScarcityBoostWeekly") as? Double {
             self.maxScarcityBoostWeekly = val
         } else {
@@ -245,7 +248,6 @@ extension SimulationSettings {
         if let val = defaults.object(forKey: "useScarcityEventsMonthly") as? Bool {
             self.useScarcityEventsMonthly = val
         }
-
         if let val = defaults.object(forKey: "maxScarcityBoostMonthly") as? Double {
             self.maxScarcityBoostMonthly = val
         } else {
@@ -256,7 +258,6 @@ extension SimulationSettings {
         if let val = defaults.object(forKey: "useGlobalMacroHedgeWeekly") as? Bool {
             self.useGlobalMacroHedgeWeekly = val
         }
-
         if let val = defaults.object(forKey: "maxMacroBoostWeekly") as? Double {
             self.maxMacroBoostWeekly = val
         } else {
@@ -266,7 +267,6 @@ extension SimulationSettings {
         if let val = defaults.object(forKey: "useGlobalMacroHedgeMonthly") as? Bool {
             self.useGlobalMacroHedgeMonthly = val
         }
-
         if let val = defaults.object(forKey: "maxMacroBoostMonthly") as? Double {
             self.maxMacroBoostMonthly = val
         } else {
@@ -277,7 +277,6 @@ extension SimulationSettings {
         if let val = defaults.object(forKey: "useStablecoinShiftWeekly") as? Bool {
             self.useStablecoinShiftWeekly = val
         }
-
         if let val = defaults.object(forKey: "maxStablecoinBoostWeekly") as? Double {
             self.maxStablecoinBoostWeekly = val
         } else {
@@ -287,7 +286,6 @@ extension SimulationSettings {
         if let val = defaults.object(forKey: "useStablecoinShiftMonthly") as? Bool {
             self.useStablecoinShiftMonthly = val
         }
-
         if let val = defaults.object(forKey: "maxStablecoinBoostMonthly") as? Double {
             self.maxStablecoinBoostMonthly = val
         } else {
@@ -298,7 +296,6 @@ extension SimulationSettings {
         if let val = defaults.object(forKey: "useDemographicAdoptionWeekly") as? Bool {
             self.useDemographicAdoptionWeekly = val
         }
-
         if let val = defaults.object(forKey: "maxDemoBoostWeekly") as? Double {
             self.maxDemoBoostWeekly = val
         } else {
@@ -308,7 +305,6 @@ extension SimulationSettings {
         if let val = defaults.object(forKey: "useDemographicAdoptionMonthly") as? Bool {
             self.useDemographicAdoptionMonthly = val
         }
-
         if let val = defaults.object(forKey: "maxDemoBoostMonthly") as? Double {
             self.maxDemoBoostMonthly = val
         } else {
@@ -319,7 +315,6 @@ extension SimulationSettings {
         if let val = defaults.object(forKey: "useAltcoinFlightWeekly") as? Bool {
             self.useAltcoinFlightWeekly = val
         }
-
         if let val = defaults.object(forKey: "maxAltcoinBoostWeekly") as? Double {
             self.maxAltcoinBoostWeekly = val
         } else {
@@ -329,7 +324,6 @@ extension SimulationSettings {
         if let val = defaults.object(forKey: "useAltcoinFlightMonthly") as? Bool {
             self.useAltcoinFlightMonthly = val
         }
-
         if let val = defaults.object(forKey: "maxAltcoinBoostMonthly") as? Double {
             self.maxAltcoinBoostMonthly = val
         } else {
@@ -340,7 +334,6 @@ extension SimulationSettings {
         if let val = defaults.object(forKey: "useAdoptionFactorWeekly") as? Bool {
             self.useAdoptionFactorWeekly = val
         }
-
         if let val = defaults.object(forKey: "adoptionBaseFactorWeekly") as? Double {
             self.adoptionBaseFactorWeekly = val
         } else {
@@ -350,7 +343,6 @@ extension SimulationSettings {
         if let val = defaults.object(forKey: "useAdoptionFactorMonthly") as? Bool {
             self.useAdoptionFactorMonthly = val
         }
-
         if let val = defaults.object(forKey: "adoptionBaseFactorMonthly") as? Double {
             self.adoptionBaseFactorMonthly = val
         } else {
@@ -365,7 +357,6 @@ extension SimulationSettings {
         if let val = defaults.object(forKey: "useRegClampdownWeekly") as? Bool {
             self.useRegClampdownWeekly = val
         }
-
         if let val = defaults.object(forKey: "maxClampDownWeekly") as? Double {
             self.maxClampDownWeekly = val
         } else {
@@ -375,7 +366,6 @@ extension SimulationSettings {
         if let val = defaults.object(forKey: "useRegClampdownMonthly") as? Bool {
             self.useRegClampdownMonthly = val
         }
-
         if let val = defaults.object(forKey: "maxClampDownMonthly") as? Double {
             self.maxClampDownMonthly = val
         } else {
@@ -386,7 +376,6 @@ extension SimulationSettings {
         if let val = defaults.object(forKey: "useCompetitorCoinWeekly") as? Bool {
             self.useCompetitorCoinWeekly = val
         }
-
         if let val = defaults.object(forKey: "maxCompetitorBoostWeekly") as? Double {
             self.maxCompetitorBoostWeekly = val
         } else {
@@ -396,7 +385,6 @@ extension SimulationSettings {
         if let val = defaults.object(forKey: "useCompetitorCoinMonthly") as? Bool {
             self.useCompetitorCoinMonthly = val
         }
-
         if let val = defaults.object(forKey: "maxCompetitorBoostMonthly") as? Double {
             self.maxCompetitorBoostMonthly = val
         } else {
@@ -407,7 +395,6 @@ extension SimulationSettings {
         if let val = defaults.object(forKey: "useSecurityBreachWeekly") as? Bool {
             self.useSecurityBreachWeekly = val
         }
-
         if let val = defaults.object(forKey: "breachImpactWeekly") as? Double {
             self.breachImpactWeekly = val
         } else {
@@ -417,7 +404,6 @@ extension SimulationSettings {
         if let val = defaults.object(forKey: "useSecurityBreachMonthly") as? Bool {
             self.useSecurityBreachMonthly = val
         }
-
         if let val = defaults.object(forKey: "breachImpactMonthly") as? Double {
             self.breachImpactMonthly = val
         } else {
@@ -428,7 +414,6 @@ extension SimulationSettings {
         if let val = defaults.object(forKey: "useBubblePopWeekly") as? Bool {
             self.useBubblePopWeekly = val
         }
-
         if let val = defaults.object(forKey: "maxPopDropWeekly") as? Double {
             self.maxPopDropWeekly = val
         } else {
@@ -438,7 +423,6 @@ extension SimulationSettings {
         if let val = defaults.object(forKey: "useBubblePopMonthly") as? Bool {
             self.useBubblePopMonthly = val
         }
-
         if let val = defaults.object(forKey: "maxPopDropMonthly") as? Double {
             self.maxPopDropMonthly = val
         } else {
@@ -449,7 +433,6 @@ extension SimulationSettings {
         if let val = defaults.object(forKey: "useStablecoinMeltdownWeekly") as? Bool {
             self.useStablecoinMeltdownWeekly = val
         }
-
         if let val = defaults.object(forKey: "maxMeltdownDropWeekly") as? Double {
             self.maxMeltdownDropWeekly = val
         } else {
@@ -459,7 +442,6 @@ extension SimulationSettings {
         if let val = defaults.object(forKey: "useStablecoinMeltdownMonthly") as? Bool {
             self.useStablecoinMeltdownMonthly = val
         }
-
         if let val = defaults.object(forKey: "maxMeltdownDropMonthly") as? Double {
             self.maxMeltdownDropMonthly = val
         } else {
@@ -470,7 +452,6 @@ extension SimulationSettings {
         if let val = defaults.object(forKey: "useBlackSwanWeekly") as? Bool {
             self.useBlackSwanWeekly = val
         }
-
         if let val = defaults.object(forKey: "blackSwanDropWeekly") as? Double {
             self.blackSwanDropWeekly = val
         } else {
@@ -480,7 +461,6 @@ extension SimulationSettings {
         if let val = defaults.object(forKey: "useBlackSwanMonthly") as? Bool {
             self.useBlackSwanMonthly = val
         }
-
         if let val = defaults.object(forKey: "blackSwanDropMonthly") as? Double {
             self.blackSwanDropMonthly = val
         } else {
@@ -491,7 +471,6 @@ extension SimulationSettings {
         if let val = defaults.object(forKey: "useBearMarketWeekly") as? Bool {
             self.useBearMarketWeekly = val
         }
-
         if let val = defaults.object(forKey: "bearWeeklyDriftWeekly") as? Double {
             self.bearWeeklyDriftWeekly = val
         } else {
@@ -501,7 +480,6 @@ extension SimulationSettings {
         if let val = defaults.object(forKey: "useBearMarketMonthly") as? Bool {
             self.useBearMarketMonthly = val
         }
-
         if let val = defaults.object(forKey: "bearWeeklyDriftMonthly") as? Double {
             self.bearWeeklyDriftMonthly = val
         } else {
@@ -512,7 +490,6 @@ extension SimulationSettings {
         if let val = defaults.object(forKey: "useMaturingMarketWeekly") as? Bool {
             self.useMaturingMarketWeekly = val
         }
-
         if let val = defaults.object(forKey: "maxMaturingDropWeekly") as? Double {
             self.maxMaturingDropWeekly = val
         } else {
@@ -522,7 +499,6 @@ extension SimulationSettings {
         if let val = defaults.object(forKey: "useMaturingMarketMonthly") as? Bool {
             self.useMaturingMarketMonthly = val
         }
-
         if let val = defaults.object(forKey: "maxMaturingDropMonthly") as? Double {
             self.maxMaturingDropMonthly = val
         } else {
@@ -533,7 +509,6 @@ extension SimulationSettings {
         if let val = defaults.object(forKey: "useRecessionWeekly") as? Bool {
             self.useRecessionWeekly = val
         }
-
         if let val = defaults.object(forKey: "maxRecessionDropWeekly") as? Double {
             self.maxRecessionDropWeekly = val
         } else {
@@ -543,7 +518,6 @@ extension SimulationSettings {
         if let val = defaults.object(forKey: "useRecessionMonthly") as? Bool {
             self.useRecessionMonthly = val
         }
-
         if let val = defaults.object(forKey: "maxRecessionDropMonthly") as? Double {
             self.maxRecessionDropMonthly = val
         } else {

@@ -193,86 +193,89 @@ extension SimulationSettings {
         useVolShocks = true
         useGarchVolatility = true
 
+        // Remove existing user default for regime switching & set default to true
+        defaults.removeObject(forKey: "useRegimeSwitching")
+        useRegimeSwitching = true
+
         // -----------------------------
         // Now set weekly/monthly toggles as desired:
         // -----------------------------
-
+        
         // Halving
         useHalvingWeekly = true
         halvingBumpWeekly = SimulationSettings.defaultHalvingBumpWeekly
-        useHalvingMonthly = true  // CHANGED TO TRUE
+        useHalvingMonthly = true
         halvingBumpMonthly = SimulationSettings.defaultHalvingBumpMonthly
 
         // Institutional Demand
         useInstitutionalDemandWeekly = true
         maxDemandBoostWeekly = SimulationSettings.defaultMaxDemandBoostWeekly
-        useInstitutionalDemandMonthly = true  // CHANGED TO TRUE
+        useInstitutionalDemandMonthly = true
         maxDemandBoostMonthly = SimulationSettings.defaultMaxDemandBoostMonthly
 
         // Country Adoption
         useCountryAdoptionWeekly = true
         maxCountryAdBoostWeekly = SimulationSettings.defaultMaxCountryAdBoostWeekly
-        useCountryAdoptionMonthly = true  // CHANGED TO TRUE
+        useCountryAdoptionMonthly = true
         maxCountryAdBoostMonthly = SimulationSettings.defaultMaxCountryAdBoostMonthly
 
         // Regulatory Clarity
         useRegulatoryClarityWeekly = true
         maxClarityBoostWeekly = SimulationSettings.defaultMaxClarityBoostWeekly
-        useRegulatoryClarityMonthly = true  // CHANGED TO TRUE
+        useRegulatoryClarityMonthly = true
         maxClarityBoostMonthly = SimulationSettings.defaultMaxClarityBoostMonthly
 
         // ETF Approval
         useEtfApprovalWeekly = true
         maxEtfBoostWeekly = SimulationSettings.defaultMaxEtfBoostWeekly
-        useEtfApprovalMonthly = true  // CHANGED TO TRUE
+        useEtfApprovalMonthly = true
         maxEtfBoostMonthly = SimulationSettings.defaultMaxEtfBoostMonthly
 
         // Tech Breakthrough
         useTechBreakthroughWeekly = true
         maxTechBoostWeekly = SimulationSettings.defaultMaxTechBoostWeekly
-        useTechBreakthroughMonthly = true  // CHANGED TO TRUE
+        useTechBreakthroughMonthly = true
         maxTechBoostMonthly = SimulationSettings.defaultMaxTechBoostMonthly
 
         // Scarcity Events
         useScarcityEventsWeekly = true
         maxScarcityBoostWeekly = SimulationSettings.defaultMaxScarcityBoostWeekly
-        useScarcityEventsMonthly = true  // CHANGED TO TRUE
+        useScarcityEventsMonthly = true
         maxScarcityBoostMonthly = SimulationSettings.defaultMaxScarcityBoostMonthly
 
         // Global Macro Hedge
         useGlobalMacroHedgeWeekly = true
         maxMacroBoostWeekly = SimulationSettings.defaultMaxMacroBoostWeekly
-        useGlobalMacroHedgeMonthly = true  // CHANGED TO TRUE
+        useGlobalMacroHedgeMonthly = true
         maxMacroBoostMonthly = SimulationSettings.defaultMaxMacroBoostMonthly
 
         // Stablecoin Shift
         useStablecoinShiftWeekly = true
         maxStablecoinBoostWeekly = SimulationSettings.defaultMaxStablecoinBoostWeekly
-        useStablecoinShiftMonthly = true  // CHANGED TO TRUE
+        useStablecoinShiftMonthly = true
         maxStablecoinBoostMonthly = SimulationSettings.defaultMaxStablecoinBoostMonthly
 
         // Demographic Adoption
         useDemographicAdoptionWeekly = true
         maxDemoBoostWeekly = SimulationSettings.defaultMaxDemoBoostWeekly
-        useDemographicAdoptionMonthly = true  // CHANGED TO TRUE
+        useDemographicAdoptionMonthly = true
         maxDemoBoostMonthly = SimulationSettings.defaultMaxDemoBoostMonthly
 
         // Altcoin Flight
         useAltcoinFlightWeekly = true
         maxAltcoinBoostWeekly = SimulationSettings.defaultMaxAltcoinBoostWeekly
-        useAltcoinFlightMonthly = true  // CHANGED TO TRUE
+        useAltcoinFlightMonthly = true
         maxAltcoinBoostMonthly = SimulationSettings.defaultMaxAltcoinBoostMonthly
 
         // Adoption Factor
         useAdoptionFactorWeekly = true
         adoptionBaseFactorWeekly = SimulationSettings.defaultAdoptionBaseFactorWeekly
-        useAdoptionFactorMonthly = true  // CHANGED TO TRUE
+        useAdoptionFactorMonthly = true
         adoptionBaseFactorMonthly = SimulationSettings.defaultAdoptionBaseFactorMonthly
 
         // -----------------------------
         // Bearish factors default on for both
         // -----------------------------
-
         useRegClampdownWeekly = true
         maxClampDownWeekly = SimulationSettings.defaultMaxClampDownWeekly
         useRegClampdownMonthly = true
@@ -324,6 +327,7 @@ extension SimulationSettings {
         // Reset lockHistoricalSampling
         lockHistoricalSampling = false
         
+        // Reset these final toggles
         useLognormalGrowth = true
         useHistoricalSampling = true
         useVolShocks = true

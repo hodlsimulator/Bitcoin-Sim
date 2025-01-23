@@ -31,7 +31,8 @@ struct BTCMonteCarloApp: App {
             "useLognormalGrowth": true,
             "useHistoricalSampling": true,
             "useVolShocks": true,
-            "useGarchVolatility": true
+            "useGarchVolatility": true,
+            "useRegimeSwitching": true
         ]
         UserDefaults.standard.register(defaults: defaultToggles)
         

@@ -135,6 +135,16 @@ class SimulationSettings: ObservableObject {
         }
     }
     
+    // MARK: - New Regime Switching Toggle
+    @Published var useRegimeSwitching: Bool = false {
+        didSet {
+            guard isInitialized else { return }
+            print("didSet: useRegimeSwitching changed to \(useRegimeSwitching)")
+            print(Thread.callStackSymbols.joined(separator: "\n"))
+            UserDefaults.standard.set(useRegimeSwitching, forKey: "useRegimeSwitching")
+        }
+    }
+    
     func finalizeToggleStateAfterLoad() {
         isUpdating = false
     }
@@ -303,6 +313,9 @@ class SimulationSettings: ObservableObject {
         autoCorrelationStrength = defaults.double(forKey: "autoCorrelationStrength")
         meanReversionTarget = defaults.double(forKey: "meanReversionTarget")
         lockHistoricalSampling = defaults.bool(forKey: "lockHistoricalSampling")
+        
+        // load the new toggle
+        useRegimeSwitching = defaults.bool(forKey: "useRegimeSwitching")
     }
 
     func saveToUserDefaults() {
@@ -318,6 +331,10 @@ class SimulationSettings: ObservableObject {
         defaults.set(autoCorrelationStrength, forKey: "autoCorrelationStrength")
         defaults.set(meanReversionTarget, forKey: "meanReversionTarget")
         defaults.set(lockHistoricalSampling, forKey: "lockHistoricalSampling")
+        
+        // save the new toggle
+        defaults.set(useRegimeSwitching, forKey: "useRegimeSwitching")
+
         defaults.synchronize()
     }
 }

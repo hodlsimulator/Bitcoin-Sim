@@ -95,7 +95,6 @@ private func lumpsumAdjustFactor(
     }
     
     // Count how many toggles are on for the *active* period (weekly or monthly)
-    // We'll sum bullish + bearish to see if *any* are on.
     let isWeekly = (settings.periodUnit == .weeks)
     
     // BULLISH toggles count
@@ -227,9 +226,7 @@ private func applyFactorToggles(
     // ─────────────────────────
     
     // Halving => Probability example if user specifically wants it
-    // Check only if weekly toggle is on OR monthly toggle is on
     if isWeekly && settings.useHalvingWeekly {
-        // Probability-based approach (example)
         let stressLevel = mempoolDataManager.stressLevel(at: stepIndex)
         let baseProb = 0.02
         let dynamicProb = (stressLevel > 80.0) ? baseProb * 1.5 : baseProb
@@ -419,13 +416,8 @@ private func runWeeklySimulation(
     rng: GKRandomSource
 ) -> [SimulationData] {
 
-    // Create a signpost ID each time this function is called:
     let signpostID = OSSignpostID(log: myLog)
-
-    // Start the signpost
     os_signpost(.begin, log: myLog, name: "runWeeklySimulation", signpostID: signpostID)
-
-    // Use 'defer' so we always end the signpost even if we return or throw
     defer {
         os_signpost(.end, log: myLog, name: "runWeeklySimulation", signpostID: signpostID)
     }
@@ -434,8 +426,8 @@ private func runWeeklySimulation(
     var prevBTCPriceUSD = initialBTCPriceUSD
     var prevBTCHoldings = 0.0
     
-    let cagrDecimal = annualCAGR / 100.0
-    let baseWeeklyVol = (annualVolatility / 100.0) / sqrt(52.0)
+    var cagrDecimal = annualCAGR / 100.0
+    var baseWeeklyVol = (annualVolatility / 100.0) / sqrt(52.0)
 
     // GARCH model
     var garchModel = GarchModel(
@@ -445,22 +437,36 @@ private func runWeeklySimulation(
         initialVariance: baseWeeklyVol * baseWeeklyVol
     )
     
+    // Regime model
+    var regimeModel = RegimeSwitchingModel()
+    
     let firstYearVal  = (settings.inputManager?.firstYearContribution as NSString?)?.doubleValue ?? 0
     let secondYearVal = (settings.inputManager?.subsequentContribution as NSString?)?.doubleValue ?? 0
     
     var lastStepLogReturn = 0.0
-    var lastAutoReturn    = 0.0 // for autocorrelation
+    var lastAutoReturn    = 0.0
 
     for currentWeek in 1...totalWeeklySteps {
+        
+        // Update regime if user wants regime switching
+        if settings.useRegimeSwitching {
+            regimeModel.updateRegime(rng: rng)
+            // Adjust CAGR and volatility for this new regime
+            cagrDecimal = (annualCAGR / 100.0) * regimeModel.currentRegime.cagrMultiplier
+            baseWeeklyVol = ((annualVolatility / 100.0) / sqrt(52.0)) * regimeModel.currentRegime.volMultiplier
+        }
         
         let lumpsum = (!settings.useHistoricalSampling && !settings.useLognormalGrowth)
         var totalReturn = 0.0
         
-        // Current stdev (GARCH or fixed)
-        let currentVol = settings.useGarchVolatility
+        // Current stdev (GARCH or fixed). Note we might also scale GARCH by the regime’s vol multiplier
+        var currentVol = settings.useGarchVolatility
             ? garchModel.currentStdDev()
             : baseWeeklyVol
-        
+        if settings.useRegimeSwitching {
+            currentVol *= regimeModel.currentRegime.volMultiplier // if you want to stack GARCH and regime
+        }
+
         if lumpsum {
             // Once every 52 weeks => do lumpsum growth
             if Double(currentWeek).truncatingRemainder(dividingBy: 52.0) == 0 {
@@ -477,7 +483,6 @@ private func runWeeklySimulation(
                     let phi = settings.autoCorrelationStrength
                     lumpsumGrowth = (1 - phi) * lumpsumGrowth + phi * lastAutoReturn
                 }
-                // Apply toggles
                 lumpsumGrowth = applyFactorToggles(
                     baseReturn: lumpsumGrowth,
                     stepIndex: currentWeek,
@@ -500,8 +505,8 @@ private func runWeeklySimulation(
             // Historical sampling or lognormal each step
             if settings.useHistoricalSampling {
                 var weeklySample = pickRandomReturn(from: historicalBTCWeeklyReturns, rng: rng)
-                weeklySample     = dampenArctanWeekly(weeklySample)
-                totalReturn     += weeklySample
+                weeklySample = dampenArctanWeekly(weeklySample)
+                totalReturn += weeklySample
             }
             if settings.useLognormalGrowth {
                 totalReturn += (cagrDecimal / 52.0)
@@ -514,7 +519,6 @@ private func runWeeklySimulation(
                 let phi = settings.autoCorrelationStrength
                 totalReturn = (1 - phi) * totalReturn + phi * lastAutoReturn
             }
-            // Apply toggles
             let toggled = applyFactorToggles(
                 baseReturn: totalReturn,
                 stepIndex: currentWeek,
@@ -596,7 +600,6 @@ private func runWeeklySimulation(
     return results
 }
 
-
 // MARK: - MONTHLY SIM
 private func runMonthlySimulation(
     settings: SimulationSettings,
@@ -614,8 +617,8 @@ private func runMonthlySimulation(
     var prevBTCPriceUSD = initialBTCPriceUSD
     var prevBTCHoldings = 0.0
     
-    let cagrDecimal = annualCAGR / 100.0
-    let baseMonthlyVol = (annualVolatility / 100.0) / sqrt(12.0)
+    var cagrDecimal = annualCAGR / 100.0
+    var baseMonthlyVol = (annualVolatility / 100.0) / sqrt(12.0)
 
     var garchModel = GarchModel(
         omega: 0.00001,
@@ -624,6 +627,8 @@ private func runMonthlySimulation(
         initialVariance: baseMonthlyVol * baseMonthlyVol
     )
     
+    var regimeModel = RegimeSwitchingModel()
+    
     let firstYearVal  = (settings.inputManager?.firstYearContribution as NSString?)?.doubleValue ?? 0
     let secondYearVal = (settings.inputManager?.subsequentContribution as NSString?)?.doubleValue ?? 0
     
@@ -631,13 +636,24 @@ private func runMonthlySimulation(
     var lastAutoReturn = 0.0
 
     for currentMonth in 1...totalMonths {
+        
+        // Update regime if user wants regime switching
+        if settings.useRegimeSwitching {
+            regimeModel.updateRegime(rng: rng)
+            cagrDecimal = (annualCAGR / 100.0) * regimeModel.currentRegime.cagrMultiplier
+            baseMonthlyVol = ((annualVolatility / 100.0) / sqrt(12.0)) * regimeModel.currentRegime.volMultiplier
+        }
+        
         let lumpsum = (!settings.useHistoricalSampling && !settings.useLognormalGrowth)
         var totalReturn = 0.0
         
-        let currentVol = settings.useGarchVolatility
+        var currentVol = settings.useGarchVolatility
             ? garchModel.currentStdDev()
             : baseMonthlyVol
-        
+        if settings.useRegimeSwitching {
+            currentVol *= regimeModel.currentRegime.volMultiplier
+        }
+
         if lumpsum {
             // Once per year => every 12 months
             if Double(currentMonth).truncatingRemainder(dividingBy: 12.0) == 0 {
@@ -650,7 +666,6 @@ private func runMonthlySimulation(
                     let phi = settings.autoCorrelationStrength
                     lumpsumGrowth = (1 - phi) * lumpsumGrowth + phi * lastAutoReturn
                 }
-                // Apply toggles
                 lumpsumGrowth = applyFactorToggles(
                     baseReturn: lumpsumGrowth,
                     stepIndex: currentMonth,
@@ -684,7 +699,6 @@ private func runMonthlySimulation(
                 let phi = settings.autoCorrelationStrength
                 totalReturn = (1 - phi) * totalReturn + (phi * lastAutoReturn)
             }
-            // Apply toggles
             let toggled = applyFactorToggles(
                 baseReturn: totalReturn,
                 stepIndex: currentMonth,
@@ -698,14 +712,12 @@ private func runMonthlySimulation(
             lastAutoReturn = toggled
         }
         
-        // Floor
         if prevBTCPriceUSD < 1.0 {
             prevBTCPriceUSD = 1.0
         }
         let newPriceUSD = prevBTCPriceUSD
         let newPriceEUR = newPriceUSD / exchangeRateEURUSD
         
-        // Contribution
         var typedDeposit = 0.0
         if currentMonth == 1 {
             typedDeposit = settings.startingBalance
@@ -723,7 +735,6 @@ private func runMonthlySimulation(
         )
         let holdingsAfterDeposit = prevBTCHoldings + depositBTC
         
-        // Withdraw thresholds
         let hypotheticalValueEUR = holdingsAfterDeposit * newPriceEUR
         var withdrawalEUR = 0.0
         if hypotheticalValueEUR > (settings.inputManager?.threshold2 ?? 0) {
@@ -742,7 +753,7 @@ private func runMonthlySimulation(
         }
 
         let dataPoint = SimulationData(
-            week: currentMonth, // reusing 'week' field to store month
+            week: currentMonth, // storing month in 'week' property
             startingBTC: prevBTCHoldings,
             netBTCHoldings: finalHoldings,
             btcPriceUSD: Decimal(newPriceUSD),
@@ -779,7 +790,6 @@ func runOneFullSimulation(
 ) -> [SimulationData] {
 
     if settings.periodUnit == .months {
-        // userWeeks is actually "months" in that scenario
         let totalMonths = userWeeks
         let monthlyResult = runMonthlySimulation(
             settings: settings,
@@ -794,7 +804,6 @@ func runOneFullSimulation(
         )
         return monthlyResult
     } else {
-        // Otherwise weekly
         let totalWeeks = userWeeks
         let weeklyResult = runWeeklySimulation(
             settings: settings,
@@ -875,10 +884,9 @@ func runMonteCarloSimulationsWithProgress(
     for i in 0..<iterations {
         if isCancelled() { break }
         
-        // optional sim delay
+        // optional small delay
         Thread.sleep(forTimeInterval: 0.01)
 
-        // Each iteration -> runOneFullSimulation with same rng (it advances each time)
         let simRun = runOneFullSimulation(
             settings: settings,
             annualCAGR: annualCAGR,
