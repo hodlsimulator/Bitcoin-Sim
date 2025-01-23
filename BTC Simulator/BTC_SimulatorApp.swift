@@ -26,6 +26,15 @@ struct BTCMonteCarloApp: App {
     @StateObject private var coordinator: SimulationCoordinator
 
     init() {
+        // Register default values to ensure toggles are on at first launch:
+        let defaultToggles: [String: Any] = [
+            "useLognormalGrowth": true,
+            "useHistoricalSampling": true,
+            "useVolShocks": true,
+            "useGarchVolatility": true
+        ]
+        UserDefaults.standard.register(defaults: defaultToggles)
+        
         print("** Creating SimulationSettings with loadDefaults = true")
         let newAppViewModel = AppViewModel()
         let newInputManager = PersistentInputManager()

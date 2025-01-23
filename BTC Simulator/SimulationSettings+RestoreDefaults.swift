@@ -323,5 +323,10 @@ extension SimulationSettings {
 
         // Reset lockHistoricalSampling
         lockHistoricalSampling = false
+        
+        useLognormalGrowth = true
+        useHistoricalSampling = true
+        useVolShocks = true
+        useGarchVolatility = true
     }
 }
