@@ -67,20 +67,20 @@ func simulationLines(
         Color(hue: 0.2500, saturation: 0.6, brightness: 1.0), // Spring Green
         
         // Extra strong reds/oranges
-        Color(hue: 0.0000, saturation: 0.8, brightness: 1.0), // Red
-        Color(hue: 0.0167, saturation: 0.8, brightness: 1.0), // Reddish-Orange
-        Color(hue: 0.0333, saturation: 0.8, brightness: 1.0), // Orange
-        Color(hue: 0.0500, saturation: 0.8, brightness: 1.0), // Soft Orange
-        Color(hue: 0.0667, saturation: 0.8, brightness: 1.0), // Golden Yellow
-        Color(hue: 0.0833, saturation: 0.8, brightness: 1.0), // Yellow-Gold
-        Color(hue: 0.1000, saturation: 0.8, brightness: 1.0), // Light Yellow
+        Color(hue: 0.0000, saturation: 0.6, brightness: 1.0), // Red
+        Color(hue: 0.0167, saturation: 0.6, brightness: 1.0), // Reddish-Orange
+        Color(hue: 0.0333, saturation: 0.6, brightness: 1.0), // Orange
+        Color(hue: 0.0500, saturation: 0.6, brightness: 1.0), // Soft Orange
+        Color(hue: 0.0667, saturation: 0.6, brightness: 1.0), // Golden Yellow
+        Color(hue: 0.0833, saturation: 0.6, brightness: 1.0), // Yellow-Gold
+        Color(hue: 0.1000, saturation: 0.6, brightness: 1.0), // Light Yellow
         Color(hue: 0.1167, saturation: 0.6, brightness: 1.0), // Pale Yellow
         Color(hue: 0.1333, saturation: 0.4, brightness: 1.0), // Lime Yellow
-        Color(hue: 0.1500, saturation: 0.8, brightness: 1.0), // Warm Yellow
-        Color(hue: 0.1667, saturation: 0.8, brightness: 1.0), // Pure Yellow
-        Color(hue: 0.1833, saturation: 0.8, brightness: 1.0), // Yellow-Green
+        Color(hue: 0.1500, saturation: 0.6, brightness: 1.0), // Warm Yellow
+        Color(hue: 0.1667, saturation: 0.6, brightness: 1.0), // Pure Yellow
+        Color(hue: 0.1833, saturation: 0.6, brightness: 1.0), // Yellow-Green
         Color(hue: 0.2000, saturation: 0.6, brightness: 1.0), // Light Yellow-Green
-        Color(hue: 0.2167, saturation: 0.8, brightness: 1.0), // Pastel Green
+        Color(hue: 0.2167, saturation: 0.6, brightness: 1.0), // Pastel Green
         Color(hue: 0.2333, saturation: 0.6, brightness: 1.0), // Soft Green
         Color(hue: 0.2500, saturation: 0.6, brightness: 1.0), // Spring Green
 
