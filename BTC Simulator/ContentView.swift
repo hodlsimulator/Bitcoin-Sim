@@ -83,12 +83,12 @@ class PersistentInputManager: ObservableObject {
         self.generateGraphs = UserDefaults.standard.bool(forKey: "generateGraphs")
 
         // Strings
-        self.firstYearContribution = UserDefaults.standard.string(forKey: "firstYearContribution") ?? "60"
+        self.firstYearContribution = UserDefaults.standard.string(forKey: "firstYearContribution") ?? "100"
         self.subsequentContribution = UserDefaults.standard.string(forKey: "subsequentContribution") ?? "100"
-        self.iterations = UserDefaults.standard.string(forKey: "iterations") ?? "1000"
-        self.annualCAGR = UserDefaults.standard.string(forKey: "annualCAGR") ?? "40.0"
-        self.annualVolatility = UserDefaults.standard.string(forKey: "annualVolatility") ?? "80.0"
-        self.standardDeviation = UserDefaults.standard.string(forKey: "standardDeviation") ?? "15.0"
+        self.iterations = UserDefaults.standard.string(forKey: "iterations") ?? "100"
+        self.annualCAGR = UserDefaults.standard.string(forKey: "annualCAGR") ?? "30 "
+        self.annualVolatility = UserDefaults.standard.string(forKey: "annualVolatility") ?? "80"
+        self.standardDeviation = UserDefaults.standard.string(forKey: "standardDeviation") ?? "150"
         self.selectedWeek = UserDefaults.standard.string(forKey: "selectedWeek") ?? "1"
         self.btcPriceMinInput = UserDefaults.standard.string(forKey: "btcPriceMinInput") ?? ""
         self.btcPriceMaxInput = UserDefaults.standard.string(forKey: "btcPriceMaxInput") ?? ""
@@ -407,7 +407,7 @@ struct ContentView: View {
                         VStack(spacing: 4) {
                             Text("Iterations")
                                 .foregroundColor(.white)
-                            TextField("1000", text: $inputManager.iterations)
+                            TextField("100", text: $inputManager.iterations)
                                 .keyboardType(.numberPad)
                                 .padding(8)
                                 .frame(width: 80)
@@ -427,7 +427,7 @@ struct ContentView: View {
                         VStack(spacing: 4) {
                             Text("CAGR (%)")
                                 .foregroundColor(.white)
-                            TextField("40.0", text: $inputManager.annualCAGR)
+                            TextField("30", text: $inputManager.annualCAGR)
                                 .keyboardType(.decimalPad)
                                 .padding(8)
                                 .frame(width: 80)
@@ -450,7 +450,7 @@ struct ContentView: View {
                         VStack(spacing: 4) {
                             Text("Vol (%)")
                                 .foregroundColor(.white)
-                            TextField("80.0", text: $inputManager.annualVolatility)
+                            TextField("80", text: $inputManager.annualVolatility)
                                 .keyboardType(.decimalPad)
                                 .padding(8)
                                 .frame(width: 80)
@@ -470,7 +470,7 @@ struct ContentView: View {
                         VStack(spacing: 4) {
                             Text("StdDev")
                                 .foregroundColor(.white)
-                            TextField("15.0", text: $inputManager.standardDeviation)
+                            TextField("150", text: $inputManager.standardDeviation)
                                 .keyboardType(.decimalPad)
                                 .padding(8)
                                 .frame(width: 80)
