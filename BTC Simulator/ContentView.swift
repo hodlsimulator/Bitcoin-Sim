@@ -14,7 +14,6 @@ import UIKit
 // MARK: - PersistentInputManager
 class PersistentInputManager: ObservableObject {
 
-    // ADDED:
     @Published var generateGraphs: Bool {
         didSet {
             UserDefaults.standard.set(generateGraphs, forKey: "generateGraphs")
@@ -36,7 +35,7 @@ class PersistentInputManager: ObservableObject {
     @Published var annualVolatility: String {
         didSet { UserDefaults.standard.set(annualVolatility, forKey: "annualVolatility") }
     }
-    @Published var standardDeviation: String {  // new field
+    @Published var standardDeviation: String {
         didSet { UserDefaults.standard.set(standardDeviation, forKey: "standardDeviation") }
     }
     @Published var selectedWeek: String {
@@ -79,10 +78,13 @@ class PersistentInputManager: ObservableObject {
     }
 
     init() {
-        // ADDED:
-        self.generateGraphs = UserDefaults.standard.bool(forKey: "generateGraphs")
+        // If "generateGraphs" doesn't exist yet, default to true
+        if UserDefaults.standard.object(forKey: "generateGraphs") == nil {
+            self.generateGraphs = true
+        } else {
+            self.generateGraphs = UserDefaults.standard.bool(forKey: "generateGraphs")
+        }
 
-        // Strings
         self.firstYearContribution = UserDefaults.standard.string(forKey: "firstYearContribution") ?? "100"
         self.subsequentContribution = UserDefaults.standard.string(forKey: "subsequentContribution") ?? "100"
         self.iterations = UserDefaults.standard.string(forKey: "iterations") ?? "100"
@@ -98,7 +100,6 @@ class PersistentInputManager: ObservableObject {
         self.btcHoldingsMaxInput = UserDefaults.standard.string(forKey: "btcHoldingsMaxInput") ?? ""
         self.btcGrowthRate = UserDefaults.standard.string(forKey: "btcGrowthRate") ?? "0.005"
 
-        // Doubles
         let storedT1 = UserDefaults.standard.double(forKey: "threshold1")
         self.threshold1 = (storedT1 != 0.0) ? storedT1 : 30000.0
 
