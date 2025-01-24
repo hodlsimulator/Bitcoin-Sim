@@ -17,7 +17,7 @@ struct GarchModel {
     let beta: Double
     
     /// The current variance (σ²). We'll update this each step.
-    private(set) var currentVariance: Double
+    var currentVariance: Double
     
     init(omega: Double, alpha: Double, beta: Double, initialVariance: Double) {
         self.omega = omega

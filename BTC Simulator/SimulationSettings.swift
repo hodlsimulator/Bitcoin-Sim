@@ -41,6 +41,8 @@ class SimulationSettings: ObservableObject {
     @Published var startingBalanceCurrencyWhenBoth: PreferredCurrency = .usd
     @Published var lastRunResults: [SimulationData] = []
     @Published var allRuns: [[SimulationData]] = []
+    
+    public var useMeanReversion: Bool = false
 
     var isInitialized = false
     var isUpdating = false

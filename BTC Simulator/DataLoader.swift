@@ -11,6 +11,7 @@ func loadAndAlignWeeklyData() {
     let btcWeeklyDict = loadBTCWeeklyReturnsAsDict()
     let spWeeklyDict  = loadSP500WeeklyReturnsAsDict()
     let alignedWeekly = alignBTCandSPWeekly(btcDict: btcWeeklyDict, spDict: spWeeklyDict)
+    let justBtcWeekly = alignedWeekly.map { $0.1 }
 
     // If you want separate arrays of Double:
     let sortedBTC = alignedWeekly.map { $0.1 }  // .1 is btcReturn

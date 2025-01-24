@@ -31,10 +31,11 @@ func loadBTCWeeklyReturnsAsDict() -> [Date: Double] {
             
             guard
                 let date = csvDateFormatter.date(from: dateString),
-                let rawChange = parseDouble(changeString
-                    .replacingOccurrences(of: "%", with: "")
-                    .replacingOccurrences(of: "+", with: "")
-                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                let rawChange = parseDouble(
+                    changeString
+                        .replacingOccurrences(of: "%", with: "")
+                        .replacingOccurrences(of: "+", with: "")
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
                 )
             else {
                 continue
@@ -110,10 +111,11 @@ func loadBTCMonthlyReturnsAsDict() -> [Date: Double] {
             
             guard
                 let date = csvDateFormatter.date(from: dateString),
-                let rawChange = parseDouble(changeString
-                    .replacingOccurrences(of: "%", with: "")
-                    .replacingOccurrences(of: "+", with: "")
-                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                let rawChange = parseDouble(
+                    changeString
+                        .replacingOccurrences(of: "%", with: "")
+                        .replacingOccurrences(of: "+", with: "")
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
                 )
             else {
                 continue
@@ -152,10 +154,11 @@ func loadSP500WeeklyReturnsAsDict() -> [Date: Double] {
             
             guard
                 let date = csvDateFormatter.date(from: dateString),
-                let rawChange = parseDouble(changeString
-                    .replacingOccurrences(of: "%", with: "")
-                    .replacingOccurrences(of: "+", with: "")
-                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                let rawChange = parseDouble(
+                    changeString
+                        .replacingOccurrences(of: "%", with: "")
+                        .replacingOccurrences(of: "+", with: "")
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
                 )
             else {
                 continue
@@ -194,10 +197,11 @@ func loadSP500MonthlyReturnsAsDict() -> [Date: Double] {
             
             guard
                 let date = csvDateFormatter.date(from: dateString),
-                let rawChange = parseDouble(changeString
-                    .replacingOccurrences(of: "%", with: "")
-                    .replacingOccurrences(of: "+", with: "")
-                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                let rawChange = parseDouble(
+                    changeString
+                        .replacingOccurrences(of: "%", with: "")
+                        .replacingOccurrences(of: "+", with: "")
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
                 )
             else {
                 continue
@@ -213,10 +217,29 @@ func loadSP500MonthlyReturnsAsDict() -> [Date: Double] {
     }
 }
 
+// MARK: - CSV Date Formatter
 fileprivate let csvDateFormatter: DateFormatter = {
     let formatter = DateFormatter()
-    // Your CSV format looks like "dd/MM/yyyy"
     formatter.dateFormat = "dd/MM/yyyy"
     formatter.locale = Locale(identifier: "en_US_POSIX")
     return formatter
 }()
+
+// MARK: - Return Just BTC Returns (Weekly & Monthly)
+/// Returns an array of BTC weekly returns as [Double].
+func loadAndAlignWeeklyData() -> [Double] {
+    let btcWeeklyDict = loadBTCWeeklyReturnsAsDict()
+    let spWeeklyDict  = loadSP500WeeklyReturnsAsDict()
+    let alignedWeekly = alignBTCandSPWeekly(btcDict: btcWeeklyDict, spDict: spWeeklyDict)
+    let justBtcWeekly = alignedWeekly.map { $0.1 } // index 1 is BTC
+    return justBtcWeekly
+}
+
+/// Returns an array of BTC monthly returns as [Double].
+func loadAndAlignMonthlyData() -> [Double] {
+    let btcMonthlyDict = loadBTCMonthlyReturnsAsDict()
+    let spMonthlyDict  = loadSP500MonthlyReturnsAsDict()
+    let alignedMonthly = alignBTCandSPMonthly(btcDict: btcMonthlyDict, spDict: spMonthlyDict)
+    let justBtcMonthly = alignedMonthly.map { $0.1 } // index 1 is BTC
+    return justBtcMonthly
+}

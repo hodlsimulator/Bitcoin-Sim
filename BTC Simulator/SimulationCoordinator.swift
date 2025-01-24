@@ -37,14 +37,21 @@ class SimulationCoordinator: ObservableObject {
     private var simSettings: SimulationSettings
     private var inputManager: PersistentInputManager
         
-    // Renamed from chartSelection to simChartSelection
     @Published var simChartSelection: SimChartSelection
+
+    // NEW: We'll store the fitted GarchModel here if we calibrate it.
+    private var fittedGarchModel: GarchModel? = nil
+
+    // Historical returns storage
+    private var historicalBTCWeeklyReturns: [Double] = []
+    private var sp500WeeklyReturns: [Double] = []
+    private var historicalBTCMonthlyReturns: [Double] = []
+    private var sp500MonthlyReturns: [Double] = []
 
     init(
         chartDataCache: ChartDataCache,
         simSettings: SimulationSettings,
         inputManager: PersistentInputManager,
-        // changed from chartSelection: ChartSelection
         simChartSelection: SimChartSelection
     ) {
         self.chartDataCache = chartDataCache
@@ -60,56 +67,54 @@ class SimulationCoordinator: ObservableObject {
         let newHash = computeInputsHash()
         simSettings.printAllSettings()
 
-        // 2) Decide whether to load monthly or weekly returns
+        // 2) Decide whether to load monthly or weekly returns, then fill arrays
         if simSettings.periodUnit == .months {
-            // --- NEW DICTIONARY-BASED LOADING/ALIGNMENT ---
             let btcMonthlyDict = loadBTCMonthlyReturnsAsDict()
             let spMonthlyDict  = loadSP500MonthlyReturnsAsDict()
             
-            // Align them by date. Make sure you have a function like:
-            //   func alignBTCandSPMonthly(btcDict: [Date: Double],
-            //                             spDict: [Date: Double]) -> [(Date, Double, Double)]
             let alignedMonthly = alignBTCandSPMonthly(
                 btcDict: btcMonthlyDict,
                 spDict: spMonthlyDict
             )
             
-            // Convert aligned data to simple [Double] arrays
-            // .1 is btcReturn, .2 is spReturn
             historicalBTCMonthlyReturns = alignedMonthly.map { $0.1 }
             sp500MonthlyReturns         = alignedMonthly.map { $0.2 }
 
             // Clear out weekly arrays
             historicalBTCWeeklyReturns = []
-            sp500WeeklyReturns         = []
-
+            sp500WeeklyReturns = []
+            
         } else {
-            // --- NEW DICTIONARY-BASED LOADING/ALIGNMENT ---
             let btcWeeklyDict = loadBTCWeeklyReturnsAsDict()
             let spWeeklyDict  = loadSP500WeeklyReturnsAsDict()
             
-            // Align them by date
             let alignedWeekly = alignBTCandSPWeekly(
                 btcDict: btcWeeklyDict,
                 spDict: spWeeklyDict
             )
             
-            // Convert aligned data to simple [Double] arrays
             historicalBTCWeeklyReturns = alignedWeekly.map { $0.1 }
             sp500WeeklyReturns         = alignedWeekly.map { $0.2 }
 
             // Clear out monthly arrays
             historicalBTCMonthlyReturns = []
-            sp500MonthlyReturns         = []
+            sp500MonthlyReturns = []
         }
 
+        // 3) If user wants GARCH, calibrate it now
+        if simSettings.useGarchVolatility {
+            calibrateGarchIfNeeded()
+        } else {
+            fittedGarchModel = nil
+        }
+
+        // Prepare for the simulation
         isCancelled = false
         isLoading = true
         isChartBuilding = false
         monteCarloResults = []
         completedIterations = 0
 
-        // 3) Determine which seed to use
         let finalSeed: UInt64?
         if simSettings.lockedRandomSeed {
             finalSeed = simSettings.seedValue
@@ -123,8 +128,8 @@ class SimulationCoordinator: ObservableObject {
             simSettings.lastUsedSeed = 0
         }
 
-        // Example: Create/Load mempool data
-        let mempoolArray = [Double](repeating: 50.0, count: 5000) // Replace with real data
+        // Example mempool data
+        let mempoolArray = [Double](repeating: 50.0, count: 5000)
         let mempoolDataManager = MempoolDataManager(mempoolData: mempoolArray)
 
         // 4) Run in background
@@ -137,19 +142,16 @@ class SimulationCoordinator: ObservableObject {
                 return
             }
             
-            // Reflect total iterations in UI
             DispatchQueue.main.async {
                 self.totalIterations = total
             }
             
-            // Parse user’s CAGR and Volatility
             let userInputCAGR = self.inputManager.getParsedAnnualCAGR()
             let userInputVolatility = Double(self.inputManager.annualVolatility) ?? 1.0
-
             let finalWeeks = self.simSettings.userPeriods
             let userPriceUSDAsDouble = NSDecimalNumber(decimal: Decimal(self.simSettings.initialBTCPriceUSD)).doubleValue
 
-            // 5) Run the simulations, passing our chosen seed (finalSeed)
+            // 5) Run the simulations
             let (medianRun, allIterations, stepMedianPrices) = runMonteCarloSimulationsWithProgress(
                 settings: self.simSettings,
                 annualCAGR: userInputCAGR,
@@ -168,7 +170,8 @@ class SimulationCoordinator: ObservableObject {
                     }
                 },
                 seed: finalSeed,
-                mempoolDataManager: mempoolDataManager  // pass it in if needed
+                mempoolDataManager: mempoolDataManager,
+                fittedGarchModel: self.fittedGarchModel
             )
             
             // Check for cancellation
@@ -190,7 +193,7 @@ class SimulationCoordinator: ObservableObject {
                 return
             }
 
-            // Build results on the main queue
+            // Build results on main queue
             DispatchQueue.main.async {
                 self.isLoading = false
                 self.isChartBuilding = true
@@ -201,28 +204,24 @@ class SimulationCoordinator: ObservableObject {
                 let sortedRuns = finalRuns.sorted { $0.1 < $1.1 }
 
                 if sortedRuns.isEmpty {
-
                     self.isChartBuilding = false
                     return
                 }
 
-                // Find 10th, 50th, and 90th percentile runs
+                // 10th, 50th, 90th percentile
                 let tenthIndex     = max(0, Int(Double(sortedRuns.count - 1) * 0.10))
                 let medianIndex    = sortedRuns.count / 2
                 let ninetiethIndex = min(sortedRuns.count - 1, Int(Double(sortedRuns.count - 1) * 0.90))
 
-                let tenthRunIndex      = sortedRuns[tenthIndex].0
-                let tenthRun           = sortedRuns[tenthIndex].2
-                let medianRunIndex     = sortedRuns[medianIndex].0
-                let medianRun2         = sortedRuns[medianIndex].2
-                let ninetiethRunIndex  = sortedRuns[ninetiethIndex].0
-                let ninetiethRun       = sortedRuns[ninetiethIndex].2
+                let tenthRun = sortedRuns[tenthIndex].2
+                let medianRun2 = sortedRuns[medianIndex].2
+                let ninetiethRun = sortedRuns[ninetiethIndex].2
 
                 self.tenthPercentileResults = tenthRun
                 self.ninetiethPercentileResults = ninetiethRun
                 self.medianResults = medianRun2
 
-                // Find best-fit run relative to median BTC steps
+                // Find run closest to median BTC path
                 let bestFitRunIndex = self.findRepresentativeRunIndex(
                     allRuns: allIterations,
                     stepMedianBTC: stepMedianPrices
@@ -234,7 +233,7 @@ class SimulationCoordinator: ObservableObject {
                 self.allSimData = allIterations
 
                 // Debug logs
-                print("// DEBUG: 'median final BTC' => iteration #\(medianRunIndex), final BTC => \(sortedRuns[medianIndex].1)")
+                print("// DEBUG: 'median final BTC' => iteration #\(sortedRuns[medianIndex].0), final BTC => \(sortedRuns[medianIndex].1)")
                 print("// DEBUG: bestFitRun => iteration #\(bestFitRunIndex) chosen by distance.")
                 print("// DEBUG: bestFitRun => final BTC => \(bestFitRun.last?.btcPriceUSD ?? 0)")
                 
@@ -255,10 +254,6 @@ class SimulationCoordinator: ObservableObject {
                 }
 
                 // Clear old chart snapshots
-                if self.chartDataCache.chartSnapshot != nil {
-                }
-                if self.chartDataCache.chartSnapshotPortfolio != nil {
-                }
                 self.chartDataCache.chartSnapshot = nil
                 self.chartDataCache.chartSnapshotLandscape = nil
                 self.chartDataCache.chartSnapshotPortfolio = nil
@@ -277,7 +272,7 @@ class SimulationCoordinator: ObservableObject {
                 
                 let oldSelection = self.simChartSelection.selectedChart
 
-                // If user doesn’t want charts, skip
+                // If user doesn’t want charts, skip building them
                 if !generateGraphs {
                     self.isChartBuilding = false
                     self.isSimulationRun = true
@@ -334,6 +329,40 @@ class SimulationCoordinator: ObservableObject {
         }
     }
     
+    // MARK: - GARCH ADAM CALIBRATION
+    /// Use a more sophisticated Adam-based calibrator on whichever data we loaded (weekly or monthly).
+    private func calibrateGarchIfNeeded() {
+        let adamCalibrator = GarchAdamCalibrator()
+        
+        if simSettings.periodUnit == .months {
+            if !historicalBTCMonthlyReturns.isEmpty {
+                let model = adamCalibrator.calibrate(
+                    returns: historicalBTCMonthlyReturns,
+                    iterations: 3000,
+                    baseLR: 1e-3 // you can tweak these as you like
+                )
+                fittedGarchModel = model
+                print("GARCH (Adam) Calibrated (Monthly): (ω, α, β) =",
+                      model.omega, model.alpha, model.beta)
+            } else {
+                print("No monthly data for GARCH calibration.")
+            }
+        } else {
+            if !historicalBTCWeeklyReturns.isEmpty {
+                let model = adamCalibrator.calibrate(
+                    returns: historicalBTCWeeklyReturns,
+                    iterations: 3000,
+                    baseLR: 1e-3
+                )
+                fittedGarchModel = model
+                print("GARCH (Adam) Calibrated (Weekly): (ω, α, β) =",
+                      model.omega, model.alpha, model.beta)
+            } else {
+                print("No weekly data for GARCH calibration.")
+            }
+        }
+    }
+
     // MARK: - Convert All Sims => Faint Lines
     func convertAllSimsToWeekPoints() -> [SimulationRun] {
         allSimData.map { singleRun -> SimulationRun in
@@ -358,8 +387,7 @@ class SimulationCoordinator: ObservableObject {
     
     // MARK: - Helpers
     private func computeInputsHash() -> Int {
-        let finalPeriods = simSettings.userPeriods // same if months or weeks
-
+        let finalPeriods = simSettings.userPeriods
         let combinedString = """
         \(inputManager.iterations)_\(inputManager.annualCAGR)_\
         \(inputManager.annualVolatility)_\(finalPeriods)_\(simSettings.initialBTCPriceUSD)
@@ -368,12 +396,12 @@ class SimulationCoordinator: ObservableObject {
     }
 
     private func processAllResults(_ allResults: [[SimulationData]]) {
+        // Additional data processing here if needed
     }
 }
 
 // MARK: - "Representative Run" logic
 extension SimulationCoordinator {
-    /// Returns the index in `allRuns` that is best fit to `stepMedianBTC`.
     fileprivate func findRepresentativeRunIndex(
         allRuns: [[SimulationData]],
         stepMedianBTC: [Decimal]
@@ -391,7 +419,6 @@ extension SimulationCoordinator {
         return bestIndex
     }
     
-    /// Calculates how “close” a run is to the median BTC array.
     fileprivate func computeDistance(
         run: [SimulationData],
         stepMedianBTC: [Decimal],
