@@ -15,6 +15,7 @@ let myLog = OSLog(subsystem: "com.conor.hodlsim", category: "Performance")
 
 // ──────────────────────────────────────────────────────────────────────────
 // Global arrays for weekly/monthly historical returns
+// (your existing arrays)
 // ──────────────────────────────────────────────────────────────────────────
 var historicalBTCWeeklyReturns: [Double] = []
 var sp500WeeklyReturns: [Double] = []
@@ -37,6 +38,25 @@ fileprivate func pickRandomReturn(from arr: [Double], rng: GKRandomSource) -> Do
     guard !arr.isEmpty else { return 0.0 }
     let idx = rng.nextInt(upperBound: arr.count)
     return arr[idx]
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Extended “Contiguous” Historical Sample
+// ──────────────────────────────────────────────────────────────────────────
+/// Returns an array of length `count` from contiguous historical data,
+/// starting at a random index in `source`. If `count` > `source.count`, returns empty.
+fileprivate func pickContiguousBlock(
+    from source: [Double],
+    count: Int,
+    rng: GKRandomSource
+) -> [Double] {
+    guard source.count >= count else {
+        return []
+    }
+    let maxStart = source.count - count
+    let startIndex = rng.nextInt(upperBound: maxStart)
+    let endIndex = startIndex + count
+    return Array(source[startIndex..<endIndex])
 }
 
 // MARK: - WEEKLY SIM
@@ -82,6 +102,18 @@ private func runWeeklySimulation(
     var lastStepLogReturn = 0.0
     var lastAutoReturn    = 0.0
 
+    // ──────────────────────────────────────────────────────────────────────
+    // Optionally get a contiguous block of extended data
+    // ──────────────────────────────────────────────────────────────────────
+    var extendedBlock = [Double]()
+    if settings.useExtendedHistoricalSampling {
+        extendedBlock = pickContiguousBlock(
+            from: extendedWeeklyReturns,
+            count: totalWeeklySteps,
+            rng: rng
+        )
+    }
+
     for currentWeek in 1...totalWeeklySteps {
         
         // Update regime if user wants regime switching
@@ -118,12 +150,9 @@ private func runWeeklySimulation(
                 }
                 if settings.useAutoCorrelation {
                     let phi = settings.autoCorrelationStrength
-                    let oldVal = lumpsumGrowth
                     lumpsumGrowth = (1 - phi) * lumpsumGrowth + phi * lastAutoReturn
                 }
 
-                // Factor toggles
-                let beforeFactor = lumpsumGrowth
                 lumpsumGrowth = applyFactorToggles(
                     baseReturn: lumpsumGrowth,
                     stepIndex: currentWeek,
@@ -131,19 +160,13 @@ private func runWeeklySimulation(
                     mempoolDataManager: mempoolDataManager,
                     rng: rng
                 )
-                if lumpsumGrowth != beforeFactor {
-                }
                 
                 let factor = lumpsumAdjustFactor(
                     settings: settings,
                     annualVolatility: annualVolatility
                 )
-                let oldLS = lumpsumGrowth
                 lumpsumGrowth *= factor
-                if factor != 1.0 {
-                }
 
-                // Multiply the price
                 prevBTCPriceUSD *= (1 + lumpsumGrowth)
                 
                 lastStepLogReturn = log(1 + lumpsumGrowth)
@@ -151,25 +174,29 @@ private func runWeeklySimulation(
             }
         } else {
             // Historical sampling or lognormal each step
-            if settings.useHistoricalSampling {
+            if settings.useExtendedHistoricalSampling, !extendedBlock.isEmpty {
+                // Use the contiguous block
+                var weeklySample = extendedBlock[currentWeek - 1]  // 1-based index
+                weeklySample = dampenArctanWeekly(weeklySample)
+                totalReturn += weeklySample
+            }
+            else if settings.useHistoricalSampling {
+                // Old random pick approach
                 var weeklySample = pickRandomReturn(from: historicalBTCWeeklyReturns, rng: rng)
                 weeklySample = dampenArctanWeekly(weeklySample)
                 totalReturn += weeklySample
-                // print("[WeeklySim] Step\(currentWeek) historical sampling => \(weeklySample)")
             }
+            
             if settings.useLognormalGrowth {
                 totalReturn += (cagrDecimal / 52.0)
             }
             if settings.useVolShocks {
                 let shockVol = randomNormalWithRNG(mean: 0, standardDeviation: currentVol, rng: rng)
                 totalReturn += shockVol
-                // print("[WeeklySim] Step\(currentWeek) shockVol=\(shockVol)")
             }
             if settings.useAutoCorrelation {
                 let phi = settings.autoCorrelationStrength
-                let oldTR = totalReturn
                 totalReturn = (1 - phi) * totalReturn + phi * lastAutoReturn
-                // print("[WeeklySim] Step\(currentWeek) autoCorr oldTR=\(oldTR), lastAuto=\(lastAutoReturn), newTR=\(totalReturn)")
             }
             
             let toggled = applyFactorToggles(
@@ -179,8 +206,6 @@ private func runWeeklySimulation(
                 mempoolDataManager: mempoolDataManager,
                 rng: rng
             )
-            if toggled != totalReturn {
-            }
             
             prevBTCPriceUSD *= exp(toggled)
             
@@ -292,6 +317,18 @@ private func runMonthlySimulation(
     var lastStepLogReturn = 0.0
     var lastAutoReturn = 0.0
 
+    // ──────────────────────────────────────────────────────────────────────
+    // Optionally get a contiguous block of extended data
+    // ──────────────────────────────────────────────────────────────────────
+    var extendedBlock = [Double]()
+    if settings.useExtendedHistoricalSampling {
+        extendedBlock = pickContiguousBlock(
+            from: extendedMonthlyReturns,
+            count: totalMonths,
+            rng: rng
+        )
+    }
+
     for currentMonth in 1...totalMonths {
         
         // Regime switching
@@ -321,11 +358,9 @@ private func runMonthlySimulation(
                 }
                 if settings.useAutoCorrelation {
                     let phi = settings.autoCorrelationStrength
-                    let oldVal = lumpsumGrowth
                     lumpsumGrowth = (1 - phi) * lumpsumGrowth + phi * lastAutoReturn
                 }
                 
-                let beforeFactor = lumpsumGrowth
                 lumpsumGrowth = applyFactorToggles(
                     baseReturn: lumpsumGrowth,
                     stepIndex: currentMonth,
@@ -333,27 +368,26 @@ private func runMonthlySimulation(
                     mempoolDataManager: mempoolDataManager,
                     rng: rng
                 )
-                if lumpsumGrowth != beforeFactor {
-                }
                 
                 let factor = lumpsumAdjustFactor(settings: settings, annualVolatility: annualVolatility)
-                let oldLS = lumpsumGrowth
                 lumpsumGrowth *= factor
-                if factor != 1.0 {
-                }
                 
                 prevBTCPriceUSD *= (1 + lumpsumGrowth)
                 
                 lastStepLogReturn = log(1 + lumpsumGrowth)
-                lastAutoReturn = lumpsumGrowth
+                lastAutoReturn    = lumpsumGrowth
             }
         } else {
             // Historical sampling or lognormal each month
-            if settings.useHistoricalSampling {
+            if settings.useExtendedHistoricalSampling, !extendedBlock.isEmpty {
+                var monthlySample = extendedBlock[currentMonth - 1]
+                monthlySample = dampenArctanMonthly(monthlySample)
+                totalReturn += monthlySample
+            }
+            else if settings.useHistoricalSampling {
                 var monthlySample = pickRandomReturn(from: historicalBTCMonthlyReturns, rng: rng)
                 monthlySample = dampenArctanMonthly(monthlySample)
                 totalReturn += monthlySample
-                // print("[MonthlySim] Month\(currentMonth) historical sampling => \(monthlySample)")
             }
             if settings.useLognormalGrowth {
                 totalReturn += (cagrDecimal / 12.0)
@@ -361,13 +395,10 @@ private func runMonthlySimulation(
             if settings.useVolShocks {
                 let shockVol = randomNormalWithRNG(mean: 0, standardDeviation: currentVol, rng: rng)
                 totalReturn += shockVol
-                // print("[MonthlySim] Month\(currentMonth) shockVol=\(shockVol)")
             }
             if settings.useAutoCorrelation {
                 let phi = settings.autoCorrelationStrength
-                let oldTR = totalReturn
                 totalReturn = (1 - phi) * totalReturn + (phi * lastAutoReturn)
-                // print("[MonthlySim] Month\(currentMonth) autoCorr oldTR=\(oldTR), lastAuto=\(lastAutoReturn), newTR=\(totalReturn)")
             }
             
             let toggled = applyFactorToggles(
@@ -377,13 +408,11 @@ private func runMonthlySimulation(
                 mempoolDataManager: mempoolDataManager,
                 rng: rng
             )
-            if toggled != totalReturn {
-            }
             
             prevBTCPriceUSD *= exp(toggled)
             
             lastStepLogReturn = toggled
-            lastAutoReturn = toggled
+            lastAutoReturn    = toggled
         }
         
         if prevBTCPriceUSD < 1.0 {

@@ -42,6 +42,8 @@ class SimulationSettings: ObservableObject {
     @Published var lastRunResults: [SimulationData] = []
     @Published var allRuns: [[SimulationData]] = []
     
+    @Published var useExtendedHistoricalSampling: Bool = false
+
     var isInitialized = false
     var isUpdating = false
     
