@@ -41,8 +41,6 @@ class SimulationSettings: ObservableObject {
     @Published var startingBalanceCurrencyWhenBoth: PreferredCurrency = .usd
     @Published var lastRunResults: [SimulationData] = []
     @Published var allRuns: [[SimulationData]] = []
-    
-    @Published var useExtendedHistoricalSampling: Bool = false
 
     var isInitialized = false
     var isUpdating = false
@@ -87,6 +85,15 @@ class SimulationSettings: ObservableObject {
             UserDefaults.standard.set(useHistoricalSampling, forKey: "useHistoricalSampling")
         }
     }
+    
+    @Published var useExtendedHistoricalSampling: Bool = true {
+        didSet {
+            guard isInitialized else { return }
+            print("didSet: useExtendedHistoricalSampling changed to \(useExtendedHistoricalSampling)")
+            UserDefaults.standard.set(useExtendedHistoricalSampling, forKey: "useExtendedHistoricalSampling")
+        }
+    }
+
     
     @Published var useVolShocks: Bool = true {
         didSet {
@@ -303,6 +310,7 @@ class SimulationSettings: ObservableObject {
 
     func loadFromUserDefaults() {
         let defaults = UserDefaults.standard
+        
         useLognormalGrowth = defaults.bool(forKey: "useLognormalGrowth")
         lockedRandomSeed = defaults.bool(forKey: "lockedRandomSeed")
         seedValue = defaults.object(forKey: "seedValue") as? UInt64 ?? 0
@@ -314,9 +322,14 @@ class SimulationSettings: ObservableObject {
         autoCorrelationStrength = defaults.double(forKey: "autoCorrelationStrength")
         meanReversionTarget = defaults.double(forKey: "meanReversionTarget")
         lockHistoricalSampling = defaults.bool(forKey: "lockHistoricalSampling")
-        
-        // load the new toggle
         useRegimeSwitching = defaults.bool(forKey: "useRegimeSwitching")
+        
+        // NEW: check if the key exists; if not, default to true.
+        if defaults.object(forKey: "useExtendedHistoricalSampling") == nil {
+            useExtendedHistoricalSampling = true // first-time install => on by default
+        } else {
+            useExtendedHistoricalSampling = defaults.bool(forKey: "useExtendedHistoricalSampling")
+        }
     }
 
     func saveToUserDefaults() {

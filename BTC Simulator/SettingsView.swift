@@ -640,13 +640,20 @@ struct SettingsView: View {
             Toggle("Use Historical Sampling", isOn: $simSettings.useHistoricalSampling)
                 .tint(.orange)
                 .foregroundColor(.white)
+            Toggle("Use Extended Historical Sampling", isOn: $simSettings.useExtendedHistoricalSampling)
+                .tint(.orange)
+                .foregroundColor(.white)
             Toggle("Lock Historical Sampling", isOn: $simSettings.lockHistoricalSampling)
                 .tint(.orange)
                 .foregroundColor(.white)
         } header: {
             Text("Historical Sampling")
         } footer: {
-            Text("Samples real-world BTC returns. Locking ensures the same historical data window each run.")
+            Text("""
+            Samples real-world BTC returns each step. 
+            Locking ensures the same data window each run. 
+            Extended Historical Sampling pulls contiguous blocks from a broad dataset, preserving local volatility clustering.
+            """)
                 .foregroundColor(.secondary)
         }
         .listRowBackground(Color(white: 0.15))
