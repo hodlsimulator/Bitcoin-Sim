@@ -13,7 +13,6 @@ class SimChartSelection: ObservableObject {
 
 @main
 struct BTCMonteCarloApp: App {
-    // Listen for scene phase changes (active, background, etc.)
     @Environment(\.scenePhase) private var scenePhase
 
     @AppStorage("hasOnboarded") private var didFinishOnboarding = false
@@ -26,7 +25,7 @@ struct BTCMonteCarloApp: App {
     @StateObject private var coordinator: SimulationCoordinator
 
     init() {
-        // Register default values to ensure toggles are on at first launch:
+        // Register default values (toggles) for first launch
         let defaultToggles: [String: Any] = [
             "useLognormalGrowth": true,
             "useHistoricalSampling": true,
@@ -40,10 +39,11 @@ struct BTCMonteCarloApp: App {
         UserDefaults.standard.register(defaults: defaultToggles)
         
         print("** Creating SimulationSettings with loadDefaults = true")
-        let newAppViewModel = AppViewModel()
-        let newInputManager = PersistentInputManager()
-        let newSimSettings = SimulationSettings(loadDefaults: true)  // custom init
-        let newChartDataCache = ChartDataCache()
+        
+        let newAppViewModel    = AppViewModel()
+        let newInputManager    = PersistentInputManager()
+        let newSimSettings     = SimulationSettings(loadDefaults: true)
+        let newChartDataCache  = ChartDataCache()
         let newSimChartSelection = SimChartSelection()
         
         let newCoordinator = SimulationCoordinator(
@@ -55,12 +55,12 @@ struct BTCMonteCarloApp: App {
 
         newSimSettings.inputManager = newInputManager
 
-        _appViewModel = StateObject(wrappedValue: newAppViewModel)
-        _inputManager = StateObject(wrappedValue: newInputManager)
-        _simSettings = StateObject(wrappedValue: newSimSettings)
-        _chartDataCache = StateObject(wrappedValue: newChartDataCache)
+        _appViewModel      = StateObject(wrappedValue: newAppViewModel)
+        _inputManager      = StateObject(wrappedValue: newInputManager)
+        _simSettings       = StateObject(wrappedValue: newSimSettings)
+        _chartDataCache    = StateObject(wrappedValue: newChartDataCache)
         _simChartSelection = StateObject(wrappedValue: newSimChartSelection)
-        _coordinator = StateObject(wrappedValue: newCoordinator)
+        _coordinator       = StateObject(wrappedValue: newCoordinator)
     }
 
     var body: some Scene {
@@ -103,8 +103,25 @@ struct BTCMonteCarloApp: App {
                 }
             }
             .onAppear {
-                simSettings.loadFromUserDefaults() // Ensure settings are loaded
+                // Load user defaults
+                simSettings.loadFromUserDefaults()
                 simSettings.isOnboarding = !didFinishOnboarding
+
+                // 1. Load weekly data
+                historicalBTCWeeklyReturns = loadAndAlignWeeklyData()
+                print("Loaded \(historicalBTCWeeklyReturns.count) weekly BTC return entries.")
+
+                // 1a. Also copy to extendedWeeklyReturns if you want the same data used for extended sampling
+                extendedWeeklyReturns = historicalBTCWeeklyReturns
+                print("extendedWeeklyReturns count = \(extendedWeeklyReturns.count)")
+
+                // 2. Load monthly data
+                historicalBTCMonthlyReturns = loadAndAlignMonthlyData()
+                print("Loaded \(historicalBTCMonthlyReturns.count) monthly BTC return entries.")
+
+                // 2a. Also copy to extendedMonthlyReturns
+                extendedMonthlyReturns = historicalBTCMonthlyReturns
+                print("extendedMonthlyReturns count = \(extendedMonthlyReturns.count)")
             }
             // Save to UserDefaults when the app goes inactive or background
             .onChange(of: scenePhase) { newPhase in

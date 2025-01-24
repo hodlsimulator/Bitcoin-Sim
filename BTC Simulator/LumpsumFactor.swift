@@ -18,7 +18,6 @@ func lumpsumAdjustFactor(
     if settings.useVolShocks {
         if annualVolatility > 5.0 {
             let added = Int((annualVolatility - 5.0) / 5.0) + 1
-            print("[DEBUG lumpsumAdjustFactorV2] annualVol check => +\(added) toggles")
             toggles += added
         }
     }

@@ -61,7 +61,7 @@ class SimulationCoordinator: ObservableObject {
     }
     
     func runSimulation(generateGraphs: Bool, lockRandomSeed: Bool) {
-        // 1) Lock or unlock your random seed
+        // 1) Lock or unlock the random seed
         simSettings.lockedRandomSeed = lockRandomSeed
 
         let newHash = computeInputsHash()
@@ -77,13 +77,20 @@ class SimulationCoordinator: ObservableObject {
                 spDict: spMonthlyDict
             )
             
-            historicalBTCMonthlyReturns = alignedMonthly.map { $0.1 }
+            // Create historical arrays
+            historicalBTCMonthlyReturns = alignedMonthly.map { $0.1 }  // BTC
             sp500MonthlyReturns         = alignedMonthly.map { $0.2 }
 
+            // Also copy them into extended arrays (used by multi-chunk extended sampling)
+            extendedMonthlyReturns = historicalBTCMonthlyReturns
+            
             // Clear out weekly arrays
             historicalBTCWeeklyReturns = []
             sp500WeeklyReturns = []
+            extendedWeeklyReturns = []
             
+            print("Loaded \(historicalBTCMonthlyReturns.count) monthly returns.")
+            print("extendedMonthlyReturns = \(extendedMonthlyReturns.count)")
         } else {
             let btcWeeklyDict = loadBTCWeeklyReturnsAsDict()
             let spWeeklyDict  = loadSP500WeeklyReturnsAsDict()
@@ -93,12 +100,20 @@ class SimulationCoordinator: ObservableObject {
                 spDict: spWeeklyDict
             )
             
-            historicalBTCWeeklyReturns = alignedWeekly.map { $0.1 }
+            // Create historical arrays
+            historicalBTCWeeklyReturns = alignedWeekly.map { $0.1 }  // BTC
             sp500WeeklyReturns         = alignedWeekly.map { $0.2 }
+
+            // Also copy them into extended arrays (used by multi-chunk extended sampling)
+            extendedWeeklyReturns = historicalBTCWeeklyReturns
 
             // Clear out monthly arrays
             historicalBTCMonthlyReturns = []
             sp500MonthlyReturns = []
+            extendedMonthlyReturns = []
+            
+            print("Loaded \(historicalBTCWeeklyReturns.count) weekly returns.")
+            print("extendedWeeklyReturns = \(extendedWeeklyReturns.count)")
         }
 
         // 3) If user wants GARCH, calibrate it now
@@ -146,9 +161,9 @@ class SimulationCoordinator: ObservableObject {
                 self.totalIterations = total
             }
             
-            let userInputCAGR = self.inputManager.getParsedAnnualCAGR()
+            let userInputCAGR       = self.inputManager.getParsedAnnualCAGR()
             let userInputVolatility = Double(self.inputManager.annualVolatility) ?? 1.0
-            let finalWeeks = self.simSettings.userPeriods
+            let finalWeeks          = self.simSettings.userPeriods
             let userPriceUSDAsDouble = NSDecimalNumber(decimal: Decimal(self.simSettings.initialBTCPriceUSD)).doubleValue
 
             // 5) Run the simulations
@@ -213,13 +228,13 @@ class SimulationCoordinator: ObservableObject {
                 let medianIndex    = sortedRuns.count / 2
                 let ninetiethIndex = min(sortedRuns.count - 1, Int(Double(sortedRuns.count - 1) * 0.90))
 
-                let tenthRun = sortedRuns[tenthIndex].2
-                let medianRun2 = sortedRuns[medianIndex].2
-                let ninetiethRun = sortedRuns[ninetiethIndex].2
+                let tenthRun      = sortedRuns[tenthIndex].2
+                let medianRun2    = sortedRuns[medianIndex].2
+                let ninetiethRun  = sortedRuns[ninetiethIndex].2
 
-                self.tenthPercentileResults = tenthRun
+                self.tenthPercentileResults     = tenthRun
                 self.ninetiethPercentileResults = ninetiethRun
-                self.medianResults = medianRun2
+                self.medianResults              = medianRun2
 
                 // Find run closest to median BTC path
                 let bestFitRunIndex = self.findRepresentativeRunIndex(

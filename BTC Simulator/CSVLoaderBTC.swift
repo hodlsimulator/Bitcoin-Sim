@@ -232,6 +232,9 @@ func loadAndAlignWeeklyData() -> [Double] {
     let spWeeklyDict  = loadSP500WeeklyReturnsAsDict()
     let alignedWeekly = alignBTCandSPWeekly(btcDict: btcWeeklyDict, spDict: spWeeklyDict)
     let justBtcWeekly = alignedWeekly.map { $0.1 } // index 1 is BTC
+    
+    print("justBtcWeekly has \(justBtcWeekly.count) entries.")  // <-- Print length here
+
     return justBtcWeekly
 }
 

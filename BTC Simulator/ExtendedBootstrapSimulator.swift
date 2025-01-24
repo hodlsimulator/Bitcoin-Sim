@@ -13,20 +13,41 @@ import GameplayKit
 public var extendedWeeklyReturns: [Double] = []
 public var extendedMonthlyReturns: [Double] = []
 
-/// Grabs a contiguous slice from the historical array.
-fileprivate func pickContiguousBlock(
+// MARK: - Multi-Chunk Picker
+/// Stitches multiple contiguous blocks together until we have `totalNeeded` samples.
+fileprivate func pickMultiChunkBlock(
     from source: [Double],
-    count: Int,
-    rng: GKRandomSource
+    totalNeeded: Int,
+    rng: GKRandomSource,
+    chunkSize: Int = 52
 ) -> [Double] {
-    guard source.count >= count else { return [] }
-    let maxStart = source.count - count
-    let startIndex = rng.nextInt(upperBound: maxStart)
-    let endIndex = startIndex + count
-    return Array(source[startIndex..<endIndex])
+    // If we have no data at all, return empty
+    guard !source.isEmpty else {
+        return []
+    }
+
+    var stitched = [Double]()
+
+    while stitched.count < totalNeeded {
+        // If the chunkSize is bigger than the entire source,
+        // fallback to just appending the entire source
+        if chunkSize > source.count {
+            stitched.append(contentsOf: source)
+        } else {
+            // Pick a random contiguous slice of length `chunkSize`
+            let maxStart = source.count - chunkSize
+            let startIndex = rng.nextInt(upperBound: maxStart + 1)
+            let endIndex = startIndex + chunkSize
+            let chunk = Array(source[startIndex..<endIndex])
+            stitched.append(contentsOf: chunk)
+        }
+    }
+
+    // Trim the final array to exactly `totalNeeded` items
+    return Array(stitched.prefix(totalNeeded))
 }
 
-/// Example usage in a weekly simulation context
+// MARK: - Example Weekly Simulation Using Multi-Chunk Extended Sampling
 func runWeeklySimulationWithExtendedSampling(
     settings: SimulationSettings,
     annualCAGR: Double,
@@ -40,10 +61,12 @@ func runWeeklySimulationWithExtendedSampling(
     
     var extendedBlock = [Double]()
     if settings.useExtendedHistoricalSampling {
-        extendedBlock = pickContiguousBlock(
+        // Multi-chunk approach for weekly data
+        extendedBlock = pickMultiChunkBlock(
             from: extendedWeeklyReturns,
-            count: totalWeeklySteps,
-            rng: rng
+            totalNeeded: totalWeeklySteps,
+            rng: rng,
+            chunkSize: 52 // e.g., 52 weeks (1 year) per chunk
         )
     }
 
@@ -54,18 +77,22 @@ func runWeeklySimulationWithExtendedSampling(
         
         var totalReturn = 0.0
         
-        // If we got a block and are using extended sampling
+        // If extended sampling is active and we have a stitched block
         if settings.useExtendedHistoricalSampling, !extendedBlock.isEmpty {
             let sample = extendedBlock[weekIndex]
-            // e.g. totalReturn += dampenArctanWeekly(sample)
+            // Possibly do something like:
+            // totalReturn += dampenArctanWeekly(sample)
             totalReturn += sample
         }
         else if settings.useHistoricalSampling {
-            // fallback: random pick from historicalBTCWeeklyReturns
+            // Fallback: pick from historicalBTCWeeklyReturns
+            if !historicalBTCWeeklyReturns.isEmpty {
+                let randomPick = pickRandomReturn(from: historicalBTCWeeklyReturns, rng: rng)
+                totalReturn += randomPick
+            }
         }
         
-        // (Optional) apply your lognormal or GARCH logic here
-
+        // (Optional) apply any lognormal or GARCH logic here, then exponentiate
         currentPriceUSD *= exp(totalReturn)
         
         let dataPoint = SimulationData(
@@ -89,7 +116,7 @@ func runWeeklySimulationWithExtendedSampling(
     return results
 }
 
-/// Example usage in a monthly simulation context
+// MARK: - Example Monthly Simulation Using Multi-Chunk Extended Sampling
 func runMonthlySimulationWithExtendedSampling(
     settings: SimulationSettings,
     annualCAGR: Double,
@@ -103,10 +130,12 @@ func runMonthlySimulationWithExtendedSampling(
     
     var extendedBlock = [Double]()
     if settings.useExtendedHistoricalSampling {
-        extendedBlock = pickContiguousBlock(
+        // Multi-chunk approach for monthly data
+        extendedBlock = pickMultiChunkBlock(
             from: extendedMonthlyReturns,
-            count: totalMonths,
-            rng: rng
+            totalNeeded: totalMonths,
+            rng: rng,
+            chunkSize: 12 // e.g., 12 months (1 year) per chunk
         )
     }
 
@@ -119,18 +148,23 @@ func runMonthlySimulationWithExtendedSampling(
         
         if settings.useExtendedHistoricalSampling, !extendedBlock.isEmpty {
             let sample = extendedBlock[monthIndex]
-            // e.g. totalReturn += dampenArctanMonthly(sample)
+            // Possibly do something like:
+            // totalReturn += dampenArctanMonthly(sample)
             totalReturn += sample
         }
         else if settings.useHistoricalSampling {
-            // fallback: random pick from historicalBTCMonthlyReturns
+            // Fallback: pick from historicalBTCMonthlyReturns
+            if !historicalBTCMonthlyReturns.isEmpty {
+                let randomPick = pickRandomReturn(from: historicalBTCMonthlyReturns, rng: rng)
+                totalReturn += randomPick
+            }
         }
         
-        // (Optional) lognormal / GARCH logic
+        // (Optional) add lognormal/GARCH/meanReversion logic here
         currentPriceUSD *= exp(totalReturn)
         
         let dataPoint = SimulationData(
-            week: monthIndex + 1, // reusing the 'week' property
+            week: monthIndex + 1, // reusing 'week' property for months
             startingBTC: 0.0,
             netBTCHoldings: 0.0,
             btcPriceUSD: Decimal(currentPriceUSD),
