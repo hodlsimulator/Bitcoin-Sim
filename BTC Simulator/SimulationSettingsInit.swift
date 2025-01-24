@@ -89,10 +89,14 @@ extension SimulationSettings {
         // Autocorrelation
         if defaults.object(forKey: "useAutoCorrelation") != nil {
             self.useAutoCorrelation = defaults.bool(forKey: "useAutoCorrelation")
+        } else {
+            self.useAutoCorrelation = true
         }
 
         if defaults.object(forKey: "autoCorrelationStrength") != nil {
             self.autoCorrelationStrength = defaults.double(forKey: "autoCorrelationStrength")
+        } else {
+            self.autoCorrelationStrength = 0.2
         }
 
         if defaults.object(forKey: "meanReversionTarget") != nil {

@@ -74,7 +74,7 @@ extension SimulationSettings {
         defaults.removeObject(forKey: "meanReversionTarget")
 
         // Reset them to your desired defaults
-        useAutoCorrelation = false
+        useAutoCorrelation = true
         autoCorrelationStrength = 0.2
         meanReversionTarget = 0.0
 

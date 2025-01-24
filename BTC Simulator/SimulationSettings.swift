@@ -330,6 +330,25 @@ class SimulationSettings: ObservableObject {
         } else {
             useExtendedHistoricalSampling = defaults.bool(forKey: "useExtendedHistoricalSampling")
         }
+        
+        if defaults.object(forKey: "useExtendedHistoricalSampling") == nil {
+                useExtendedHistoricalSampling = true
+            } else {
+                useExtendedHistoricalSampling = defaults.bool(forKey: "useExtendedHistoricalSampling")
+            }
+            
+        // Autocorrelation:
+        if defaults.object(forKey: "useAutoCorrelation") == nil {
+            useAutoCorrelation = true
+        } else {
+            useAutoCorrelation = defaults.bool(forKey: "useAutoCorrelation")
+        }
+        
+        if defaults.object(forKey: "autoCorrelationStrength") == nil {
+            autoCorrelationStrength = 0.2
+        } else {
+            autoCorrelationStrength = defaults.double(forKey: "autoCorrelationStrength")
+        }
     }
 
     func saveToUserDefaults() {

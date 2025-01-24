@@ -32,7 +32,9 @@ struct BTCMonteCarloApp: App {
             "useHistoricalSampling": true,
             "useVolShocks": true,
             "useGarchVolatility": true,
-            "useRegimeSwitching": true
+            "useRegimeSwitching": true,
+            "useAutoCorrelation": true,
+            "autoCorrelationStrength": 0.2
         ]
         UserDefaults.standard.register(defaults: defaultToggles)
         
