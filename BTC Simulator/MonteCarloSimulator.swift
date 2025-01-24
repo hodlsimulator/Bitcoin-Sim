@@ -141,26 +141,20 @@ private func runWeeklySimulation(
     var extendedBlock = [Double]()
     if settings.useExtendedHistoricalSampling {
         if totalWeeklySteps <= extendedWeeklyReturns.count {
-            print("[ExtendedSampling] Weekly using SINGLE-SLICE. totalSteps=\(totalWeeklySteps), have=\(extendedWeeklyReturns.count)")
             extendedBlock = pickContiguousBlock(
                 from: extendedWeeklyReturns,
                 count: totalWeeklySteps,
                 rng: rng
             )
-            print("[ExtendedSampling] single-slice extendedBlock count = \(extendedBlock.count)")
         } else {
-            // multi-chunk approach
-            print("[ExtendedSampling] Weekly using MULTI-CHUNK. totalSteps=\(totalWeeklySteps), have=\(extendedWeeklyReturns.count)")
+            // multi-chunk approac
             extendedBlock = pickMultiChunkBlock(
                 from: extendedWeeklyReturns,
                 totalNeeded: totalWeeklySteps,
                 rng: rng,
                 chunkSize: 52
             )
-            print("[ExtendedSampling] multi-chunk extendedBlock count = \(extendedBlock.count)")
         }
-    } else {
-        print("[ExtendedSampling] Weekly is OFF.")
     }
 
     for currentWeek in 1...totalWeeklySteps {
@@ -405,26 +399,21 @@ private func runMonthlySimulation(
     var extendedBlock = [Double]()
     if settings.useExtendedHistoricalSampling {
         if totalMonths <= extendedMonthlyReturns.count {
-            print("[ExtendedSampling] Monthly using SINGLE-SLICE. totalMonths=\(totalMonths), have=\(extendedMonthlyReturns.count)")
             extendedBlock = pickContiguousBlock(
                 from: extendedMonthlyReturns,
                 count: totalMonths,
                 rng: rng
             )
-            print("[ExtendedSampling] (Monthly) single-slice block count = \(extendedBlock.count)")
         } else {
-            print("[ExtendedSampling] Monthly using MULTI-CHUNK. totalMonths=\(totalMonths), have=\(extendedMonthlyReturns.count)")
             extendedBlock = pickMultiChunkBlock(
                 from: extendedMonthlyReturns,
                 totalNeeded: totalMonths,
                 rng: rng,
                 chunkSize: 12
             )
-            print("[ExtendedSampling] (Monthly) multi-chunk block count = \(extendedBlock.count)")
+
         }
-    } else {
-        print("[ExtendedSampling] Monthly is OFF.")
-    }
+    } 
 
     for currentMonth in 1...totalMonths {
         
