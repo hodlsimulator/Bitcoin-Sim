@@ -34,7 +34,7 @@ struct BTCMonteCarloApp: App {
             "useRegimeSwitching": true,
             "useAutoCorrelation": true,
             "autoCorrelationStrength": 0.05,
-            "meanReversionTarget": 0.009
+            "meanReversionTarget": 0.03
         ]
         UserDefaults.standard.register(defaults: defaultToggles)
         

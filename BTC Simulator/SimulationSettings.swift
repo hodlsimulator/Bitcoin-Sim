@@ -42,7 +42,7 @@ class SimulationSettings: ObservableObject {
     @Published var lastRunResults: [SimulationData] = []
     @Published var allRuns: [[SimulationData]] = []
     
-    public var useMeanReversion: Bool = false
+    public var useMeanReversion: Bool = true
 
     var isInitialized = false
     var isUpdating = false
@@ -347,7 +347,7 @@ class SimulationSettings: ObservableObject {
         }
 
         if defaults.object(forKey: "meanReversionTarget") == nil {
-            self.meanReversionTarget = 0.009  // new default
+            self.meanReversionTarget = 0.03  // new default
         } else {
             self.meanReversionTarget = defaults.double(forKey: "meanReversionTarget")
         }

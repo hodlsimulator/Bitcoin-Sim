@@ -447,7 +447,7 @@ private func runMonthlySimulation(
                 
                 // Mean reversion
                 if settings.useMeanReversion {
-                    let reversionFactor = 0.5
+                    let reversionFactor = 0.1
                     let distanceFromTarget = (settings.meanReversionTarget - lumpsumGrowth)
                     lumpsumGrowth += (reversionFactor * distanceFromTarget)
                 }

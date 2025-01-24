@@ -687,11 +687,11 @@ struct SettingsView: View {
                         .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
                 }
                 
-                // Mean reversion slider
+                // Mean Reversion slider
                 HStack {
                     Button {
-                        // Reset to new default = 0.009
-                        simSettings.meanReversionTarget = 0.009
+                        // Reset to new default = 0.05
+                        simSettings.meanReversionTarget = 0.03
                     } label: {
                         Image(systemName: "arrow.uturn.backward.circle")
                             .foregroundColor(.orange)
@@ -702,13 +702,13 @@ struct SettingsView: View {
                     Text("Mean Reversion Target")
                         .foregroundColor(.white)
                     
-                    // Example: restrict range from 0.001 up to 0.02
+                    // Example: range from 0.02 up to 0.08, symmetric around 0.03
                     Slider(
                         value: $simSettings.meanReversionTarget,
-                        in: 0.001...0.017,
+                        in: 0.01...0.05,
                         step: 0.001
                     )
-                        .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
+                    .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
                 }
             }
             .disabled(!simSettings.useAutoCorrelation)

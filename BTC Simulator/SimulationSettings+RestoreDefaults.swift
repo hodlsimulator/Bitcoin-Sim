@@ -76,7 +76,7 @@ extension SimulationSettings {
         // Reset them to your desired defaults
         useAutoCorrelation = true
         autoCorrelationStrength = 0.05      // changed from 0.2 to 0.05
-        meanReversionTarget = 0.009         // changed from 0.0 to 0.009
+        meanReversionTarget = 0.03         // changed from 0.0 to 0.03
 
         // Remove new weekly/monthly keys
         defaults.removeObject(forKey: "useHalvingWeekly")
