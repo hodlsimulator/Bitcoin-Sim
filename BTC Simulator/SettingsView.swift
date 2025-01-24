@@ -666,7 +666,8 @@ struct SettingsView: View {
                 // Strength slider
                 HStack {
                     Button {
-                        simSettings.autoCorrelationStrength = 0.2
+                        // Reset to new default = 0.05
+                        simSettings.autoCorrelationStrength = 0.05
                     } label: {
                         Image(systemName: "arrow.uturn.backward.circle")
                             .foregroundColor(.orange)
@@ -677,14 +678,20 @@ struct SettingsView: View {
                     Text("Autocorrelation Strength")
                         .foregroundColor(.white)
                     
-                    Slider(value: $simSettings.autoCorrelationStrength, in: 0.0...0.4, step: 0.05)
+                    // Set min to 0.05, or whatever you like
+                    Slider(
+                        value: $simSettings.autoCorrelationStrength,
+                        in: 0.01...0.09,
+                        step: 0.01
+                    )
                         .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
                 }
                 
                 // Mean reversion slider
                 HStack {
                     Button {
-                        simSettings.meanReversionTarget = 0.0
+                        // Reset to new default = 0.009
+                        simSettings.meanReversionTarget = 0.009
                     } label: {
                         Image(systemName: "arrow.uturn.backward.circle")
                             .foregroundColor(.orange)
@@ -695,7 +702,12 @@ struct SettingsView: View {
                     Text("Mean Reversion Target")
                         .foregroundColor(.white)
                     
-                    Slider(value: $simSettings.meanReversionTarget, in: -0.02...0.02, step: 0.001)
+                    // Example: restrict range from 0.001 up to 0.02
+                    Slider(
+                        value: $simSettings.meanReversionTarget,
+                        in: 0.001...0.017,
+                        step: 0.001
+                    )
                         .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
                 }
             }
@@ -704,7 +716,7 @@ struct SettingsView: View {
         } header: {
             Text("Autocorrelation & Mean Reversion")
         } footer: {
-            Text("Allows returns to partially follow or revert from the previous step. Higher strength means a bigger influence on the next period’s return.")
+            Text("Allows returns to partially follow or revert from the previous step. Adjust them as desired.")
                 .foregroundColor(.secondary)
         }
         .listRowBackground(Color(white: 0.15))

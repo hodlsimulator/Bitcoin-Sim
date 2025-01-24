@@ -338,16 +338,16 @@ class SimulationSettings: ObservableObject {
             }
             
         // Autocorrelation:
-        if defaults.object(forKey: "useAutoCorrelation") == nil {
-            useAutoCorrelation = true
-        } else {
-            useAutoCorrelation = defaults.bool(forKey: "useAutoCorrelation")
-        }
-        
         if defaults.object(forKey: "autoCorrelationStrength") == nil {
-            autoCorrelationStrength = 0.2
+            self.autoCorrelationStrength = 0.05  // new default
         } else {
-            autoCorrelationStrength = defaults.double(forKey: "autoCorrelationStrength")
+            self.autoCorrelationStrength = defaults.double(forKey: "autoCorrelationStrength")
+        }
+
+        if defaults.object(forKey: "meanReversionTarget") == nil {
+            self.meanReversionTarget = 0.009  // new default
+        } else {
+            self.meanReversionTarget = defaults.double(forKey: "meanReversionTarget")
         }
     }
 

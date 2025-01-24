@@ -34,7 +34,8 @@ struct BTCMonteCarloApp: App {
             "useGarchVolatility": true,
             "useRegimeSwitching": true,
             "useAutoCorrelation": true,
-            "autoCorrelationStrength": 0.2
+            "autoCorrelationStrength": 0.05,
+            "meanReversionTarget": 0.009
         ]
         UserDefaults.standard.register(defaults: defaultToggles)
         

@@ -75,8 +75,8 @@ extension SimulationSettings {
 
         // Reset them to your desired defaults
         useAutoCorrelation = true
-        autoCorrelationStrength = 0.2
-        meanReversionTarget = 0.0
+        autoCorrelationStrength = 0.05      // changed from 0.2 to 0.05
+        meanReversionTarget = 0.009         // changed from 0.0 to 0.009
 
         // Remove new weekly/monthly keys
         defaults.removeObject(forKey: "useHalvingWeekly")
@@ -197,10 +197,6 @@ extension SimulationSettings {
         defaults.removeObject(forKey: "useRegimeSwitching")
         useRegimeSwitching = true
 
-        // -----------------------------
-        // Now set weekly/monthly toggles as desired:
-        // -----------------------------
-        
         // Halving
         useHalvingWeekly = true
         halvingBumpWeekly = SimulationSettings.defaultHalvingBumpWeekly
@@ -273,9 +269,7 @@ extension SimulationSettings {
         useAdoptionFactorMonthly = true
         adoptionBaseFactorMonthly = SimulationSettings.defaultAdoptionBaseFactorMonthly
 
-        // -----------------------------
         // Bearish factors default on for both
-        // -----------------------------
         useRegClampdownWeekly = true
         maxClampDownWeekly = SimulationSettings.defaultMaxClampDownWeekly
         useRegClampdownMonthly = true

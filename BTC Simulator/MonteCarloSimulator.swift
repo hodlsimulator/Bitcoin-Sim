@@ -148,6 +148,15 @@ private func runWeeklySimulation(
                     )
                     lumpsumGrowth = (1 + lumpsumGrowth) * exp(shockVol) - 1
                 }
+                
+                // ──────────────────────────────
+                // MEAN REVERSION ADDED (lumpsum)
+                // ──────────────────────────────
+                // e.g. pull lumpsumGrowth partially toward meanReversionTarget
+                let reversionFactor = 0.1
+                let distanceFromTarget = (settings.meanReversionTarget - lumpsumGrowth)
+                lumpsumGrowth += (reversionFactor * distanceFromTarget)
+                
                 if settings.useAutoCorrelation {
                     let phi = settings.autoCorrelationStrength
                     lumpsumGrowth = (1 - phi) * lumpsumGrowth + phi * lastAutoReturn
@@ -186,7 +195,6 @@ private func runWeeklySimulation(
                 weeklySample = dampenArctanWeekly(weeklySample)
                 totalReturn += weeklySample
             }
-            
             if settings.useLognormalGrowth {
                 totalReturn += (cagrDecimal / 52.0)
             }
@@ -194,6 +202,16 @@ private func runWeeklySimulation(
                 let shockVol = randomNormalWithRNG(mean: 0, standardDeviation: currentVol, rng: rng)
                 totalReturn += shockVol
             }
+            
+            // ──────────────────────────────
+            // MEAN REVERSION ADDED (weekly)
+            // ──────────────────────────────
+            // Pull the totalReturn partially toward meanReversionTarget
+            let reversionFactor = 0.1
+            let distanceFromTarget = (settings.meanReversionTarget - totalReturn)
+            totalReturn += (reversionFactor * distanceFromTarget)
+
+            // Now apply autocorrelation
             if settings.useAutoCorrelation {
                 let phi = settings.autoCorrelationStrength
                 totalReturn = (1 - phi) * totalReturn + phi * lastAutoReturn
@@ -356,6 +374,14 @@ private func runMonthlySimulation(
                     let shockVol = randomNormalWithRNG(mean: 0, standardDeviation: currentVol, rng: rng)
                     lumpsumGrowth = (1 + lumpsumGrowth) * exp(shockVol) - 1
                 }
+                
+                // ───────────────────────────────
+                // MEAN REVERSION ADDED (lumpsum)
+                // ───────────────────────────────
+                let reversionFactor = 0.5
+                let distanceFromTarget = (settings.meanReversionTarget - lumpsumGrowth)
+                lumpsumGrowth += (reversionFactor * distanceFromTarget)
+                
                 if settings.useAutoCorrelation {
                     let phi = settings.autoCorrelationStrength
                     lumpsumGrowth = (1 - phi) * lumpsumGrowth + phi * lastAutoReturn
@@ -396,6 +422,14 @@ private func runMonthlySimulation(
                 let shockVol = randomNormalWithRNG(mean: 0, standardDeviation: currentVol, rng: rng)
                 totalReturn += shockVol
             }
+            
+            // ─────────────────────────────
+            // MEAN REVERSION ADDED (month)
+            // ─────────────────────────────
+            let reversionFactor = 0.1
+            let distanceFromTarget = (settings.meanReversionTarget - totalReturn)
+            totalReturn += (reversionFactor * distanceFromTarget)
+            
             if settings.useAutoCorrelation {
                 let phi = settings.autoCorrelationStrength
                 totalReturn = (1 - phi) * totalReturn + (phi * lastAutoReturn)
