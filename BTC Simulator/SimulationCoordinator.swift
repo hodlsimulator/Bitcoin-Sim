@@ -62,13 +62,43 @@ class SimulationCoordinator: ObservableObject {
 
         // 2) Decide whether to load monthly or weekly returns
         if simSettings.periodUnit == .months {
-            historicalBTCMonthlyReturns = loadBTCMonthlyReturns()
-            sp500MonthlyReturns        = loadSP500MonthlyReturns()
+            // --- NEW DICTIONARY-BASED LOADING/ALIGNMENT ---
+            let btcMonthlyDict = loadBTCMonthlyReturnsAsDict()
+            let spMonthlyDict  = loadSP500MonthlyReturnsAsDict()
+            
+            // Align them by date. Make sure you have a function like:
+            //   func alignBTCandSPMonthly(btcDict: [Date: Double],
+            //                             spDict: [Date: Double]) -> [(Date, Double, Double)]
+            let alignedMonthly = alignBTCandSPMonthly(
+                btcDict: btcMonthlyDict,
+                spDict: spMonthlyDict
+            )
+            
+            // Convert aligned data to simple [Double] arrays
+            // .1 is btcReturn, .2 is spReturn
+            historicalBTCMonthlyReturns = alignedMonthly.map { $0.1 }
+            sp500MonthlyReturns         = alignedMonthly.map { $0.2 }
+
+            // Clear out weekly arrays
             historicalBTCWeeklyReturns = []
             sp500WeeklyReturns         = []
+
         } else {
-            historicalBTCWeeklyReturns = loadBTCWeeklyReturns()
-            sp500WeeklyReturns         = loadSP500WeeklyReturns()
+            // --- NEW DICTIONARY-BASED LOADING/ALIGNMENT ---
+            let btcWeeklyDict = loadBTCWeeklyReturnsAsDict()
+            let spWeeklyDict  = loadSP500WeeklyReturnsAsDict()
+            
+            // Align them by date
+            let alignedWeekly = alignBTCandSPWeekly(
+                btcDict: btcWeeklyDict,
+                spDict: spWeeklyDict
+            )
+            
+            // Convert aligned data to simple [Double] arrays
+            historicalBTCWeeklyReturns = alignedWeekly.map { $0.1 }
+            sp500WeeklyReturns         = alignedWeekly.map { $0.2 }
+
+            // Clear out monthly arrays
             historicalBTCMonthlyReturns = []
             sp500MonthlyReturns         = []
         }
@@ -206,8 +236,6 @@ class SimulationCoordinator: ObservableObject {
                 // Debug logs
                 print("// DEBUG: 'median final BTC' => iteration #\(medianRunIndex), final BTC => \(sortedRuns[medianIndex].1)")
                 print("// DEBUG: bestFitRun => iteration #\(bestFitRunIndex) chosen by distance.")
-                
-                // **ADDED LINE**: print the final BTC price for the best-fit run
                 print("// DEBUG: bestFitRun => final BTC => \(bestFitRun.last?.btcPriceUSD ?? 0)")
                 
                 // Convert all sims to chart lines

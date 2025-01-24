@@ -69,6 +69,24 @@ func alignBTCandSPWeekly(
     return aligned
 }
 
+func alignBTCandSPMonthly(
+    btcDict: [Date: Double],
+    spDict: [Date: Double]
+) -> [(Date, Double, Double)] {
+    
+    let commonDates = Set(btcDict.keys).intersection(spDict.keys)
+    var aligned: [(Date, Double, Double)] = []
+    
+    for date in commonDates {
+        if let btcRet = btcDict[date], let spRet = spDict[date] {
+            aligned.append((date, btcRet, spRet))
+        }
+    }
+    
+    aligned.sort { $0.0 < $1.0 }  // Sort by ascending date
+    return aligned
+}
+
 // MARK: - BTC Monthly
 func loadBTCMonthlyReturnsAsDict() -> [Date: Double] {
     guard let filePath = Bundle.main.path(forResource: "Bitcoin Historical Data Monthly", ofType: "csv") else {

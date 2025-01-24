@@ -649,11 +649,7 @@ struct SettingsView: View {
         } header: {
             Text("Historical Sampling")
         } footer: {
-            Text("""
-            Samples real-world BTC returns each step. 
-            Locking ensures the same data window each run. 
-            Extended Historical Sampling pulls contiguous blocks from a broad dataset, preserving local volatility clustering.
-            """)
+            Text("Extended Historical Sampling pulls contiguous blocks from a broad dataset, preserving local volatility clustering and uses date-aligned BTC + S&P returns if available.")
                 .foregroundColor(.secondary)
         }
         .listRowBackground(Color(white: 0.15))
