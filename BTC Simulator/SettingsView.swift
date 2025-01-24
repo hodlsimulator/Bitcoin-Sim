@@ -666,7 +666,7 @@ struct SettingsView: View {
                 // Strength slider
                 HStack {
                     Button {
-                        simSettings.autoCorrelationStrength = 0.3
+                        simSettings.autoCorrelationStrength = 0.2
                     } label: {
                         Image(systemName: "arrow.uturn.backward.circle")
                             .foregroundColor(.orange)
@@ -677,7 +677,7 @@ struct SettingsView: View {
                     Text("Autocorrelation Strength")
                         .foregroundColor(.white)
                     
-                    Slider(value: $simSettings.autoCorrelationStrength, in: 0...1, step: 0.05)
+                    Slider(value: $simSettings.autoCorrelationStrength, in: 0.0...0.4, step: 0.05)
                         .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
                 }
                 
