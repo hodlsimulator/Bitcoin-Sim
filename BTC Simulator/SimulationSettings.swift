@@ -140,7 +140,6 @@ class SimulationSettings: ObservableObject {
         didSet {
             guard isInitialized else { return }
             print("didSet: useRegimeSwitching changed to \(useRegimeSwitching)")
-            print(Thread.callStackSymbols.joined(separator: "\n"))
             UserDefaults.standard.set(useRegimeSwitching, forKey: "useRegimeSwitching")
         }
     }

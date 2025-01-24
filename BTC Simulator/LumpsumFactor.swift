@@ -2,7 +2,7 @@
 //  LumpsumFactor.swift
 //  BTCMonteCarlo
 //
-//  Created by . . on 23/01/2025.
+//  Created by Conor on 23/01/2025.
 //
 
 import Foundation
@@ -12,23 +12,19 @@ func lumpsumAdjustFactor(
     settings: SimulationSettings,
     annualVolatility: Double
 ) -> Double {
-    // We’ll add +1 to `toggles` for each "condition" we meet, then reduce factor by 0.02 each time
     var toggles = 0
 
-    // If annualVol > 5.0 => add toggles
-    if annualVolatility > 5.0 {
-        toggles += Int((annualVolatility - 5.0) / 5.0) + 1
-    }
-    
-    // If vol shocks are on
+    // Only if userVolShocks is TRUE do we factor in big volatility
     if settings.useVolShocks {
-        toggles += 1
+        if annualVolatility > 5.0 {
+            let added = Int((annualVolatility - 5.0) / 5.0) + 1
+            print("[DEBUG lumpsumAdjustFactorV2] annualVol check => +\(added) toggles")
+            toggles += added
+        }
     }
-    
-    // Count how many toggles are on for the *active* period (weekly or monthly)
-    let isWeekly = (settings.periodUnit == .weeks)
     
     // BULLISH toggles count
+    let isWeekly = (settings.periodUnit == .weeks)
     let bullishCount = isWeekly
         ? [
             settings.useHalvingWeekly,
@@ -84,13 +80,15 @@ func lumpsumAdjustFactor(
             settings.useRecessionMonthly
           ].filter { $0 }.count
     
+    // If the user has ANY toggles on, apply a small lumpsum penalty:
     if (bullishCount + bearishCount) > 0 {
-        toggles += 1
     }
-    
+
+    // Each toggle => 2% lumpsum cut, but never go below 80%
     let maxCutPerToggle = 0.02
     let totalCut = Double(toggles) * maxCutPerToggle
     var factor = 1.0 - totalCut
     factor = max(factor, 0.80)
+
     return factor
 }
