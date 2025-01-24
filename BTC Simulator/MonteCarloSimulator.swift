@@ -82,9 +82,6 @@ private func runWeeklySimulation(
     var lastStepLogReturn = 0.0
     var lastAutoReturn    = 0.0
 
-    // DEBUG PRINT: Show which toggles are on/off at start of run
-    print("[WeeklySim] iteration=\(iterationIndex), lumpsum=\(!settings.useHistoricalSampling && !settings.useLognormalGrowth), useVolShocks=\(settings.useVolShocks), useGarch=\(settings.useGarchVolatility), useRegime=\(settings.useRegimeSwitching), autoCorr=\(settings.useAutoCorrelation)")
-
     for currentWeek in 1...totalWeeklySteps {
         
         // Update regime if user wants regime switching
@@ -118,13 +115,11 @@ private func runWeeklySimulation(
                         rng: rng
                     )
                     lumpsumGrowth = (1 + lumpsumGrowth) * exp(shockVol) - 1
-                    print("[WeeklySim] Step\(currentWeek) lumpsum shockVol=\(shockVol), lumpsumGrowth now=\(lumpsumGrowth)")
                 }
                 if settings.useAutoCorrelation {
                     let phi = settings.autoCorrelationStrength
                     let oldVal = lumpsumGrowth
                     lumpsumGrowth = (1 - phi) * lumpsumGrowth + phi * lastAutoReturn
-                    print("[WeeklySim] Step\(currentWeek) lumpsum autoCorr old=\(oldVal), lastAuto=\(lastAutoReturn), new=\(lumpsumGrowth)")
                 }
 
                 // Factor toggles
@@ -137,18 +132,15 @@ private func runWeeklySimulation(
                     rng: rng
                 )
                 if lumpsumGrowth != beforeFactor {
-                    print("[WeeklySim] Step\(currentWeek) lumpsum factorToggles changed from=\(beforeFactor) to=\(lumpsumGrowth)")
                 }
                 
                 let factor = lumpsumAdjustFactor(
                     settings: settings,
                     annualVolatility: annualVolatility
                 )
-                print("[WeeklySim] lumpsum => factor=\(factor) before lumpsumGrowth=\(lumpsumGrowth), after lumpsumGrowth=\(lumpsumGrowth * factor)")
                 let oldLS = lumpsumGrowth
                 lumpsumGrowth *= factor
                 if factor != 1.0 {
-                    print("[WeeklySim] Step\(currentWeek) lumpsum lumpsumAdjustFactor = \(factor), lumpsumGrowth from=\(oldLS) to=\(lumpsumGrowth)")
                 }
 
                 // Multiply the price
@@ -188,7 +180,6 @@ private func runWeeklySimulation(
                 rng: rng
             )
             if toggled != totalReturn {
-                print("[WeeklySim] Step\(currentWeek) factorToggles changed totalReturn from=\(totalReturn) to=\(toggled)")
             }
             
             prevBTCPriceUSD *= exp(toggled)
@@ -199,7 +190,6 @@ private func runWeeklySimulation(
         
         // Floor
         if prevBTCPriceUSD < 1.0 {
-            print("[WeeklySim] Step\(currentWeek) Price floored from \(prevBTCPriceUSD) to 1.0")
             prevBTCPriceUSD = 1.0
         }
 
@@ -302,8 +292,6 @@ private func runMonthlySimulation(
     var lastStepLogReturn = 0.0
     var lastAutoReturn = 0.0
 
-    print("[MonthlySim] iteration=\(iterationIndex), lumpsum=\(!settings.useHistoricalSampling && !settings.useLognormalGrowth), useVolShocks=\(settings.useVolShocks), useGarch=\(settings.useGarchVolatility), useRegime=\(settings.useRegimeSwitching), autoCorr=\(settings.useAutoCorrelation)")
-
     for currentMonth in 1...totalMonths {
         
         // Regime switching
@@ -330,13 +318,11 @@ private func runMonthlySimulation(
                 if settings.useVolShocks && annualVolatility > 0 {
                     let shockVol = randomNormalWithRNG(mean: 0, standardDeviation: currentVol, rng: rng)
                     lumpsumGrowth = (1 + lumpsumGrowth) * exp(shockVol) - 1
-                    print("[MonthlySim] Month\(currentMonth) lumpsum shockVol=\(shockVol), lumpsumGrowth now=\(lumpsumGrowth)")
                 }
                 if settings.useAutoCorrelation {
                     let phi = settings.autoCorrelationStrength
                     let oldVal = lumpsumGrowth
                     lumpsumGrowth = (1 - phi) * lumpsumGrowth + phi * lastAutoReturn
-                    print("[MonthlySim] Month\(currentMonth) lumpsum autoCorr old=\(oldVal), lastAuto=\(lastAutoReturn), new=\(lumpsumGrowth)")
                 }
                 
                 let beforeFactor = lumpsumGrowth
@@ -348,14 +334,12 @@ private func runMonthlySimulation(
                     rng: rng
                 )
                 if lumpsumGrowth != beforeFactor {
-                    print("[MonthlySim] Month\(currentMonth) lumpsum factorToggles changed from=\(beforeFactor) to=\(lumpsumGrowth)")
                 }
                 
                 let factor = lumpsumAdjustFactor(settings: settings, annualVolatility: annualVolatility)
                 let oldLS = lumpsumGrowth
                 lumpsumGrowth *= factor
                 if factor != 1.0 {
-                    print("[MonthlySim] Month\(currentMonth) lumpsum lumpsumAdjustFactor = \(factor), lumpsumGrowth from=\(oldLS) to=\(lumpsumGrowth)")
                 }
                 
                 prevBTCPriceUSD *= (1 + lumpsumGrowth)
@@ -394,7 +378,6 @@ private func runMonthlySimulation(
                 rng: rng
             )
             if toggled != totalReturn {
-                print("[MonthlySim] Month\(currentMonth) factorToggles changed totalReturn from=\(totalReturn) to=\(toggled)")
             }
             
             prevBTCPriceUSD *= exp(toggled)
@@ -404,7 +387,6 @@ private func runMonthlySimulation(
         }
         
         if prevBTCPriceUSD < 1.0 {
-            print("[MonthlySim] Month\(currentMonth) Price floored from \(prevBTCPriceUSD) to 1.0")
             prevBTCPriceUSD = 1.0
         }
         let newPriceUSD = prevBTCPriceUSD
