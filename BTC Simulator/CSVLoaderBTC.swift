@@ -7,83 +7,198 @@
 
 import Foundation
 
-func loadBTCWeeklyReturns() -> [Double] {
-    // 1) Check if the file is in the bundle
+// MARK: - BTC Weekly
+func loadBTCWeeklyReturnsAsDict() -> [Date: Double] {
     guard let filePath = Bundle.main.path(forResource: "Bitcoin Historical Data Weekly", ofType: "csv") else {
-        return []
+        return [:]
     }
     
+    var weeklyDict: [Date: Double] = [:]
+    
     do {
-        // 2) Read the entire file content
         let content = try String(contentsOfFile: filePath, encoding: .utf8)
+        let rows = content.components(separatedBy: .newlines).filter { !$0.isEmpty }
         
-        // 3) Split into lines
-        let rows = content.components(separatedBy: .newlines).filter { !$0.isEmpty }
-    
-        var weeklyReturns: [Double] = []
-
-        // 4) Iterate over each row, skipping header
         for (index, row) in rows.enumerated() {
-            if index == 0 {
-                continue
-            }
-
-            // 5) Parse columns
+            // Skip header
+            if index == 0 { continue }
+            
             let cols = parseCSVRowNoPadding(row)
-            if cols.count < 7 {
+            if cols.count < 7 { continue }
+            
+            let dateString   = cols[0]
+            let changeString = cols[6]
+            
+            guard
+                let date = csvDateFormatter.date(from: dateString),
+                let rawChange = parseDouble(changeString
+                    .replacingOccurrences(of: "%", with: "")
+                    .replacingOccurrences(of: "+", with: "")
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                )
+            else {
                 continue
             }
-
-            // 6) “Change %” column is typically index 6
-            let changeStr = cols[6]
-                .replacingOccurrences(of: "%", with: "")
-                .replacingOccurrences(of: "+", with: "")
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-
-            // 7) Convert to double
-            if let val = parseDouble(changeStr) {
-                weeklyReturns.append(val / 100.0) // e.g. “2.0” => 0.02
-            }
+            
+            weeklyDict[date] = rawChange / 100.0
         }
-
-        return weeklyReturns
-
+        
+        return weeklyDict
+        
     } catch {
-        return []
+        return [:]
     }
 }
 
-func loadBTCMonthlyReturns() -> [Double] {
-    guard let filePath = Bundle.main.path(forResource: "Bitcoin Historical Data Monthly", ofType: "csv") else {
-        return []
+func alignBTCandSPWeekly(
+    btcDict: [Date: Double],
+    spDict: [Date: Double]
+) -> [(Date, Double, Double)] {
+    
+    let commonDates = Set(btcDict.keys).intersection(spDict.keys)
+    var aligned: [(Date, Double, Double)] = []
+    
+    for date in commonDates {
+        if let btcRet = btcDict[date], let spRet = spDict[date] {
+            aligned.append((date, btcRet, spRet))
+        }
     }
+    
+    // Sort by ascending date
+    aligned.sort { $0.0 < $1.0 }
+    return aligned
+}
+
+// MARK: - BTC Monthly
+func loadBTCMonthlyReturnsAsDict() -> [Date: Double] {
+    guard let filePath = Bundle.main.path(forResource: "Bitcoin Historical Data Monthly", ofType: "csv") else {
+        return [:]
+    }
+    
+    var monthlyDict: [Date: Double] = [:]
     
     do {
         let content = try String(contentsOfFile: filePath, encoding: .utf8)
         let rows = content.components(separatedBy: .newlines).filter { !$0.isEmpty }
-        var monthlyReturns: [Double] = []
-
+        
         for (index, row) in rows.enumerated() {
-            if index == 0 {
-                continue
-            }
+            if index == 0 { continue }
+            
             let cols = parseCSVRowNoPadding(row)
-            if cols.count < 7 {
+            if cols.count < 7 { continue }
+            
+            let dateString   = cols[0]
+            let changeString = cols[6]
+            
+            guard
+                let date = csvDateFormatter.date(from: dateString),
+                let rawChange = parseDouble(changeString
+                    .replacingOccurrences(of: "%", with: "")
+                    .replacingOccurrences(of: "+", with: "")
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                )
+            else {
                 continue
             }
-
-            let changeStr = cols[6]
-                .replacingOccurrences(of: "%", with: "")
-                .replacingOccurrences(of: "+", with: "")
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-
-            if let val = parseDouble(changeStr) {
-                monthlyReturns.append(val / 100.0)
-            }
+            
+            monthlyDict[date] = rawChange / 100.0
         }
-        return monthlyReturns
-
+        
+        return monthlyDict
+        
     } catch {
-        return []
+        return [:]
     }
 }
+
+// MARK: - S&P 500 Weekly
+func loadSP500WeeklyReturnsAsDict() -> [Date: Double] {
+    guard let filePath = Bundle.main.path(forResource: "S&P 500 Historical Data Weekly", ofType: "csv") else {
+        return [:]
+    }
+    
+    var weeklyDict: [Date: Double] = [:]
+    
+    do {
+        let content = try String(contentsOfFile: filePath, encoding: .utf8)
+        let rows = content.components(separatedBy: .newlines).filter { !$0.isEmpty }
+        
+        for (index, row) in rows.enumerated() {
+            if index == 0 { continue }
+            
+            let cols = parseCSVRowNoPadding(row)
+            if cols.count < 7 { continue }
+            
+            let dateString   = cols[0]
+            let changeString = cols[6]
+            
+            guard
+                let date = csvDateFormatter.date(from: dateString),
+                let rawChange = parseDouble(changeString
+                    .replacingOccurrences(of: "%", with: "")
+                    .replacingOccurrences(of: "+", with: "")
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                )
+            else {
+                continue
+            }
+            
+            weeklyDict[date] = rawChange / 100.0
+        }
+        
+        return weeklyDict
+        
+    } catch {
+        return [:]
+    }
+}
+
+// MARK: - S&P 500 Monthly
+func loadSP500MonthlyReturnsAsDict() -> [Date: Double] {
+    guard let filePath = Bundle.main.path(forResource: "S&P 500 Historical Data Monthly", ofType: "csv") else {
+        return [:]
+    }
+    
+    var monthlyDict: [Date: Double] = [:]
+    
+    do {
+        let content = try String(contentsOfFile: filePath, encoding: .utf8)
+        let rows = content.components(separatedBy: .newlines).filter { !$0.isEmpty }
+        
+        for (index, row) in rows.enumerated() {
+            if index == 0 { continue }
+            
+            let cols = parseCSVRowNoPadding(row)
+            if cols.count < 7 { continue }
+            
+            let dateString   = cols[0]
+            let changeString = cols[6]
+            
+            guard
+                let date = csvDateFormatter.date(from: dateString),
+                let rawChange = parseDouble(changeString
+                    .replacingOccurrences(of: "%", with: "")
+                    .replacingOccurrences(of: "+", with: "")
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                )
+            else {
+                continue
+            }
+            
+            monthlyDict[date] = rawChange / 100.0
+        }
+        
+        return monthlyDict
+        
+    } catch {
+        return [:]
+    }
+}
+
+fileprivate let csvDateFormatter: DateFormatter = {
+    let formatter = DateFormatter()
+    // Your CSV format looks like "dd/MM/yyyy"
+    formatter.dateFormat = "dd/MM/yyyy"
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    return formatter
+}()

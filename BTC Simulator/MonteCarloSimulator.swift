@@ -622,3 +622,26 @@ func runMonteCarloSimulationsWithProgress(
 
     return (medianRun, allRuns, stepMedians)
 }
+
+/// Aligns weekly BTC and S&P arrays by taking only up to the minimum length.
+func alignWeeklyData() {
+    let minCount = min(historicalBTCWeeklyReturns.count, sp500WeeklyReturns.count)
+    let partialBTC = Array(historicalBTCWeeklyReturns.prefix(minCount))
+    let partialSP  = Array(sp500WeeklyReturns.prefix(minCount))
+    
+    // Convert them into (btc, sp) tuples
+    combinedWeeklyData = zip(partialBTC, partialSP).map { (btc, sp) in
+        (btc, sp)
+    }
+}
+
+/// Aligns monthly BTC and S&P arrays similarly.
+func alignMonthlyData() {
+    let minCount = min(historicalBTCMonthlyReturns.count, sp500MonthlyReturns.count)
+    let partialBTC = Array(historicalBTCMonthlyReturns.prefix(minCount))
+    let partialSP  = Array(sp500MonthlyReturns.prefix(minCount))
+    
+    combinedMonthlyData = zip(partialBTC, partialSP).map { (btc, sp) in
+        (btc, sp)
+    }
+}
