@@ -88,7 +88,7 @@ class PersistentInputManager: ObservableObject {
         self.firstYearContribution = UserDefaults.standard.string(forKey: "firstYearContribution") ?? "100"
         self.subsequentContribution = UserDefaults.standard.string(forKey: "subsequentContribution") ?? "100"
         self.iterations = UserDefaults.standard.string(forKey: "iterations") ?? "100"
-        self.annualCAGR = UserDefaults.standard.string(forKey: "annualCAGR") ?? "30 "
+        self.annualCAGR = UserDefaults.standard.string(forKey: "annualCAGR") ?? "30"
         self.annualVolatility = UserDefaults.standard.string(forKey: "annualVolatility") ?? "80"
         self.standardDeviation = UserDefaults.standard.string(forKey: "standardDeviation") ?? "150"
         self.selectedWeek = UserDefaults.standard.string(forKey: "selectedWeek") ?? "1"
@@ -345,20 +345,32 @@ struct ContentView: View {
             .navigationDestination(isPresented: $showAbout) {
                 AboutView()
             }
+            // ADDED FOR DEFAULT BTC PRICE:
             .onAppear {
-                // Load last viewed row + page
-                let savedWeek = UserDefaults.standard.integer(forKey: "lastViewedWeek")
-                if savedWeek != 0 {
-                    lastViewedWeek = savedWeek
-                }
+                // If there's no stored lastViewedPage, assume fresh install
+                if UserDefaults.standard.object(forKey: "lastViewedPage") == nil {
+                    // Look for a column whose title contains "BTC Price"
+                    if let btcPriceIndex = columns.firstIndex(where: { $0.0.contains("BTC Price") }) {
+                        currentPage = btcPriceIndex
+                        lastViewedPage = btcPriceIndex
+                    }
+                } else {
+                    // Otherwise, restore from user defaults as usual
+                    let savedWeek = UserDefaults.standard.integer(forKey: "lastViewedWeek")
+                    if savedWeek != 0 {
+                        lastViewedWeek = savedWeek
+                    }
 
-                let savedPage = UserDefaults.standard.integer(forKey: "lastViewedPage")
-                if savedPage < columns.count {
-                    lastViewedPage = savedPage
-                    currentPage = savedPage
-                } else if let usdIndex = columns.firstIndex(where: { $0.0 == "BTC Price USD" }) {
-                    currentPage = usdIndex
-                    lastViewedPage = usdIndex
+                    let savedPage = UserDefaults.standard.integer(forKey: "lastViewedPage")
+                    if savedPage < columns.count {
+                        lastViewedPage = savedPage
+                        currentPage = savedPage
+                    }
+                    // If savedPage is out of range, just default to the first BTC Price column
+                    else if let usdIndex = columns.firstIndex(where: { $0.0.contains("BTC Price") }) {
+                        currentPage = usdIndex
+                        lastViewedPage = usdIndex
+                    }
                 }
             }
         }
