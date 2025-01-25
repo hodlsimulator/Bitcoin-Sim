@@ -179,6 +179,50 @@ extension Double {
     }
 }
 
+// MARK: - Suffix Logic
+extension Double {
+
+    /// For large numeric values using the short scale up to 10^30 (nonillion):
+        ///  - If exponent < 3 => just show normal comma formatting.
+        ///  - If exponent is between 3 and 30 => show K, M, B, T, Q, Qi, Sx, Sp, Oc, No.
+        ///  - If exponent > 30 => fallback to plain decimal with 2 decimals.
+        func formattedWithPowerOfTenSuffix() -> String {
+            guard self != 0 else { return "0" }
+
+            let sign = self < 0 ? "-" : ""
+            let absVal = abs(self)
+            let exponent = Int(floor(log10(absVal)))
+
+            // Under 1,000 => just format normally
+            if exponent < 3 {
+                return sign + normalNumberFormat(absVal)
+            }
+
+            // If exponent is above 30 => fallback
+            if exponent > 30 {
+                return "\(sign)\(String(format: "%.2f", absVal))"
+            }
+
+            // Otherwise, find the 'leading number' and suffix:
+            // e.g. if exponent = 15, leading number = 1.234..., suffix = Q (quadrillion)
+            let leadingNumber = absVal / pow(10, Double(exponent))
+            let suffix = formatPowerOfTenLabel(exponent)
+            // Show 2 decimals for the leading number
+            return "\(sign)\(String(format: "%.2f", leadingNumber))\(suffix)"
+        }
+    }
+
+/// Helper for standard comma formatting
+private func normalNumberFormat(_ value: Double) -> String {
+    let formatter = NumberFormatter()
+    formatter.numberStyle = .decimal
+    formatter.maximumFractionDigits = 2
+    formatter.minimumFractionDigits = 2
+    formatter.usesGroupingSeparator = true
+    return formatter.string(from: NSNumber(value: value)) ?? "\(value)"
+}
+
+// MARK: - ChartLoadingState
 fileprivate enum ChartLoadingState {
     case none, loading, cancelled
 }
@@ -213,7 +257,6 @@ class ChartDataCache: ObservableObject {
     @Published var chartSnapshotPortfolio: UIImage? = nil
     @Published var chartSnapshotPortfolioLandscape: UIImage? = nil
 
-    // Add any other logic or initialisers if needed
     init() { }
 }
 
@@ -223,30 +266,29 @@ struct ContentView: View {
     @State private var oldAnnualCAGRValue: String = ""
     @State private var oldAnnualVolatilityValue: String = ""
     @State private var oldStandardDevValue: String = ""
-
+    
     // Focus for text fields
     @FocusState private var activeField: ActiveField?
-
+    
     @State private var isAtBottom: Bool = false
     @State private var lastViewedWeek: Int = 0
-
+    
     @State private var scrollToBottom: Bool = false
     @State private var lastScrollTime = Date()
     @State private var contentScrollProxy: ScrollViewProxy?
-
+    
     @State private var currentPage: Int = 0
     @State private var lastViewedPage: Int = 0
-
+    
     @State private var currentTip: String = ""
     @State private var showTip: Bool = false
     @State private var tipTimer: Timer? = nil
-
+    
     @State private var hideScrollIndicators = true
-
-    // No more local arrays. Use the new file’s data:
+    
     private var loadingTips: [String] { TipsData.filteredLoadingTips(for: simSettings) }
     private var usageTips: [String] { TipsData.filteredUsageTips(for: simSettings) }
-
+    
     // Columns in the table view (depending on the user’s currency preference):
     private var columns: [(String, PartialKeyPath<SimulationData>)] {
         switch simSettings.currencyPreference {
@@ -290,50 +332,47 @@ struct ContentView: View {
             ]
         }
     }
-
+    
     @State private var showSettings = false
     @State private var showAbout = false
     @State private var showHistograms = false
     @State private var showGraphics = false
-
+    
     @State private var tenthPercentileResults: [SimulationData] = []
     @State private var medianResults: [SimulationData] = []
     @State private var ninetiethPercentileResults: [SimulationData] = []
     @State private var selectedPercentile: PercentileChoice = .median
-
+    
     @State private var allSimData: [[SimulationData]] = []
-
+    
     @State private var chartLoadingState: ChartLoadingState = .none
-
+    
     @State private var showSnapshotView = false
     @State private var showSnapshotsDebug = false
-
+    
     @EnvironmentObject var simSettings: SimulationSettings
     @EnvironmentObject var inputManager: PersistentInputManager
     @EnvironmentObject var chartDataCache: ChartDataCache
     @EnvironmentObject var coordinator: SimulationCoordinator
-
+    
     var body: some View {
         NavigationStack {
             ZStack {
                 if !coordinator.isSimulationRun {
                     parametersScreen
-                    // Bottom icons only if not loading & keyboard not active
                     if !coordinator.isLoading && activeField == nil {
                         bottomIcons
                     }
                 } else {
                     simulationResultsView
                 }
-
-                // Show the “→” button if we have results + chart built
+                
                 if !coordinator.isSimulationRun &&
                     !coordinator.monteCarloResults.isEmpty &&
                     !coordinator.isChartBuilding {
                     transitionToResultsButton
                 }
-
-                // Loading / Chart-building overlay
+                
                 if coordinator.isLoading || coordinator.isChartBuilding {
                     loadingOverlayCombined
                 }
@@ -345,29 +384,22 @@ struct ContentView: View {
             .navigationDestination(isPresented: $showAbout) {
                 AboutView()
             }
-            // ADDED FOR DEFAULT BTC PRICE:
             .onAppear {
-                // If there's no stored lastViewedPage, assume fresh install
                 if UserDefaults.standard.object(forKey: "lastViewedPage") == nil {
-                    // Look for a column whose title contains "BTC Price"
                     if let btcPriceIndex = columns.firstIndex(where: { $0.0.contains("BTC Price") }) {
                         currentPage = btcPriceIndex
                         lastViewedPage = btcPriceIndex
                     }
                 } else {
-                    // Otherwise, restore from user defaults as usual
                     let savedWeek = UserDefaults.standard.integer(forKey: "lastViewedWeek")
                     if savedWeek != 0 {
                         lastViewedWeek = savedWeek
                     }
-
                     let savedPage = UserDefaults.standard.integer(forKey: "lastViewedPage")
                     if savedPage < columns.count {
                         lastViewedPage = savedPage
                         currentPage = savedPage
-                    }
-                    // If savedPage is out of range, just default to the first BTC Price column
-                    else if let usdIndex = columns.firstIndex(where: { $0.0.contains("BTC Price") }) {
+                    } else if let usdIndex = columns.firstIndex(where: { $0.0.contains("BTC Price") }) {
                         currentPage = usdIndex
                         lastViewedPage = usdIndex
                     }
@@ -388,7 +420,7 @@ struct ContentView: View {
             }
         }
     }
-
+    
     // MARK: - Parameter Screen
     private var parametersScreen: some View {
         ZStack {
@@ -398,22 +430,21 @@ struct ContentView: View {
                 endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
-
+            
             VStack(spacing: 30) {
                 Spacer().frame(height: 60)
-
+                
                 Text("HODL Simulator")
                     .font(.custom("AvenirNext-Heavy", size: 36))
                     .foregroundColor(.white)
                     .shadow(color: Color.white.opacity(0.6), radius: 6, x: 0, y: 0)
-
+                
                 Text("Set your simulation parameters")
                     .font(.callout)
                     .foregroundColor(.gray)
-
-                // Parameter card
+                
                 VStack(spacing: 20) {
-
+                    
                     // Row 1: Iterations & CAGR
                     HStack(spacing: 24) {
                         // Iterations
@@ -435,7 +466,7 @@ struct ContentView: View {
                                     }
                                 }
                         }
-
+                        
                         // CAGR
                         VStack(spacing: 4) {
                             Text("CAGR (%)")
@@ -456,7 +487,7 @@ struct ContentView: View {
                                 }
                         }
                     }
-
+                    
                     // Row 2: Vol & StdDev
                     HStack(spacing: 24) {
                         // Vol
@@ -478,7 +509,7 @@ struct ContentView: View {
                                     }
                                 }
                         }
-
+                        
                         // StdDev
                         VStack(spacing: 4) {
                             Text("StdDev")
@@ -499,13 +530,13 @@ struct ContentView: View {
                                 }
                         }
                     }
-
+                    
                     // Row 3: Toggles
                     HStack(spacing: 32) {
                         Toggle("Charts", isOn: $inputManager.generateGraphs)
                             .toggleStyle(CheckboxToggleStyle())
                             .foregroundColor(.white)
-
+                        
                         Toggle("Lock Seed", isOn: $simSettings.lockedRandomSeed)
                             .toggleStyle(CheckboxToggleStyle())
                             .foregroundColor(.white)
@@ -528,10 +559,8 @@ struct ContentView: View {
                         .fill(Color(white: 0.1).opacity(0.8))
                 )
                 .padding(.horizontal, 30)
-
-                // Run Simulation
+                
                 if coordinator.isLoading || coordinator.isChartBuilding {
-                    // Invisible placeholder so layout stays put
                     Text(" ")
                         .font(.callout)
                         .foregroundColor(.clear)
@@ -540,14 +569,14 @@ struct ContentView: View {
                         .background(Color.clear)
                         .cornerRadius(8)
                         .padding(.top, 6)
-
+                    
                     Spacer()
                 } else {
                     Button {
                         activeField = nil
                         coordinator.isLoading = true
                         coordinator.isChartBuilding = false
-
+                        
                         coordinator.runSimulation(
                             generateGraphs: inputManager.generateGraphs,
                             lockRandomSeed: simSettings.lockedRandomSeed
@@ -561,24 +590,22 @@ struct ContentView: View {
                             .cornerRadius(8)
                     }
                     .padding(.top, 6)
-
+                    
                     Spacer()
                 }
             }
         }
         .onTapGesture {
-            // Dismiss keyboard
             activeField = nil
         }
     }
-
-    // MARK: - If inputs change, clear cached chart
+    
     private func invalidateChartIfInputChanged() {
         coordinator.chartDataCache.allRuns = nil
         coordinator.chartDataCache.storedInputsHash = nil
     }
-
-    // MARK: - Bottom icons (gear, info)
+    
+    // MARK: - Bottom icons
     @ViewBuilder
     private var bottomIcons: some View {
         if !coordinator.isLoading && !coordinator.isChartBuilding {
@@ -592,9 +619,9 @@ struct ContentView: View {
                             .padding()
                     }
                     .padding(.leading, 15)
-
+                    
                     Spacer()
-
+                    
                     Button(action: { showSettings = true }) {
                         Image(systemName: "gearshape")
                             .font(.system(size: 28))
@@ -607,19 +634,17 @@ struct ContentView: View {
             }
         }
     }
-
+    
     // MARK: - Simulation Results Screen
     private var simulationResultsView: some View {
         ScrollViewReader { scrollProxy in
             ZStack {
                 Color(white: 0.12)
                     .edgesIgnoringSafeArea(.bottom)
-
+                
                 VStack(spacing: 0) {
-
-                    // -- Top bar --
+                    
                     HStack {
-                        // Back button
                         Button(action: {
                             UserDefaults.standard.set(lastViewedWeek, forKey: "lastViewedWeek")
                             UserDefaults.standard.set(currentPage, forKey: "lastViewedPage")
@@ -632,17 +657,15 @@ struct ContentView: View {
                                 .frame(width: 40, height: 40)
                         }
                         .padding(.leading, 42)
-
+                        
                         Spacer()
-
-                        // Centre title
+                        
                         Text("Simulation Results")
                             .foregroundColor(.white)
                             .font(.headline)
-
+                        
                         Spacer()
-
-                        // Chart button
+                        
                         Button(action: {
                             showHistograms = true
                         }) {
@@ -656,19 +679,16 @@ struct ContentView: View {
                     }
                     .padding(.vertical, 10)
                     .background(Color(white: 0.12))
-
-                    // -- Calculate & show Summary Card --
+                    
                     let (finalBTCPrice, finalPortfolioValue, growthPercent, currencySymbol) = calculateSummaryValues()
-
+                    
                     SimulationSummaryCardView(
                         finalBTCPrice: finalBTCPrice,
                         finalPortfolioValue: finalPortfolioValue,
                         growthPercent: growthPercent,
                         currencySymbol: currencySymbol
                     )
-                    // -------------------------------------
-
-                    // -- Column headers --
+                    
                     HStack(spacing: 0) {
                         Text(simSettings.periodUnit == .weeks ? "Week" : "Month")
                             .frame(width: 60, alignment: .leading)
@@ -677,7 +697,7 @@ struct ContentView: View {
                             .padding(.vertical, 8)
                             .background(Color.black)
                             .foregroundColor(.orange)
-
+                        
                         ZStack {
                             Text(columns[currentPage].0)
                                 .font(.headline)
@@ -686,7 +706,7 @@ struct ContentView: View {
                                 .background(Color.black)
                                 .foregroundColor(.orange)
                                 .frame(maxWidth: .infinity, alignment: .leading)
-
+                            
                             GeometryReader { geometry in
                                 HStack(spacing: 0) {
                                     Color.clear
@@ -712,21 +732,19 @@ struct ContentView: View {
                         .frame(height: 50)
                     }
                     .background(Color.black)
-
-                    // -- Main data scroll --
+                    
                     ScrollView(.vertical, showsIndicators: !hideScrollIndicators) {
-
+                        
                         let displayedResults = coordinator.monteCarloResults
-
+                        
                         HStack(spacing: 0) {
-                            // Left column
                             VStack(spacing: 0) {
                                 ForEach(displayedResults.indices, id: \.self) { index in
                                     let result = displayedResults[index]
                                     let rowBackground = index.isMultiple(of: 2)
-                                        ? Color(white: 0.10)
-                                        : Color(white: 0.14)
-
+                                    ? Color(white: 0.10)
+                                    : Color(white: 0.14)
+                                    
                                     Text("\(result.week)")
                                         .frame(width: 70, alignment: .leading)
                                         .padding(.leading, 50)
@@ -738,8 +756,7 @@ struct ContentView: View {
                                         .background(RowOffsetReporter(week: result.week))
                                 }
                             }
-
-                            // Right column (pages)
+                            
                             TabView(selection: $currentPage) {
                                 ForEach(0..<columns.count, id: \.self) { idx in
                                     ZStack {
@@ -747,10 +764,10 @@ struct ContentView: View {
                                             ForEach(displayedResults.indices, id: \.self) { rowIndex in
                                                 let rowResult = displayedResults[rowIndex]
                                                 let rowBackground = rowIndex.isMultiple(of: 2)
-                                                    ? Color(white: 0.10)
-                                                    : Color(white: 0.14)
-
-                                                Text(getValue(rowResult, columns[idx].1))
+                                                ? Color(white: 0.10)
+                                                : Color(white: 0.14)
+                                                
+                                                Text(getValueForTable(rowResult, columns[idx].1))
                                                     .frame(maxWidth: .infinity, alignment: .leading)
                                                     .padding(.leading, 80)
                                                     .padding(.vertical, 12)
@@ -793,12 +810,12 @@ struct ContentView: View {
                         .onPreferenceChange(RowOffsetPreferenceKey.self) { offsets in
                             let targetY: CGFloat = 160 + 120
                             let finalWeeks = simSettings.userPeriods
-
+                            
                             let filtered = offsets.filter { (week, _) in
                                 week >= 0 && week <= finalWeeks
                             }
                             let mapped = filtered.mapValues { abs($0 - targetY) }
-
+                            
                             if let (closestWeek, _) = mapped.min(by: { $0.value < $1.value }) {
                                 lastViewedWeek = closestWeek
                             }
@@ -833,7 +850,6 @@ struct ContentView: View {
                                 }
                         )
                     }
-                    // Re-hide indicators after a bit
                     .onReceive(
                         Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()
                     ) { _ in
@@ -849,8 +865,7 @@ struct ContentView: View {
                     UserDefaults.standard.set(lastViewedWeek, forKey: "lastViewedWeek")
                     UserDefaults.standard.set(currentPage, forKey: "lastViewedPage")
                 }
-
-                // -- Jump to bottom button --
+                
                 if !isAtBottom {
                     VStack {
                         Spacer()
@@ -870,44 +885,37 @@ struct ContentView: View {
             }
         }
     }
-
-    // MARK: - Calculate final BTC price, portfolio, growth (accounting for contributions)
+    
     private func calculateSummaryValues() -> (Double, Double, Double, String) {
         guard let lastRow = coordinator.monteCarloResults.last else {
-            // Return zeros and a default symbol
             return (0, 0, 0, "$")
         }
-
-        // 1) Convert from Decimal to Double
+        
         let finalBTC = simSettings.currencyPreference == .eur
-            ? NSDecimalNumber(decimal: lastRow.btcPriceEUR).doubleValue
-            : NSDecimalNumber(decimal: lastRow.btcPriceUSD).doubleValue
-
+        ? NSDecimalNumber(decimal: lastRow.btcPriceEUR).doubleValue
+        : NSDecimalNumber(decimal: lastRow.btcPriceUSD).doubleValue
+        
         let finalPortfolio: Double
         if simSettings.currencyPreference == .eur {
             finalPortfolio = NSDecimalNumber(decimal: lastRow.portfolioValueEUR).doubleValue
         } else {
             finalPortfolio = NSDecimalNumber(decimal: lastRow.portfolioValueUSD).doubleValue
         }
-
-        // 2) Sum all contributions
+        
         let totalContributions = coordinator.monteCarloResults.reduce(0.0) { partialSum, row in
             partialSum + row.contributionUSD
         }
-
-        // 3) Calculate growth % = ((final - totalContributions) / totalContributions) * 100
+        
         var growth = 0.0
         if totalContributions > 0 {
             growth = (finalPortfolio - totalContributions) / totalContributions * 100.0
         }
-
-        // 4) Decide which currency symbol to show
+        
         let symbol = (simSettings.currencyPreference == .eur) ? "€" : "$"
-
+        
         return (finalBTC, finalPortfolio, growth, symbol)
     }
-
-    // MARK: - Next arrow to show results
+    
     private var transitionToResultsButton: some View {
         VStack {
             HStack {
@@ -938,14 +946,13 @@ struct ContentView: View {
             Spacer()
         }
     }
-
-    // MARK: - Loading Overlay
+    
     private var loadingOverlayCombined: some View {
         ZStack {
             Color.black.opacity(0.6).ignoresSafeArea()
             VStack(spacing: 0) {
                 Spacer().frame(height: 250)
-
+                
                 HStack {
                     Spacer()
                     if coordinator.isLoading && !coordinator.isChartBuilding {
@@ -961,21 +968,21 @@ struct ContentView: View {
                     }
                 }
                 .offset(y: 220)
-
+                
                 if coordinator.isLoading {
                     InteractiveBitcoinSymbol3DSpinner()
                         .padding(.bottom, 30)
-
+                    
                     VStack(spacing: 17) {
                         Text("Simulating: \(coordinator.completedIterations) / \(coordinator.totalIterations)")
                             .font(.body.monospacedDigit())
                             .foregroundColor(.white)
-
+                        
                         ProgressView(value: Double(coordinator.completedIterations),
                                      total: Double(coordinator.totalIterations))
-                            .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
-                            .scaleEffect(x: 1, y: 2, anchor: .center)
-                            .frame(width: 200)
+                        .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
+                        .scaleEffect(x: 1, y: 2, anchor: .center)
+                        .frame(width: 200)
                     }
                     .padding(.bottom, 20)
                 }
@@ -985,7 +992,7 @@ struct ContentView: View {
                             .font(.headline)
                             .foregroundColor(.white)
                             .padding(.bottom, 20)
-
+                        
                         ProgressView()
                             .progressViewStyle(
                                 CircularProgressViewStyle(
@@ -995,10 +1002,10 @@ struct ContentView: View {
                             .scaleEffect(2.0)
                     }
                     .offset(y: 270)
-
+                    
                     Spacer().frame(height: 30)
                 }
-
+                
                 if showTip && coordinator.isLoading {
                     Text(currentTip)
                         .foregroundColor(.white)
@@ -1008,27 +1015,26 @@ struct ContentView: View {
                         .transition(.opacity)
                         .padding(.bottom, 30)
                 }
-
+                
                 Spacer()
             }
         }
         .onAppear { startTipCycle() }
         .onDisappear { stopTipCycle() }
     }
-
-    // MARK: - Tip cycle
+    
     private func startTipCycle() {
         showTip = false
         tipTimer?.invalidate()
         tipTimer = nil
-
+        
         DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
             currentTip = loadingTips.randomElement() ?? ""
             withAnimation(.easeInOut(duration: 2)) {
                 showTip = true
             }
         }
-
+        
         tipTimer = Timer.scheduledTimer(withTimeInterval: 20, repeats: true) { _ in
             withAnimation(.easeInOut(duration: 2)) {
                 showTip = false
@@ -1041,51 +1047,68 @@ struct ContentView: View {
             }
         }
     }
-
+    
     private func stopTipCycle() {
         tipTimer?.invalidate()
         tipTimer = nil
         showTip = false
     }
-
-    // MARK: - Data Formatting
-    private func getValue(_ item: SimulationData, _ keyPath: PartialKeyPath<SimulationData>) -> String {
-        // 1) If the field is a Decimal:
+    
+    // MARK: - This is where we changed logic for Decimal fields to also get suffix:
+    private func getValueForTable(_ item: SimulationData, _ keyPath: PartialKeyPath<SimulationData>) -> String {
+        // If the field is a Decimal:
         if let decimalVal = item[keyPath: keyPath] as? Decimal {
             let doubleValue = NSDecimalNumber(decimal: decimalVal).doubleValue
-            return doubleValue.formattedCurrency()
-
-        // 2) If the field is a Double:
-        } else if let doubleVal = item[keyPath: keyPath] as? Double {
+            
+            // Added a matching switch here so large decimals also get suffix formatting
             switch keyPath {
-            case \SimulationData.startingBTC,
-                 \SimulationData.netBTCHoldings,
-                 \SimulationData.netContributionBTC:
-                return doubleVal.formattedBTC()
             case \SimulationData.btcPriceUSD,
                  \SimulationData.btcPriceEUR,
                  \SimulationData.portfolioValueEUR,
                  \SimulationData.portfolioValueUSD:
-                return doubleVal.formattedCurrency()
-
+                if abs(doubleValue) < 1_000_000_000_000_000 {
+                    return doubleValue.formattedCurrency()
+                } else {
+                    return doubleValue.formattedWithPowerOfTenSuffix()
+                }
+                
+            default:
+                // For other Decimals, do normal currency
+                return doubleValue.formattedCurrency()
+            }
+            
+        } else if let doubleVal = item[keyPath: keyPath] as? Double {
+            switch keyPath {
+                
+            case \SimulationData.startingBTC,
+                 \SimulationData.netBTCHoldings,
+                 \SimulationData.netContributionBTC:
+                return doubleVal.formattedBTC()
+                
+            case \SimulationData.btcPriceUSD,
+                 \SimulationData.btcPriceEUR,
+                 \SimulationData.portfolioValueEUR,
+                 \SimulationData.portfolioValueUSD:
+                if abs(doubleVal) < 1_000_000_000_000_000 {
+                    return doubleVal.formattedCurrency()
+                } else {
+                    return doubleVal.formattedWithPowerOfTenSuffix()
+                }
+                
             case \SimulationData.contributionEUR,
-                 \SimulationData.contributionUSD:
-                return doubleVal.formattedCurrency()
-
-            case \SimulationData.transactionFeeEUR,
+                 \SimulationData.contributionUSD,
+                 \SimulationData.transactionFeeEUR,
                  \SimulationData.transactionFeeUSD,
                  \SimulationData.withdrawalEUR,
                  \SimulationData.withdrawalUSD:
                 return doubleVal.formattedCurrency()
+                
             default:
                 return String(format: "%.2f", doubleVal)
             }
-
-        // 3) If the field is an Int:
+            
         } else if let intVal = item[keyPath: keyPath] as? Int {
             return "\(intVal)"
-
-        // 4) Otherwise (e.g. a String?), return empty or handle differently
         } else {
             return ""
         }
