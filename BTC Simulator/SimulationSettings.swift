@@ -41,8 +41,6 @@ class SimulationSettings: ObservableObject {
     @Published var startingBalanceCurrencyWhenBoth: PreferredCurrency = .usd
     @Published var lastRunResults: [SimulationData] = []
     @Published var allRuns: [[SimulationData]] = []
-    
-    public var useMeanReversion: Bool = true
 
     var isInitialized = false
     var isUpdating = false
@@ -131,6 +129,11 @@ class SimulationSettings: ObservableObject {
             guard isInitialized else { return }
             print("didSet: useAutoCorrelation changed to \(useAutoCorrelation)")
             UserDefaults.standard.set(useAutoCorrelation, forKey: "useAutoCorrelation")
+
+            // Force mean reversion off whenever autocorrelation is turned off:
+            if !useAutoCorrelation {
+                useMeanReversion = false
+            }
         }
     }
     
@@ -147,6 +150,14 @@ class SimulationSettings: ObservableObject {
             guard isInitialized else { return }
             print("didSet: meanReversionTarget changed to \(meanReversionTarget)")
             UserDefaults.standard.set(meanReversionTarget, forKey: "meanReversionTarget")
+        }
+    }
+    
+    @Published var useMeanReversion: Bool = true {
+        didSet {
+            guard isInitialized else { return }
+            print("didSet: useMeanReversion changed to \(useMeanReversion)")
+            UserDefaults.standard.set(useMeanReversion, forKey: "useMeanReversion")
         }
     }
     
@@ -326,6 +337,8 @@ class SimulationSettings: ObservableObject {
     func loadFromUserDefaults() {
         let defaults = UserDefaults.standard
         
+        isInitialized = true
+        
         useLognormalGrowth = defaults.bool(forKey: "useLognormalGrowth")
         lockedRandomSeed = defaults.bool(forKey: "lockedRandomSeed")
         seedValue = defaults.object(forKey: "seedValue") as? UInt64 ?? 0
@@ -363,6 +376,12 @@ class SimulationSettings: ObservableObject {
             self.meanReversionTarget = 0.03  // new default
         } else {
             self.meanReversionTarget = defaults.double(forKey: "meanReversionTarget")
+        }
+        
+        if defaults.object(forKey: "useMeanReversion") == nil {
+            useMeanReversion = true  // your chosen default
+        } else {
+            useMeanReversion = defaults.bool(forKey: "useMeanReversion")
         }
     }
 

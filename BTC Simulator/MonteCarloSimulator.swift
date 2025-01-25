@@ -9,13 +9,11 @@ import Foundation
 import SwiftUI
 import GameplayKit // for GKARC4RandomSource
 
-// MARK: - Extend SimulationSettings to include our new toggle
+// MARK: - Extend SimulationSettings to include our new toggle (example only)
 extension SimulationSettings {
     /// If true, annualStepFactor mode will *ignore* mean reversion (even if useMeanReversion is on).
     /// If false, annualStepFactor mode will apply mean reversion as well.
     var disableMeanReversionWhenannualStepFactor: Bool {
-        // You can store this in your persistent settings or just define a default here.
-        // For demonstration, I return true by default to skip mean reversion in annualStepFactor mode.
         get { return true }
     }
 }
@@ -124,15 +122,15 @@ private func runWeeklySimulation(
     // Extended historical sample
     var extendedBlock = [Double]()
     if settings.useExtendedHistoricalSampling {
-        if totalWeeklySteps <= extendedWeeklyReturns.count {
+        if totalWeeklySteps <= historicalBTCWeeklyReturns.count {
             extendedBlock = pickContiguousBlock(
-                from: extendedWeeklyReturns,
+                from: historicalBTCWeeklyReturns,
                 count: totalWeeklySteps,
                 rng: rng
             )
         } else {
             extendedBlock = pickMultiChunkBlock(
-                from: extendedWeeklyReturns,
+                from: historicalBTCWeeklyReturns,
                 totalNeeded: totalWeeklySteps,
                 rng: rng,
                 chunkSize: 52
@@ -140,7 +138,7 @@ private func runWeeklySimulation(
         }
     }
 
-    // Read our new toggle for single annual step
+    // Read our toggle for single annual step
     let useAnnualStep = settings.useAnnualStep
     
     for currentWeek in 1...totalWeeklySteps {
@@ -161,84 +159,47 @@ private func runWeeklySimulation(
             currentVol *= regimeModel.currentRegime.volMultiplier
         }
 
-        // ─── Single Annual Step ──────────────────────────────────────────
+        // Single Annual Step
         if useAnnualStep {
             // Only apply the annual CAGR jump once a year => the final week of each year (52, 104, etc.)
             if Double(currentWeek).truncatingRemainder(dividingBy: 52.0) == 0 {
-                let yearIndex = currentWeek / 52
-                var annualGrowth = cagrDecimal  // e.g. 0.30 for 30%
-                
-                // Optional vol shock
-                if settings.useVolShocks && annualVolatility > 0 {
-                    let shockVol = randomNormalWithRNG(mean: 0, standardDeviation: currentVol, rng: rng)
-                    annualGrowth = (1 + annualGrowth) * exp(shockVol) - 1
-                }
-                
-                // Mean reversion
-                if settings.useMeanReversion {
-                    let reversionFactor = 0.1
-                    let distance = (settings.meanReversionTarget - annualGrowth)
-                    annualGrowth += (reversionFactor * distance)
-                }
-                
-                // Autocorrelation
-                if settings.useAutoCorrelation {
-                    let phi = settings.autoCorrelationStrength
-                    annualGrowth = (1 - phi) * annualGrowth + phi * lastAutoReturn
-                }
-
-                // Factor toggles (bull/bear toggles)
-                annualGrowth = applyFactorToggles(
-                    baseReturn: annualGrowth,
-                    stepIndex: currentWeek,
+                let annualGrowth = annualStepUpdate(
                     settings: settings,
-                    mempoolDataManager: mempoolDataManager,
+                    cagrDecimal: cagrDecimal,
+                    annualVolatility: annualVolatility,  // pass it in
+                    currentVol: currentVol,
+                    lastAutoReturn: lastAutoReturn,
+                    lastStepLogReturn: &lastStepLogReturn,
                     rng: rng
                 )
-
-                // Additional annual step factor (if any)
-                let factor = annualStepAdjustFactor(settings: settings, annualVolatility: annualVolatility)
-                annualGrowth *= factor
-
-                print("  annualGrowth after toggles => \(annualGrowth)")
-                
-                // Apply the growth
                 prevBTCPriceUSD *= (1 + annualGrowth)
-
-                lastStepLogReturn = log(1 + annualGrowth)
-                lastAutoReturn    = annualGrowth
+                lastAutoReturn = annualGrowth
             }
         }
-        // ─── Weekly Step ────────────────────────────────────────────────
+        // Normal Weekly Step
         else {
-            // extended historical
             if settings.useExtendedHistoricalSampling, !extendedBlock.isEmpty {
                 var weeklySample = extendedBlock[currentWeek - 1]
                 weeklySample = dampenArctanWeekly(weeklySample)
                 totalReturn += weeklySample
             }
-            // basic historical
             else if settings.useHistoricalSampling {
                 var weeklySample = pickRandomReturn(from: historicalBTCWeeklyReturns, rng: rng)
                 weeklySample = dampenArctanWeekly(weeklySample)
                 totalReturn += weeklySample
             }
-            // lognormal
             if settings.useLognormalGrowth {
                 totalReturn += (cagrDecimal / 52.0)
             }
-            // volatility shock
             if settings.useVolShocks {
                 let shockVol = randomNormalWithRNG(mean: 0, standardDeviation: currentVol, rng: rng)
                 totalReturn += shockVol
             }
-            // mean reversion
             if settings.useMeanReversion {
                 let reversionFactor = 0.1
                 let distance = (settings.meanReversionTarget - totalReturn)
                 totalReturn += (reversionFactor * distance)
             }
-            // auto-corr
             if settings.useAutoCorrelation {
                 let phi = settings.autoCorrelationStrength
                 totalReturn = (1 - phi) * totalReturn + phi * lastAutoReturn
@@ -326,6 +287,56 @@ private func runWeeklySimulation(
     return results
 }
 
+// MARK: - Single Annual Step Helper
+private func annualStepUpdate(
+    settings: SimulationSettings,
+    cagrDecimal: Double,
+    annualVolatility: Double,  // pass annualVol here
+    currentVol: Double,
+    lastAutoReturn: Double,
+    lastStepLogReturn: inout Double,
+    rng: GKRandomSource
+) -> Double {
+    var annualGrowth = cagrDecimal
+    
+    // Vol shocks
+    if settings.useVolShocks && annualVolatility > 0 {
+        let shockVol = randomNormalWithRNG(mean: 0, standardDeviation: currentVol, rng: rng)
+        annualGrowth = (1 + annualGrowth) * exp(shockVol) - 1
+    }
+
+    // Mean reversion
+    if settings.useMeanReversion {
+        let reversionFactor = 0.1
+        let distance = (settings.meanReversionTarget - annualGrowth)
+        annualGrowth += (reversionFactor * distance)
+    }
+
+    // Autocorrelation
+    if settings.useAutoCorrelation {
+        let phi = settings.autoCorrelationStrength
+        annualGrowth = (1 - phi) * annualGrowth + phi * lastAutoReturn
+    }
+    
+    // Factor toggles
+    annualGrowth = applyFactorToggles(
+        baseReturn: annualGrowth,
+        stepIndex: 0,
+        settings: settings,
+        mempoolDataManager: MempoolDataManager(mempoolData: []),
+        rng: rng
+    )
+    
+    let factor = annualStepAdjustFactor(
+        settings: settings,
+        annualVolatility: annualVolatility
+    )
+    annualGrowth *= factor
+    
+    lastStepLogReturn = log(1 + annualGrowth)
+    return annualGrowth
+}
+
 // MARK: - MONTHLY SIM
 private func runMonthlySimulation(
     settings: SimulationSettings,
@@ -372,15 +383,15 @@ private func runMonthlySimulation(
 
     var extendedBlock = [Double]()
     if settings.useExtendedHistoricalSampling {
-        if totalMonths <= extendedMonthlyReturns.count {
+        if totalMonths <= historicalBTCMonthlyReturns.count {
             extendedBlock = pickContiguousBlock(
-                from: extendedMonthlyReturns,
+                from: historicalBTCMonthlyReturns,
                 count: totalMonths,
                 rng: rng
             )
         } else {
             extendedBlock = pickMultiChunkBlock(
-                from: extendedMonthlyReturns,
+                from: historicalBTCMonthlyReturns,
                 totalNeeded: totalMonths,
                 rng: rng,
                 chunkSize: 12
@@ -408,51 +419,23 @@ private func runMonthlySimulation(
             currentVol *= regimeModel.currentRegime.volMultiplier
         }
 
-        // ─── Single Annual Step (once a year => every 12 mo) ────────────
+        // Single Annual Step (once a year => every 12 months)
         if useAnnualStep {
             if Double(currentMonth).truncatingRemainder(dividingBy: 12.0) == 0 {
-                let yearIndex = currentMonth / 12
-                print("=== Year \(yearIndex) START ===")
-                print("Price before step => \(prevBTCPriceUSD)")
-
-                var annualGrowth = cagrDecimal
-                if settings.useVolShocks && annualVolatility > 0 {
-                    let shockVol = randomNormalWithRNG(mean: 0, standardDeviation: currentVol, rng: rng)
-                    annualGrowth = (1 + annualGrowth) * exp(shockVol) - 1
-                }
-                if settings.useMeanReversion {
-                    let reversionFactor = 0.5
-                    let distance = (settings.meanReversionTarget - annualGrowth)
-                    annualGrowth += (reversionFactor * distance)
-                }
-                if settings.useAutoCorrelation {
-                    let phi = settings.autoCorrelationStrength
-                    annualGrowth = (1 - phi) * annualGrowth + phi * lastAutoReturn
-                }
-                
-                annualGrowth = applyFactorToggles(
-                    baseReturn: annualGrowth,
-                    stepIndex: currentMonth,
+                let annualGrowth = annualStepUpdateMonthly(
                     settings: settings,
-                    mempoolDataManager: mempoolDataManager,
+                    cagrDecimal: cagrDecimal,
+                    annualVolatility: annualVolatility,  // pass it
+                    currentVol: currentVol,
+                    lastAutoReturn: lastAutoReturn,
+                    lastStepLogReturn: &lastStepLogReturn,
                     rng: rng
                 )
-                
-                let factor = annualStepAdjustFactor(settings: settings, annualVolatility: annualVolatility)
-                annualGrowth *= factor
-                
-                print("  annualGrowth after toggles => \(annualGrowth)")
-                
                 prevBTCPriceUSD *= (1 + annualGrowth)
-                
-                print("Price after step => \(prevBTCPriceUSD)")
-                print("=== Year \(yearIndex) END ===\n")
-
-                lastStepLogReturn = log(1 + annualGrowth)
-                lastAutoReturn    = annualGrowth
+                lastAutoReturn = annualGrowth
             }
         }
-        // ─── Normal Monthly Step ────────────────────────────────────────
+        // Normal Monthly Step
         else {
             if settings.useExtendedHistoricalSampling, !extendedBlock.isEmpty {
                 var monthlySample = extendedBlock[currentMonth - 1]
@@ -564,6 +547,49 @@ private func runMonthlySimulation(
     return results
 }
 
+// MARK: - Single Annual Step Helper (Monthly)
+private func annualStepUpdateMonthly(
+    settings: SimulationSettings,
+    cagrDecimal: Double,
+    annualVolatility: Double,  // new param
+    currentVol: Double,
+    lastAutoReturn: Double,
+    lastStepLogReturn: inout Double,
+    rng: GKRandomSource
+) -> Double {
+    var annualGrowth = cagrDecimal
+    
+    if settings.useVolShocks && annualVolatility > 0 {
+        let shockVol = randomNormalWithRNG(mean: 0, standardDeviation: currentVol, rng: rng)
+        annualGrowth = (1 + annualGrowth) * exp(shockVol) - 1
+    }
+    
+    if settings.useMeanReversion {
+        let reversionFactor = 0.5
+        let distance = (settings.meanReversionTarget - annualGrowth)
+        annualGrowth += (reversionFactor * distance)
+    }
+    
+    if settings.useAutoCorrelation {
+        let phi = settings.autoCorrelationStrength
+        annualGrowth = (1 - phi) * annualGrowth + phi * lastAutoReturn
+    }
+    
+    annualGrowth = applyFactorToggles(
+        baseReturn: annualGrowth,
+        stepIndex: 0,
+        settings: settings,
+        mempoolDataManager: MempoolDataManager(mempoolData: []),
+        rng: rng
+    )
+
+    let factor = annualStepAdjustFactor(settings: settings, annualVolatility: annualVolatility)
+    annualGrowth *= factor
+
+    lastStepLogReturn = log(1 + annualGrowth)
+    return annualGrowth
+}
+
 // MARK: - Single Simulation Entry
 func runOneFullSimulation(
     settings: SimulationSettings,
@@ -671,6 +697,7 @@ func runMonteCarloSimulationsWithProgress(
     for i in 0..<iterations {
         if isCancelled() { break }
         
+        // Tiny delay to simulate progress
         Thread.sleep(forTimeInterval: 0.01)
 
         let simRun = runOneFullSimulation(
@@ -695,15 +722,18 @@ func runMonteCarloSimulationsWithProgress(
         return ([], [], [])
     }
     
+    // Sort runs by final EUR value, pick median
     let finalValues = allRuns.map { ($0.last?.portfolioValueEUR ?? Decimal.zero, $0) }
     let sorted = finalValues.sorted { $0.0 < $1.0 }
     let medianRun = sorted[sorted.count / 2].1
+    
+    // Compute step-by-step median BTC
     let stepMedians = computeMedianBTCPriceByStep(allRuns: allRuns)
 
     return (medianRun, allRuns, stepMedians)
 }
 
-/// Example aligners (unchanged)
+// Aligners for SP500 (optional)
 func alignWeeklyData() {
     let minCount = min(historicalBTCWeeklyReturns.count, sp500WeeklyReturns.count)
     let partialBTC = Array(historicalBTCWeeklyReturns.prefix(minCount))
