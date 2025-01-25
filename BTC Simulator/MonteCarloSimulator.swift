@@ -9,10 +9,18 @@ import Foundation
 import SwiftUI
 import GameplayKit // for GKARC4RandomSource
 
-// ──────────────────────────────────────────────────────────────────────────
-// Global arrays for weekly/monthly historical returns
-// (Populated elsewhere; used here by the simulator.)
-// ──────────────────────────────────────────────────────────────────────────
+// MARK: - Extend SimulationSettings to include our new toggle
+extension SimulationSettings {
+    /// If true, lumpsum mode will *ignore* mean reversion (even if useMeanReversion is on).
+    /// If false, lumpsum mode will apply mean reversion as well.
+    var disableMeanReversionWhenLumpsum: Bool {
+        // You can store this in your persistent settings or just define a default here.
+        // For demonstration, I return true by default to skip mean reversion in lumpsum mode.
+        get { return true }
+    }
+}
+
+// MARK: - Global Arrays
 var historicalBTCWeeklyReturns: [Double] = []
 var sp500WeeklyReturns: [Double] = []
 var weightedBTCWeeklyReturns: [Double] = []
@@ -20,17 +28,8 @@ var weightedBTCWeeklyReturns: [Double] = []
 var historicalBTCMonthlyReturns: [Double] = []
 var sp500MonthlyReturns: [Double] = []
 
-// ──────────────────────────────────────────────────────────────────────────
-// Probability thresholds & intervals (legacy constants)
-// ──────────────────────────────────────────────────────────────────────────
-private let halvingIntervalGuess = 210.0
-private let blackSwanIntervalGuess = 400.0
-private let halvingIntervalGuessMonths: Double = 48.0
-private let blackSwanIntervalGuessMonths: Double = 92.0
-
-// MARK: - Historical Return Picker
-/// We make this non-fileprivate so it can be used in other files if needed.
-func pickRandomReturn(from arr: [Double], rng: GKRandomSource) -> Double {
+// MARK: - pickRandomReturn
+public func pickRandomReturn(from arr: [Double], rng: GKRandomSource) -> Double {
     guard !arr.isEmpty else { return 0.0 }
     let idx = rng.nextInt(upperBound: arr.count)
     return arr[idx]
@@ -52,7 +51,6 @@ fileprivate func pickContiguousBlock(
 }
 
 // MARK: - pickMultiChunkBlock
-/// Stitches multiple contiguous chunks to get `totalNeeded` data points.
 fileprivate func pickMultiChunkBlock(
     from source: [Double],
     totalNeeded: Int,
@@ -63,9 +61,9 @@ fileprivate func pickMultiChunkBlock(
         return []
     }
     var stitched = [Double]()
+
     while stitched.count < totalNeeded {
         if chunkSize > source.count {
-            // If chunkSize is bigger than entire data, just append all
             stitched.append(contentsOf: source)
         } else {
             let maxStart = source.count - chunkSize
@@ -96,16 +94,14 @@ private func runWeeklySimulation(
     var prevBTCPriceUSD = initialBTCPriceUSD
     var prevBTCHoldings = 0.0
     
-    // Convert user’s CAGR: e.g. 30 => 0.30
     var cagrDecimal = annualCAGR / 100.0
-    // Base weekly volatility if NOT using GARCH
     var baseWeeklyVol = (annualVolatility / 100.0) / sqrt(52.0)
 
-    // GARCH model to use
+    // GARCH
     var garchModelToUse: GarchModel
-    if let fittedModel = garchModel, settings.useGarchVolatility {
+    if let fitted = garchModel, settings.useGarchVolatility {
         let initialVol = baseWeeklyVol
-        var copy = fittedModel
+        var copy = fitted
         copy.currentVariance = initialVol * initialVol
         garchModelToUse = copy
     } else {
@@ -119,14 +115,13 @@ private func runWeeklySimulation(
     
     var regimeModel = RegimeSwitchingModel()
     
-    // Contribution
     let firstYearVal  = (settings.inputManager?.firstYearContribution as NSString?)?.doubleValue ?? 0
     let secondYearVal = (settings.inputManager?.subsequentContribution as NSString?)?.doubleValue ?? 0
     
     var lastStepLogReturn = 0.0
     var lastAutoReturn    = 0.0
 
-    // Extended sampling: single slice or multi-chunk
+    // Extended historical sample
     var extendedBlock = [Double]()
     if settings.useExtendedHistoricalSampling {
         if totalWeeklySteps <= extendedWeeklyReturns.count {
@@ -154,39 +149,38 @@ private func runWeeklySimulation(
             baseWeeklyVol = ((annualVolatility / 100.0) / sqrt(52.0)) * regimeModel.currentRegime.volMultiplier
         }
         
-        // lumpsum => no historical sampling or lognormal growth
+        // lumpsum => no historical sampling or lognormal
         let lumpsum = (!settings.useHistoricalSampling && !settings.useLognormalGrowth)
         var totalReturn = 0.0
         
-        // If GARCH is on, use its volatility; otherwise, base
         var currentVol = settings.useGarchVolatility
             ? garchModelToUse.currentStdDev()
             : baseWeeklyVol
         
-        // If regime switching is on, scale again
         if settings.useRegimeSwitching {
             currentVol *= regimeModel.currentRegime.volMultiplier
         }
 
-        // ─── LUMPSUM LOGIC (Yearly) ──────────────────────────
+        // ─── LUMPSUM (Yearly) ──────────────────────────────────────────────
         if lumpsum {
             // Only do lumpsum once a year => every 52 weeks
             if Double(currentWeek).truncatingRemainder(dividingBy: 52.0) == 0 {
                 var lumpsumGrowth = cagrDecimal
                 
+                // Optional vol shock
                 if settings.useVolShocks && annualVolatility > 0 {
                     let shockVol = randomNormalWithRNG(mean: 0, standardDeviation: currentVol, rng: rng)
                     lumpsumGrowth = (1 + lumpsumGrowth) * exp(shockVol) - 1
                 }
                 
-                // If user wants mean reversion in lumpsum:
-                if settings.useMeanReversion {
+                // Only apply mean reversion if user wants it AND lumpsum ignoring is turned off
+                if settings.useMeanReversion && !settings.disableMeanReversionWhenLumpsum {
                     let reversionFactor = 0.1
                     let distance = (settings.meanReversionTarget - lumpsumGrowth)
                     lumpsumGrowth += (reversionFactor * distance)
                 }
                 
-                // If user wants autocorrelation in lumpsum:
+                // If lumpsum user wants auto-corr
                 if settings.useAutoCorrelation {
                     let phi = settings.autoCorrelationStrength
                     lumpsumGrowth = (1 - phi) * lumpsumGrowth + phi * lastAutoReturn
@@ -200,44 +194,46 @@ private func runWeeklySimulation(
                     mempoolDataManager: mempoolDataManager,
                     rng: rng
                 )
-                
-                // Possibly scale lumpsum
+                // lumpsum scaling
                 let factor = lumpsumAdjustFactor(settings: settings, annualVolatility: annualVolatility)
                 lumpsumGrowth *= factor
 
-                // Apply lumpsum growth
+                // Apply lumpsum
                 prevBTCPriceUSD *= (1 + lumpsumGrowth)
                 
                 lastStepLogReturn = log(1 + lumpsumGrowth)
                 lastAutoReturn    = lumpsumGrowth
             }
-
-        // ─── WEEKLY SAMPLING LOGIC ───────────────────────────
+        // ─── WEEKLY SAMPLING ──────────────────────────────────────────────
         } else {
+            // extended historical
             if settings.useExtendedHistoricalSampling, !extendedBlock.isEmpty {
                 var weeklySample = extendedBlock[currentWeek - 1]
                 weeklySample = dampenArctanWeekly(weeklySample)
                 totalReturn += weeklySample
             }
+            // basic historical
             else if settings.useHistoricalSampling {
                 var weeklySample = pickRandomReturn(from: historicalBTCWeeklyReturns, rng: rng)
                 weeklySample = dampenArctanWeekly(weeklySample)
                 totalReturn += weeklySample
             }
+            // lognormal
             if settings.useLognormalGrowth {
                 totalReturn += (cagrDecimal / 52.0)
             }
+            // volatility shock
             if settings.useVolShocks {
                 let shockVol = randomNormalWithRNG(mean: 0, standardDeviation: currentVol, rng: rng)
                 totalReturn += shockVol
             }
-            
+            // mean reversion
             if settings.useMeanReversion {
                 let reversionFactor = 0.1
                 let distance = (settings.meanReversionTarget - totalReturn)
                 totalReturn += (reversionFactor * distance)
             }
-
+            // auto-corr
             if settings.useAutoCorrelation {
                 let phi = settings.autoCorrelationStrength
                 totalReturn = (1 - phi) * totalReturn + phi * lastAutoReturn
@@ -250,7 +246,6 @@ private func runWeeklySimulation(
                 mempoolDataManager: mempoolDataManager,
                 rng: rng
             )
-            
             prevBTCPriceUSD *= exp(toggled)
             
             lastStepLogReturn = toggled
@@ -297,7 +292,7 @@ private func runWeeklySimulation(
         let portfolioValueEUR = finalHoldings * newPriceEUR
         let portfolioValueUSD = finalHoldings * newPriceUSD
         
-        // Update GARCH if on
+        // Update GARCH
         if settings.useGarchVolatility {
             garchModelToUse.updateVariance(lastReturn: lastStepLogReturn)
         }
@@ -407,7 +402,7 @@ private func runMonthlySimulation(
             currentVol *= regimeModel.currentRegime.volMultiplier
         }
 
-        // ─── LUMPSUM logic (annual lumpsum => every 12 mo) ─────────────────────
+        // ─── LUMPSUM logic (annual lumpsum => every 12 mo)
         if lumpsum {
             if Double(currentMonth).truncatingRemainder(dividingBy: 12.0) == 0 {
                 var lumpsumGrowth = cagrDecimal
@@ -415,15 +410,13 @@ private func runMonthlySimulation(
                     let shockVol = randomNormalWithRNG(mean: 0, standardDeviation: currentVol, rng: rng)
                     lumpsumGrowth = (1 + lumpsumGrowth) * exp(shockVol) - 1
                 }
-                
-                // If lumpsum user wants mean reversion
-                if settings.useMeanReversion {
+                // Only apply mean reversion if user wants it AND lumpsum ignoring is turned off
+                if settings.useMeanReversion && !settings.disableMeanReversionWhenLumpsum {
                     let reversionFactor = 0.5
                     let distance = (settings.meanReversionTarget - lumpsumGrowth)
                     lumpsumGrowth += (reversionFactor * distance)
                 }
-                
-                // If lumpsum user wants autoCorrelation
+                // If lumpsum user wants autocorrelation
                 if settings.useAutoCorrelation {
                     let phi = settings.autoCorrelationStrength
                     lumpsumGrowth = (1 - phi) * lumpsumGrowth + phi * lastAutoReturn
@@ -445,8 +438,7 @@ private func runMonthlySimulation(
                 lastStepLogReturn = log(1 + lumpsumGrowth)
                 lastAutoReturn    = lumpsumGrowth
             }
-
-        // ─── MONTHLY SAMPLING LOGIC ────────────────────────────────────────────
+        // ─── MONTHLY SAMPLING logic
         } else {
             if settings.useExtendedHistoricalSampling, !extendedBlock.isEmpty {
                 var monthlySample = extendedBlock[currentMonth - 1]
@@ -466,12 +458,13 @@ private func runMonthlySimulation(
                 totalReturn += shockVol
             }
             
+            // mean reversion
             if settings.useMeanReversion {
                 let reversionFactor = 0.1
                 let distance = (settings.meanReversionTarget - totalReturn)
                 totalReturn += (reversionFactor * distance)
             }
-            
+            // auto-corr
             if settings.useAutoCorrelation {
                 let phi = settings.autoCorrelationStrength
                 totalReturn = (1 - phi) * totalReturn + phi * lastAutoReturn
@@ -531,6 +524,7 @@ private func runMonthlySimulation(
         let portfolioValueEUR = finalHoldings * newPriceEUR
         let portfolioValueUSD = finalHoldings * newPriceUSD
         
+        // GARCH
         if settings.useGarchVolatility {
             garchModelToUse.updateVariance(lastReturn: lastStepLogReturn)
         }
@@ -604,7 +598,7 @@ func runOneFullSimulation(
     }
 }
 
-// MARK: - Compute median BTC across all runs
+// MARK: - Compute median BTC
 fileprivate func computeMedianBTCPriceByStep(allRuns: [[SimulationData]]) -> [Decimal] {
     guard let steps = allRuns.first?.count, steps > 0 else { return [] }
     var medians = [Decimal](repeating: 0, count: steps)
@@ -633,7 +627,7 @@ fileprivate func computeMedianBTCPriceByStep(allRuns: [[SimulationData]]) -> [De
     return medians
 }
 
-// MARK: - Run Multiple Simulations With Progress
+// MARK: - runMonteCarloSimulationsWithProgress
 func runMonteCarloSimulationsWithProgress(
     settings: SimulationSettings,
     annualCAGR: Double,
@@ -653,7 +647,6 @@ func runMonteCarloSimulationsWithProgress(
     allRuns: [[SimulationData]],
     stepMedianPrices: [Decimal]
 ) {
-    // Create RNG
     let rng: GKRandomSource
     if let validSeed = seed {
         let seedData = withUnsafeBytes(of: validSeed) { Data($0) }
