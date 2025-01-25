@@ -9,6 +9,8 @@ import SwiftUI
 
 class SimulationSettings: ObservableObject {
     
+    @AppStorage("factorIntensity") var factorIntensity: Double = 0.5
+
     init() {
         // Initialization
         isUpdating = false

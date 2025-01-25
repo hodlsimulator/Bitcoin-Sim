@@ -11,6 +11,11 @@ extension SimulationSettings {
     func restoreDefaults() {
         print("RESTORE DEFAULTS CALLED!")
         let defaults = UserDefaults.standard
+        
+        // Remove the old factorIntensity from user defaults (optional):
+        UserDefaults.standard.removeObject(forKey: "factorIntensity")
+        // Then set it:
+        factorIntensity = 0.5
 
         // Keep any general toggles you want to preserve:
         defaults.set(useHistoricalSampling, forKey: "useHistoricalSampling")

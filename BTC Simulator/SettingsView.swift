@@ -43,7 +43,7 @@ struct SettingsView: View {
     // Factor Intensity in [0...1].
     // 0 => fully bearish
     // 1 => fully bullish
-    @AppStorage("factorIntensity") private var factorIntensity: Double = 0.5
+    @AppStorage("factorIntensity") var factorIntensity: Double = 0.5
     
     @State private var showResetCriteriaConfirmation = false
     @State private var activeFactor: String? = nil
@@ -93,25 +93,25 @@ struct SettingsView: View {
     var body: some View {
         Form {
             
-            // 1) Universal Factor Intensity
-            factorIntensitySection
-            
-            // 2) Toggle All Factors
-            toggleAllSection
-            
-            // 3) Tilt Bar
+            // 1) Tilt Bar
             overallTiltSection
             
-            // 4) Bullish Factors
+            // 2) Universal Factor Intensity
+            factorIntensitySection
+            
+            // 3) Toggle All Factors
+            toggleAllSection
+            
+            // 4) "Restore Defaults"
+            restoreDefaultsSection
+            
+            // 5) Bullish Factors
             BullishFactorsSection(activeFactor: $activeFactor, toggleFactor: toggleFactor)
                 .environmentObject(simSettings)
             
-            // 5) Bearish Factors
+            // 6) Bearish Factors
             BearishFactorsSection(activeFactor: $activeFactor, toggleFactor: toggleFactor)
                 .environmentObject(simSettings)
-            
-            // 6) "Restore Defaults"
-            restoreDefaultsSection
             
             // 7) Advanced Disclosure
             AdvancedSettingsSection(showAdvancedSettings: $showAdvancedSettings)
@@ -135,7 +135,7 @@ struct SettingsView: View {
         }
         .onAppear {
             // Keep them synced on appear
-            updateAllFactors()
+            // updateAllFactors()
         }
         // Tooltip overlay
         .overlayPreferenceValue(TooltipAnchorKey.self) { allAnchors in
@@ -188,30 +188,30 @@ struct SettingsView: View {
     private var factorIntensitySection: some View {
         Section {
             HStack {
-                // Left button => Tortoise => "Fully Bullish" => factorIntensity=1
-                Button {
-                    factorIntensity = 1.0
-                } label: {
-                    Image(systemName: "tortoise.fill")
-                        .foregroundColor(.green)
-                }
-                .buttonStyle(.plain)
-                
-                Slider(value: $factorIntensity, in: 0...1, step: 0.01)
-                    .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
-                
-                // Right button => Lightning => "Fully Bearish" => factorIntensity=0
+                // Left => Fully Bearish => factorIntensity = 0 => Red
                 Button {
                     factorIntensity = 0.0
                 } label: {
-                    Image(systemName: "bolt.fill")
+                    Image(systemName: "tortoise.fill")
                         .foregroundColor(.red)
+                }
+                .buttonStyle(.plain)
+
+                Slider(value: $factorIntensity, in: 0...1, step: 0.01)
+                    .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
+
+                // Right => Fully Bullish => factorIntensity = 1 => Green
+                Button {
+                    factorIntensity = 1.0
+                } label: {
+                    Image(systemName: "bolt.fill")
+                        .foregroundColor(.green)
                 }
                 .buttonStyle(.plain)
             }
         } footer: {
-            Text("Scales all bullish and bearish factors. Left (green) = maximum bull, right (red) = maximum bear.")
-                .foregroundColor(.red)
+            Text("Scales all bullish & bearish factors. Left (red) = maximum bear, right (green) = maximum bull.")
+                .foregroundColor(.white)
         }
         .listRowBackground(Color(white: 0.15))
     }
@@ -233,7 +233,7 @@ struct SettingsView: View {
             .foregroundColor(.white)
         } footer: {
             Text("Switches ON or OFF all bullish and bearish factors at once.")
-                .foregroundColor(.red)
+                .foregroundColor(.white)
         }
         .listRowBackground(Color(white: 0.15))
     }
@@ -259,7 +259,7 @@ struct SettingsView: View {
             }
         } footer: {
             Text("Green if bullish factors dominate, red if bearish factors dominate.")
-                .foregroundColor(.red)
+                .foregroundColor(.white)
         }
         .listRowBackground(Color(white: 0.15))
     }
@@ -398,8 +398,9 @@ struct SettingsView: View {
             current = newVal
         }
         func setBearish(_ current: inout Double, minVal: Double, maxVal: Double) {
-            let newVal = maxVal - factorIntensity * (maxVal - minVal)
-            current = newVal
+            // Now factorIntensity=0 => we pick minVal (the biggest negative).
+            //    factorIntensity=1 => we pick maxVal (the least negative).
+            current = minVal + factorIntensity * (maxVal - minVal)
         }
         
         // BULLISH
