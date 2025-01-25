@@ -134,8 +134,8 @@ struct SettingsView: View {
             updateAllFactors()
         }
         .onAppear {
-            // Keep them synced on appear
-            // updateAllFactors()
+            // (Change A) Keep them synced on appear
+            updateAllFactors()
         }
         // Tooltip overlay
         .overlayPreferenceValue(TooltipAnchorKey.self) { allAnchors in
@@ -210,7 +210,7 @@ struct SettingsView: View {
                 .buttonStyle(.plain)
             }
         } footer: {
-            Text("Scales all bullish & bearish factors. Left (red) = maximum bear, right (green) = maximum bull.")
+            Text("Scales all bullish & bearish factors. Left (red) = max bear, right (green) = max bull.")
                 .foregroundColor(.white)
         }
         .listRowBackground(Color(white: 0.15))
@@ -243,13 +243,25 @@ struct SettingsView: View {
         Section {
             HStack {
                 GeometryReader { geo in
-                    let tilt = max(-1, min(netTilt, 1))  // clamp to [-1, 1]
-                    
+                    // Compute tilt in a local function or closure,
+                    // so SwiftUI sees this entire block as returning a single View.
+                    let tilt: Double = {
+                        if factorIntensity <= 0.001 {
+                            return -1
+                        } else if factorIntensity >= 0.999 {
+                            return 1
+                        } else if abs(factorIntensity - 0.5) < 0.0001 {
+                            return 0
+                        } else {
+                            return max(-1, min(netTilt, 1))
+                        }
+                    }()
+
                     ZStack(alignment: tilt >= 0 ? .leading : .trailing) {
                         Rectangle()
                             .fill(Color.gray.opacity(0.3))
                             .frame(height: 8)
-                        
+
                         Rectangle()
                             .fill(tilt >= 0 ? .green : .red)
                             .frame(width: geo.size.width * abs(tilt), height: 8)
@@ -390,16 +402,14 @@ struct SettingsView: View {
     }
     
     // MARK: - Update All Factors
-    // If factorIntensity=0 => fully bearish => bullish factors=their min, bearish factors=their max
-    // If factorIntensity=1 => fully bullish => bullish factors=their max, bearish factors=their min
     private func updateAllFactors() {
         func setBullish(_ current: inout Double, minVal: Double, maxVal: Double) {
             let newVal = minVal + factorIntensity * (maxVal - minVal)
             current = newVal
         }
         func setBearish(_ current: inout Double, minVal: Double, maxVal: Double) {
-            // Now factorIntensity=0 => we pick minVal (the biggest negative).
-            //    factorIntensity=1 => we pick maxVal (the least negative).
+            // factorIntensity=0 => pick minVal (most negative).
+            // factorIntensity=1 => pick maxVal (least negative).
             current = minVal + factorIntensity * (maxVal - minVal)
         }
         
