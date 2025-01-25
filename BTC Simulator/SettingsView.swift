@@ -37,6 +37,12 @@ struct SettingsView: View {
     
     @AppStorage("hasOnboarded") private var didFinishOnboarding = false
     
+    // NEW: Persists “Advanced Settings” collapsed/expanded state
+    @AppStorage("showAdvancedSettings") private var showAdvancedSettings: Bool = false
+    
+    // NEW: Universal “Factor Intensity” slider, stored in AppStorage so it persists
+    @AppStorage("factorIntensity") private var factorIntensity: Double = 1.0
+    
     @State private var showResetCriteriaConfirmation = false
     @State private var activeFactor: String? = nil
     
@@ -84,18 +90,37 @@ struct SettingsView: View {
     
     var body: some View {
         Form {
+            
+            // 1) UNIVERSAL FACTOR INTENSITY SLIDER
+            factorIntensitySection
+            
+            // 2) “TOGGLE ALL FACTORS”
+            toggleAllSection
+            
+            // 3) MINI PREVIEW BAR (show net bullish/bearish tilt)
+            overallTiltSection
+            
+            // 4) BULLISH + BEARISH FACTORS (unchanged)
             bullishFactorsSection
             bearishFactorsSection
-            toggleAllSection
-            randomSeedSection
-            growthModelSection
-            historicalSamplingSection
-            autocorrelationSection
-            volatilitySection
-            regimeSwitchingSection  // <--- Added the new section here
-            restoreDefaultsSection
-            aboutSection
-            resetCriteriaSection
+            
+            // 5) ADVANCED SETTINGS (collapsible via DisclosureGroup)
+            Section {
+                DisclosureGroup("Advanced Settings", isExpanded: $showAdvancedSettings) {
+                    // Moved these existing sections into the collapsible area:
+                    randomSeedSection
+                    growthModelSection
+                    historicalSamplingSection
+                    autocorrelationSection
+                    volatilitySection
+                    regimeSwitchingSection
+                    restoreDefaultsSection
+                    aboutSection
+                    resetCriteriaSection
+                }
+            }
+            .listRowBackground(Color(white: 0.15))
+            
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -103,6 +128,7 @@ struct SettingsView: View {
         .environment(\.colorScheme, .dark)
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.large)
+        // Keep the tooltip overlay
         .overlayPreferenceValue(TooltipAnchorKey.self) { allAnchors in
             GeometryReader { proxy in
                 if let item = allAnchors.last {
@@ -147,6 +173,102 @@ struct SettingsView: View {
                 }
             }
         }
+    }
+    
+    // MARK: - NEW: UNIVERSAL FACTOR INTENSITY SECTION
+    private var factorIntensitySection: some View {
+        Section {
+            HStack {
+                Button {
+                    // Example reset to default
+                    factorIntensity = 1.0
+                } label: {
+                    Image(systemName: "arrow.uturn.backward.circle")
+                        .foregroundColor(.orange)
+                }
+                .buttonStyle(.plain)
+                .padding(.trailing, 4)
+                
+                Text("Factor Intensity")
+                    .foregroundColor(.white)
+                
+                Slider(value: $factorIntensity, in: 0.5...1.5, step: 0.01)
+                    .tint(.orange)
+            }
+        } header: {
+            Text("Scale All Bull/Bear Factors")
+        } footer: {
+            Text("Globally scales all factor sliders up or down.")
+                .foregroundColor(.secondary)
+        }
+        .listRowBackground(Color(white: 0.15))
+    }
+    
+    // MARK: - NEW: OVERALL TILT SECTION
+    // Simple bar: green if bullish > bearish, red if bearish > bullish
+    private var overallTiltSection: some View {
+        Section {
+            // A tiny horizontal bar indicating net bull–bear
+            HStack {
+                GeometryReader { geo in
+                    // Normalise net tilt to ±1 for the bar
+                    let tilt = max(-1, min(netTilt, 1))
+                    
+                    ZStack(alignment: tilt >= 0 ? .leading : .trailing) {
+                        Rectangle()
+                            .fill(Color.gray.opacity(0.3))
+                            .frame(height: 8)
+                        
+                        Rectangle()
+                            .fill(tilt >= 0 ? .green : .red)
+                            .frame(width: geo.size.width * abs(tilt), height: 8)
+                    }
+                }
+                .frame(height: 8)
+            }
+        } header: {
+            Text("Overall Bullish–Bearish Tilt")
+        } footer: {
+            Text("If this bar leans green, bullish factors outweigh bearish; red means the opposite.")
+                .foregroundColor(.secondary)
+        }
+        .listRowBackground(Color(white: 0.15))
+    }
+    
+    // MARK: - HELPER: Summation of all factors (with “factorIntensity”)
+    private var netTilt: Double {
+        // Sum all bullish factors if toggled on, minus all bearish factors if toggled on.
+        // Multiply each factor’s slider by factorIntensity.
+        
+        let bull = (
+            (simSettings.useHalvingUnified           ? simSettings.halvingBumpUnified           : 0) +
+            (simSettings.useInstitutionalDemandUnified ? simSettings.maxDemandBoostUnified       : 0) +
+            (simSettings.useCountryAdoptionUnified     ? simSettings.maxCountryAdBoostUnified    : 0) +
+            (simSettings.useRegulatoryClarityUnified   ? simSettings.maxClarityBoostUnified      : 0) +
+            (simSettings.useEtfApprovalUnified         ? simSettings.maxEtfBoostUnified          : 0) +
+            (simSettings.useTechBreakthroughUnified    ? simSettings.maxTechBoostUnified         : 0) +
+            (simSettings.useScarcityEventsUnified      ? simSettings.maxScarcityBoostUnified     : 0) +
+            (simSettings.useGlobalMacroHedgeUnified    ? simSettings.maxMacroBoostUnified        : 0) +
+            (simSettings.useStablecoinShiftUnified     ? simSettings.maxStablecoinBoostUnified   : 0) +
+            (simSettings.useDemographicAdoptionUnified ? simSettings.maxDemoBoostUnified         : 0) +
+            (simSettings.useAltcoinFlightUnified       ? simSettings.maxAltcoinBoostUnified      : 0) +
+            (simSettings.useAdoptionFactorUnified      ? simSettings.adoptionBaseFactorUnified   : 0)
+        ) * factorIntensity
+        
+        let bear = (
+            (simSettings.useRegClampdownUnified    ? abs(simSettings.maxClampDownUnified)    : 0) +
+            (simSettings.useCompetitorCoinUnified  ? abs(simSettings.maxCompetitorBoostUnified) : 0) +
+            (simSettings.useSecurityBreachUnified  ? abs(simSettings.breachImpactUnified)    : 0) +
+            (simSettings.useBubblePopUnified       ? abs(simSettings.maxPopDropUnified)      : 0) +
+            (simSettings.useStablecoinMeltdownUnified ? abs(simSettings.maxMeltdownDropUnified) : 0) +
+            (simSettings.useBlackSwanUnified       ? abs(simSettings.blackSwanDropUnified)   : 0) +
+            (simSettings.useBearMarketUnified      ? abs(simSettings.bearWeeklyDriftUnified) : 0) +
+            (simSettings.useMaturingMarketUnified  ? abs(simSettings.maxMaturingDropUnified) : 0) +
+            (simSettings.useRecessionUnified       ? abs(simSettings.maxRecessionDropUnified): 0)
+        ) * factorIntensity
+        
+        // Net tilt: positive => bullish side bigger, negative => bearish side bigger
+        return bull - bear
     }
     
     // MARK: - BULLISH FACTORS
@@ -578,7 +700,7 @@ struct SettingsView: View {
         .listRowBackground(Color(white: 0.15))
     }
     
-    // MARK: - RANDOM SEED
+    // MARK: - RANDOM SEED (moved inside the Advanced Settings disclosure)
     private var randomSeedSection: some View {
         Section {
             Toggle("Lock Random Seed", isOn: $simSettings.lockedRandomSeed)
@@ -619,7 +741,7 @@ struct SettingsView: View {
         .listRowBackground(Color(white: 0.15))
     }
     
-    // MARK: - GROWTH MODEL
+    // MARK: - GROWTH MODEL (moved inside Advanced)
     private var growthModelSection: some View {
         Section {
             Toggle("Use Lognormal Growth", isOn: $simSettings.useLognormalGrowth)
@@ -627,9 +749,9 @@ struct SettingsView: View {
                 .foregroundColor(.white)
                 // Whenever the user toggles lognormal, flip useAnnualStep accordingly
                 .onChange(of: simSettings.useLognormalGrowth) { newVal in
-                        simSettings.useAnnualStep = !newVal
-                        print("DEBUG: useLognormalGrowth=\(newVal), so useAnnualStep=\(!newVal)")
-                    }
+                    simSettings.useAnnualStep = !newVal
+                    print("DEBUG: useLognormalGrowth=\(newVal), so useAnnualStep=\(!newVal)")
+                }
         } header: {
             Text("Growth Model")
         } footer: {
@@ -639,7 +761,7 @@ struct SettingsView: View {
         .listRowBackground(Color(white: 0.15))
     }
     
-    // MARK: - HISTORICAL SAMPLING
+    // MARK: - HISTORICAL SAMPLING (moved inside Advanced)
     private var historicalSamplingSection: some View {
         Section {
             Toggle("Use Historical Sampling", isOn: $simSettings.useHistoricalSampling)
@@ -660,7 +782,7 @@ struct SettingsView: View {
         .listRowBackground(Color(white: 0.15))
     }
     
-    // MARK: - AUTOCORRELATION
+    // MARK: - AUTOCORRELATION (moved inside Advanced)
     private var autocorrelationSection: some View {
         Section {
             Toggle("Use Autocorrelation", isOn: $simSettings.useAutoCorrelation)
@@ -671,7 +793,7 @@ struct SettingsView: View {
                 // Strength slider
                 HStack {
                     Button {
-                        // Reset to new default = 0.05
+                        // Reset to default
                         simSettings.autoCorrelationStrength = 0.05
                     } label: {
                         Image(systemName: "arrow.uturn.backward.circle")
@@ -683,19 +805,18 @@ struct SettingsView: View {
                     Text("Autocorrelation Strength")
                         .foregroundColor(.white)
                     
-                    // Set min to 0.05, or whatever you like
                     Slider(
                         value: $simSettings.autoCorrelationStrength,
                         in: 0.01...0.09,
                         step: 0.01
                     )
-                        .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
+                    .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
                 }
                 
                 // Mean Reversion slider
                 HStack {
                     Button {
-                        // Reset to new default = 0.05
+                        // Reset to default
                         simSettings.meanReversionTarget = 0.03
                     } label: {
                         Image(systemName: "arrow.uturn.backward.circle")
@@ -707,7 +828,6 @@ struct SettingsView: View {
                     Text("Mean Reversion Target")
                         .foregroundColor(.white)
                     
-                    // Example: range from 0.02 up to 0.08, symmetric around 0.03
                     Slider(
                         value: $simSettings.meanReversionTarget,
                         in: 0.01...0.05,
@@ -727,7 +847,7 @@ struct SettingsView: View {
         .listRowBackground(Color(white: 0.15))
     }
     
-    // MARK: - VOLATILITY
+    // MARK: - VOLATILITY (moved inside Advanced)
     private var volatilitySection: some View {
         Section {
             Toggle("Use Volatility Shocks", isOn: $simSettings.useVolShocks)
@@ -745,7 +865,7 @@ struct SettingsView: View {
         .listRowBackground(Color(white: 0.15))
     }
     
-    // MARK: - REGIME SWITCHING
+    // MARK: - REGIME SWITCHING (moved inside Advanced)
     private var regimeSwitchingSection: some View {
         Section {
             Toggle("Use Regime Switching", isOn: $simSettings.useRegimeSwitching)
@@ -760,7 +880,7 @@ struct SettingsView: View {
         .listRowBackground(Color(white: 0.15))
     }
     
-    // MARK: - RESTORE DEFAULTS
+    // MARK: - RESTORE DEFAULTS (moved inside Advanced)
     private var restoreDefaultsSection: some View {
         Section {
             Button("Restore Defaults") {
@@ -774,7 +894,7 @@ struct SettingsView: View {
         .listRowBackground(Color(white: 0.15))
     }
     
-    // MARK: - ABOUT
+    // MARK: - ABOUT (moved inside Advanced)
     private var aboutSection: some View {
         Section {
             NavigationLink("About") {
@@ -786,7 +906,7 @@ struct SettingsView: View {
         .listRowBackground(Color(white: 0.15))
     }
     
-    // MARK: - RESET CRITERIA
+    // MARK: - RESET CRITERIA (moved inside Advanced)
     private var resetCriteriaSection: some View {
         Section {
             Button("Reset All Criteria") {
