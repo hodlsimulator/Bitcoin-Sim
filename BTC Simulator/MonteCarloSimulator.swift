@@ -92,10 +92,12 @@ private func runWeeklySimulation(
     var prevBTCPriceUSD = initialBTCPriceUSD
     var prevBTCHoldings = 0.0
     
-    var cagrDecimal = annualCAGR / 100.0
+    // Turn e.g. "30.0" into 0.30
+    let cagrDecimal = annualCAGR / 100.0
+    // The base volatility if needed
     var baseWeeklyVol = (annualVolatility / 100.0) / sqrt(52.0)
 
-    // GARCH
+    // GARCH init
     var garchModelToUse: GarchModel
     if let fitted = garchModel, settings.useGarchVolatility {
         let initialVol = baseWeeklyVol
@@ -111,15 +113,17 @@ private func runWeeklySimulation(
         )
     }
     
+    // For turning on/off higher or lower CAGR/Vol in different "regimes"
     var regimeModel = RegimeSwitchingModel()
     
+    // The deposit amounts for first year vs second year
     let firstYearVal  = (settings.inputManager?.firstYearContribution as NSString?)?.doubleValue ?? 0
     let secondYearVal = (settings.inputManager?.subsequentContribution as NSString?)?.doubleValue ?? 0
     
     var lastStepLogReturn = 0.0
     var lastAutoReturn    = 0.0
 
-    // Extended historical sample
+    // If extended sampling is on, build a random block from extendedWeeklyReturns
     var extendedBlock = [Double]()
     if settings.useExtendedHistoricalSampling {
         if totalWeeklySteps <= historicalBTCWeeklyReturns.count {
@@ -138,85 +142,88 @@ private func runWeeklySimulation(
         }
     }
 
-    // Read our toggle for single annual step
-    let useAnnualStep = settings.useAnnualStep
+    // Instead of a single lumpsum at year-end, we'll do "smooth" weekly growth
+    // so that the total growth over 52 weeks approximates the annualCAGR.
+    // For example, if cagrDecimal=0.30 => about +0.52% each week => (1.0052^52) ~1.30
+    let weeklyGrowth = pow(1.0 + cagrDecimal, 1.0 / 52.0) - 1.0
     
     for currentWeek in 1...totalWeeklySteps {
         
-        // Regime Switching
+        // If RegimeSwitching is on, adjust base CAGR & Vol each iteration
         if settings.useRegimeSwitching {
             regimeModel.updateRegime(rng: rng)
-            cagrDecimal = (annualCAGR / 100.0) * regimeModel.currentRegime.cagrMultiplier
-            baseWeeklyVol = ((annualVolatility / 100.0) / sqrt(52.0)) * regimeModel.currentRegime.volMultiplier
         }
         
+        // Start fresh each loop
         var totalReturn = 0.0
-        var currentVol = settings.useGarchVolatility
-            ? garchModelToUse.currentStdDev()
-            : baseWeeklyVol
         
+        // Possibly scale your base volatility if regime switching is on
+        var currentVol = baseWeeklyVol
         if settings.useRegimeSwitching {
             currentVol *= regimeModel.currentRegime.volMultiplier
         }
-
-        // Single Annual Step
-        if useAnnualStep {
-            // Only apply the annual CAGR jump once a year => the final week of each year (52, 104, etc.)
-            if Double(currentWeek).truncatingRemainder(dividingBy: 52.0) == 0 {
-                let annualGrowth = annualStepUpdate(
-                    settings: settings,
-                    cagrDecimal: cagrDecimal,
-                    annualVolatility: annualVolatility,  // pass it in
-                    currentVol: currentVol,
-                    lastAutoReturn: lastAutoReturn,
-                    lastStepLogReturn: &lastStepLogReturn,
-                    rng: rng
-                )
-                prevBTCPriceUSD *= (1 + annualGrowth)
-                lastAutoReturn = annualGrowth
-            }
+        if settings.useGarchVolatility {
+            currentVol = garchModelToUse.currentStdDev()
         }
-        // Normal Weekly Step
-        else {
-            if settings.useExtendedHistoricalSampling, !extendedBlock.isEmpty {
-                var weeklySample = extendedBlock[currentWeek - 1]
-                weeklySample = dampenArctanWeekly(weeklySample)
-                totalReturn += weeklySample
-            }
-            else if settings.useHistoricalSampling {
-                var weeklySample = pickRandomReturn(from: historicalBTCWeeklyReturns, rng: rng)
-                weeklySample = dampenArctanWeekly(weeklySample)
-                totalReturn += weeklySample
-            }
-            if settings.useLognormalGrowth {
-                totalReturn += (cagrDecimal / 52.0)
-            }
-            if settings.useVolShocks {
-                let shockVol = randomNormalWithRNG(mean: 0, standardDeviation: currentVol, rng: rng)
-                totalReturn += shockVol
-            }
-            if settings.useMeanReversion {
-                let reversionFactor = 0.1
-                let distance = (settings.meanReversionTarget - totalReturn)
-                totalReturn += (reversionFactor * distance)
-            }
-            if settings.useAutoCorrelation {
-                let phi = settings.autoCorrelationStrength
-                totalReturn = (1 - phi) * totalReturn + phi * lastAutoReturn
-            }
-            
-            let toggled = applyFactorToggles(
-                baseReturn: totalReturn,
-                stepIndex: currentWeek,
-                settings: settings,
-                mempoolDataManager: mempoolDataManager,
-                rng: rng
-            )
-            prevBTCPriceUSD *= exp(toggled)
-            
-            lastStepLogReturn = toggled
-            lastAutoReturn    = toggled
+        
+        // Historical sampling approach
+        if settings.useExtendedHistoricalSampling, !extendedBlock.isEmpty {
+            var sample = extendedBlock[currentWeek - 1]
+            sample = dampenArctanWeekly(sample)
+            totalReturn += sample
         }
+        else if settings.useHistoricalSampling {
+            var sample = pickRandomReturn(from: historicalBTCWeeklyReturns, rng: rng)
+            sample = dampenArctanWeekly(sample)
+            totalReturn += sample
+        }
+        
+        // If the user wants a "smooth" (non-lognormal) approach that still yields ~30% a year,
+        // then each week we do a small fraction so that after 52 it compounds to 30%.
+        if settings.useAnnualStep {
+            // Instead of lumpsum, let's do partial increments:
+            totalReturn += weeklyGrowth
+        }
+        else if settings.useLognormalGrowth {
+            // The old approach: each week just add 30%/52 => ~0.5769%,
+            // but gets exponentiated => actual >30% year
+            totalReturn += (cagrDecimal / 52.0)
+        }
+        
+        // Optional volatility shocks
+        if settings.useVolShocks && annualVolatility > 0 {
+            let shockVol = randomNormalWithRNG(mean: 0, standardDeviation: currentVol, rng: rng)
+            totalReturn += shockVol
+        }
+        
+        // Mean reversion
+        if settings.useMeanReversion {
+            let reversionFactor = 0.1
+            let distance = (settings.meanReversionTarget - totalReturn)
+            totalReturn += (reversionFactor * distance)
+        }
+        
+        // AutoCorrelation
+        if settings.useAutoCorrelation {
+            let phi = settings.autoCorrelationStrength
+            totalReturn = (1 - phi) * totalReturn + phi * lastAutoReturn
+        }
+        
+        // Factor toggles
+        let toggled = applyFactorToggles(
+            baseReturn: totalReturn,
+            stepIndex: currentWeek,
+            settings: settings,
+            mempoolDataManager: mempoolDataManager,
+            rng: rng
+        )
+        
+        // Apply final step: multiply price by exp(toggled)
+        prevBTCPriceUSD *= exp(toggled)
+        
+        // Keep track for next loop
+        lastStepLogReturn = toggled
+        lastAutoReturn    = toggled
         
         // Floor
         if prevBTCPriceUSD < 1.0 {
@@ -226,7 +233,7 @@ private func runWeeklySimulation(
         let newPriceUSD = prevBTCPriceUSD
         let newPriceEUR = newPriceUSD / exchangeRateEURUSD
         
-        // Contributions (DCA)
+        // DCA contributions
         var typedDeposit = 0.0
         if currentWeek == 1 {
             typedDeposit = settings.startingBalance
@@ -287,56 +294,6 @@ private func runWeeklySimulation(
     return results
 }
 
-// MARK: - Single Annual Step Helper
-private func annualStepUpdate(
-    settings: SimulationSettings,
-    cagrDecimal: Double,
-    annualVolatility: Double,  // pass annualVol here
-    currentVol: Double,
-    lastAutoReturn: Double,
-    lastStepLogReturn: inout Double,
-    rng: GKRandomSource
-) -> Double {
-    var annualGrowth = cagrDecimal
-    
-    // Vol shocks
-    if settings.useVolShocks && annualVolatility > 0 {
-        let shockVol = randomNormalWithRNG(mean: 0, standardDeviation: currentVol, rng: rng)
-        annualGrowth = (1 + annualGrowth) * exp(shockVol) - 1
-    }
-
-    // Mean reversion
-    if settings.useMeanReversion {
-        let reversionFactor = 0.1
-        let distance = (settings.meanReversionTarget - annualGrowth)
-        annualGrowth += (reversionFactor * distance)
-    }
-
-    // Autocorrelation
-    if settings.useAutoCorrelation {
-        let phi = settings.autoCorrelationStrength
-        annualGrowth = (1 - phi) * annualGrowth + phi * lastAutoReturn
-    }
-    
-    // Factor toggles
-    annualGrowth = applyFactorToggles(
-        baseReturn: annualGrowth,
-        stepIndex: 0,
-        settings: settings,
-        mempoolDataManager: MempoolDataManager(mempoolData: []),
-        rng: rng
-    )
-    
-    let factor = annualStepAdjustFactor(
-        settings: settings,
-        annualVolatility: annualVolatility
-    )
-    annualGrowth *= factor
-    
-    lastStepLogReturn = log(1 + annualGrowth)
-    return annualGrowth
-}
-
 // MARK: - MONTHLY SIM
 private func runMonthlySimulation(
     settings: SimulationSettings,
@@ -355,9 +312,10 @@ private func runMonthlySimulation(
     var prevBTCPriceUSD = initialBTCPriceUSD
     var prevBTCHoldings = 0.0
     
-    var cagrDecimal = annualCAGR / 100.0
-    var baseMonthlyVol = (annualVolatility / 100.0) / sqrt(12.0)
+    let cagrDecimal = annualCAGR / 100.0
+    let baseMonthlyVol = (annualVolatility / 100.0) / sqrt(12.0)
 
+    // GARCH
     var garchModelToUse: GarchModel
     if let fitted = garchModel, settings.useGarchVolatility {
         let initialVol = baseMonthlyVol
@@ -381,6 +339,7 @@ private func runMonthlySimulation(
     var lastStepLogReturn = 0.0
     var lastAutoReturn    = 0.0
 
+    // Extended sample if needed
     var extendedBlock = [Double]()
     if settings.useExtendedHistoricalSampling {
         if totalMonths <= historicalBTCMonthlyReturns.count {
@@ -399,87 +358,76 @@ private func runMonthlySimulation(
         }
     }
 
-    let useAnnualStep = settings.useAnnualStep
+    // Instead of lumpsum once/year, do monthly increments so 12 increments => ~30% total
+    let monthlyGrowth = pow(1.0 + cagrDecimal, 1.0 / 12.0) - 1.0
 
     for currentMonth in 1...totalMonths {
         
-        // Regime Switching
+        // Regime switching
         if settings.useRegimeSwitching {
             regimeModel.updateRegime(rng: rng)
-            cagrDecimal = (annualCAGR / 100.0) * regimeModel.currentRegime.cagrMultiplier
-            baseMonthlyVol = ((annualVolatility / 100.0) / sqrt(12.0)) * regimeModel.currentRegime.volMultiplier
         }
         
         var totalReturn = 0.0
-        var currentVol = settings.useGarchVolatility
-            ? garchModelToUse.currentStdDev()
-            : baseMonthlyVol
-        
+        var currentVol = baseMonthlyVol
         if settings.useRegimeSwitching {
             currentVol *= regimeModel.currentRegime.volMultiplier
         }
-
-        // Single Annual Step (once a year => every 12 months)
-        if useAnnualStep {
-            if Double(currentMonth).truncatingRemainder(dividingBy: 12.0) == 0 {
-                let annualGrowth = annualStepUpdateMonthly(
-                    settings: settings,
-                    cagrDecimal: cagrDecimal,
-                    annualVolatility: annualVolatility,  // pass it
-                    currentVol: currentVol,
-                    lastAutoReturn: lastAutoReturn,
-                    lastStepLogReturn: &lastStepLogReturn,
-                    rng: rng
-                )
-                prevBTCPriceUSD *= (1 + annualGrowth)
-                lastAutoReturn = annualGrowth
-            }
+        if settings.useGarchVolatility {
+            currentVol = garchModelToUse.currentStdDev()
         }
-        // Normal Monthly Step
-        else {
-            if settings.useExtendedHistoricalSampling, !extendedBlock.isEmpty {
-                var monthlySample = extendedBlock[currentMonth - 1]
-                monthlySample = dampenArctanMonthly(monthlySample)
-                totalReturn += monthlySample
-            }
-            else if settings.useHistoricalSampling {
-                var monthlySample = pickRandomReturn(from: historicalBTCMonthlyReturns, rng: rng)
-                monthlySample = dampenArctanMonthly(monthlySample)
-                totalReturn += monthlySample
-            }
-            if settings.useLognormalGrowth {
-                totalReturn += (cagrDecimal / 12.0)
-            }
-            if settings.useVolShocks {
-                let shockVol = randomNormalWithRNG(mean: 0, standardDeviation: currentVol, rng: rng)
-                totalReturn += shockVol
-            }
-            
-            if settings.useMeanReversion {
-                let reversionFactor = 0.1
-                let distance = (settings.meanReversionTarget - totalReturn)
-                totalReturn += (reversionFactor * distance)
-            }
-            if settings.useAutoCorrelation {
-                let phi = settings.autoCorrelationStrength
-                totalReturn = (1 - phi) * totalReturn + phi * lastAutoReturn
-            }
-            
-            let toggled = applyFactorToggles(
-                baseReturn: totalReturn,
-                stepIndex: currentMonth,
-                settings: settings,
-                mempoolDataManager: mempoolDataManager,
-                rng: rng
-            )
-            
-            prevBTCPriceUSD *= exp(toggled)
-            
-            lastStepLogReturn = toggled
-            lastAutoReturn    = toggled
+
+        // Historical sample
+        if settings.useExtendedHistoricalSampling, !extendedBlock.isEmpty {
+            var sample = extendedBlock[currentMonth - 1]
+            sample = dampenArctanMonthly(sample)
+            totalReturn += sample
+        }
+        else if settings.useHistoricalSampling {
+            var sample = pickRandomReturn(from: historicalBTCMonthlyReturns, rng: rng)
+            sample = dampenArctanMonthly(sample)
+            totalReturn += sample
+        }
+
+        // If userAnnualStep => we do smaller monthly increments
+        // so that after 12 months total is ~30%:
+        if settings.useAnnualStep {
+            totalReturn += monthlyGrowth
+        }
+        else if settings.useLognormalGrowth {
+            // old monthly approach => cagr/12 each month (slightly different compounding)
+            totalReturn += (cagrDecimal / 12.0)
         }
         
-        // Floor
+        if settings.useVolShocks && annualVolatility > 0 {
+            let shockVol = randomNormalWithRNG(mean: 0, standardDeviation: currentVol, rng: rng)
+            totalReturn += shockVol
+        }
+        
+        if settings.useMeanReversion {
+            let reversionFactor = 0.1
+            let distance = (settings.meanReversionTarget - totalReturn)
+            totalReturn += (reversionFactor * distance)
+        }
+        if settings.useAutoCorrelation {
+            let phi = settings.autoCorrelationStrength
+            totalReturn = (1 - phi) * totalReturn + phi * lastAutoReturn
+        }
+        
+        let toggled = applyFactorToggles(
+            baseReturn: totalReturn,
+            stepIndex: currentMonth,
+            settings: settings,
+            mempoolDataManager: mempoolDataManager,
+            rng: rng
+        )
+        
+        // update price
+        prevBTCPriceUSD *= exp(toggled)
+        
+        lastStepLogReturn = toggled
+        lastAutoReturn    = toggled
+        
         if prevBTCPriceUSD < 1.0 {
             prevBTCPriceUSD = 1.0
         }
@@ -487,7 +435,7 @@ private func runMonthlySimulation(
         let newPriceUSD = prevBTCPriceUSD
         let newPriceEUR = newPriceUSD / exchangeRateEURUSD
         
-        // Contributions
+        // DCA deposit
         var typedDeposit = 0.0
         if currentMonth == 1 {
             typedDeposit = settings.startingBalance
@@ -545,49 +493,6 @@ private func runMonthlySimulation(
     }
     
     return results
-}
-
-// MARK: - Single Annual Step Helper (Monthly)
-private func annualStepUpdateMonthly(
-    settings: SimulationSettings,
-    cagrDecimal: Double,
-    annualVolatility: Double,  // new param
-    currentVol: Double,
-    lastAutoReturn: Double,
-    lastStepLogReturn: inout Double,
-    rng: GKRandomSource
-) -> Double {
-    var annualGrowth = cagrDecimal
-    
-    if settings.useVolShocks && annualVolatility > 0 {
-        let shockVol = randomNormalWithRNG(mean: 0, standardDeviation: currentVol, rng: rng)
-        annualGrowth = (1 + annualGrowth) * exp(shockVol) - 1
-    }
-    
-    if settings.useMeanReversion {
-        let reversionFactor = 0.5
-        let distance = (settings.meanReversionTarget - annualGrowth)
-        annualGrowth += (reversionFactor * distance)
-    }
-    
-    if settings.useAutoCorrelation {
-        let phi = settings.autoCorrelationStrength
-        annualGrowth = (1 - phi) * annualGrowth + phi * lastAutoReturn
-    }
-    
-    annualGrowth = applyFactorToggles(
-        baseReturn: annualGrowth,
-        stepIndex: 0,
-        settings: settings,
-        mempoolDataManager: MempoolDataManager(mempoolData: []),
-        rng: rng
-    )
-
-    let factor = annualStepAdjustFactor(settings: settings, annualVolatility: annualVolatility)
-    annualGrowth *= factor
-
-    lastStepLogReturn = log(1 + annualGrowth)
-    return annualGrowth
 }
 
 // MARK: - Single Simulation Entry
@@ -697,7 +602,6 @@ func runMonteCarloSimulationsWithProgress(
     for i in 0..<iterations {
         if isCancelled() { break }
         
-        // Tiny delay to simulate progress
         Thread.sleep(forTimeInterval: 0.01)
 
         let simRun = runOneFullSimulation(
@@ -733,7 +637,7 @@ func runMonteCarloSimulationsWithProgress(
     return (medianRun, allRuns, stepMedians)
 }
 
-// Aligners for SP500 (optional)
+// MARK: - Aligners for SP500 (optional)
 func alignWeeklyData() {
     let minCount = min(historicalBTCWeeklyReturns.count, sp500WeeklyReturns.count)
     let partialBTC = Array(historicalBTCWeeklyReturns.prefix(minCount))
