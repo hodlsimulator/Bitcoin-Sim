@@ -54,7 +54,7 @@
 		E19D10F92D40E66200E3A55E /* InMemorySettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = E19D10F82D40E66100E3A55E /* InMemorySettings.swift */; };
 		E19D113A2D42F75000E3A55E /* MarketRegime.swift in Sources */ = {isa = PBXBuildFile; fileRef = E19D11392D42F74E00E3A55E /* MarketRegime.swift */; };
 		E19D113C2D42F81C00E3A55E /* UtilityExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = E19D113B2D42F81A00E3A55E /* UtilityExtensions.swift */; };
-		E19D113E2D42F91100E3A55E /* LumpsumFactor.swift in Sources */ = {isa = PBXBuildFile; fileRef = E19D113D2D42F90F00E3A55E /* LumpsumFactor.swift */; };
+		E19D113E2D42F91100E3A55E /* AnnualStepAdjustFactor.swift in Sources */ = {isa = PBXBuildFile; fileRef = E19D113D2D42F90F00E3A55E /* AnnualStepAdjustFactor.swift */; };
 		E19D11402D42F97700E3A55E /* DampenOutliers.swift in Sources */ = {isa = PBXBuildFile; fileRef = E19D113F2D42F97600E3A55E /* DampenOutliers.swift */; };
 		E19D11422D42F9E600E3A55E /* NetDeposit.swift in Sources */ = {isa = PBXBuildFile; fileRef = E19D11412D42F9E500E3A55E /* NetDeposit.swift */; };
 		E19D11442D42FA6800E3A55E /* RNGHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = E19D11432D42FA6600E3A55E /* RNGHelpers.swift */; };
@@ -124,7 +124,7 @@
 		E19D10F82D40E66100E3A55E /* InMemorySettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InMemorySettings.swift; sourceTree = "<group>"; };
 		E19D11392D42F74E00E3A55E /* MarketRegime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketRegime.swift; sourceTree = "<group>"; };
 		E19D113B2D42F81A00E3A55E /* UtilityExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UtilityExtensions.swift; sourceTree = "<group>"; };
-		E19D113D2D42F90F00E3A55E /* LumpsumFactor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LumpsumFactor.swift; sourceTree = "<group>"; };
+		E19D113D2D42F90F00E3A55E /* AnnualStepAdjustFactor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnualStepAdjustFactor.swift; sourceTree = "<group>"; };
 		E19D113F2D42F97600E3A55E /* DampenOutliers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DampenOutliers.swift; sourceTree = "<group>"; };
 		E19D11412D42F9E500E3A55E /* NetDeposit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetDeposit.swift; sourceTree = "<group>"; };
 		E19D11432D42FA6600E3A55E /* RNGHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RNGHelpers.swift; sourceTree = "<group>"; };
@@ -210,7 +210,7 @@
 				E1883F3F2D1E0DC8007AA90B /* InputManager.swift */,
 				E1A1E52A2D2E3967008F7658 /* InteractiveBitcoinSymbol3DSpinner.swift */,
 				E17B2F272D27505100ECE087 /* LandscapePlaceholderView.swift */,
-				E19D113D2D42F90F00E3A55E /* LumpsumFactor.swift */,
+				E19D113D2D42F90F00E3A55E /* AnnualStepAdjustFactor.swift */,
 				E19D11392D42F74E00E3A55E /* MarketRegime.swift */,
 				E19D10EA2D3EF69200E3A55E /* MempoolDataManager.swift */,
 				E166A8AD2CF855BF0003F518 /* MonteCarloSimulator.swift */,
@@ -383,7 +383,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				E14D23F52D37425D007CC11A /* SimulationSummaryCardView.swift in Sources */,
-				E19D113E2D42F91100E3A55E /* LumpsumFactor.swift in Sources */,
+				E19D113E2D42F91100E3A55E /* AnnualStepAdjustFactor.swift in Sources */,
 				E19D11462D42FCAE00E3A55E /* FactorToggles.swift in Sources */,
 				E14D24112D3A9525007CC11A /* SimulationSettings+UnifiedFactors.swift in Sources */,
 				E1883F522D1FDDB2007AA90B /* BitcoinShapes.swift in Sources */,

@@ -1,5 +1,5 @@
 //
-//  LumpsumFactor.swift
+//  AnnualStepAdjustFactor.swift
 //  BTCMonteCarlo
 //
 //  Created by Conor on 23/01/2025.
@@ -7,8 +7,8 @@
 
 import Foundation
 
-/// Adjusts a lumpsum growth factor based on toggles and volatility.
-func lumpsumAdjustFactor(
+/// Adjusts an annual step growth factor based on toggles and volatility.
+func annualStepAdjustFactor(
     settings: SimulationSettings,
     annualVolatility: Double
 ) -> Double {
@@ -22,7 +22,7 @@ func lumpsumAdjustFactor(
         }
     }
     
-    // BULLISH toggles count
+    // Count bullish toggles
     let isWeekly = (settings.periodUnit == .weeks)
     let bullishCount = isWeekly
         ? [
@@ -54,7 +54,7 @@ func lumpsumAdjustFactor(
             settings.useAdoptionFactorMonthly
           ].filter { $0 }.count
     
-    // BEARISH toggles count
+    // Count bearish toggles
     let bearishCount = isWeekly
         ? [
             settings.useRegClampdownWeekly,
@@ -79,11 +79,12 @@ func lumpsumAdjustFactor(
             settings.useRecessionMonthly
           ].filter { $0 }.count
     
-    // If the user has ANY toggles on, apply a small lumpsum penalty:
+    // If the user has ANY toggles on, you could apply some penalty or logic here
     if (bullishCount + bearishCount) > 0 {
+        // e.g., toggles += 1 or some other multiplier
     }
 
-    // Each toggle => 2% lumpsum cut, but never go below 80%
+    // Each toggle => 2% cut, but never go below 80%
     let maxCutPerToggle = 0.02
     let totalCut = Double(toggles) * maxCutPerToggle
     var factor = 1.0 - totalCut

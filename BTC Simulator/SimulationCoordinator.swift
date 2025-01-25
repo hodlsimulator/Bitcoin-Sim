@@ -165,6 +165,8 @@ class SimulationCoordinator: ObservableObject {
             let userInputVolatility = Double(self.inputManager.annualVolatility) ?? 1.0
             let finalWeeks          = self.simSettings.userPeriods
             let userPriceUSDAsDouble = NSDecimalNumber(decimal: Decimal(self.simSettings.initialBTCPriceUSD)).doubleValue
+            
+            print("DEBUG: Going to run simulation with userInputCAGR = \(userInputCAGR), userInputVolatility = \(userInputVolatility)")
 
             // 5) Run the simulations
             let (medianRun, allIterations, stepMedianPrices) = runMonteCarloSimulationsWithProgress(

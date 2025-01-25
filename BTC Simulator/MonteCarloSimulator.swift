@@ -11,11 +11,11 @@ import GameplayKit // for GKARC4RandomSource
 
 // MARK: - Extend SimulationSettings to include our new toggle
 extension SimulationSettings {
-    /// If true, lumpsum mode will *ignore* mean reversion (even if useMeanReversion is on).
-    /// If false, lumpsum mode will apply mean reversion as well.
-    var disableMeanReversionWhenLumpsum: Bool {
+    /// If true, annualStepFactor mode will *ignore* mean reversion (even if useMeanReversion is on).
+    /// If false, annualStepFactor mode will apply mean reversion as well.
+    var disableMeanReversionWhenannualStepFactor: Bool {
         // You can store this in your persistent settings or just define a default here.
-        // For demonstration, I return true by default to skip mean reversion in lumpsum mode.
+        // For demonstration, I return true by default to skip mean reversion in annualStepFactor mode.
         get { return true }
     }
 }
@@ -140,19 +140,19 @@ private func runWeeklySimulation(
         }
     }
 
+    // Read our new toggle for single annual step
+    let useAnnualStep = settings.useAnnualStep
+    
     for currentWeek in 1...totalWeeklySteps {
         
-        // Regime switching
+        // Regime Switching
         if settings.useRegimeSwitching {
             regimeModel.updateRegime(rng: rng)
             cagrDecimal = (annualCAGR / 100.0) * regimeModel.currentRegime.cagrMultiplier
             baseWeeklyVol = ((annualVolatility / 100.0) / sqrt(52.0)) * regimeModel.currentRegime.volMultiplier
         }
         
-        // lumpsum => no historical sampling or lognormal
-        let lumpsum = (!settings.useHistoricalSampling && !settings.useLognormalGrowth)
         var totalReturn = 0.0
-        
         var currentVol = settings.useGarchVolatility
             ? garchModelToUse.currentStdDev()
             : baseWeeklyVol
@@ -161,51 +161,56 @@ private func runWeeklySimulation(
             currentVol *= regimeModel.currentRegime.volMultiplier
         }
 
-        // ─── LUMPSUM (Yearly) ──────────────────────────────────────────────
-        if lumpsum {
-            // Only do lumpsum once a year => every 52 weeks
+        // ─── Single Annual Step ──────────────────────────────────────────
+        if useAnnualStep {
+            // Only apply the annual CAGR jump once a year => the final week of each year (52, 104, etc.)
             if Double(currentWeek).truncatingRemainder(dividingBy: 52.0) == 0 {
-                var lumpsumGrowth = cagrDecimal
+                let yearIndex = currentWeek / 52
+                var annualGrowth = cagrDecimal  // e.g. 0.30 for 30%
                 
                 // Optional vol shock
                 if settings.useVolShocks && annualVolatility > 0 {
                     let shockVol = randomNormalWithRNG(mean: 0, standardDeviation: currentVol, rng: rng)
-                    lumpsumGrowth = (1 + lumpsumGrowth) * exp(shockVol) - 1
+                    annualGrowth = (1 + annualGrowth) * exp(shockVol) - 1
                 }
                 
-                // Only apply mean reversion if user wants it AND lumpsum ignoring is turned off
-                if settings.useMeanReversion && !settings.disableMeanReversionWhenLumpsum {
+                // Mean reversion
+                if settings.useMeanReversion {
                     let reversionFactor = 0.1
-                    let distance = (settings.meanReversionTarget - lumpsumGrowth)
-                    lumpsumGrowth += (reversionFactor * distance)
+                    let distance = (settings.meanReversionTarget - annualGrowth)
+                    annualGrowth += (reversionFactor * distance)
                 }
                 
-                // If lumpsum user wants auto-corr
+                // Autocorrelation
                 if settings.useAutoCorrelation {
                     let phi = settings.autoCorrelationStrength
-                    lumpsumGrowth = (1 - phi) * lumpsumGrowth + phi * lastAutoReturn
+                    annualGrowth = (1 - phi) * annualGrowth + phi * lastAutoReturn
                 }
 
-                // Factor toggles
-                lumpsumGrowth = applyFactorToggles(
-                    baseReturn: lumpsumGrowth,
+                // Factor toggles (bull/bear toggles)
+                annualGrowth = applyFactorToggles(
+                    baseReturn: annualGrowth,
                     stepIndex: currentWeek,
                     settings: settings,
                     mempoolDataManager: mempoolDataManager,
                     rng: rng
                 )
-                // lumpsum scaling
-                let factor = lumpsumAdjustFactor(settings: settings, annualVolatility: annualVolatility)
-                lumpsumGrowth *= factor
 
-                // Apply lumpsum
-                prevBTCPriceUSD *= (1 + lumpsumGrowth)
+                // Additional annual step factor (if any)
+                let factor = annualStepAdjustFactor(settings: settings, annualVolatility: annualVolatility)
+                annualGrowth *= factor
+
+                print("  annualGrowth after toggles => \(annualGrowth)")
                 
-                lastStepLogReturn = log(1 + lumpsumGrowth)
-                lastAutoReturn    = lumpsumGrowth
+                // Apply the growth
+                prevBTCPriceUSD *= (1 + annualGrowth)
+
+                lastStepLogReturn = log(1 + annualGrowth)
+                lastAutoReturn    = annualGrowth
             }
-        // ─── WEEKLY SAMPLING ──────────────────────────────────────────────
-        } else {
+        }
+        // ─── Weekly Step ────────────────────────────────────────────────
+        else {
             // extended historical
             if settings.useExtendedHistoricalSampling, !extendedBlock.isEmpty {
                 var weeklySample = extendedBlock[currentWeek - 1]
@@ -260,7 +265,7 @@ private func runWeeklySimulation(
         let newPriceUSD = prevBTCPriceUSD
         let newPriceEUR = newPriceUSD / exchangeRateEURUSD
         
-        // Contributions
+        // Contributions (DCA)
         var typedDeposit = 0.0
         if currentWeek == 1 {
             typedDeposit = settings.startingBalance
@@ -383,17 +388,18 @@ private func runMonthlySimulation(
         }
     }
 
+    let useAnnualStep = settings.useAnnualStep
+
     for currentMonth in 1...totalMonths {
         
+        // Regime Switching
         if settings.useRegimeSwitching {
             regimeModel.updateRegime(rng: rng)
             cagrDecimal = (annualCAGR / 100.0) * regimeModel.currentRegime.cagrMultiplier
             baseMonthlyVol = ((annualVolatility / 100.0) / sqrt(12.0)) * regimeModel.currentRegime.volMultiplier
         }
         
-        let lumpsum = (!settings.useHistoricalSampling && !settings.useLognormalGrowth)
         var totalReturn = 0.0
-        
         var currentVol = settings.useGarchVolatility
             ? garchModelToUse.currentStdDev()
             : baseMonthlyVol
@@ -402,44 +408,52 @@ private func runMonthlySimulation(
             currentVol *= regimeModel.currentRegime.volMultiplier
         }
 
-        // ─── LUMPSUM logic (annual lumpsum => every 12 mo)
-        if lumpsum {
+        // ─── Single Annual Step (once a year => every 12 mo) ────────────
+        if useAnnualStep {
             if Double(currentMonth).truncatingRemainder(dividingBy: 12.0) == 0 {
-                var lumpsumGrowth = cagrDecimal
+                let yearIndex = currentMonth / 12
+                print("=== Year \(yearIndex) START ===")
+                print("Price before step => \(prevBTCPriceUSD)")
+
+                var annualGrowth = cagrDecimal
                 if settings.useVolShocks && annualVolatility > 0 {
                     let shockVol = randomNormalWithRNG(mean: 0, standardDeviation: currentVol, rng: rng)
-                    lumpsumGrowth = (1 + lumpsumGrowth) * exp(shockVol) - 1
+                    annualGrowth = (1 + annualGrowth) * exp(shockVol) - 1
                 }
-                // Only apply mean reversion if user wants it AND lumpsum ignoring is turned off
-                if settings.useMeanReversion && !settings.disableMeanReversionWhenLumpsum {
+                if settings.useMeanReversion {
                     let reversionFactor = 0.5
-                    let distance = (settings.meanReversionTarget - lumpsumGrowth)
-                    lumpsumGrowth += (reversionFactor * distance)
+                    let distance = (settings.meanReversionTarget - annualGrowth)
+                    annualGrowth += (reversionFactor * distance)
                 }
-                // If lumpsum user wants autocorrelation
                 if settings.useAutoCorrelation {
                     let phi = settings.autoCorrelationStrength
-                    lumpsumGrowth = (1 - phi) * lumpsumGrowth + phi * lastAutoReturn
+                    annualGrowth = (1 - phi) * annualGrowth + phi * lastAutoReturn
                 }
                 
-                lumpsumGrowth = applyFactorToggles(
-                    baseReturn: lumpsumGrowth,
+                annualGrowth = applyFactorToggles(
+                    baseReturn: annualGrowth,
                     stepIndex: currentMonth,
                     settings: settings,
                     mempoolDataManager: mempoolDataManager,
                     rng: rng
                 )
                 
-                let factor = lumpsumAdjustFactor(settings: settings, annualVolatility: annualVolatility)
-                lumpsumGrowth *= factor
+                let factor = annualStepAdjustFactor(settings: settings, annualVolatility: annualVolatility)
+                annualGrowth *= factor
                 
-                prevBTCPriceUSD *= (1 + lumpsumGrowth)
+                print("  annualGrowth after toggles => \(annualGrowth)")
                 
-                lastStepLogReturn = log(1 + lumpsumGrowth)
-                lastAutoReturn    = lumpsumGrowth
+                prevBTCPriceUSD *= (1 + annualGrowth)
+                
+                print("Price after step => \(prevBTCPriceUSD)")
+                print("=== Year \(yearIndex) END ===\n")
+
+                lastStepLogReturn = log(1 + annualGrowth)
+                lastAutoReturn    = annualGrowth
             }
-        // ─── MONTHLY SAMPLING logic
-        } else {
+        }
+        // ─── Normal Monthly Step ────────────────────────────────────────
+        else {
             if settings.useExtendedHistoricalSampling, !extendedBlock.isEmpty {
                 var monthlySample = extendedBlock[currentMonth - 1]
                 monthlySample = dampenArctanMonthly(monthlySample)
@@ -458,13 +472,11 @@ private func runMonthlySimulation(
                 totalReturn += shockVol
             }
             
-            // mean reversion
             if settings.useMeanReversion {
                 let reversionFactor = 0.1
                 let distance = (settings.meanReversionTarget - totalReturn)
                 totalReturn += (reversionFactor * distance)
             }
-            // auto-corr
             if settings.useAutoCorrelation {
                 let phi = settings.autoCorrelationStrength
                 totalReturn = (1 - phi) * totalReturn + phi * lastAutoReturn
@@ -524,7 +536,6 @@ private func runMonthlySimulation(
         let portfolioValueEUR = finalHoldings * newPriceEUR
         let portfolioValueUSD = finalHoldings * newPriceUSD
         
-        // GARCH
         if settings.useGarchVolatility {
             garchModelToUse.updateVariance(lastReturn: lastStepLogReturn)
         }

@@ -24,7 +24,7 @@ struct ParametersFormView: View {
                     HStack {
                         Text("Iterations")
                             .foregroundColor(.white)
-                        TextField("1000", text: $inputManager.iterations)
+                        TextField("100", text: $inputManager.iterations)
                             .keyboardType(.numberPad)
                             .foregroundColor(.white)
                             .focused($activeField, equals: .iterations)
@@ -32,15 +32,18 @@ struct ParametersFormView: View {
                     HStack {
                         Text("Annual CAGR (%)")
                             .foregroundColor(.white)
-                        TextField("40.0", text: $inputManager.annualCAGR)
+                        TextField("30", text: $inputManager.annualCAGR)
                             .keyboardType(.decimalPad)
+                            .onChange(of: inputManager.annualCAGR) { newVal in
+                                print("User typed new CAGR value: \(newVal)")
+                            }
                             .foregroundColor(.white)
                             .focused($activeField, equals: .annualCAGR)
                     }
                     HStack {
                         Text("Annual Volatility (%)")
                             .foregroundColor(.white)
-                        TextField("80.0", text: $inputManager.annualVolatility)
+                        TextField("80", text: $inputManager.annualVolatility)
                             .keyboardType(.decimalPad)
                             .foregroundColor(.white)
                             .focused($activeField, equals: .annualVolatility)

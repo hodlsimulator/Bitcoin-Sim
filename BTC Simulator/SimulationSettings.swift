@@ -47,12 +47,25 @@ class SimulationSettings: ObservableObject {
     var isInitialized = false
     var isUpdating = false
     
-    // MARK: Settings Toggles
+    /// MARK: Settings Toggles
     @Published var useLognormalGrowth: Bool = true {
         didSet {
             guard isInitialized else { return }
             print("didSet: useLognormalGrowth changed to \(useLognormalGrowth)")
             UserDefaults.standard.set(useLognormalGrowth, forKey: "useLognormalGrowth")
+
+            // Force annualStep to true whenever lognormalGrowth is turned off
+            if !useLognormalGrowth {
+                useAnnualStep = true
+            }
+        }
+    }
+
+    @Published var useAnnualStep: Bool = false {
+        didSet {
+            guard isInitialized else { return }
+            print("didSet: useAnnualStep changed to \(useAnnualStep)")
+            UserDefaults.standard.set(useAnnualStep, forKey: "useAnnualStep")
         }
     }
     

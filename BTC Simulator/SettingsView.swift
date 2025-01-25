@@ -625,6 +625,11 @@ struct SettingsView: View {
             Toggle("Use Lognormal Growth", isOn: $simSettings.useLognormalGrowth)
                 .tint(.orange)
                 .foregroundColor(.white)
+                // Whenever the user toggles lognormal, flip useAnnualStep accordingly
+                .onChange(of: simSettings.useLognormalGrowth) { newVal in
+                        simSettings.useAnnualStep = !newVal
+                        print("DEBUG: useLognormalGrowth=\(newVal), so useAnnualStep=\(!newVal)")
+                    }
         } header: {
             Text("Growth Model")
         } footer: {
