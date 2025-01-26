@@ -8,17 +8,29 @@
 import SwiftUI
 
 struct AdvancedSettingsSection: View {
-    // We still bring in simSettings to access other toggles
     @EnvironmentObject var simSettings: SimulationSettings
-    
-    // But showAdvancedSettings is just a binding from the parent view
     @Binding var showAdvancedSettings: Bool
     
     var body: some View {
         Section {
-            // Use `isExpanded: $showAdvancedSettings` instead
-            DisclosureGroup("Advanced Settings", isExpanded: $showAdvancedSettings) {
-
+            // Tappable row for expanding/collapsing
+            Button(action: {
+                showAdvancedSettings.toggle()
+            }) {
+                HStack {
+                    Text("Advanced Settings")
+                        .foregroundColor(.white)
+                    Spacer()
+                    Image(systemName: "chevron.forward")
+                        .foregroundColor(.gray)
+                        .rotationEffect(showAdvancedSettings ? .degrees(90) : .degrees(0))
+                }
+            }
+            .buttonStyle(.plain)
+            .listRowBackground(Color(white: 0.15))
+            
+            // Only show this block if showAdvancedSettings == true
+            if showAdvancedSettings {
                 // RANDOM SEED
                 Group {
                     Toggle("Lock Random Seed", isOn: $simSettings.lockedRandomSeed)
@@ -57,14 +69,14 @@ struct AdvancedSettingsSection: View {
                     
                     Divider()
                 }
-                
+                .listRowBackground(Color(white: 0.15))
+
                 // GROWTH MODEL
                 Group {
                     Toggle("Use Lognormal Growth", isOn: $simSettings.useLognormalGrowth)
                         .tint(.orange)
                         .foregroundColor(.white)
                         .onChange(of: simSettings.useLognormalGrowth) { newVal in
-                            // Flip useAnnualStep
                             simSettings.useAnnualStep = !newVal
                         }
                     
@@ -74,7 +86,8 @@ struct AdvancedSettingsSection: View {
                     
                     Divider()
                 }
-                
+                .listRowBackground(Color(white: 0.15))
+
                 // HISTORICAL SAMPLING
                 Group {
                     Toggle("Use Historical Sampling", isOn: $simSettings.useHistoricalSampling)
@@ -93,14 +106,14 @@ struct AdvancedSettingsSection: View {
                     
                     Divider()
                 }
-                
+                .listRowBackground(Color(white: 0.15))
+
                 // AUTOCORRELATION
                 Group {
                     Toggle("Use Autocorrelation", isOn: $simSettings.useAutoCorrelation)
                         .tint(simSettings.useAutoCorrelation ? .orange : .gray)
                         .foregroundColor(.white)
                     
-                    // Strength slider
                     HStack {
                         Button {
                             simSettings.autoCorrelationStrength = 0.05
@@ -121,7 +134,6 @@ struct AdvancedSettingsSection: View {
                     .disabled(!simSettings.useAutoCorrelation)
                     .opacity(simSettings.useAutoCorrelation ? 1.0 : 0.4)
                     
-                    // Mean reversion
                     HStack {
                         Button {
                             simSettings.meanReversionTarget = 0.03
@@ -148,7 +160,8 @@ struct AdvancedSettingsSection: View {
                     
                     Divider()
                 }
-                
+                .listRowBackground(Color(white: 0.15))
+
                 // VOLATILITY
                 Group {
                     Toggle("Use Volatility Shocks", isOn: $simSettings.useVolShocks)
@@ -164,7 +177,8 @@ struct AdvancedSettingsSection: View {
                     
                     Divider()
                 }
-                
+                .listRowBackground(Color(white: 0.15))
+
                 // REGIME SWITCHING
                 Group {
                     Toggle("Use Regime Switching", isOn: $simSettings.useRegimeSwitching)
@@ -175,6 +189,7 @@ struct AdvancedSettingsSection: View {
                         .font(.footnote)
                         .foregroundColor(.secondary)
                 }
+                .listRowBackground(Color(white: 0.15))
             }
         }
         .listRowBackground(Color(white: 0.15))
