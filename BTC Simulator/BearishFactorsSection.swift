@@ -19,14 +19,16 @@ struct BearishFactorsSection: View {
     var body: some View {
         Section("Bearish Factors") {
             
+            // REGULATORY CLAMPDOWN
             FactorToggleRow(
                 iconName: "hand.raised.slash",
                 title: "Regulatory Clampdown",
                 isOn: $simSettings.useRegClampdownUnified,
                 sliderValue: $simSettings.maxClampDownUnified,
                 sliderRange: simSettings.periodUnit == .weeks
-                    ? -0.0025921152243542672 ... 0.0003198247756457328
-                    : -0.035 ... -0.005,
+                    ? -0.0014273392243542672 ... -0.0008449512243542672     // ~1/5 original weekly
+                    : -0.023 ... -0.017                                      // ~1/5 original monthly
+                ,
                 defaultValue: simSettings.periodUnit == .weeks
                     ? -0.0011361452243542672
                     : -0.02,
@@ -37,14 +39,16 @@ struct BearishFactorsSection: View {
                 onTitleTap: toggleFactor
             )
             
+            // COMPETITOR COIN
             FactorToggleRow(
                 iconName: "bitcoinsign.circle",
                 title: "Competitor Coin",
                 isOn: $simSettings.useCompetitorCoinUnified,
                 sliderValue: $simSettings.maxCompetitorBoostUnified,
                 sliderRange: simSettings.periodUnit == .weeks
-                    ? -0.0018617981746411323 ... -0.0001678381746411323
-                    : -0.014 ... -0.002,
+                    ? -0.0011842141746411323 ... -0.0008454221746411323    // ~1/5 original weekly
+                    : -0.0092 ... -0.0068                                  // ~1/5 original monthly
+                ,
                 defaultValue: simSettings.periodUnit == .weeks
                     ? -0.0010148181746411323
                     : -0.008,
@@ -55,14 +59,16 @@ struct BearishFactorsSection: View {
                 onTitleTap: toggleFactor
             )
             
+            // SECURITY BREACH
             FactorToggleRow(
                 iconName: "lock.shield",
                 title: "Security Breach",
                 isOn: $simSettings.useSecurityBreachUnified,
                 sliderValue: $simSettings.breachImpactUnified,
                 sliderRange: simSettings.periodUnit == .weeks
-                    ? -0.0020439515168380737 ... -0.0001389915168380737
-                    : -0.01225 ... -0.00175,
+                    ? -0.0012819675168380737 ... -0.0009009755168380737    // ~1/5 original weekly
+                    : -0.00805 ... -0.00595                                // ~1/5 original monthly
+                ,
                 defaultValue: simSettings.periodUnit == .weeks
                     ? -0.0010914715168380737
                     : -0.007,
@@ -73,14 +79,16 @@ struct BearishFactorsSection: View {
                 onTitleTap: toggleFactor
             )
             
+            // BUBBLE POP
             FactorToggleRow(
                 iconName: "bubble.left.and.bubble.right.fill",
                 title: "Bubble Pop",
                 isOn: $simSettings.useBubblePopUnified,
                 sliderValue: $simSettings.maxPopDropUnified,
                 sliderRange: simSettings.periodUnit == .weeks
-                    ? -0.004173393890762329 ... 0.000648046109237671
-                    : -0.0175 ... -0.0025,
+                    ? -0.002244817890762329 ... -0.001280529890762329   // ~1/5 original weekly
+                    : -0.0115 ... -0.0085                               // ~1/5 original monthly
+                ,
                 defaultValue: simSettings.periodUnit == .weeks
                     ? -0.001762673890762329
                     : -0.01,
@@ -91,14 +99,16 @@ struct BearishFactorsSection: View {
                 onTitleTap: toggleFactor
             )
             
+            // STABLECOIN MELTDOWN
             FactorToggleRow(
                 iconName: "exclamationmark.triangle.fill",
                 title: "Stablecoin Meltdown",
                 isOn: $simSettings.useStablecoinMeltdownUnified,
                 sliderValue: $simSettings.maxMeltdownDropUnified,
                 sliderRange: simSettings.periodUnit == .weeks
-                    ? -0.0019842626159477233 ... 0.0005560573840522763
-                    : -0.0175 ... -0.0025,
+                    ? -0.0009681346159477233 ... -0.0004600706159477233  // ~1/5 original weekly
+                    : -0.013 ... -0.007                                 // ~1/5 original monthly
+                ,
                 defaultValue: simSettings.periodUnit == .weeks
                     ? -0.0007141026159477233
                     : -0.01,
@@ -109,14 +119,16 @@ struct BearishFactorsSection: View {
                 onTitleTap: toggleFactor
             )
             
+            // BLACK SWAN EVENTS
             FactorToggleRow(
                 iconName: "tornado",
                 title: "Black Swan Events",
                 isOn: $simSettings.useBlackSwanUnified,
                 sliderValue: $simSettings.blackSwanDropUnified,
                 sliderRange: simSettings.periodUnit == .weeks
-                    ? -0.79777 ... 0.0
-                    : -0.8 ... 0.0,
+                    ? -0.478662 ... -0.319108   // ~1/5 original weekly
+                    : -0.48 ... -0.32          // ~1/5 original monthly
+                ,
                 defaultValue: simSettings.periodUnit == .weeks
                     ? -0.398885
                     : -0.4,
@@ -127,14 +139,16 @@ struct BearishFactorsSection: View {
                 onTitleTap: toggleFactor
             )
             
+            // BEAR MARKET CONDITIONS
             FactorToggleRow(
                 iconName: "chart.bar.xaxis",
                 title: "Bear Market Conditions",
                 isOn: $simSettings.useBearMarketUnified,
                 sliderValue: $simSettings.bearWeeklyDriftUnified,
                 sliderRange: simSettings.periodUnit == .weeks
-                    ? -0.0016278802752494812 ... -0.0001278802752494812
-                    : -0.0175 ... -0.0025,
+                    ? -0.0010278802752494812 ... -0.0007278802752494812  // ~1/5 original weekly
+                    : -0.013 ... -0.007                                  // ~1/5 original monthly
+                ,
                 defaultValue: simSettings.periodUnit == .weeks
                     ? -0.0008778802752494812
                     : -0.01,
@@ -145,14 +159,16 @@ struct BearishFactorsSection: View {
                 onTitleTap: toggleFactor
             )
             
+            // DECLINING ARR / MATURING MARKET
             FactorToggleRow(
                 iconName: "chart.line.downtrend.xyaxis",
                 title: "Declining ARR / Maturing Market",
                 isOn: $simSettings.useMaturingMarketUnified,
                 sliderValue: $simSettings.maxMaturingDropUnified,
                 sliderRange: simSettings.periodUnit == .weeks
-                    ? -0.0039956381055486196 ... 0.0009075918944513804
-                    : -0.0175 ... -0.0025,
+                    ? -0.0020343461055486196 ... -0.0010537001055486196   // ~1/5 original weekly
+                    : -0.013 ... -0.007                                  // ~1/5 original monthly
+                ,
                 defaultValue: simSettings.periodUnit == .weeks
                     ? -0.0015440231055486196
                     : -0.01,
@@ -163,14 +179,16 @@ struct BearishFactorsSection: View {
                 onTitleTap: toggleFactor
             )
             
+            // RECESSION / MACRO CRASH
             FactorToggleRow(
                 iconName: "chart.line.downtrend.xyaxis.circle.fill",
                 title: "Recession / Macro Crash",
                 isOn: $simSettings.useRecessionUnified,
                 sliderValue: $simSettings.maxRecessionDropUnified,
                 sliderRange: simSettings.periodUnit == .weeks
-                    ? -0.0016560341467487811 ... -0.0001450641467487811
-                    : -0.00217621 ... -0.00072540,
+                    ? -0.0010516462467487811 ... -0.0007494520467487811  // ~1/5 original weekly
+                    : -0.0015958890 ... -0.0013057270                    // ~1/5 original monthly
+                ,
                 defaultValue: simSettings.periodUnit == .weeks
                     ? -0.0009005491467487811
                     : -0.0014508080482482913,
