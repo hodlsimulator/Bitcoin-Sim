@@ -364,23 +364,23 @@ struct SettingsView: View {
     }
     
     // MARK: - Restore Defaults (full-width tappable)
-        private var restoreDefaultsSection: some View {
-            Section {
-                Button(action: {
-                    simSettings.restoreDefaults()
-                    updateAllFactors()
-                }) {
-                    HStack {
-                        Text("Restore Defaults")
-                            .foregroundColor(.red)
-                        Spacer()
-                    }
-                    .contentShape(Rectangle()) // Ensures entire row is tappable
+    private var restoreDefaultsSection: some View {
+        Section {
+            Button(action: {
+                simSettings.restoreDefaults()
+                updateAllFactors()
+            }) {
+                HStack {
+                    Text("Restore Defaults")
+                        .foregroundColor(.red)
+                    Spacer()
                 }
-                .buttonStyle(.plain)
+                .contentShape(Rectangle()) // Ensures entire row is tappable
             }
-            .listRowBackground(Color(white: 0.15))
+            .buttonStyle(.plain)
         }
+        .listRowBackground(Color(white: 0.15))
+    }
     
     // MARK: - About
     private var aboutSection: some View {
@@ -600,55 +600,46 @@ struct SettingsView: View {
             
             // BEARISH
             if simSettings.useRegClampdownUnified {
-                // Original: -0.035 ... -0.005 => Midpoint ~ -0.02 => Range 0.03 => 1/5 => 0.006 total => ±0.003
                 setBearish(&simSettings.maxClampDownUnified,
                            minVal: -0.023,
                            maxVal: -0.017)
             }
             if simSettings.useCompetitorCoinUnified {
-                // Original: -0.014 ... -0.002 => Midpoint -0.008 => Range 0.012 => 1/5 => 0.0024 => ±0.0012
                 setBearish(&simSettings.maxCompetitorBoostUnified,
                            minVal: -0.0092,
                            maxVal: -0.0068)
             }
             if simSettings.useSecurityBreachUnified {
-                // Original: -0.01225 ... -0.00175 => Midpoint -0.007 => Range 0.0105 => 1/5 => 0.0021 => ±0.00105
                 setBearish(&simSettings.breachImpactUnified,
                            minVal: -0.00805,
                            maxVal: -0.00595)
             }
             if simSettings.useBubblePopUnified {
-                // Original: -0.0175 ... -0.0025 => Midpoint -0.01 => Range 0.015 => 1/5 => 0.003 => ±0.0015
                 setBearish(&simSettings.maxPopDropUnified,
                            minVal: -0.0115,
                            maxVal: -0.0085)
             }
             if simSettings.useStablecoinMeltdownUnified {
-                // Same original as BubblePop => same logic
                 setBearish(&simSettings.maxMeltdownDropUnified,
                            minVal: -0.0115,
                            maxVal: -0.0085)
             }
             if simSettings.useBlackSwanUnified {
-                // Original: -0.8 ... 0 => Midpoint -0.4 => Range 0.8 => 1/5 => 0.16 => ±0.08
                 setBearish(&simSettings.blackSwanDropUnified,
                            minVal: -0.48,
                            maxVal: -0.32)
             }
             if simSettings.useBearMarketUnified {
-                // Same original as BubblePop => same logic
                 setBearish(&simSettings.bearWeeklyDriftUnified,
                            minVal: -0.0115,
                            maxVal: -0.0085)
             }
             if simSettings.useMaturingMarketUnified {
-                // Same original as BubblePop => same logic
                 setBearish(&simSettings.maxMaturingDropUnified,
                            minVal: -0.0115,
                            maxVal: -0.0085)
             }
             if simSettings.useRecessionUnified {
-                // Original: -0.00217621 ... -0.00072540 => midpoint ~ -0.00145081 => range ~ 0.00145081 => 1/5 => ~0.00029016 => ±0.00014508
                 setBearish(&simSettings.maxRecessionDropUnified,
                            minVal: -0.00159589,
                            maxVal: -0.00130573)
@@ -656,64 +647,14 @@ struct SettingsView: View {
         }
     }
     
-    // MARK: - Toggle Factor (used for tapping factor titles or tooltips)
-    private func toggleFactor(_ tappedTitle: String) {
-        // This animation just shows/hides the tooltip bubble
-        withAnimation {
-            if activeFactor == tappedTitle {
-                activeFactor = nil
-            } else {
-                activeFactor = tappedTitle
+    // MARK: - Tap factor titles => show/hide tooltip only
+        private func toggleFactor(_ tappedTitle: String) {
+            withAnimation {
+                if activeFactor == tappedTitle {
+                    activeFactor = nil
+                } else {
+                    activeFactor = tappedTitle
+                }
             }
         }
-        
-        // Now actually toggle the underlying factor
-        switch tappedTitle {
-        case "Halving":
-            simSettings.useHalvingUnified.toggle()
-        case "Institutional Demand":
-            simSettings.useInstitutionalDemandUnified.toggle()
-        case "Country Adoption":
-            simSettings.useCountryAdoptionUnified.toggle()
-        case "Regulatory Clarity":
-            simSettings.useRegulatoryClarityUnified.toggle()
-        case "ETF Approval":
-            simSettings.useEtfApprovalUnified.toggle()
-        case "Tech Breakthrough":
-            simSettings.useTechBreakthroughUnified.toggle()
-        case "Scarcity Events":
-            simSettings.useScarcityEventsUnified.toggle()
-        case "Global Macro Hedge":
-            simSettings.useGlobalMacroHedgeUnified.toggle()
-        case "Stablecoin Shift":
-            simSettings.useStablecoinShiftUnified.toggle()
-        case "Demographic Adoption":
-            simSettings.useDemographicAdoptionUnified.toggle()
-        case "Altcoin Flight":
-            simSettings.useAltcoinFlightUnified.toggle()
-        case "Adoption Factor":
-            simSettings.useAdoptionFactorUnified.toggle()
-            
-        case "Regulatory Clampdown":
-            simSettings.useRegClampdownUnified.toggle()
-        case "Competitor Coin":
-            simSettings.useCompetitorCoinUnified.toggle()
-        case "Security Breach":
-            simSettings.useSecurityBreachUnified.toggle()
-        case "Bubble Pop":
-            simSettings.useBubblePopUnified.toggle()
-        case "Stablecoin Meltdown":
-            simSettings.useStablecoinMeltdownUnified.toggle()
-        case "Black Swan":
-            simSettings.useBlackSwanUnified.toggle()
-        case "Bear Market":
-            simSettings.useBearMarketUnified.toggle()
-        case "Maturing Market":
-            simSettings.useMaturingMarketUnified.toggle()
-        case "Recession":
-            simSettings.useRecessionUnified.toggle()
-        default:
-            break
-        }
-    }
-}
+    }   
