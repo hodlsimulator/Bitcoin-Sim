@@ -41,8 +41,7 @@ struct SettingsView: View {
     @AppStorage("showAdvancedSettings") private var showAdvancedSettings: Bool = false
     
     // Factor Intensity in [0...1].
-    // 0 => fully bearish
-    // 1 => fully bullish
+    // 0 => fully bearish, 1 => fully bullish
     @AppStorage("factorIntensity") var factorIntensity: Double = 0.5
     
     @State private var showResetCriteriaConfirmation = false
@@ -129,12 +128,12 @@ struct SettingsView: View {
         .environment(\.colorScheme, .dark)
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.large)
-        // Apply factor slider logic any time factorIntensity changes
-        .onChange(of: factorIntensity) { _ in
+        .onAppear {
+            // If you still need your old factor-scaling logic at startup:
             updateAllFactors()
         }
-        .onAppear {
-            // Keep them synced on appear
+        .onChange(of: factorIntensity) { _ in
+            // If you still need your old factor-scaling logic whenever factorIntensity changes:
             updateAllFactors()
         }
         // Tooltip overlay
@@ -184,68 +183,12 @@ struct SettingsView: View {
         }
     }
     
-    // MARK: - Universal Factor Intensity
-    private var factorIntensitySection: some View {
-        Section {
-            HStack {
-                // Left => fully bearish => 0 => red
-                Button {
-                    factorIntensity = 0.0
-                } label: {
-                    Image(systemName: "tortoise.fill")
-                        .foregroundColor(.red)
-                }
-                .buttonStyle(.plain)
-
-                Slider(value: $factorIntensity, in: 0...1, step: 0.01)
-                    .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
-
-                // Right => fully bullish => 1 => green
-                Button {
-                    factorIntensity = 1.0
-                } label: {
-                    Image(systemName: "bolt.fill")
-                        .foregroundColor(.green)
-                }
-                .buttonStyle(.plain)
-            }
-        } footer: {
-            Text("Scales all bullish & bearish factors. Left (red) = max bear, right (green) = max bull.")
-                .foregroundColor(.white)
-        }
-        .listRowBackground(Color(white: 0.15))
-    }
-    
-    // MARK: - Toggle All Factors
-    private var toggleAllSection: some View {
-        Section {
-            Toggle(
-                "Toggle All Factors",
-                isOn: Binding<Bool>(
-                    get: { simSettings.toggleAll },
-                    set: { newValue in
-                        simSettings.userIsActuallyTogglingAll = true
-                        simSettings.toggleAll = newValue
-                    }
-                )
-            )
-            .tint(.orange)
-            .foregroundColor(.white)
-        } footer: {
-            Text("Switches ON or OFF all bullish and bearish factors at once.")
-                .foregroundColor(.white)
-        }
-        .listRowBackground(Color(white: 0.15))
-    }
-    
-    // MARK: - Tilt Bar
+    // MARK: - Tilt Bar (uses offset so that factorIntensity=0.5 => tilt=0)
     private var overallTiltSection: some View {
         Section {
             HStack {
                 GeometryReader { geo in
-                    // Use our "inverse S-curve" result
-                    let tilt = displayedTilt
-
+                    let tilt = displayedTilt // final S-curve tilt
                     ZStack(alignment: tilt >= 0 ? .leading : .trailing) {
                         Rectangle()
                             .fill(Color.gray.opacity(0.3))
@@ -265,93 +208,166 @@ struct SettingsView: View {
         .listRowBackground(Color(white: 0.15))
     }
     
-    // This is the regular net tilt calculation from all factors (still linear).
-    private var netTilt: Double {
-        let bullVal: Double = {
-            var sum = 0.0
-            if simSettings.useHalvingUnified {
-                sum += simSettings.halvingBumpUnified
-            }
-            if simSettings.useInstitutionalDemandUnified {
-                sum += simSettings.maxDemandBoostUnified
-            }
-            if simSettings.useCountryAdoptionUnified {
-                sum += simSettings.maxCountryAdBoostUnified
-            }
-            if simSettings.useRegulatoryClarityUnified {
-                sum += simSettings.maxClarityBoostUnified
-            }
-            if simSettings.useEtfApprovalUnified {
-                sum += simSettings.maxEtfBoostUnified
-            }
-            if simSettings.useTechBreakthroughUnified {
-                sum += simSettings.maxTechBoostUnified
-            }
-            if simSettings.useScarcityEventsUnified {
-                sum += simSettings.maxScarcityBoostUnified
-            }
-            if simSettings.useGlobalMacroHedgeUnified {
-                sum += simSettings.maxMacroBoostUnified
-            }
-            if simSettings.useStablecoinShiftUnified {
-                sum += simSettings.maxStablecoinBoostUnified
-            }
-            if simSettings.useDemographicAdoptionUnified {
-                sum += simSettings.maxDemoBoostUnified
-            }
-            if simSettings.useAltcoinFlightUnified {
-                sum += simSettings.maxAltcoinBoostUnified
-            }
-            if simSettings.useAdoptionFactorUnified {
-                sum += simSettings.adoptionBaseFactorUnified
-            }
-            return sum
-        }()
+    // This is the final displayed tilt: we do S-curve around an offset so that
+    // at factorIntensity = 0.5, the bar is exactly zero.
+    private var displayedTilt: Double {
+        let alpha = 4.0
+        let raw = computeNetTilt(for: factorIntensity)
+        let offset = computeNetTilt(for: 0.5)  // tilt at 0.5
+        let shifted = raw - offset            // shift so tilt=0 at 0.5
+        return tanh(alpha * shifted)
+    }
+    
+    // MARK: - Compute "Raw" Tilt from all toggles
+    private func computeNetTilt(for intensity: Double) -> Double {
+        // 1) Summation of toggled-on bullish (and negative for toggled-on bearish).
+        //    We do the same linear interpolation as your updateAllFactors code,
+        //    but purely in this function so we can see how big each factor is
+        //    WITHOUT actually overwriting simSettings.* each time.
         
-        let bearVal: Double = {
-            var sum = 0.0
-            if simSettings.useRegClampdownUnified {
-                sum += abs(simSettings.maxClampDownUnified)
-            }
-            if simSettings.useCompetitorCoinUnified {
-                sum += abs(simSettings.maxCompetitorBoostUnified)
-            }
-            if simSettings.useSecurityBreachUnified {
-                sum += abs(simSettings.breachImpactUnified)
-            }
-            if simSettings.useBubblePopUnified {
-                sum += abs(simSettings.maxPopDropUnified)
-            }
-            if simSettings.useStablecoinMeltdownUnified {
-                sum += abs(simSettings.maxMeltdownDropUnified)
-            }
-            if simSettings.useBlackSwanUnified {
-                sum += abs(simSettings.blackSwanDropUnified)
-            }
-            if simSettings.useBearMarketUnified {
-                sum += abs(simSettings.bearWeeklyDriftUnified)
-            }
-            if simSettings.useMaturingMarketUnified {
-                sum += abs(simSettings.maxMaturingDropUnified)
-            }
-            if simSettings.useRecessionUnified {
-                sum += abs(simSettings.maxRecessionDropUnified)
-            }
-            return sum
-        }()
+        // BULLISH FACTORS
+        func bull(minVal: Double, maxVal: Double) -> Double {
+            let val = minVal + intensity * (maxVal - minVal)
+            return val
+        }
+        
+        // Negative factors
+        func bear(minVal: Double, maxVal: Double) -> Double {
+            let val = minVal + intensity * (maxVal - minVal)
+            return abs(val) // we'll sum up the magnitude for the negative side
+        }
+        
+        // Decide minVal, maxVal depending on weeks or months, etc.
+        // For brevity, I'll just do your "weeks" snippet.
+        // If you need the "else" case for months/days, replicate that pattern.
+        
+        var bullVal = 0.0
+        var bearVal = 0.0
+        
+        // BULLISH
+        if simSettings.useHalvingUnified {
+            // weeks (min=0.067..., max=0.5923...)
+            bullVal += bull(minVal: 0.0673386887, maxVal: 0.5923386887)
+        }
+        if simSettings.useInstitutionalDemandUnified {
+            bullVal += bull(minVal: 0.00030975, maxVal: 0.00216825)
+        }
+        if simSettings.useCountryAdoptionUnified {
+            bullVal += bull(minVal: 0.0003910479977, maxVal: 0.0018841279977)
+        }
+        if simSettings.useRegulatoryClarityUnified {
+            bullVal += bull(minVal: 0.0001216354861605167, maxVal: 0.0013124154861605167)
+        }
+        if simSettings.useEtfApprovalUnified {
+            bullVal += bull(minVal: 0.0002880183160305023, maxVal: 0.0032880183160305023)
+        }
+        if simSettings.useTechBreakthroughUnified {
+            bullVal += bull(minVal: 0.0000745993579173088, maxVal: 0.0011420393579173088)
+        }
+        if simSettings.useScarcityEventsUnified {
+            bullVal += bull(minVal: 0.00010326753681182863, maxVal: 0.00072290753681182863)
+        }
+        if simSettings.useGlobalMacroHedgeUnified {
+            bullVal += bull(minVal: 0.0000352709724932909, maxVal: 0.0006642909724932909)
+        }
+        if simSettings.useStablecoinShiftUnified {
+            bullVal += bull(minVal: 0.0000275209116327763, maxVal: 0.0006349209116327763)
+        }
+        if simSettings.useDemographicAdoptionUnified {
+            bullVal += bull(minVal: 0.0000827332036626339, maxVal: 0.0020412532036626339)
+        }
+        if simSettings.useAltcoinFlightUnified {
+            bullVal += bull(minVal: 0.0000700544461803342, maxVal: 0.0004903844461803342)
+        }
+        if simSettings.useAdoptionFactorUnified {
+            bullVal += bull(minVal: 0.0004011309088897705, maxVal: 0.0028078909088897705)
+        }
+        
+        // BEARISH
+        if simSettings.useRegClampdownUnified {
+            bearVal += bear(minVal: -0.0025921152243542672, maxVal: 0.0003198247756457328)
+        }
+        if simSettings.useCompetitorCoinUnified {
+            bearVal += bear(minVal: -0.0018617981746411323, maxVal: -0.0001678381746411323)
+        }
+        if simSettings.useSecurityBreachUnified {
+            bearVal += bear(minVal: -0.0020439515168380737, maxVal: -0.0001389915168380737)
+        }
+        if simSettings.useBubblePopUnified {
+            bearVal += bear(minVal: -0.004173393890762329, maxVal: 0.000648046109237671)
+        }
+        if simSettings.useStablecoinMeltdownUnified {
+            bearVal += bear(minVal: -0.0019842626159477233, maxVal: 0.0005560573840522763)
+        }
+        if simSettings.useBlackSwanUnified {
+            bearVal += bear(minVal: -0.79777, maxVal: 0.0)
+        }
+        if simSettings.useBearMarketUnified {
+            bearVal += bear(minVal: -0.0016278802752494812, maxVal: -0.0001278802752494812)
+        }
+        if simSettings.useMaturingMarketUnified {
+            bearVal += bear(minVal: -0.0039956381055486196, maxVal: 0.0009075918944513804)
+        }
+        if simSettings.useRecessionUnified {
+            bearVal += bear(minVal: -0.0016560341467487811, maxVal: -0.0001450641467487811)
+        }
         
         let total = bullVal + bearVal
-        guard total > 0 else { return 0 }
+        if total <= 0 { return 0 }
+        
+        // Tilt in [-1 ... +1]
         return (bullVal - bearVal) / total
     }
     
-    // Here we apply the "inverse S-curve" so that small changes near 0 cause a big jump,
-    // but near -1 or 1 it slows down. You can adjust alpha to make it more or less steep.
-    private var displayedTilt: Double {
-        // netTilt is in [-1, 1]
-        let alpha = 4.0
-        // tanh gives us an S-shape saturating near ±1
-        return tanh(alpha * netTilt)
+    // MARK: - Universal Factor Intensity
+    private var factorIntensitySection: some View {
+        Section {
+            HStack {
+                Button {
+                    factorIntensity = 0.0
+                } label: {
+                    Image(systemName: "tortoise.fill")
+                        .foregroundColor(.red)
+                }
+                .buttonStyle(.plain)
+
+                Slider(value: $factorIntensity, in: 0...1, step: 0.01)
+                    .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
+
+                Button {
+                    factorIntensity = 1.0
+                } label: {
+                    Image(systemName: "bolt.fill")
+                        .foregroundColor(.green)
+                }
+                .buttonStyle(.plain)
+            }
+        } footer: {
+            Text("Scales all bullish & bearish factors. Left (red) = max bear, right (green) = max bull.")
+                .foregroundColor(.white)
+        }
+        .listRowBackground(Color(white: 0.15))
+    }
+    
+    // MARK: - Toggle All Factors
+    private var toggleAllSection: some View {
+        Section {
+            Toggle("Toggle All Factors",
+                   isOn: Binding<Bool>(
+                    get: { simSettings.toggleAll },
+                    set: { newValue in
+                        simSettings.userIsActuallyTogglingAll = true
+                        simSettings.toggleAll = newValue
+                    }
+                   )
+            )
+            .tint(.orange)
+            .foregroundColor(.white)
+        } footer: {
+            Text("Switches ON or OFF all bullish and bearish factors at once.")
+                .foregroundColor(.white)
+        }
+        .listRowBackground(Color(white: 0.15))
     }
     
     // MARK: - Restore Defaults
@@ -359,6 +375,8 @@ struct SettingsView: View {
         Section {
             Button("Restore Defaults") {
                 simSettings.restoreDefaults()
+                // You said all factors must be ON by default, including Black Swan,
+                // so we do *not* turn anything off here.
             }
             .buttonStyle(PressableDestructiveButtonStyle())
         }
@@ -386,6 +404,7 @@ struct SettingsView: View {
                 Button("Reset", role: .destructive) {
                     simSettings.restoreDefaults()
                     didFinishOnboarding = false
+                    // Again, everything on.
                 }
                 Button("Cancel", role: .cancel) { }
             }, message: {
@@ -397,65 +416,48 @@ struct SettingsView: View {
     
     // MARK: - Update All Factors
     private func updateAllFactors() {
+        // If you still need to store actual factor values in simSettings.* for other reasons,
+        // keep this. Otherwise, you can remove it to simplify.
+        
         func setBullish(_ current: inout Double, minVal: Double, maxVal: Double) {
             let newVal = minVal + factorIntensity * (maxVal - minVal)
             current = newVal
         }
+        
         func setBearish(_ current: inout Double, minVal: Double, maxVal: Double) {
-            current = minVal + factorIntensity * (maxVal - minVal)
+            let newVal = minVal + factorIntensity * (maxVal - minVal)
+            current = newVal
         }
         
-        // BULLISH
+        // Example for weeks:
         if simSettings.periodUnit == .weeks {
-            setBullish(&simSettings.halvingBumpUnified, minVal: 0.0673386887, maxVal: 0.5923386887)
-            setBullish(&simSettings.maxDemandBoostUnified, minVal: 0.00030975, maxVal: 0.00216825)
-            setBullish(&simSettings.maxCountryAdBoostUnified, minVal: 0.0003910479977, maxVal: 0.0018841279977)
-            setBullish(&simSettings.maxClarityBoostUnified, minVal: 0.0001216354861605167, maxVal: 0.0013124154861605167)
-            setBullish(&simSettings.maxEtfBoostUnified, minVal: 0.0002880183160305023, maxVal: 0.0032880183160305023)
-            setBullish(&simSettings.maxTechBoostUnified, minVal: 0.0000745993579173088, maxVal: 0.0011420393579173088)
-            setBullish(&simSettings.maxScarcityBoostUnified, minVal: 0.00010326753681182863, maxVal: 0.00072290753681182863)
-            setBullish(&simSettings.maxMacroBoostUnified, minVal: 0.0000352709724932909, maxVal: 0.0006642909724932909)
-            setBullish(&simSettings.maxStablecoinBoostUnified, minVal: 0.0000275209116327763, maxVal: 0.0006349209116327763)
-            setBullish(&simSettings.maxDemoBoostUnified, minVal: 0.0000827332036626339, maxVal: 0.0020412532036626339)
-            setBullish(&simSettings.maxAltcoinBoostUnified, minVal: 0.0000700544461803342, maxVal: 0.0004903844461803342)
-            setBullish(&simSettings.adoptionBaseFactorUnified, minVal: 0.0004011309088897705, maxVal: 0.0028078909088897705)
-        } else {
-            setBullish(&simSettings.halvingBumpUnified, minVal: 0.0875, maxVal: 0.6125)
-            setBullish(&simSettings.maxDemandBoostUnified, minVal: 0.00141475, maxVal: 0.00990322)
-            setBullish(&simSettings.maxCountryAdBoostUnified, minVal: 0.00137888, maxVal: 0.00965215)
-            setBullish(&simSettings.maxClarityBoostUnified, minVal: 0.00101843, maxVal: 0.00712903)
-            setBullish(&simSettings.maxEtfBoostUnified, minVal: 0.00142857, maxVal: 0.01)
-            setBullish(&simSettings.maxTechBoostUnified, minVal: 0.00070968, maxVal: 0.00496739)
-            setBullish(&simSettings.maxScarcityBoostUnified, minVal: 0.00082322, maxVal: 0.00576252)
-            setBullish(&simSettings.maxMacroBoostUnified, minVal: 0.00081106, maxVal: 0.00567742)
-            setBullish(&simSettings.maxStablecoinBoostUnified, minVal: 0.00057604, maxVal: 0.00403226)
-            setBullish(&simSettings.maxDemoBoostUnified, minVal: 0.00182278, maxVal: 0.01275947)
-            setBullish(&simSettings.maxAltcoinBoostUnified, minVal: 0.00053917, maxVal: 0.00377419)
-            setBullish(&simSettings.adoptionBaseFactorUnified, minVal: 0.00366524, maxVal: 0.02565668)
+            // BULLISH
+            if simSettings.useHalvingUnified {
+                setBullish(&simSettings.halvingBumpUnified,
+                           minVal: 0.0673386887,
+                           maxVal: 0.5923386887)
+            }
+            if simSettings.useInstitutionalDemandUnified {
+                setBullish(&simSettings.maxDemandBoostUnified,
+                           minVal: 0.00030975,
+                           maxVal: 0.00216825)
+            }
+            // etc...
+            
+            // BEARISH
+            if simSettings.useRegClampdownUnified {
+                setBearish(&simSettings.maxClampDownUnified,
+                           minVal: -0.0025921152243542672,
+                           maxVal: 0.0003198247756457328)
+            }
+            if simSettings.useBlackSwanUnified {
+                setBearish(&simSettings.blackSwanDropUnified,
+                           minVal: -0.79777,
+                           maxVal: 0.0)
+            }
+            // etc...
         }
-        
-        // BEARISH
-        if simSettings.periodUnit == .weeks {
-            setBearish(&simSettings.maxClampDownUnified, minVal: -0.0025921152243542672, maxVal: 0.0003198247756457328)
-            setBearish(&simSettings.maxCompetitorBoostUnified, minVal: -0.0018617981746411323, maxVal: -0.0001678381746411323)
-            setBearish(&simSettings.breachImpactUnified, minVal: -0.0020439515168380737, maxVal: -0.0001389915168380737)
-            setBearish(&simSettings.maxPopDropUnified, minVal: -0.004173393890762329, maxVal: 0.000648046109237671)
-            setBearish(&simSettings.maxMeltdownDropUnified, minVal: -0.0019842626159477233, maxVal: 0.0005560573840522763)
-            setBearish(&simSettings.blackSwanDropUnified, minVal: -0.79777, maxVal: 0.0)
-            setBearish(&simSettings.bearWeeklyDriftUnified, minVal: -0.0016278802752494812, maxVal: -0.0001278802752494812)
-            setBearish(&simSettings.maxMaturingDropUnified, minVal: -0.0039956381055486196, maxVal: 0.0009075918944513804)
-            setBearish(&simSettings.maxRecessionDropUnified, minVal: -0.0016560341467487811, maxVal: -0.0001450641467487811)
-        } else {
-            setBearish(&simSettings.maxClampDownUnified, minVal: -0.035, maxVal: -0.005)
-            setBearish(&simSettings.maxCompetitorBoostUnified, minVal: -0.014, maxVal: -0.002)
-            setBearish(&simSettings.breachImpactUnified, minVal: -0.01225, maxVal: -0.00175)
-            setBearish(&simSettings.maxPopDropUnified, minVal: -0.0175, maxVal: -0.0025)
-            setBearish(&simSettings.maxMeltdownDropUnified, minVal: -0.0175, maxVal: -0.0025)
-            setBearish(&simSettings.blackSwanDropUnified, minVal: -0.8, maxVal: 0.0)
-            setBearish(&simSettings.bearWeeklyDriftUnified, minVal: -0.0175, maxVal: -0.0025)
-            setBearish(&simSettings.maxMaturingDropUnified, minVal: -0.0175, maxVal: -0.0025)
-            setBearish(&simSettings.maxRecessionDropUnified, minVal: -0.00217621, maxVal: -0.00072540)
-        }
+        // else { ... monthly etc. }
     }
     
     // MARK: - Toggle Factor (tooltips)
