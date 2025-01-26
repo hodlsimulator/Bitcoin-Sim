@@ -12,67 +12,75 @@ struct AdvancedSettingsSection: View {
     @Binding var showAdvancedSettings: Bool
     
     var body: some View {
-        Section {
-            // Tappable row for expanding/collapsing
-            Button(action: {
-                showAdvancedSettings.toggle()
-            }) {
-                HStack {
-                    Text("Advanced Settings")
-                        .foregroundColor(.white)
-                    Spacer()
-                    Image(systemName: "chevron.forward")
-                        .foregroundColor(.gray)
-                        .rotationEffect(showAdvancedSettings ? .degrees(90) : .degrees(0))
-                }
-            }
-            .buttonStyle(.plain)
-            .listRowBackground(Color(white: 0.15))
-            
-            // Only show this block if showAdvancedSettings == true
-            if showAdvancedSettings {
-                // RANDOM SEED
-                Group {
-                    Toggle("Lock Random Seed", isOn: $simSettings.lockedRandomSeed)
-                        .tint(.orange)
-                        .foregroundColor(.white)
-                        .onChange(of: simSettings.lockedRandomSeed) { locked in
-                            if locked {
-                                let newSeed = UInt64.random(in: 0..<UInt64.max)
-                                simSettings.seedValue = newSeed
-                                simSettings.useRandomSeed = false
-                            } else {
-                                simSettings.seedValue = 0
-                                simSettings.useRandomSeed = true
-                            }
-                        }
-                    
-                    if simSettings.lockedRandomSeed {
-                        Text("Current Seed (Locked): \(simSettings.seedValue)")
-                            .font(.footnote)
+            Section {
+                // Entire row is a button
+                Button(action: {
+                    showAdvancedSettings.toggle()
+                }) {
+                    HStack {
+                        Text("Advanced Settings")
                             .foregroundColor(.white)
-                    } else {
-                        if simSettings.lastUsedSeed == 0 {
-                            Text("Current Seed: (no run yet)")
+                        
+                        Spacer()
+                        
+                        Image(systemName: "chevron.forward")
+                            .foregroundColor(.gray)
+                            .rotationEffect(showAdvancedSettings ? .degrees(90) : .degrees(0))
+                    }
+                    .frame(maxWidth: .infinity)       // Let the label stretch horizontally
+                    .contentShape(Rectangle())        // Make entire row tappable
+                }
+                .buttonStyle(.plain)
+                .listRowBackground(Color(white: 0.15))
+                
+                // Now show the advanced toggles if expanded
+                if showAdvancedSettings {
+                    
+                    // Example random seed section...
+                    Section {
+                        Toggle("Lock Random Seed", isOn: $simSettings.lockedRandomSeed)
+                            .tint(.orange)
+                            .foregroundColor(.white)
+                            .onChange(of: simSettings.lockedRandomSeed) { locked in
+                                if locked {
+                                    let newSeed = UInt64.random(in: 0..<UInt64.max)
+                                    simSettings.seedValue = newSeed
+                                    simSettings.useRandomSeed = false
+                                } else {
+                                    simSettings.seedValue = 0
+                                    simSettings.useRandomSeed = true
+                                }
+                            }
+                        
+                        if simSettings.lockedRandomSeed {
+                            Text("Current Seed (Locked): \(simSettings.seedValue)")
                                 .font(.footnote)
                                 .foregroundColor(.white)
                         } else {
-                            Text("Current Seed (Unlocked): \(simSettings.lastUsedSeed)")
-                                .font(.footnote)
-                                .foregroundColor(.white)
+                            if simSettings.lastUsedSeed == 0 {
+                                Text("Current Seed: (no run yet)")
+                                    .font(.footnote)
+                                    .foregroundColor(.white)
+                            } else {
+                                Text("Current Seed (Unlocked): \(simSettings.lastUsedSeed)")
+                                    .font(.footnote)
+                                    .foregroundColor(.white)
+                            }
                         }
+                        
+                        Text("Locking this seed ensures consistent simulation results every run. Unlock for new randomness.")
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+                        
+                    } header: {
+                        Text("RANDOM SEED")
+                            .font(.caption)
+                            .textCase(.uppercase)
+                            .foregroundColor(.gray)
                     }
-                    
-                    Text("Locking this seed ensures consistent simulation results every run. Unlock for new randomness.")
-                        .font(.footnote)
-                        .foregroundColor(.secondary)
-                    
-                    Divider()
-                }
-                .listRowBackground(Color(white: 0.15))
-
-                // GROWTH MODEL
-                Group {
+                    .listRowBackground(Color(white: 0.15))
+                
+                Section {
                     Toggle("Use Lognormal Growth", isOn: $simSettings.useLognormalGrowth)
                         .tint(.orange)
                         .foregroundColor(.white)
@@ -84,12 +92,15 @@ struct AdvancedSettingsSection: View {
                         .font(.footnote)
                         .foregroundColor(.secondary)
                     
-                    Divider()
+                } header: {
+                    Text("Growth Model")
+                        .font(.caption)
+                        .textCase(.uppercase)
+                        .foregroundColor(.gray)
                 }
                 .listRowBackground(Color(white: 0.15))
-
-                // HISTORICAL SAMPLING
-                Group {
+                
+                Section {
                     Toggle("Use Historical Sampling", isOn: $simSettings.useHistoricalSampling)
                         .tint(.orange)
                         .foregroundColor(.white)
@@ -104,12 +115,15 @@ struct AdvancedSettingsSection: View {
                         .font(.footnote)
                         .foregroundColor(.secondary)
                     
-                    Divider()
+                } header: {
+                    Text("Historical Sampling")
+                        .font(.caption)
+                        .textCase(.uppercase)
+                        .foregroundColor(.gray)
                 }
                 .listRowBackground(Color(white: 0.15))
-
-                // AUTOCORRELATION
-                Group {
+                
+                Section {
                     Toggle("Use Autocorrelation", isOn: $simSettings.useAutoCorrelation)
                         .tint(simSettings.useAutoCorrelation ? .orange : .gray)
                         .foregroundColor(.white)
@@ -127,9 +141,12 @@ struct AdvancedSettingsSection: View {
                         Text("Autocorrelation Strength")
                             .foregroundColor(.white)
                         
-                        Slider(value: $simSettings.autoCorrelationStrength,
-                               in: 0.01...0.09, step: 0.01)
-                            .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
+                        Slider(
+                            value: $simSettings.autoCorrelationStrength,
+                            in: 0.01...0.09,
+                            step: 0.01
+                        )
+                        .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
                     }
                     .disabled(!simSettings.useAutoCorrelation)
                     .opacity(simSettings.useAutoCorrelation ? 1.0 : 0.4)
@@ -147,9 +164,12 @@ struct AdvancedSettingsSection: View {
                         Text("Mean Reversion Target")
                             .foregroundColor(.white)
                         
-                        Slider(value: $simSettings.meanReversionTarget,
-                               in: 0.01...0.05, step: 0.001)
-                            .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
+                        Slider(
+                            value: $simSettings.meanReversionTarget,
+                            in: 0.01...0.05,
+                            step: 0.001
+                        )
+                        .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
                     }
                     .disabled(!simSettings.useAutoCorrelation)
                     .opacity(simSettings.useAutoCorrelation ? 1.0 : 0.4)
@@ -158,12 +178,15 @@ struct AdvancedSettingsSection: View {
                         .font(.footnote)
                         .foregroundColor(.secondary)
                     
-                    Divider()
+                } header: {
+                    Text("Autocorrelation")
+                        .font(.caption)
+                        .textCase(.uppercase)
+                        .foregroundColor(.gray)
                 }
                 .listRowBackground(Color(white: 0.15))
-
-                // VOLATILITY
-                Group {
+                
+                Section {
                     Toggle("Use Volatility Shocks", isOn: $simSettings.useVolShocks)
                         .tint(.orange)
                         .foregroundColor(.white)
@@ -175,12 +198,15 @@ struct AdvancedSettingsSection: View {
                         .font(.footnote)
                         .foregroundColor(.secondary)
                     
-                    Divider()
+                } header: {
+                    Text("Volatility")
+                        .font(.caption)
+                        .textCase(.uppercase)
+                        .foregroundColor(.gray)
                 }
                 .listRowBackground(Color(white: 0.15))
-
-                // REGIME SWITCHING
-                Group {
+                
+                Section {
                     Toggle("Use Regime Switching", isOn: $simSettings.useRegimeSwitching)
                         .tint(.orange)
                         .foregroundColor(.white)
@@ -188,6 +214,12 @@ struct AdvancedSettingsSection: View {
                     Text("Dynamically shifts between bull, bear, and hype states using a Markov chain to create more realistic cyclical patterns.")
                         .font(.footnote)
                         .foregroundColor(.secondary)
+                    
+                } header: {
+                    Text("Regime Switching")
+                        .font(.caption)
+                        .textCase(.uppercase)
+                        .foregroundColor(.gray)
                 }
                 .listRowBackground(Color(white: 0.15))
             }
