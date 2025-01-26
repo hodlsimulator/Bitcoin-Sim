@@ -326,7 +326,7 @@ struct SettingsView: View {
                 Button {
                     factorIntensity = 0.0
                 } label: {
-                    Image(systemName: "tortoise.fill")
+                    Image(systemName: "chart.line.downtrend.xyaxis")
                         .foregroundColor(.red)
                 }
                 .buttonStyle(.plain)
@@ -337,7 +337,7 @@ struct SettingsView: View {
                 Button {
                     factorIntensity = 1.0
                 } label: {
-                    Image(systemName: "bolt.fill")
+                    Image(systemName: "chart.line.uptrend.xyaxis")
                         .foregroundColor(.green)
                 }
                 .buttonStyle(.plain)
