@@ -134,7 +134,7 @@ struct SettingsView: View {
             updateAllFactors()
         }
         .onAppear {
-            // (Change A) Keep them synced on appear
+            // Keep them synced on appear
             updateAllFactors()
         }
         // Tooltip overlay
@@ -188,7 +188,7 @@ struct SettingsView: View {
     private var factorIntensitySection: some View {
         Section {
             HStack {
-                // Left => Fully Bearish => factorIntensity = 0 => Red
+                // Left => fully bearish => 0 => red
                 Button {
                     factorIntensity = 0.0
                 } label: {
@@ -200,7 +200,7 @@ struct SettingsView: View {
                 Slider(value: $factorIntensity, in: 0...1, step: 0.01)
                     .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
 
-                // Right => Fully Bullish => factorIntensity = 1 => Green
+                // Right => fully bullish => 1 => green
                 Button {
                     factorIntensity = 1.0
                 } label: {
@@ -243,19 +243,8 @@ struct SettingsView: View {
         Section {
             HStack {
                 GeometryReader { geo in
-                    // Compute tilt in a local function or closure,
-                    // so SwiftUI sees this entire block as returning a single View.
-                    let tilt: Double = {
-                        if factorIntensity <= 0.001 {
-                            return -1
-                        } else if factorIntensity >= 0.999 {
-                            return 1
-                        } else if abs(factorIntensity - 0.5) < 0.0001 {
-                            return 0
-                        } else {
-                            return max(-1, min(netTilt, 1))
-                        }
-                    }()
+                    // Use our "inverse S-curve" result
+                    let tilt = displayedTilt
 
                     ZStack(alignment: tilt >= 0 ? .leading : .trailing) {
                         Rectangle()
@@ -276,9 +265,8 @@ struct SettingsView: View {
         .listRowBackground(Color(white: 0.15))
     }
     
-    // We normalise net tilt so it can approach ±1
+    // This is the regular net tilt calculation from all factors (still linear).
     private var netTilt: Double {
-        // Sum all toggled-on bullish vs. bearish
         let bullVal: Double = {
             var sum = 0.0
             if simSettings.useHalvingUnified {
@@ -353,11 +341,17 @@ struct SettingsView: View {
         }()
         
         let total = bullVal + bearVal
-        // If neither side has anything toggled on, or sum=0, no tilt
         guard total > 0 else { return 0 }
-        
-        // Normalise to [-1...+1]
         return (bullVal - bearVal) / total
+    }
+    
+    // Here we apply the "inverse S-curve" so that small changes near 0 cause a big jump,
+    // but near -1 or 1 it slows down. You can adjust alpha to make it more or less steep.
+    private var displayedTilt: Double {
+        // netTilt is in [-1, 1]
+        let alpha = 4.0
+        // tanh gives us an S-shape saturating near ±1
+        return tanh(alpha * netTilt)
     }
     
     // MARK: - Restore Defaults
@@ -408,8 +402,6 @@ struct SettingsView: View {
             current = newVal
         }
         func setBearish(_ current: inout Double, minVal: Double, maxVal: Double) {
-            // factorIntensity=0 => pick minVal (most negative).
-            // factorIntensity=1 => pick maxVal (least negative).
             current = minVal + factorIntensity * (maxVal - minVal)
         }
         
