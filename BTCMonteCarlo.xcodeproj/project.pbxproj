@@ -69,6 +69,10 @@
 		E1B7B09D2D44E0D000B60EC6 /* BullishFactorsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B7B09C2D44E0CE00B60EC6 /* BullishFactorsSection.swift */; };
 		E1B7B09F2D44E44A00B60EC6 /* BearishFactorsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B7B09E2D44E44700B60EC6 /* BearishFactorsSection.swift */; };
 		E1B7B0A12D44FD3600B60EC6 /* BigNumberExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B7B0A02D44FD3400B60EC6 /* BigNumberExtensions.swift */; };
+		E1B7B0A52D47532D00B60EC6 /* UIComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B7B0A42D47532B00B60EC6 /* UIComponents.swift */; };
+		E1B7B0A72D4753CF00B60EC6 /* ShiftFactors.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B7B0A62D4753CC00B60EC6 /* ShiftFactors.swift */; };
+		E1B7B0A92D47575400B60EC6 /* SettingsSections.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B7B0A82D47575200B60EC6 /* SettingsSections.swift */; };
+		E1B7B0AB2D4759D800B60EC6 /* SettingsWatchers.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B7B0AA2D4759D300B60EC6 /* SettingsWatchers.swift */; };
 		E1C543B82D224D23005E416D /* MonteCarloResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1C543B72D224D21005E416D /* MonteCarloResultsView.swift */; };
 		E1C543BA2D2283A2005E416D /* YearlyPercentileData.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1C543B92D22839F005E416D /* YearlyPercentileData.swift */; };
 		E1CFF0272D30D07A00D9D044 /* ChartBuilders.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1CFF0262D30D07800D9D044 /* ChartBuilders.swift */; };
@@ -143,6 +147,10 @@
 		E1B7B09C2D44E0CE00B60EC6 /* BullishFactorsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BullishFactorsSection.swift; sourceTree = "<group>"; };
 		E1B7B09E2D44E44700B60EC6 /* BearishFactorsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BearishFactorsSection.swift; sourceTree = "<group>"; };
 		E1B7B0A02D44FD3400B60EC6 /* BigNumberExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BigNumberExtensions.swift; sourceTree = "<group>"; };
+		E1B7B0A42D47532B00B60EC6 /* UIComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIComponents.swift; sourceTree = "<group>"; };
+		E1B7B0A62D4753CC00B60EC6 /* ShiftFactors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftFactors.swift; sourceTree = "<group>"; };
+		E1B7B0A82D47575200B60EC6 /* SettingsSections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSections.swift; sourceTree = "<group>"; };
+		E1B7B0AA2D4759D300B60EC6 /* SettingsWatchers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWatchers.swift; sourceTree = "<group>"; };
 		E1C543B72D224D21005E416D /* MonteCarloResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonteCarloResultsView.swift; sourceTree = "<group>"; };
 		E1C543B92D22839F005E416D /* YearlyPercentileData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YearlyPercentileData.swift; sourceTree = "<group>"; };
 		E1CFF0262D30D07800D9D044 /* ChartBuilders.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartBuilders.swift; sourceTree = "<group>"; };
@@ -236,6 +244,9 @@
 				E1A1E52E2D2E3A3E008F7658 /* RowOffsetHelpers.swift */,
 				E14D24082D3A677D007CC11A /* SettingsPrinter.swift */,
 				E1883F372D1DD4C5007AA90B /* SettingsView.swift */,
+				E1B7B0A82D47575200B60EC6 /* SettingsSections.swift */,
+				E1B7B0AA2D4759D300B60EC6 /* SettingsWatchers.swift */,
+				E1B7B0A62D4753CC00B60EC6 /* ShiftFactors.swift */,
 				E17B2F212D26A9F000ECE087 /* SimulationCoordinator.swift */,
 				E166A8AF2CF855C20003F518 /* SimulationData.swift */,
 				E1883F392D1DD94C007AA90B /* SimulationSettings.swift */,
@@ -250,6 +261,7 @@
 				E14D23F42D374258007CC11A /* SimulationSummaryCardView.swift */,
 				E1A1E52C2D2E39E3008F7658 /* SnapshotExtensions.swift */,
 				E1A1E5262D2E371B008F7658 /* TipsData.swift */,
+				E1B7B0A42D47532B00B60EC6 /* UIComponents.swift */,
 				E19D113B2D42F81A00E3A55E /* UtilityExtensions.swift */,
 				E1883F412D1E43D7007AA90B /* VisualEffectBlur.swift */,
 				E1C543B92D22839F005E416D /* YearlyPercentileData.swift */,
@@ -404,6 +416,7 @@
 				E191AD5F2D1B07BC00020DBE /* CSVLoaderHistorical.swift in Sources */,
 				E166A8B02CF855C20003F518 /* SimulationData.swift in Sources */,
 				E19D10F12D402BDC00E3A55E /* SimulationSettings+ToggleAll.swift in Sources */,
+				E1B7B0A92D47575400B60EC6 /* SettingsSections.swift in Sources */,
 				E191AD5D2D1B06E600020DBE /* BitcoinHistoricalData.swift in Sources */,
 				E1883F482D1E8E21007AA90B /* AboutView.swift in Sources */,
 				E17B2F282D27505300ECE087 /* LandscapePlaceholderView.swift in Sources */,
@@ -427,6 +440,7 @@
 				E191AD632D1B0C9400020DBE /* CSVLoaderSP500.swift in Sources */,
 				E191AD652D1B0D5700020DBE /* CSVParsingUtilities.swift in Sources */,
 				E19D10F72D40D8E100E3A55E /* SimulationSettings+BearishFactors.swift in Sources */,
+				E1B7B0AB2D4759D800B60EC6 /* SettingsWatchers.swift in Sources */,
 				E19D10E72D3ED96200E3A55E /* GARCHHelper.swift in Sources */,
 				E1B7B09D2D44E0D000B60EC6 /* BullishFactorsSection.swift in Sources */,
 				E19D10EF2D40290A00E3A55E /* SimulationSettings+RestoreDefaults.swift in Sources */,
@@ -441,6 +455,7 @@
 				E12CCD8B2CF8235F0059931D /* BTC_SimulatorApp.swift in Sources */,
 				E1A1E5272D2E371D008F7658 /* TipsData.swift in Sources */,
 				E1E31C4F2D4349E000ED22E6 /* DataLoader.swift in Sources */,
+				E1B7B0A72D4753CF00B60EC6 /* ShiftFactors.swift in Sources */,
 				E14D240B2D3A698A007CC11A /* SimulationSettingsInit.swift in Sources */,
 				E1E31C512D438DD900ED22E6 /* GarchCalibrator.swift in Sources */,
 				E1883F3E2D1E0D7A007AA90B /* ActiveField.swift in Sources */,
@@ -455,6 +470,7 @@
 				E166A8AE2CF855BF0003F518 /* MonteCarloSimulator.swift in Sources */,
 				E1CFF0272D30D07A00D9D044 /* ChartBuilders.swift in Sources */,
 				E1883F382D1DD4C8007AA90B /* SettingsView.swift in Sources */,
+				E1B7B0A52D47532D00B60EC6 /* UIComponents.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
