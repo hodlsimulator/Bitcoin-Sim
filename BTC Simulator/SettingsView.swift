@@ -189,14 +189,19 @@ struct SettingsView: View {
         }
         
         // 2) Return that Form with watchers attached:
-        return mainForm.attachFactorWatchers(
-            simSettings: simSettings,
-            factorIntensity: factorIntensity,
-            oldFactorIntensity: oldFactorIntensity,
-            animateFactor: animateFactor,
-            updateUniversalFactorIntensity: updateUniversalFactorIntensity,
-            syncFactorToSlider: syncFactorToSlider
-        )
+        return mainForm
+            // Disable any default/implicit animations
+            .transaction { txn in
+                txn.animation = nil
+            }
+            .attachFactorWatchers(
+                simSettings: simSettings,
+                factorIntensity: factorIntensity,
+                oldFactorIntensity: oldFactorIntensity,
+                animateFactor: animateFactor,
+                updateUniversalFactorIntensity: updateUniversalFactorIntensity,
+                syncFactorToSlider: syncFactorToSlider
+            )
     }
     
     // -------------- Helper Function --------------
