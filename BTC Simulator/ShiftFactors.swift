@@ -27,6 +27,7 @@ extension SettingsView {
                          minVal: Double,
                          maxVal: Double)
         {
+            // Freeze if factor is off
             guard useFactor else { return }
             let range = maxVal - minVal
             let newValue = clamp(oldValue + delta * range * frac(key), minVal: minVal, maxVal: maxVal)
@@ -272,10 +273,121 @@ extension SettingsView {
         factorIntensity = average
         oldFactorIntensity = average
     }
+    
+    // New helper: ensures the factor’s internal value is resynced to the current slider
+    // so 0→1 animations don’t jump.
+    private func syncSingleFactorWithSlider(_ key: String) {
+        switch key {
+        case "Halving":
+            syncFactorToSlider(&simSettings.halvingBumpUnified,
+                               minVal: 0.2773386887,
+                               maxVal: 0.3823386887)
+        case "InstitutionalDemand":
+            syncFactorToSlider(&simSettings.maxDemandBoostUnified,
+                               minVal: 0.00105315,
+                               maxVal: 0.00142485)
+        case "CountryAdoption":
+            syncFactorToSlider(&simSettings.maxCountryAdBoostUnified,
+                               minVal: 0.0009882799977,
+                               maxVal: 0.0012868959977)
+        case "RegulatoryClarity":
+            syncFactorToSlider(&simSettings.maxClarityBoostUnified,
+                               minVal: 0.0005979474861605167,
+                               maxVal: 0.0008361034861605167)
+        case "EtfApproval":
+            syncFactorToSlider(&simSettings.maxEtfBoostUnified,
+                               minVal: 0.0014880183160305023,
+                               maxVal: 0.0020880183160305023)
+        case "TechBreakthrough":
+            syncFactorToSlider(&simSettings.maxTechBoostUnified,
+                               minVal: 0.0005015753579173088,
+                               maxVal: 0.0007150633579173088)
+        case "ScarcityEvents":
+            syncFactorToSlider(&simSettings.maxScarcityBoostUnified,
+                               minVal: 0.00035112353681182863,
+                               maxVal: 0.00047505153681182863)
+        case "GlobalMacroHedge":
+            syncFactorToSlider(&simSettings.maxMacroBoostUnified,
+                               minVal: 0.0002868789724932909,
+                               maxVal: 0.0004126829724932909)
+        case "StablecoinShift":
+            syncFactorToSlider(&simSettings.maxStablecoinBoostUnified,
+                               minVal: 0.0002704809116327763,
+                               maxVal: 0.0003919609116327763)
+        case "DemographicAdoption":
+            syncFactorToSlider(&simSettings.maxDemoBoostUnified,
+                               minVal: 0.0008661432036626339,
+                               maxVal: 0.0012578432036626339)
+        case "AltcoinFlight":
+            syncFactorToSlider(&simSettings.maxAltcoinBoostUnified,
+                               minVal: 0.0002381864461803342,
+                               maxVal: 0.0003222524461803342)
+        case "AdoptionFactor":
+            syncFactorToSlider(&simSettings.adoptionBaseFactorUnified,
+                               minVal: 0.0013638349088897705,
+                               maxVal: 0.0018451869088897705)
+        case "RegClampdown":
+            syncFactorToSlider(&simSettings.maxClampDownUnified,
+                               minVal: -0.0014273392243542672,
+                               maxVal: -0.0008449512243542672)
+        case "CompetitorCoin":
+            syncFactorToSlider(&simSettings.maxCompetitorBoostUnified,
+                               minVal: -0.0011842141746411323,
+                               maxVal: -0.0008454221746411323)
+        case "SecurityBreach":
+            syncFactorToSlider(&simSettings.breachImpactUnified,
+                               minVal: -0.0012819675168380737,
+                               maxVal: -0.0009009755168380737)
+        case "BubblePop":
+            syncFactorToSlider(&simSettings.maxPopDropUnified,
+                               minVal: -0.002244817890762329,
+                               maxVal: -0.001280529890762329)
+        case "StablecoinMeltdown":
+            syncFactorToSlider(&simSettings.maxMeltdownDropUnified,
+                               minVal: -0.0009681346159477233,
+                               maxVal: -0.0004600706159477233)
+        case "BlackSwan":
+            syncFactorToSlider(&simSettings.blackSwanDropUnified,
+                               minVal: -0.478662,
+                               maxVal: -0.319108)
+        case "BearMarket":
+            syncFactorToSlider(&simSettings.bearWeeklyDriftUnified,
+                               minVal: -0.0010278802752494812,
+                               maxVal: -0.0007278802752494812)
+        case "MaturingMarket":
+            syncFactorToSlider(&simSettings.maxMaturingDropUnified,
+                               minVal: -0.0020343461055486196,
+                               maxVal: -0.0010537001055486196)
+        case "Recession":
+            syncFactorToSlider(&simSettings.maxRecessionDropUnified,
+                               minVal: -0.0010516462467487811,
+                               maxVal: -0.0007494520467487811)
+        default:
+            break
+        }
+    }
+
+    // Same logic as in the main file.
+    private func syncFactorToSlider(_ currentValue: inout Double,
+                                    minVal: Double,
+                                    maxVal: Double)
+    {
+        let t = factorIntensity
+        currentValue = minVal + t * (maxVal - minVal)
+    }
 
     func animateFactor(_ key: String, isOn: Bool) {
+        withAnimation(.none) {
+            if isOn {
+                syncSingleFactorWithSlider(key)
+                // Force fraction to zero without animating
+                factorEnableFrac[key] = 0
+            }
+        }
+
+        // Now do the real animation
         withAnimation(.easeInOut(duration: 0.6)) {
-            factorEnableFrac[key] = isOn ? 1.0 : 0.0
+            factorEnableFrac[key] = isOn ? 1 : 0
         }
     }
 
