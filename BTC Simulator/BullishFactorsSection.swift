@@ -16,13 +16,20 @@ struct BullishFactorsSection: View {
     // Pass in a function to toggle the tooltip
     let toggleFactor: (String) -> Void
     
+    // NEW: Instead of Bool toggles, we use fractional on/off from factorEnableFrac
+    @Binding var factorEnableFrac: [String: Double]
+    
     var body: some View {
         Section("Bullish Factors") {
+            
             // HALVING
             FactorToggleRow(
                 iconName: "globe.europe.africa",
                 title: "Halving",
-                isOn: $simSettings.useHalvingUnified,
+                isOn: Binding<Bool>(
+                    get: { (factorEnableFrac["Halving"] ?? 0.0) > 0.5 },
+                    set: { factorEnableFrac["Halving"] = $0 ? 1.0 : 0.0 }
+                ),
                 sliderValue: $simSettings.halvingBumpUnified,
                 sliderRange: simSettings.periodUnit == .weeks
                     ? 0.2773386887 ... 0.3823386887
@@ -42,7 +49,10 @@ struct BullishFactorsSection: View {
             FactorToggleRow(
                 iconName: "bitcoinsign.bank.building",
                 title: "Institutional Demand",
-                isOn: $simSettings.useInstitutionalDemandUnified,
+                isOn: Binding<Bool>(
+                    get: { (factorEnableFrac["InstitutionalDemand"] ?? 0.0) > 0.5 },
+                    set: { factorEnableFrac["InstitutionalDemand"] = $0 ? 1.0 : 0.0 }
+                ),
                 sliderValue: $simSettings.maxDemandBoostUnified,
                 sliderRange: simSettings.periodUnit == .weeks
                     ? 0.00105315 ... 0.00142485
@@ -61,7 +71,10 @@ struct BullishFactorsSection: View {
             FactorToggleRow(
                 iconName: "flag.fill",
                 title: "Country Adoption",
-                isOn: $simSettings.useCountryAdoptionUnified,
+                isOn: Binding<Bool>(
+                    get: { (factorEnableFrac["CountryAdoption"] ?? 0.0) > 0.5 },
+                    set: { factorEnableFrac["CountryAdoption"] = $0 ? 1.0 : 0.0 }
+                ),
                 sliderValue: $simSettings.maxCountryAdBoostUnified,
                 sliderRange: simSettings.periodUnit == .weeks
                     ? 0.0009882799977 ... 0.0012868959977
@@ -80,7 +93,10 @@ struct BullishFactorsSection: View {
             FactorToggleRow(
                 iconName: "checkmark.shield",
                 title: "Regulatory Clarity",
-                isOn: $simSettings.useRegulatoryClarityUnified,
+                isOn: Binding<Bool>(
+                    get: { (factorEnableFrac["RegulatoryClarity"] ?? 0.0) > 0.5 },
+                    set: { factorEnableFrac["RegulatoryClarity"] = $0 ? 1.0 : 0.0 }
+                ),
                 sliderValue: $simSettings.maxClarityBoostUnified,
                 sliderRange: simSettings.periodUnit == .weeks
                     ? 0.0005979474861605167 ... 0.0008361034861605167
@@ -99,7 +115,10 @@ struct BullishFactorsSection: View {
             FactorToggleRow(
                 iconName: "building.2.crop.circle",
                 title: "ETF Approval",
-                isOn: $simSettings.useEtfApprovalUnified,
+                isOn: Binding<Bool>(
+                    get: { (factorEnableFrac["EtfApproval"] ?? 0.0) > 0.5 },
+                    set: { factorEnableFrac["EtfApproval"] = $0 ? 1.0 : 0.0 }
+                ),
                 sliderValue: $simSettings.maxEtfBoostUnified,
                 sliderRange: simSettings.periodUnit == .weeks
                     ? 0.0014880183160305023 ... 0.0020880183160305023
@@ -118,7 +137,10 @@ struct BullishFactorsSection: View {
             FactorToggleRow(
                 iconName: "sparkles",
                 title: "Tech Breakthrough",
-                isOn: $simSettings.useTechBreakthroughUnified,
+                isOn: Binding<Bool>(
+                    get: { (factorEnableFrac["TechBreakthrough"] ?? 0.0) > 0.5 },
+                    set: { factorEnableFrac["TechBreakthrough"] = $0 ? 1.0 : 0.0 }
+                ),
                 sliderValue: $simSettings.maxTechBoostUnified,
                 sliderRange: simSettings.periodUnit == .weeks
                     ? 0.0005015753579173088 ... 0.0007150633579173088
@@ -137,7 +159,10 @@ struct BullishFactorsSection: View {
             FactorToggleRow(
                 iconName: "scalemass",
                 title: "Scarcity Events",
-                isOn: $simSettings.useScarcityEventsUnified,
+                isOn: Binding<Bool>(
+                    get: { (factorEnableFrac["ScarcityEvents"] ?? 0.0) > 0.5 },
+                    set: { factorEnableFrac["ScarcityEvents"] = $0 ? 1.0 : 0.0 }
+                ),
                 sliderValue: $simSettings.maxScarcityBoostUnified,
                 sliderRange: simSettings.periodUnit == .weeks
                     ? 0.00035112353681182863 ... 0.00047505153681182863
@@ -156,7 +181,10 @@ struct BullishFactorsSection: View {
             FactorToggleRow(
                 iconName: "globe.americas.fill",
                 title: "Global Macro Hedge",
-                isOn: $simSettings.useGlobalMacroHedgeUnified,
+                isOn: Binding<Bool>(
+                    get: { (factorEnableFrac["GlobalMacroHedge"] ?? 0.0) > 0.5 },
+                    set: { factorEnableFrac["GlobalMacroHedge"] = $0 ? 1.0 : 0.0 }
+                ),
                 sliderValue: $simSettings.maxMacroBoostUnified,
                 sliderRange: simSettings.periodUnit == .weeks
                     ? 0.0002868789724932909 ... 0.0004126829724932909
@@ -175,7 +203,10 @@ struct BullishFactorsSection: View {
             FactorToggleRow(
                 iconName: "dollarsign.arrow.circlepath",
                 title: "Stablecoin Shift",
-                isOn: $simSettings.useStablecoinShiftUnified,
+                isOn: Binding<Bool>(
+                    get: { (factorEnableFrac["StablecoinShift"] ?? 0.0) > 0.5 },
+                    set: { factorEnableFrac["StablecoinShift"] = $0 ? 1.0 : 0.0 }
+                ),
                 sliderValue: $simSettings.maxStablecoinBoostUnified,
                 sliderRange: simSettings.periodUnit == .weeks
                     ? 0.0002704809116327763 ... 0.0003919609116327763
@@ -194,7 +225,10 @@ struct BullishFactorsSection: View {
             FactorToggleRow(
                 iconName: "person.3.fill",
                 title: "Demographic Adoption",
-                isOn: $simSettings.useDemographicAdoptionUnified,
+                isOn: Binding<Bool>(
+                    get: { (factorEnableFrac["DemographicAdoption"] ?? 0.0) > 0.5 },
+                    set: { factorEnableFrac["DemographicAdoption"] = $0 ? 1.0 : 0.0 }
+                ),
                 sliderValue: $simSettings.maxDemoBoostUnified,
                 sliderRange: simSettings.periodUnit == .weeks
                     ? 0.0008661432036626339 ... 0.0012578432036626339
@@ -213,7 +247,10 @@ struct BullishFactorsSection: View {
             FactorToggleRow(
                 iconName: "bitcoinsign.circle.fill",
                 title: "Altcoin Flight",
-                isOn: $simSettings.useAltcoinFlightUnified,
+                isOn: Binding<Bool>(
+                    get: { (factorEnableFrac["AltcoinFlight"] ?? 0.0) > 0.5 },
+                    set: { factorEnableFrac["AltcoinFlight"] = $0 ? 1.0 : 0.0 }
+                ),
                 sliderValue: $simSettings.maxAltcoinBoostUnified,
                 sliderRange: simSettings.periodUnit == .weeks
                     ? 0.0002381864461803342 ... 0.0003222524461803342
@@ -232,7 +269,10 @@ struct BullishFactorsSection: View {
             FactorToggleRow(
                 iconName: "arrow.up.right.circle.fill",
                 title: "Adoption Factor (Incremental Drift)",
-                isOn: $simSettings.useAdoptionFactorUnified,
+                isOn: Binding<Bool>(
+                    get: { (factorEnableFrac["AdoptionFactor"] ?? 0.0) > 0.5 },
+                    set: { factorEnableFrac["AdoptionFactor"] = $0 ? 1.0 : 0.0 }
+                ),
                 sliderValue: $simSettings.adoptionBaseFactorUnified,
                 sliderRange: simSettings.periodUnit == .weeks
                     ? 0.0013638349088897705 ... 0.0018451869088897705

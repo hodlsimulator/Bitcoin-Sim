@@ -23,11 +23,7 @@ struct SettingsView: View {
     @State var showResetCriteriaConfirmation = false
     @State var activeFactor: String? = nil
     
-    @State private var halvingEnableFrac: Double = 1.0
-    
-    // MARK: - NEW: Factor "enable" fractions for each factor
-    // These start at 1.0 if you want them “on” by default.
-    // If a factor is toggled off at the start, set 0.0.
+    // Factor "enable" fractions (0 = off, 1 = on)
     @State var factorEnableFrac: [String: Double] = [
         "Halving": 1.0,
         "InstitutionalDemand": 1.0,
@@ -77,7 +73,7 @@ struct SettingsView: View {
         blurredAppearance.largeTitleTextAttributes = opaqueAppearance.largeTitleTextAttributes
         blurredAppearance.titleTextAttributes = opaqueAppearance.titleTextAttributes
         
-        // Back button (just chevron)
+        // Back button (chevron only)
         let chevronImage = UIImage(systemName: "chevron.left")?
             .withTintColor(.white, renderingMode: .alwaysOriginal)
         let backItem = UIBarButtonItemAppearance(style: .plain)
@@ -95,7 +91,6 @@ struct SettingsView: View {
     }
     
     var body: some View {
-        // 1) Build the main Form as a local constant:
         let mainForm = Form {
             
             // 1) Tilt Bar
@@ -111,12 +106,20 @@ struct SettingsView: View {
             restoreDefaultsSection
             
             // 5) Bullish Factors
-            BullishFactorsSection(activeFactor: $activeFactor, toggleFactor: toggleFactor)
-                .environmentObject(simSettings)
+            BullishFactorsSection(
+                activeFactor: $activeFactor,
+                toggleFactor: toggleFactor,
+                factorEnableFrac: $factorEnableFrac
+            )
+            .environmentObject(simSettings)
             
             // 6) Bearish Factors
-            BearishFactorsSection(activeFactor: $activeFactor, toggleFactor: toggleFactor)
-                .environmentObject(simSettings)
+            BearishFactorsSection(
+                activeFactor: $activeFactor,
+                toggleFactor: toggleFactor,
+                factorEnableFrac: $factorEnableFrac
+            )
+            .environmentObject(simSettings)
             
             // 7) Advanced Disclosure
             AdvancedSettingsSection(showAdvancedSettings: $showAdvancedSettings)
@@ -135,7 +138,7 @@ struct SettingsView: View {
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.large)
         
-        // When the universal slider changes, shift all toggled-on factors accordingly
+        // Update all factor values whenever the universal slider changes
         .onChange(of: factorIntensity) { newVal in
             let delta = newVal - oldFactorIntensity
             oldFactorIntensity = newVal
@@ -188,10 +191,10 @@ struct SettingsView: View {
             }
         }
         
-        // 2) Return that Form with watchers attached:
+        // Return the form with watchers attached
         return mainForm
-            // Disable any default/implicit animations
             .transaction { txn in
+                // Disable default/implicit form row animations
                 txn.animation = nil
             }
             .attachFactorWatchers(
@@ -204,322 +207,111 @@ struct SettingsView: View {
             )
     }
     
-    // -------------- Helper Function --------------
+    // ------------------ Helpers ------------------
+    
     private func syncFactorToSlider(
         currentValue: inout Double,
         minVal: Double,
         maxVal: Double
     ) {
-        // E.g., if universal slider is 0.3, we set currentValue to
-        // minVal + 0.3*(maxVal - minVal).
-        // This ensures the factor’s real value matches the universal slider’s proportion.
-        
+        // Force the factor’s internal value to match the universal factorIntensity proportion.
         let t = factorIntensity
         currentValue = minVal + t * (maxVal - minVal)
     }
     
-    // Compute "Raw" Tilt from toggles
-    private func computeNetTilt() -> Double {
-        computeNetTilt(atIntensity: factorIntensity)
-    }
+    private func updateUniversalFactorIntensity(_: String) { /* optional stub */ }
     
-    // If you want to see net tilt for a hypothetical intensity
-    private func computeNetTilt(atIntensity intensity: Double) -> Double {
-        func bull(minVal: Double, maxVal: Double) -> Double {
-            minVal + intensity * (maxVal - minVal)
-        }
-        func bear(minVal: Double, maxVal: Double) -> Double {
-            abs(minVal + intensity * (maxVal - minVal))
-        }
-        
-        var bullVal = 0.0
-        var bearVal = 0.0
-        
-        // BULLISH
-        if simSettings.useHalvingUnified {
-            bullVal += bull(minVal: 0.2773386887, maxVal: 0.3823386887)
-        }
-        if simSettings.useInstitutionalDemandUnified {
-            bullVal += bull(minVal: 0.00105315, maxVal: 0.00142485)
-        }
-        if simSettings.useCountryAdoptionUnified {
-            bullVal += bull(minVal: 0.0009882799977, maxVal: 0.0012868959977)
-        }
-        if simSettings.useRegulatoryClarityUnified {
-            bullVal += bull(minVal: 0.0005979474861605167, maxVal: 0.0008361034861605167)
-        }
-        if simSettings.useEtfApprovalUnified {
-            bullVal += bull(minVal: 0.0014880183160305023, maxVal: 0.0020880183160305023)
-        }
-        if simSettings.useTechBreakthroughUnified {
-            bullVal += bull(minVal: 0.0005015753579173088, maxVal: 0.0007150633579173088)
-        }
-        if simSettings.useScarcityEventsUnified {
-            bullVal += bull(minVal: 0.00035112353681182863, maxVal: 0.00047505153681182863)
-        }
-        if simSettings.useGlobalMacroHedgeUnified {
-            bullVal += bull(minVal: 0.0002868789724932909, maxVal: 0.0004126829724932909)
-        }
-        if simSettings.useStablecoinShiftUnified {
-            bullVal += bull(minVal: 0.0002704809116327763, maxVal: 0.0003919609116327763)
-        }
-        if simSettings.useDemographicAdoptionUnified {
-            bullVal += bull(minVal: 0.0008661432036626339, maxVal: 0.0012578432036626339)
-        }
-        if simSettings.useAltcoinFlightUnified {
-            bullVal += bull(minVal: 0.0002381864461803342, maxVal: 0.0003222524461803342)
-        }
-        if simSettings.useAdoptionFactorUnified {
-            bullVal += bull(minVal: 0.0013638349088897705, maxVal: 0.0018451869088897705)
-        }
-        
-        // BEARISH
-        if simSettings.useRegClampdownUnified {
-            bearVal += bear(minVal: -0.0014273392243542672, maxVal: -0.0008449512243542672)
-        }
-        if simSettings.useCompetitorCoinUnified {
-            bearVal += bear(minVal: -0.0011842141746411323, maxVal: -0.0008454221746411323)
-        }
-        if simSettings.useSecurityBreachUnified {
-            bearVal += bear(minVal: -0.0012819675168380737, maxVal: -0.0009009755168380737)
-        }
-        if simSettings.useBubblePopUnified {
-            bearVal += bear(minVal: -0.002244817890762329, maxVal: -0.001280529890762329)
-        }
-        if simSettings.useStablecoinMeltdownUnified {
-            bearVal += bear(minVal: -0.0009681346159477233, maxVal: -0.0004600706159477233)
-        }
-        if simSettings.useBlackSwanUnified {
-            bearVal += bear(minVal: -0.478662, maxVal: -0.319108)
-        }
-        if simSettings.useBearMarketUnified {
-            bearVal += bear(minVal: -0.0010278802752494812, maxVal: -0.0007278802752494812)
-        }
-        if simSettings.useMaturingMarketUnified {
-            bearVal += bear(minVal: -0.0020343461055486196, maxVal: -0.0010537001055486196)
-        }
-        if simSettings.useRecessionUnified {
-            bearVal += bear(minVal: -0.0010516462467487811, maxVal: -0.0007494520467487811)
-        }
-        
-        let total = bullVal + bearVal
-        guard total > 0 else { return 0.0 }
-        
-        return (bullVal - bearVal) / total
-    }
-    
+    // MARK: - Net Tilt Calculation
     var displayedTilt: Double {
         let alpha = 4.0
-        let baseline = baselineNetTilt()           // All factors ON at 0.5
-        let raw = computeActiveNetTilt()           // Actually-toggled factors at real intensities
-        let shifted = raw - baseline               // Deviation from baseline
+        let baseline = baselineNetTilt()  // all factors on at 0.5
+        let raw = computeActiveNetTilt()  // actual toggles + intensities
+        let shifted = raw - baseline
         let scaleFactor = 5.0
-        
         return tanh(alpha * shifted * scaleFactor)
     }
-
-    // 1) Baseline always sums *all* factors, ignoring toggles, at 0.5 intensity.
+    
     private func baselineNetTilt() -> Double {
         var bullVal = 0.0
         var bearVal = 0.0
         
-        // MARK: - Bullish Factors (All On, Intensity=0.5)
-        bullVal += bull(minVal: 0.2773386887,         maxVal: 0.3823386887,         intensity: 0.5) // Halving
-        bullVal += bull(minVal: 0.00105315,           maxVal: 0.00142485,           intensity: 0.5) // Institutional Demand
-        bullVal += bull(minVal: 0.0009882799977,      maxVal: 0.0012868959977,      intensity: 0.5) // Country Adoption
-        bullVal += bull(minVal: 0.0005979474861605167,maxVal: 0.0008361034861605167,intensity: 0.5) // Regulatory Clarity
-        bullVal += bull(minVal: 0.0014880183160305023,maxVal: 0.0020880183160305023,intensity: 0.5) // ETF Approval
-        bullVal += bull(minVal: 0.0005015753579173088,maxVal: 0.0007150633579173088,intensity: 0.5) // Tech Breakthrough
-        bullVal += bull(minVal: 0.00035112353681182863,maxVal: 0.00047505153681182863,intensity: 0.5) // Scarcity Events
-        bullVal += bull(minVal: 0.0002868789724932909,maxVal: 0.0004126829724932909,intensity: 0.5) // Global Macro Hedge
-        bullVal += bull(minVal: 0.0002704809116327763,maxVal: 0.0003919609116327763,intensity: 0.5) // Stablecoin Shift
-        bullVal += bull(minVal: 0.0008661432036626339,maxVal: 0.0012578432036626339,intensity: 0.5) // Demographic Adoption
-        bullVal += bull(minVal: 0.0002381864461803342,maxVal: 0.0003222524461803342,intensity: 0.5) // Altcoin Flight
-        bullVal += bull(minVal: 0.0013638349088897705,maxVal: 0.0018451869088897705,intensity: 0.5) // Adoption Factor
+        // Bullish (all on @ intensity=0.5)
+        bullVal += bull(minVal: 0.2773386887,         maxVal: 0.3823386887,         intensity: 0.5)
+        bullVal += bull(minVal: 0.00105315,           maxVal: 0.00142485,           intensity: 0.5)
+        bullVal += bull(minVal: 0.0009882799977,      maxVal: 0.0012868959977,      intensity: 0.5)
+        bullVal += bull(minVal: 0.0005979474861605167,maxVal: 0.0008361034861605167,intensity: 0.5)
+        bullVal += bull(minVal: 0.0014880183160305023,maxVal: 0.0020880183160305023,intensity: 0.5)
+        bullVal += bull(minVal: 0.0005015753579173088,maxVal: 0.0007150633579173088,intensity: 0.5)
+        bullVal += bull(minVal: 0.00035112353681182863,maxVal: 0.00047505153681182863,intensity: 0.5)
+        bullVal += bull(minVal: 0.0002868789724932909,maxVal: 0.0004126829724932909,intensity: 0.5)
+        bullVal += bull(minVal: 0.0002704809116327763,maxVal: 0.0003919609116327763,intensity: 0.5)
+        bullVal += bull(minVal: 0.0008661432036626339,maxVal: 0.0012578432036626339,intensity: 0.5)
+        bullVal += bull(minVal: 0.0002381864461803342,maxVal: 0.0003222524461803342,intensity: 0.5)
+        bullVal += bull(minVal: 0.0013638349088897705,maxVal: 0.0018451869088897705,intensity: 0.5)
         
-        // MARK: - Bearish Factors (All On, Intensity=0.5)
-        bearVal += bear(minVal: -0.0014273392243542672, maxVal: -0.0008449512243542672, intensity: 0.5) // Regulatory Clampdown
-        bearVal += bear(minVal: -0.0011842141746411323, maxVal: -0.0008454221746411323, intensity: 0.5) // Competitor Coin
-        bearVal += bear(minVal: -0.0012819675168380737, maxVal: -0.0009009755168380737, intensity: 0.5) // Security Breach
-        bearVal += bear(minVal: -0.002244817890762329,  maxVal: -0.001280529890762329,  intensity: 0.5) // Bubble Pop
-        bearVal += bear(minVal: -0.0009681346159477233, maxVal: -0.0004600706159477233, intensity: 0.5) // Stablecoin Meltdown
-        bearVal += bear(minVal: -0.478662,              maxVal: -0.319108,              intensity: 0.5) // Black Swan
-        bearVal += bear(minVal: -0.0010278802752494812, maxVal: -0.0007278802752494812, intensity: 0.5) // Bear Market
-        bearVal += bear(minVal: -0.0020343461055486196, maxVal: -0.0010537001055486196, intensity: 0.5) // Maturing Market
-        bearVal += bear(minVal: -0.0010516462467487811, maxVal: -0.0007494520467487811, intensity: 0.5) // Recession
+        // Bearish (all on @ intensity=0.5)
+        bearVal += bear(minVal: -0.0014273392243542672, maxVal: -0.0008449512243542672, intensity: 0.5)
+        bearVal += bear(minVal: -0.0011842141746411323, maxVal: -0.0008454221746411323, intensity: 0.5)
+        bearVal += bear(minVal: -0.0012819675168380737, maxVal: -0.0009009755168380737, intensity: 0.5)
+        bearVal += bear(minVal: -0.002244817890762329,  maxVal: -0.001280529890762329,  intensity: 0.5)
+        bearVal += bear(minVal: -0.0009681346159477233, maxVal: -0.0004600706159477233, intensity: 0.5)
+        bearVal += bear(minVal: -0.478662,              maxVal: -0.319108,              intensity: 0.5)
+        bearVal += bear(minVal: -0.0010278802752494812, maxVal: -0.0007278802752494812, intensity: 0.5)
+        bearVal += bear(minVal: -0.0020343461055486196, maxVal: -0.0010537001055486196, intensity: 0.5)
+        bearVal += bear(minVal: -0.0010516462467487811, maxVal: -0.0007494520467487811, intensity: 0.5)
         
         let total = bullVal + bearVal
         return total > 0 ? (bullVal - bearVal) / total : 0.0
     }
-
-    // 2) Actual net tilt from toggled-on factors & their real intensities
+    
     private func computeActiveNetTilt() -> Double {
         var bullVal = 0.0
         var bearVal = 0.0
         
-        // Helper to get fraction for each factor
-        // and run it through the inverted S-curve to avoid linear scaling
+        // Use a gentler inverted S curve
         func sFrac(_ key: String) -> Double {
-            let rawFraction = factorEnableFrac[key] ?? 0.0
-            return invertedSCurve(rawFraction)  // Non-linear transformation
+            let raw = factorEnableFrac[key] ?? 0.0
+            return gentleSCurve(raw, steepness: 3.0)
         }
-
+        
         // BULLISH
-        if simSettings.useHalvingUnified {
-            bullVal += sFrac("Halving") * bull(
-                minVal: 0.2773386887,
-                maxVal: 0.3823386887,
-                intensity: factorIntensity
-            )
-        }
-        if simSettings.useInstitutionalDemandUnified {
-            bullVal += sFrac("InstitutionalDemand") * bull(
-                minVal: 0.00105315,
-                maxVal: 0.00142485,
-                intensity: factorIntensity
-            )
-        }
-        if simSettings.useCountryAdoptionUnified {
-            bullVal += sFrac("CountryAdoption") * bull(
-                minVal: 0.0009882799977,
-                maxVal: 0.0012868959977,
-                intensity: factorIntensity
-            )
-        }
-        if simSettings.useRegulatoryClarityUnified {
-            bullVal += sFrac("RegulatoryClarity") * bull(
-                minVal: 0.0005979474861605167,
-                maxVal: 0.0008361034861605167,
-                intensity: factorIntensity
-            )
-        }
-        if simSettings.useEtfApprovalUnified {
-            bullVal += sFrac("EtfApproval") * bull(
-                minVal: 0.0014880183160305023,
-                maxVal: 0.0020880183160305023,
-                intensity: factorIntensity
-            )
-        }
-        if simSettings.useTechBreakthroughUnified {
-            bullVal += sFrac("TechBreakthrough") * bull(
-                minVal: 0.0005015753579173088,
-                maxVal: 0.0007150633579173088,
-                intensity: factorIntensity
-            )
-        }
-        if simSettings.useScarcityEventsUnified {
-            bullVal += sFrac("ScarcityEvents") * bull(
-                minVal: 0.00035112353681182863,
-                maxVal: 0.00047505153681182863,
-                intensity: factorIntensity
-            )
-        }
-        if simSettings.useGlobalMacroHedgeUnified {
-            bullVal += sFrac("GlobalMacroHedge") * bull(
-                minVal: 0.0002868789724932909,
-                maxVal: 0.0004126829724932909,
-                intensity: factorIntensity
-            )
-        }
-        if simSettings.useStablecoinShiftUnified {
-            bullVal += sFrac("StablecoinShift") * bull(
-                minVal: 0.0002704809116327763,
-                maxVal: 0.0003919609116327763,
-                intensity: factorIntensity
-            )
-        }
-        if simSettings.useDemographicAdoptionUnified {
-            bullVal += sFrac("DemographicAdoption") * bull(
-                minVal: 0.0008661432036626339,
-                maxVal: 0.0012578432036626339,
-                intensity: factorIntensity
-            )
-        }
-        if simSettings.useAltcoinFlightUnified {
-            bullVal += sFrac("AltcoinFlight") * bull(
-                minVal: 0.0002381864461803342,
-                maxVal: 0.0003222524461803342,
-                intensity: factorIntensity
-            )
-        }
-        if simSettings.useAdoptionFactorUnified {
-            bullVal += sFrac("AdoptionFactor") * bull(
-                minVal: 0.0013638349088897705,
-                maxVal: 0.0018451869088897705,
-                intensity: factorIntensity
-            )
-        }
+        bullVal += sFrac("Halving") * bull(minVal: 0.2773386887, maxVal: 0.3823386887, intensity: factorIntensity)
+        bullVal += sFrac("InstitutionalDemand") * bull(minVal: 0.00105315, maxVal: 0.00142485, intensity: factorIntensity)
+        bullVal += sFrac("CountryAdoption") * bull(minVal: 0.0009882799977, maxVal: 0.0012868959977, intensity: factorIntensity)
+        bullVal += sFrac("RegulatoryClarity") * bull(minVal: 0.0005979474861605167, maxVal: 0.0008361034861605167, intensity: factorIntensity)
+        bullVal += sFrac("EtfApproval") * bull(minVal: 0.0014880183160305023, maxVal: 0.0020880183160305023, intensity: factorIntensity)
+        bullVal += sFrac("TechBreakthrough") * bull(minVal: 0.0005015753579173088, maxVal: 0.0007150633579173088, intensity: factorIntensity)
+        bullVal += sFrac("ScarcityEvents") * bull(minVal: 0.00035112353681182863, maxVal: 0.00047505153681182863, intensity: factorIntensity)
+        bullVal += sFrac("GlobalMacroHedge") * bull(minVal: 0.0002868789724932909, maxVal: 0.0004126829724932909, intensity: factorIntensity)
+        bullVal += sFrac("StablecoinShift") * bull(minVal: 0.0002704809116327763, maxVal: 0.0003919609116327763, intensity: factorIntensity)
+        bullVal += sFrac("DemographicAdoption") * bull(minVal: 0.0008661432036626339, maxVal: 0.0012578432036626339, intensity: factorIntensity)
+        bullVal += sFrac("AltcoinFlight") * bull(minVal: 0.0002381864461803342, maxVal: 0.0003222524461803342, intensity: factorIntensity)
+        bullVal += sFrac("AdoptionFactor") * bull(minVal: 0.0013638349088897705, maxVal: 0.0018451869088897705, intensity: factorIntensity)
         
         // BEARISH
-        if simSettings.useRegClampdownUnified {
-            bearVal += sFrac("RegClampdown") * bear(
-                minVal: -0.0014273392243542672,
-                maxVal: -0.0008449512243542672,
-                intensity: factorIntensity
-            )
-        }
-        if simSettings.useCompetitorCoinUnified {
-            bearVal += sFrac("CompetitorCoin") * bear(
-                minVal: -0.0011842141746411323,
-                maxVal: -0.0008454221746411323,
-                intensity: factorIntensity
-            )
-        }
-        if simSettings.useSecurityBreachUnified {
-            bearVal += sFrac("SecurityBreach") * bear(
-                minVal: -0.0012819675168380737,
-                maxVal: -0.0009009755168380737,
-                intensity: factorIntensity
-            )
-        }
-        if simSettings.useBubblePopUnified {
-            bearVal += sFrac("BubblePop") * bear(
-                minVal: -0.002244817890762329,
-                maxVal: -0.001280529890762329,
-                intensity: factorIntensity
-            )
-        }
-        if simSettings.useStablecoinMeltdownUnified {
-            bearVal += sFrac("StablecoinMeltdown") * bear(
-                minVal: -0.0009681346159477233,
-                maxVal: -0.0004600706159477233,
-                intensity: factorIntensity
-            )
-        }
-        if simSettings.useBlackSwanUnified {
-            bearVal += sFrac("BlackSwan") * bear(
-                minVal: -0.478662,
-                maxVal: -0.319108,
-                intensity: factorIntensity
-            )
-        }
-        if simSettings.useBearMarketUnified {
-            bearVal += sFrac("BearMarket") * bear(
-                minVal: -0.0010278802752494812,
-                maxVal: -0.0007278802752494812,
-                intensity: factorIntensity
-            )
-        }
-        if simSettings.useMaturingMarketUnified {
-            bearVal += sFrac("MaturingMarket") * bear(
-                minVal: -0.0020343461055486196,
-                maxVal: -0.0010537001055486196,
-                intensity: factorIntensity
-            )
-        }
-        if simSettings.useRecessionUnified {
-            bearVal += sFrac("Recession") * bear(
-                minVal: -0.0010516462467487811,
-                maxVal: -0.0007494520467487811,
-                intensity: factorIntensity
-            )
-        }
+        bearVal += sFrac("RegClampdown") * bear(minVal: -0.0014273392243542672, maxVal: -0.0008449512243542672, intensity: factorIntensity)
+        bearVal += sFrac("CompetitorCoin") * bear(minVal: -0.0011842141746411323, maxVal: -0.0008454221746411323, intensity: factorIntensity)
+        bearVal += sFrac("SecurityBreach") * bear(minVal: -0.0012819675168380737, maxVal: -0.0009009755168380737, intensity: factorIntensity)
+        bearVal += sFrac("BubblePop") * bear(minVal: -0.002244817890762329, maxVal: -0.001280529890762329, intensity: factorIntensity)
+        bearVal += sFrac("StablecoinMeltdown") * bear(minVal: -0.0009681346159477233, maxVal: -0.0004600706159477233, intensity: factorIntensity)
+        bearVal += sFrac("BlackSwan") * bear(minVal: -0.478662, maxVal: -0.319108, intensity: factorIntensity)
+        bearVal += sFrac("BearMarket") * bear(minVal: -0.0010278802752494812, maxVal: -0.0007278802752494812, intensity: factorIntensity)
+        bearVal += sFrac("MaturingMarket") * bear(minVal: -0.0020343461055486196, maxVal: -0.0010537001055486196, intensity: factorIntensity)
+        bearVal += sFrac("Recession") * bear(minVal: -0.0010516462467487811, maxVal: -0.0007494520467487811, intensity: factorIntensity)
         
+        // Let tilt go negative if total < 0
         let total = bullVal + bearVal
-        return total > 0 ? (bullVal - bearVal) / total : 0.0
+        if total == 0 {
+            return 0.0
+        }
+        return (bullVal - bearVal) / total
+    }
+    
+    private func gentleSCurve(_ x: Double, steepness: Double = 3.0) -> Double {
+        return 1.0 / (1.0 + exp(-steepness * (x - 0.5)))
     }
 
-    // Helpers for bull/bear
+    // Basic bull/bear interpolation
     private func bull(minVal: Double, maxVal: Double, intensity: Double) -> Double {
         minVal + intensity * (maxVal - minVal)
     }
@@ -527,11 +319,14 @@ struct SettingsView: View {
         abs(minVal + intensity * (maxVal - minVal))
     }
     
-    /// Maps 0...1 through an inverted S-curve.
-    /// Adjust 'steepness' to control how sharply it transitions near 0.5.
+    /// Inverted S-curve transforms 0..1 so that transitions away from 0/1 are gentler.
     private func invertedSCurve(_ x: Double, steepness: Double = 6.0) -> Double {
-        // Basic logistic in 0..1, but 'inverted' by subtracting from 1
         let logistic = 1.0 / (1.0 + exp(-steepness * (x - 0.5)))
         return 1.0 - logistic
     }
+}
+
+/// Normal logistic S-curve in 0..1
+private func sCurve(_ x: Double, steepness: Double = 6.0) -> Double {
+    return 1.0 / (1.0 + exp(-steepness * (x - 0.5)))
 }
