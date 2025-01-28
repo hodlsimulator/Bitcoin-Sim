@@ -170,7 +170,6 @@ struct SettingsView: View {
         // Return the form with watchers attached
         return mainForm
             .transaction { txn in
-                // Disable default/implicit form row animations
                 txn.animation = nil
             }
             .attachFactorWatchers(
@@ -178,8 +177,8 @@ struct SettingsView: View {
                 factorIntensity: factorIntensity,
                 oldFactorIntensity: oldFactorIntensity,
                 animateFactor: animateFactor,
-                updateUniversalFactorIntensity: updateUniversalFactorIntensity,
-                syncFactorToSlider: syncFactorToSlider
+                updateUniversalFactorIntensity: updateUniversalFactorIntensity
+                // Removed syncFactorToSlider here, because it's no longer in the signature
             )
     }
     

@@ -117,7 +117,7 @@ extension SimulationSettings {
         print("// DEBUG:       maxRecessionDropWeekly=\(self.maxRecessionDropWeekly), maxRecessionDropMonthly=\(self.maxRecessionDropMonthly)")
         
         // toggleAll & areAllFactorsEnabled
-        print("// DEBUG: toggleAll=\(self.toggleAll), areAllFactorsEnabled=\(self.areAllFactorsEnabled)")
+        print("// DEBUG: toggleAll=\(toggleAll)")
 
         print("======================================================================================")
     }
