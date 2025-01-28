@@ -185,8 +185,8 @@ struct SettingsView: View {
     
     // ------------------ Helpers ------------------
     
-    private func syncFactorToSlider(
-        currentValue: inout Double,
+    func syncFactorToSlider(
+        _ currentValue: inout Double,
         minVal: Double,
         maxVal: Double
     ) {

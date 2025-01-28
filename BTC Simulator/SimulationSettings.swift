@@ -9,38 +9,40 @@ import SwiftUI
 
 class SimulationSettings: ObservableObject {
     
+    // MARK: - Fraction-Based Toggles
     @Published var factorEnableFrac: [String: Double] = [
-            "Halving": 1.0,
-            "InstitutionalDemand": 1.0,
-            "CountryAdoption": 1.0,
-            "RegulatoryClarity": 1.0,
-            "EtfApproval": 1.0,
-            "TechBreakthrough": 1.0,
-            "ScarcityEvents": 1.0,
-            "GlobalMacroHedge": 1.0,
-            "StablecoinShift": 1.0,
-            "DemographicAdoption": 1.0,
-            "AltcoinFlight": 1.0,
-            "AdoptionFactor": 1.0,
-            "RegClampdown": 1.0,
-            "CompetitorCoin": 1.0,
-            "SecurityBreach": 1.0,
-            "BubblePop": 1.0,
-            "StablecoinMeltdown": 1.0,
-            "BlackSwan": 1.0,
-            "BearMarket": 1.0,
-            "MaturingMarket": 1.0,
-            "Recession": 1.0,
-        ]
+        "Halving": 1.0,
+        "InstitutionalDemand": 1.0,
+        "CountryAdoption": 1.0,
+        "RegulatoryClarity": 1.0,
+        "EtfApproval": 1.0,
+        "TechBreakthrough": 1.0,
+        "ScarcityEvents": 1.0,
+        "GlobalMacroHedge": 1.0,
+        "StablecoinShift": 1.0,
+        "DemographicAdoption": 1.0,
+        "AltcoinFlight": 1.0,
+        "AdoptionFactor": 1.0,
+        "RegClampdown": 1.0,
+        "CompetitorCoin": 1.0,
+        "SecurityBreach": 1.0,
+        "BubblePop": 1.0,
+        "StablecoinMeltdown": 1.0,
+        "BlackSwan": 1.0,
+        "BearMarket": 1.0,
+        "MaturingMarket": 1.0,
+        "Recession": 1.0,
+    ]
     
+    // MARK: - Universal Slider
     @AppStorage("factorIntensity") var factorIntensity: Double = 0.5
-
+    
     init() {
         // Initialization
         isUpdating = false
         isInitialized = false
     }
-
+    
     var inputManager: PersistentInputManager?
     
     @Published var userIsActuallyTogglingAll = false
@@ -67,7 +69,7 @@ class SimulationSettings: ObservableObject {
     @Published var startingBalanceCurrencyWhenBoth: PreferredCurrency = .usd
     @Published var lastRunResults: [SimulationData] = []
     @Published var allRuns: [[SimulationData]] = []
-
+    
     var isInitialized = false
     var isUpdating = false
     
@@ -77,14 +79,14 @@ class SimulationSettings: ObservableObject {
             guard isInitialized else { return }
             print("didSet: useLognormalGrowth changed to \(useLognormalGrowth)")
             UserDefaults.standard.set(useLognormalGrowth, forKey: "useLognormalGrowth")
-
+            
             // Force annualStep to true whenever lognormalGrowth is turned off
             if !useLognormalGrowth {
                 useAnnualStep = true
             }
         }
     }
-
+    
     @Published var useAnnualStep: Bool = false {
         didSet {
             guard isInitialized else { return }
@@ -132,7 +134,7 @@ class SimulationSettings: ObservableObject {
             UserDefaults.standard.set(useExtendedHistoricalSampling, forKey: "useExtendedHistoricalSampling")
         }
     }
-
+    
     
     @Published var useVolShocks: Bool = true {
         didSet {
@@ -155,8 +157,8 @@ class SimulationSettings: ObservableObject {
             guard isInitialized else { return }
             print("didSet: useAutoCorrelation changed to \(useAutoCorrelation)")
             UserDefaults.standard.set(useAutoCorrelation, forKey: "useAutoCorrelation")
-
-            // Force mean reversion off whenever autocorrelation is turned off:
+            
+            // Force meanReversion off whenever autocorrelation is turned off:
             if !useAutoCorrelation {
                 useMeanReversion = false
             }
@@ -232,7 +234,7 @@ class SimulationSettings: ObservableObject {
         useMaturingMarketMonthly = false
         useRecessionMonthly = false
     }
-
+    
     private func turnOffWeeklyToggles() {
         useHalvingWeekly = false
         useInstitutionalDemandWeekly = false
@@ -256,53 +258,53 @@ class SimulationSettings: ObservableObject {
         useMaturingMarketWeekly = false
         useRecessionWeekly = false
     }
-
+    
     var toggleAll: Bool {
         get {
             if periodUnit == .weeks {
                 return useHalvingWeekly
-                    && useInstitutionalDemandWeekly
-                    && useCountryAdoptionWeekly
-                    && useRegulatoryClarityWeekly
-                    && useEtfApprovalWeekly
-                    && useTechBreakthroughWeekly
-                    && useScarcityEventsWeekly
-                    && useGlobalMacroHedgeWeekly
-                    && useStablecoinShiftWeekly
-                    && useDemographicAdoptionWeekly
-                    && useAltcoinFlightWeekly
-                    && useAdoptionFactorWeekly
-                    && useRegClampdownWeekly
-                    && useCompetitorCoinWeekly
-                    && useSecurityBreachWeekly
-                    && useBubblePopWeekly
-                    && useStablecoinMeltdownWeekly
-                    && useBlackSwanWeekly
-                    && useBearMarketWeekly
-                    && useMaturingMarketWeekly
-                    && useRecessionWeekly
+                && useInstitutionalDemandWeekly
+                && useCountryAdoptionWeekly
+                && useRegulatoryClarityWeekly
+                && useEtfApprovalWeekly
+                && useTechBreakthroughWeekly
+                && useScarcityEventsWeekly
+                && useGlobalMacroHedgeWeekly
+                && useStablecoinShiftWeekly
+                && useDemographicAdoptionWeekly
+                && useAltcoinFlightWeekly
+                && useAdoptionFactorWeekly
+                && useRegClampdownWeekly
+                && useCompetitorCoinWeekly
+                && useSecurityBreachWeekly
+                && useBubblePopWeekly
+                && useStablecoinMeltdownWeekly
+                && useBlackSwanWeekly
+                && useBearMarketWeekly
+                && useMaturingMarketWeekly
+                && useRecessionWeekly
             } else {
                 return useHalvingMonthly
-                    && useInstitutionalDemandMonthly
-                    && useCountryAdoptionMonthly
-                    && useRegulatoryClarityMonthly
-                    && useEtfApprovalMonthly
-                    && useTechBreakthroughMonthly
-                    && useScarcityEventsMonthly
-                    && useGlobalMacroHedgeMonthly
-                    && useStablecoinShiftMonthly
-                    && useDemographicAdoptionMonthly
-                    && useAltcoinFlightMonthly
-                    && useAdoptionFactorMonthly
-                    && useRegClampdownMonthly
-                    && useCompetitorCoinMonthly
-                    && useSecurityBreachMonthly
-                    && useBubblePopMonthly
-                    && useStablecoinMeltdownMonthly
-                    && useBlackSwanMonthly
-                    && useBearMarketMonthly
-                    && useMaturingMarketMonthly
-                    && useRecessionMonthly
+                && useInstitutionalDemandMonthly
+                && useCountryAdoptionMonthly
+                && useRegulatoryClarityMonthly
+                && useEtfApprovalMonthly
+                && useTechBreakthroughMonthly
+                && useScarcityEventsMonthly
+                && useGlobalMacroHedgeMonthly
+                && useStablecoinShiftMonthly
+                && useDemographicAdoptionMonthly
+                && useAltcoinFlightMonthly
+                && useAdoptionFactorMonthly
+                && useRegClampdownMonthly
+                && useCompetitorCoinMonthly
+                && useSecurityBreachMonthly
+                && useBubblePopMonthly
+                && useStablecoinMeltdownMonthly
+                && useBlackSwanMonthly
+                && useBearMarketMonthly
+                && useMaturingMarketMonthly
+                && useRecessionMonthly
             }
         }
         set {
@@ -357,9 +359,9 @@ class SimulationSettings: ObservableObject {
             isUpdating = false
         }
     }
-
+    
     // MARK: - UserDefaults Handling
-
+    
     func loadFromUserDefaults() {
         let defaults = UserDefaults.standard
         
@@ -386,18 +388,18 @@ class SimulationSettings: ObservableObject {
         }
         
         if defaults.object(forKey: "useExtendedHistoricalSampling") == nil {
-                useExtendedHistoricalSampling = true
-            } else {
-                useExtendedHistoricalSampling = defaults.bool(forKey: "useExtendedHistoricalSampling")
-            }
-            
+            useExtendedHistoricalSampling = true
+        } else {
+            useExtendedHistoricalSampling = defaults.bool(forKey: "useExtendedHistoricalSampling")
+        }
+        
         // Autocorrelation:
         if defaults.object(forKey: "autoCorrelationStrength") == nil {
             self.autoCorrelationStrength = 0.05  // new default
         } else {
             self.autoCorrelationStrength = defaults.double(forKey: "autoCorrelationStrength")
         }
-
+        
         if defaults.object(forKey: "meanReversionTarget") == nil {
             self.meanReversionTarget = 0.03  // new default
         } else {
@@ -410,7 +412,7 @@ class SimulationSettings: ObservableObject {
             useMeanReversion = defaults.bool(forKey: "useMeanReversion")
         }
     }
-
+    
     func saveToUserDefaults() {
         let defaults = UserDefaults.standard
         defaults.set(useLognormalGrowth, forKey: "useLognormalGrowth")
@@ -427,7 +429,7 @@ class SimulationSettings: ObservableObject {
         
         // save the new toggle
         defaults.set(useRegimeSwitching, forKey: "useRegimeSwitching")
-
+        
         defaults.synchronize()
     }
 }
