@@ -10,14 +10,17 @@ import SwiftUI
 struct BullishFactorsSection: View {
     @EnvironmentObject var simSettings: SimulationSettings
     
-    // Pass in the currently active tooltip factor
+    // Currently active tooltip factor
     @Binding var activeFactor: String?
     
-    // Pass in a function to toggle the tooltip
+    // For tooltips on title tap
     let toggleFactor: (String) -> Void
     
-    // NEW: Instead of Bool toggles, we use fractional on/off from factorEnableFrac
+    // Fraction toggles
     @Binding var factorEnableFrac: [String: Double]
+    
+    // A closure that does the smooth 0..1 or 1..0 animation
+    let animateFactor: (String, Bool) -> Void
     
     var body: some View {
         Section("Bullish Factors") {
@@ -27,8 +30,12 @@ struct BullishFactorsSection: View {
                 iconName: "globe.europe.africa",
                 title: "Halving",
                 isOn: Binding<Bool>(
-                    get: { (factorEnableFrac["Halving"] ?? 0.0) > 0.5 },
-                    set: { factorEnableFrac["Halving"] = $0 ? 1.0 : 0.0 }
+                    get: {
+                        (factorEnableFrac["Halving"] ?? 0.0) > 0.5
+                    },
+                    set: { newValue in
+                        animateFactor("Halving", newValue)
+                    }
                 ),
                 sliderValue: $simSettings.halvingBumpUnified,
                 sliderRange: simSettings.periodUnit == .weeks
@@ -51,7 +58,9 @@ struct BullishFactorsSection: View {
                 title: "Institutional Demand",
                 isOn: Binding<Bool>(
                     get: { (factorEnableFrac["InstitutionalDemand"] ?? 0.0) > 0.5 },
-                    set: { factorEnableFrac["InstitutionalDemand"] = $0 ? 1.0 : 0.0 }
+                    set: { newValue in
+                        animateFactor("InstitutionalDemand", newValue)
+                    }
                 ),
                 sliderValue: $simSettings.maxDemandBoostUnified,
                 sliderRange: simSettings.periodUnit == .weeks
@@ -73,7 +82,9 @@ struct BullishFactorsSection: View {
                 title: "Country Adoption",
                 isOn: Binding<Bool>(
                     get: { (factorEnableFrac["CountryAdoption"] ?? 0.0) > 0.5 },
-                    set: { factorEnableFrac["CountryAdoption"] = $0 ? 1.0 : 0.0 }
+                    set: { newValue in
+                        animateFactor("CountryAdoption", newValue)
+                    }
                 ),
                 sliderValue: $simSettings.maxCountryAdBoostUnified,
                 sliderRange: simSettings.periodUnit == .weeks
@@ -95,7 +106,9 @@ struct BullishFactorsSection: View {
                 title: "Regulatory Clarity",
                 isOn: Binding<Bool>(
                     get: { (factorEnableFrac["RegulatoryClarity"] ?? 0.0) > 0.5 },
-                    set: { factorEnableFrac["RegulatoryClarity"] = $0 ? 1.0 : 0.0 }
+                    set: { newValue in
+                        animateFactor("RegulatoryClarity", newValue)
+                    }
                 ),
                 sliderValue: $simSettings.maxClarityBoostUnified,
                 sliderRange: simSettings.periodUnit == .weeks
@@ -117,7 +130,9 @@ struct BullishFactorsSection: View {
                 title: "ETF Approval",
                 isOn: Binding<Bool>(
                     get: { (factorEnableFrac["EtfApproval"] ?? 0.0) > 0.5 },
-                    set: { factorEnableFrac["EtfApproval"] = $0 ? 1.0 : 0.0 }
+                    set: { newValue in
+                        animateFactor("EtfApproval", newValue)
+                    }
                 ),
                 sliderValue: $simSettings.maxEtfBoostUnified,
                 sliderRange: simSettings.periodUnit == .weeks
@@ -139,7 +154,9 @@ struct BullishFactorsSection: View {
                 title: "Tech Breakthrough",
                 isOn: Binding<Bool>(
                     get: { (factorEnableFrac["TechBreakthrough"] ?? 0.0) > 0.5 },
-                    set: { factorEnableFrac["TechBreakthrough"] = $0 ? 1.0 : 0.0 }
+                    set: { newValue in
+                        animateFactor("TechBreakthrough", newValue)
+                    }
                 ),
                 sliderValue: $simSettings.maxTechBoostUnified,
                 sliderRange: simSettings.periodUnit == .weeks
@@ -161,7 +178,9 @@ struct BullishFactorsSection: View {
                 title: "Scarcity Events",
                 isOn: Binding<Bool>(
                     get: { (factorEnableFrac["ScarcityEvents"] ?? 0.0) > 0.5 },
-                    set: { factorEnableFrac["ScarcityEvents"] = $0 ? 1.0 : 0.0 }
+                    set: { newValue in
+                        animateFactor("ScarcityEvents", newValue)
+                    }
                 ),
                 sliderValue: $simSettings.maxScarcityBoostUnified,
                 sliderRange: simSettings.periodUnit == .weeks
@@ -183,7 +202,9 @@ struct BullishFactorsSection: View {
                 title: "Global Macro Hedge",
                 isOn: Binding<Bool>(
                     get: { (factorEnableFrac["GlobalMacroHedge"] ?? 0.0) > 0.5 },
-                    set: { factorEnableFrac["GlobalMacroHedge"] = $0 ? 1.0 : 0.0 }
+                    set: { newValue in
+                        animateFactor("GlobalMacroHedge", newValue)
+                    }
                 ),
                 sliderValue: $simSettings.maxMacroBoostUnified,
                 sliderRange: simSettings.periodUnit == .weeks
@@ -205,7 +226,9 @@ struct BullishFactorsSection: View {
                 title: "Stablecoin Shift",
                 isOn: Binding<Bool>(
                     get: { (factorEnableFrac["StablecoinShift"] ?? 0.0) > 0.5 },
-                    set: { factorEnableFrac["StablecoinShift"] = $0 ? 1.0 : 0.0 }
+                    set: { newValue in
+                        animateFactor("StablecoinShift", newValue)
+                    }
                 ),
                 sliderValue: $simSettings.maxStablecoinBoostUnified,
                 sliderRange: simSettings.periodUnit == .weeks
@@ -227,7 +250,9 @@ struct BullishFactorsSection: View {
                 title: "Demographic Adoption",
                 isOn: Binding<Bool>(
                     get: { (factorEnableFrac["DemographicAdoption"] ?? 0.0) > 0.5 },
-                    set: { factorEnableFrac["DemographicAdoption"] = $0 ? 1.0 : 0.0 }
+                    set: { newValue in
+                        animateFactor("DemographicAdoption", newValue)
+                    }
                 ),
                 sliderValue: $simSettings.maxDemoBoostUnified,
                 sliderRange: simSettings.periodUnit == .weeks
@@ -249,7 +274,9 @@ struct BullishFactorsSection: View {
                 title: "Altcoin Flight",
                 isOn: Binding<Bool>(
                     get: { (factorEnableFrac["AltcoinFlight"] ?? 0.0) > 0.5 },
-                    set: { factorEnableFrac["AltcoinFlight"] = $0 ? 1.0 : 0.0 }
+                    set: { newValue in
+                        animateFactor("AltcoinFlight", newValue )
+                    }
                 ),
                 sliderValue: $simSettings.maxAltcoinBoostUnified,
                 sliderRange: simSettings.periodUnit == .weeks
@@ -271,7 +298,9 @@ struct BullishFactorsSection: View {
                 title: "Adoption Factor (Incremental Drift)",
                 isOn: Binding<Bool>(
                     get: { (factorEnableFrac["AdoptionFactor"] ?? 0.0) > 0.5 },
-                    set: { factorEnableFrac["AdoptionFactor"] = $0 ? 1.0 : 0.0 }
+                    set: { newValue in
+                        animateFactor("AdoptionFactor", newValue )
+                    }
                 ),
                 sliderValue: $simSettings.adoptionBaseFactorUnified,
                 sliderRange: simSettings.periodUnit == .weeks

@@ -10,14 +10,17 @@ import SwiftUI
 struct BearishFactorsSection: View {
     @EnvironmentObject var simSettings: SimulationSettings
     
-    // Pass in the currently active tooltip factor
+    // The currently active tooltip factor
     @Binding var activeFactor: String?
     
-    // Pass in a function to toggle the tooltip
+    // For tooltips on title tap
     let toggleFactor: (String) -> Void
     
-    // NEW: Instead of Booleans, we use fraction-based toggles
+    // Fraction toggles
     @Binding var factorEnableFrac: [String: Double]
+    
+    // A closure that does the smooth 0..1 or 1..0 animation
+    let animateFactor: (String, Bool) -> Void
     
     var body: some View {
         Section("Bearish Factors") {
@@ -26,10 +29,13 @@ struct BearishFactorsSection: View {
             FactorToggleRow(
                 iconName: "hand.raised.slash",
                 title: "Regulatory Clampdown",
-                // Replaces isOn: $simSettings.useRegClampdownUnified with fraction approach
                 isOn: Binding<Bool>(
-                    get: { (factorEnableFrac["RegClampdown"] ?? 0.0) > 0.5 },
-                    set: { factorEnableFrac["RegClampdown"] = $0 ? 1.0 : 0.0 }
+                    get: {
+                        (factorEnableFrac["RegClampdown"] ?? 0.0) > 0.5
+                    },
+                    set: { newValue in
+                        animateFactor("RegClampdown", newValue)
+                    }
                 ),
                 sliderValue: $simSettings.maxClampDownUnified,
                 sliderRange: simSettings.periodUnit == .weeks
@@ -51,7 +57,9 @@ struct BearishFactorsSection: View {
                 title: "Competitor Coin",
                 isOn: Binding<Bool>(
                     get: { (factorEnableFrac["CompetitorCoin"] ?? 0.0) > 0.5 },
-                    set: { factorEnableFrac["CompetitorCoin"] = $0 ? 1.0 : 0.0 }
+                    set: { newValue in
+                        animateFactor("CompetitorCoin", newValue)
+                    }
                 ),
                 sliderValue: $simSettings.maxCompetitorBoostUnified,
                 sliderRange: simSettings.periodUnit == .weeks
@@ -73,7 +81,9 @@ struct BearishFactorsSection: View {
                 title: "Security Breach",
                 isOn: Binding<Bool>(
                     get: { (factorEnableFrac["SecurityBreach"] ?? 0.0) > 0.5 },
-                    set: { factorEnableFrac["SecurityBreach"] = $0 ? 1.0 : 0.0 }
+                    set: { newValue in
+                        animateFactor("SecurityBreach", newValue)
+                    }
                 ),
                 sliderValue: $simSettings.breachImpactUnified,
                 sliderRange: simSettings.periodUnit == .weeks
@@ -95,7 +105,9 @@ struct BearishFactorsSection: View {
                 title: "Bubble Pop",
                 isOn: Binding<Bool>(
                     get: { (factorEnableFrac["BubblePop"] ?? 0.0) > 0.5 },
-                    set: { factorEnableFrac["BubblePop"] = $0 ? 1.0 : 0.0 }
+                    set: { newValue in
+                        animateFactor("BubblePop", newValue)
+                    }
                 ),
                 sliderValue: $simSettings.maxPopDropUnified,
                 sliderRange: simSettings.periodUnit == .weeks
@@ -117,7 +129,9 @@ struct BearishFactorsSection: View {
                 title: "Stablecoin Meltdown",
                 isOn: Binding<Bool>(
                     get: { (factorEnableFrac["StablecoinMeltdown"] ?? 0.0) > 0.5 },
-                    set: { factorEnableFrac["StablecoinMeltdown"] = $0 ? 1.0 : 0.0 }
+                    set: { newValue in
+                        animateFactor("StablecoinMeltdown", newValue)
+                    }
                 ),
                 sliderValue: $simSettings.maxMeltdownDropUnified,
                 sliderRange: simSettings.periodUnit == .weeks
@@ -139,7 +153,9 @@ struct BearishFactorsSection: View {
                 title: "Black Swan Events",
                 isOn: Binding<Bool>(
                     get: { (factorEnableFrac["BlackSwan"] ?? 0.0) > 0.5 },
-                    set: { factorEnableFrac["BlackSwan"] = $0 ? 1.0 : 0.0 }
+                    set: { newValue in
+                        animateFactor("BlackSwan", newValue)
+                    }
                 ),
                 sliderValue: $simSettings.blackSwanDropUnified,
                 sliderRange: simSettings.periodUnit == .weeks
@@ -161,7 +177,9 @@ struct BearishFactorsSection: View {
                 title: "Bear Market Conditions",
                 isOn: Binding<Bool>(
                     get: { (factorEnableFrac["BearMarket"] ?? 0.0) > 0.5 },
-                    set: { factorEnableFrac["BearMarket"] = $0 ? 1.0 : 0.0 }
+                    set: { newValue in
+                        animateFactor("BearMarket", newValue)
+                    }
                 ),
                 sliderValue: $simSettings.bearWeeklyDriftUnified,
                 sliderRange: simSettings.periodUnit == .weeks
@@ -183,7 +201,9 @@ struct BearishFactorsSection: View {
                 title: "Declining ARR / Maturing Market",
                 isOn: Binding<Bool>(
                     get: { (factorEnableFrac["MaturingMarket"] ?? 0.0) > 0.5 },
-                    set: { factorEnableFrac["MaturingMarket"] = $0 ? 1.0 : 0.0 }
+                    set: { newValue in
+                        animateFactor("MaturingMarket", newValue)
+                    }
                 ),
                 sliderValue: $simSettings.maxMaturingDropUnified,
                 sliderRange: simSettings.periodUnit == .weeks
@@ -205,7 +225,9 @@ struct BearishFactorsSection: View {
                 title: "Recession / Macro Crash",
                 isOn: Binding<Bool>(
                     get: { (factorEnableFrac["Recession"] ?? 0.0) > 0.5 },
-                    set: { factorEnableFrac["Recession"] = $0 ? 1.0 : 0.0 }
+                    set: { newValue in
+                        animateFactor("Recession", newValue)
+                    }
                 ),
                 sliderValue: $simSettings.maxRecessionDropUnified,
                 sliderRange: simSettings.periodUnit == .weeks

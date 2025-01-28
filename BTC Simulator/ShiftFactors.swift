@@ -315,11 +315,16 @@ extension SettingsView {
                 syncSingleFactorWithSlider(key)
                 // Force fraction to zero momentarily, no animation
                 simSettings.factorEnableFrac[key] = 0
+                
+                print("DEBUG: animateFactor => \(key) toggled ON, fraction after zero =>",
+                      simSettings.factorEnableFrac[key] ?? -1)
             }
         }
         // Now animate from 0..1 or 1..0
         withAnimation(.easeInOut(duration: 0.6)) {
             simSettings.factorEnableFrac[key] = isOn ? 1 : 0
+            print("DEBUG: animateFactor => \(key), isOn=\(isOn), final fraction =>",
+                  simSettings.factorEnableFrac[key] ?? -1)
         }
     }
     
