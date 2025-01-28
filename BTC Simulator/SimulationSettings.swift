@@ -9,6 +9,30 @@ import SwiftUI
 
 class SimulationSettings: ObservableObject {
     
+    @Published var factorEnableFrac: [String: Double] = [
+            "Halving": 1.0,
+            "InstitutionalDemand": 1.0,
+            "CountryAdoption": 1.0,
+            "RegulatoryClarity": 1.0,
+            "EtfApproval": 1.0,
+            "TechBreakthrough": 1.0,
+            "ScarcityEvents": 1.0,
+            "GlobalMacroHedge": 1.0,
+            "StablecoinShift": 1.0,
+            "DemographicAdoption": 1.0,
+            "AltcoinFlight": 1.0,
+            "AdoptionFactor": 1.0,
+            "RegClampdown": 1.0,
+            "CompetitorCoin": 1.0,
+            "SecurityBreach": 1.0,
+            "BubblePop": 1.0,
+            "StablecoinMeltdown": 1.0,
+            "BlackSwan": 1.0,
+            "BearMarket": 1.0,
+            "MaturingMarket": 1.0,
+            "Recession": 1.0,
+        ]
+    
     @AppStorage("factorIntensity") var factorIntensity: Double = 0.5
 
     init() {

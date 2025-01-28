@@ -12,14 +12,14 @@ extension SimulationSettings {
         print("RESTORE DEFAULTS CALLED!")
         let defaults = UserDefaults.standard
         
-        // Remove the old factorIntensity from user defaults (optional):
+        // Remove the old factorIntensity from user defaults (optional)
         UserDefaults.standard.removeObject(forKey: "factorIntensity")
-        // Then set it:
+        // Then set it to 0.5
         factorIntensity = 0.5
 
         // Keep any general toggles you want to preserve:
         defaults.set(useHistoricalSampling, forKey: "useHistoricalSampling")
-        defaults.set(useVolShocks, forKey: "useVolShocks")
+        defaults.set(useVolShocks,         forKey: "useVolShocks")
 
         // Remove old parent-toggle keys (we no longer use them in code)
         defaults.removeObject(forKey: "useHalving")
@@ -80,8 +80,8 @@ extension SimulationSettings {
 
         // Reset them to your desired defaults
         useAutoCorrelation = true
-        autoCorrelationStrength = 0.05      // changed from 0.2 to 0.05
-        meanReversionTarget = 0.03         // changed from 0.0 to 0.03
+        autoCorrelationStrength = 0.05
+        meanReversionTarget = 0.03
 
         // Remove new weekly/monthly keys
         defaults.removeObject(forKey: "useHalvingWeekly")
@@ -201,7 +201,11 @@ extension SimulationSettings {
         // Remove existing user default for regime switching & set default to true
         defaults.removeObject(forKey: "useRegimeSwitching")
         useRegimeSwitching = true
-
+        
+        // -------------------
+        // Bullish / Bearish Toggles (old system)
+        // -------------------
+        
         // Halving
         useHalvingWeekly = true
         halvingBumpWeekly = SimulationSettings.defaultHalvingBumpWeekly
@@ -319,17 +323,88 @@ extension SimulationSettings {
         maxRecessionDropWeekly = SimulationSettings.defaultMaxRecessionDropWeekly
         useRecessionMonthly = true
         maxRecessionDropMonthly = SimulationSettings.defaultMaxRecessionDropMonthly
+        
+        // --------------------------------------------------
+        // ALSO set fraction-based toggles to 1.0 and restore
+        // each "unified" factor to a default/midpoint value.
+        // --------------------------------------------------
+        
+        factorEnableFrac["Halving"] = 1.0
+        halvingBumpUnified = 0.3298386887 // midpoint of 0.2773386887...0.3823386887
 
-        // Finally, toggle everything on for the *current* period:
+        factorEnableFrac["InstitutionalDemand"] = 1.0
+        maxDemandBoostUnified = 0.001239 // midpoint of 0.00105315...0.00142485
+
+        factorEnableFrac["CountryAdoption"] = 1.0
+        maxCountryAdBoostUnified = 0.0011375879977
+
+        factorEnableFrac["RegulatoryClarity"] = 1.0
+        maxClarityBoostUnified = 0.0007170254861605167
+
+        factorEnableFrac["EtfApproval"] = 1.0
+        maxEtfBoostUnified = 0.0017880183160305023
+
+        factorEnableFrac["TechBreakthrough"] = 1.0
+        maxTechBoostUnified = 0.0006083193579173088
+
+        factorEnableFrac["ScarcityEvents"] = 1.0
+        maxScarcityBoostUnified = 0.00041308753681182863
+
+        factorEnableFrac["GlobalMacroHedge"] = 1.0
+        maxMacroBoostUnified = 0.0003497809724932909
+
+        factorEnableFrac["StablecoinShift"] = 1.0
+        maxStablecoinBoostUnified = 0.0003312209116327763
+
+        factorEnableFrac["DemographicAdoption"] = 1.0
+        maxDemoBoostUnified = 0.001061993203662634
+
+        factorEnableFrac["AltcoinFlight"] = 1.0
+        maxAltcoinBoostUnified = 0.0002802194461803342
+
+        factorEnableFrac["AdoptionFactor"] = 1.0
+        adoptionBaseFactorUnified = 0.0016045109088897705
+
+        factorEnableFrac["RegClampdown"] = 1.0
+        maxClampDownUnified = -0.0011361452243542672
+
+        factorEnableFrac["CompetitorCoin"] = 1.0
+        maxCompetitorBoostUnified = -0.0010148181746411323
+
+        factorEnableFrac["SecurityBreach"] = 1.0
+        breachImpactUnified = -0.0010914715168380737
+
+        factorEnableFrac["BubblePop"] = 1.0
+        maxPopDropUnified = -0.001762673890762329
+
+        factorEnableFrac["StablecoinMeltdown"] = 1.0
+        maxMeltdownDropUnified = -0.0007141026159477233
+
+        factorEnableFrac["BlackSwan"] = 1.0
+        blackSwanDropUnified = -0.398885
+
+        factorEnableFrac["BearMarket"] = 1.0
+        bearWeeklyDriftUnified = -0.0008778802752494812
+
+        factorEnableFrac["MaturingMarket"] = 1.0
+        maxMaturingDropUnified = -0.0015440231055486196
+
+        factorEnableFrac["Recession"] = 1.0
+        maxRecessionDropUnified = -0.0009005491467487811
+        
+        // Finally, toggle everything on for the *current* period
         toggleAll = true
-
+        
         // Reset lockHistoricalSampling
         lockHistoricalSampling = false
         
-        // Reset these final toggles
+        // Reset final toggles
         useLognormalGrowth = true
         useHistoricalSampling = true
         useVolShocks = true
         useGarchVolatility = true
+        
+        // Write changes to disk
+        defaults.synchronize()
     }
 }

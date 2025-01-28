@@ -23,31 +23,6 @@ struct SettingsView: View {
     @State var showResetCriteriaConfirmation = false
     @State var activeFactor: String? = nil
     
-    // Factor "enable" fractions (0 = off, 1 = on)
-    @State var factorEnableFrac: [String: Double] = [
-        "Halving": 1.0,
-        "InstitutionalDemand": 1.0,
-        "CountryAdoption": 1.0,
-        "RegulatoryClarity": 1.0,
-        "EtfApproval": 1.0,
-        "TechBreakthrough": 1.0,
-        "ScarcityEvents": 1.0,
-        "GlobalMacroHedge": 1.0,
-        "StablecoinShift": 1.0,
-        "DemographicAdoption": 1.0,
-        "AltcoinFlight": 1.0,
-        "AdoptionFactor": 1.0,
-        "RegClampdown": 1.0,
-        "CompetitorCoin": 1.0,
-        "SecurityBreach": 1.0,
-        "BubblePop": 1.0,
-        "StablecoinMeltdown": 1.0,
-        "BlackSwan": 1.0,
-        "BearMarket": 1.0,
-        "MaturingMarket": 1.0,
-        "Recession": 1.0,
-    ]
-    
     init() {
         // Custom nav bar style
         let opaqueAppearance = UINavigationBarAppearance()
@@ -109,7 +84,8 @@ struct SettingsView: View {
             BullishFactorsSection(
                 activeFactor: $activeFactor,
                 toggleFactor: toggleFactor,
-                factorEnableFrac: $factorEnableFrac
+                // Pass the environment object’s fraction dictionary
+                factorEnableFrac: $simSettings.factorEnableFrac
             )
             .environmentObject(simSettings)
             
@@ -117,7 +93,7 @@ struct SettingsView: View {
             BearishFactorsSection(
                 activeFactor: $activeFactor,
                 toggleFactor: toggleFactor,
-                factorEnableFrac: $factorEnableFrac
+                factorEnableFrac: $simSettings.factorEnableFrac
             )
             .environmentObject(simSettings)
             
@@ -219,7 +195,9 @@ struct SettingsView: View {
         currentValue = minVal + t * (maxVal - minVal)
     }
     
-    private func updateUniversalFactorIntensity(_: String) { /* optional stub */ }
+    private func updateUniversalFactorIntensity(_: String) {
+        // optional stub
+    }
     
     // MARK: - Net Tilt Calculation
     var displayedTilt: Double {
@@ -267,37 +245,63 @@ struct SettingsView: View {
     private func computeActiveNetTilt() -> Double {
         var bullVal = 0.0
         var bearVal = 0.0
-        
-        // Use a gentler inverted S curve
+
+        // Instead of factorEnableFrac in our local view,
+        // we reference simSettings.factorEnableFrac.
         func sFrac(_ key: String) -> Double {
-            let raw = factorEnableFrac[key] ?? 0.0
+            let raw = simSettings.factorEnableFrac[key] ?? 0.0
+            if raw == 0 {
+                return 0  // skip logistic, ensures 0 means truly off
+            }
+            // otherwise do your logistic curve
             return gentleSCurve(raw, steepness: 3.0)
         }
         
         // BULLISH
-        bullVal += sFrac("Halving") * bull(minVal: 0.2773386887, maxVal: 0.3823386887, intensity: factorIntensity)
-        bullVal += sFrac("InstitutionalDemand") * bull(minVal: 0.00105315, maxVal: 0.00142485, intensity: factorIntensity)
-        bullVal += sFrac("CountryAdoption") * bull(minVal: 0.0009882799977, maxVal: 0.0012868959977, intensity: factorIntensity)
-        bullVal += sFrac("RegulatoryClarity") * bull(minVal: 0.0005979474861605167, maxVal: 0.0008361034861605167, intensity: factorIntensity)
-        bullVal += sFrac("EtfApproval") * bull(minVal: 0.0014880183160305023, maxVal: 0.0020880183160305023, intensity: factorIntensity)
-        bullVal += sFrac("TechBreakthrough") * bull(minVal: 0.0005015753579173088, maxVal: 0.0007150633579173088, intensity: factorIntensity)
-        bullVal += sFrac("ScarcityEvents") * bull(minVal: 0.00035112353681182863, maxVal: 0.00047505153681182863, intensity: factorIntensity)
-        bullVal += sFrac("GlobalMacroHedge") * bull(minVal: 0.0002868789724932909, maxVal: 0.0004126829724932909, intensity: factorIntensity)
-        bullVal += sFrac("StablecoinShift") * bull(minVal: 0.0002704809116327763, maxVal: 0.0003919609116327763, intensity: factorIntensity)
-        bullVal += sFrac("DemographicAdoption") * bull(minVal: 0.0008661432036626339, maxVal: 0.0012578432036626339, intensity: factorIntensity)
-        bullVal += sFrac("AltcoinFlight") * bull(minVal: 0.0002381864461803342, maxVal: 0.0003222524461803342, intensity: factorIntensity)
-        bullVal += sFrac("AdoptionFactor") * bull(minVal: 0.0013638349088897705, maxVal: 0.0018451869088897705, intensity: factorIntensity)
+        bullVal += sFrac("Halving")
+            * bull(minVal: 0.2773386887, maxVal: 0.3823386887, intensity: factorIntensity)
+        bullVal += sFrac("InstitutionalDemand")
+            * bull(minVal: 0.00105315, maxVal: 0.00142485, intensity: factorIntensity)
+        bullVal += sFrac("CountryAdoption")
+            * bull(minVal: 0.0009882799977, maxVal: 0.0012868959977, intensity: factorIntensity)
+        bullVal += sFrac("RegulatoryClarity")
+            * bull(minVal: 0.0005979474861605167, maxVal: 0.0008361034861605167, intensity: factorIntensity)
+        bullVal += sFrac("EtfApproval")
+            * bull(minVal: 0.0014880183160305023, maxVal: 0.0020880183160305023, intensity: factorIntensity)
+        bullVal += sFrac("TechBreakthrough")
+            * bull(minVal: 0.0005015753579173088, maxVal: 0.0007150633579173088, intensity: factorIntensity)
+        bullVal += sFrac("ScarcityEvents")
+            * bull(minVal: 0.00035112353681182863, maxVal: 0.00047505153681182863, intensity: factorIntensity)
+        bullVal += sFrac("GlobalMacroHedge")
+            * bull(minVal: 0.0002868789724932909, maxVal: 0.0004126829724932909, intensity: factorIntensity)
+        bullVal += sFrac("StablecoinShift")
+            * bull(minVal: 0.0002704809116327763, maxVal: 0.0003919609116327763, intensity: factorIntensity)
+        bullVal += sFrac("DemographicAdoption")
+            * bull(minVal: 0.0008661432036626339, maxVal: 0.0012578432036626339, intensity: factorIntensity)
+        bullVal += sFrac("AltcoinFlight")
+            * bull(minVal: 0.0002381864461803342, maxVal: 0.0003222524461803342, intensity: factorIntensity)
+        bullVal += sFrac("AdoptionFactor")
+            * bull(minVal: 0.0013638349088897705, maxVal: 0.0018451869088897705, intensity: factorIntensity)
         
         // BEARISH
-        bearVal += sFrac("RegClampdown") * bear(minVal: -0.0014273392243542672, maxVal: -0.0008449512243542672, intensity: factorIntensity)
-        bearVal += sFrac("CompetitorCoin") * bear(minVal: -0.0011842141746411323, maxVal: -0.0008454221746411323, intensity: factorIntensity)
-        bearVal += sFrac("SecurityBreach") * bear(minVal: -0.0012819675168380737, maxVal: -0.0009009755168380737, intensity: factorIntensity)
-        bearVal += sFrac("BubblePop") * bear(minVal: -0.002244817890762329, maxVal: -0.001280529890762329, intensity: factorIntensity)
-        bearVal += sFrac("StablecoinMeltdown") * bear(minVal: -0.0009681346159477233, maxVal: -0.0004600706159477233, intensity: factorIntensity)
-        bearVal += sFrac("BlackSwan") * bear(minVal: -0.478662, maxVal: -0.319108, intensity: factorIntensity)
-        bearVal += sFrac("BearMarket") * bear(minVal: -0.0010278802752494812, maxVal: -0.0007278802752494812, intensity: factorIntensity)
-        bearVal += sFrac("MaturingMarket") * bear(minVal: -0.0020343461055486196, maxVal: -0.0010537001055486196, intensity: factorIntensity)
-        bearVal += sFrac("Recession") * bear(minVal: -0.0010516462467487811, maxVal: -0.0007494520467487811, intensity: factorIntensity)
+        bearVal += sFrac("RegClampdown")
+            * bear(minVal: -0.0014273392243542672, maxVal: -0.0008449512243542672, intensity: factorIntensity)
+        bearVal += sFrac("CompetitorCoin")
+            * bear(minVal: -0.0011842141746411323, maxVal: -0.0008454221746411323, intensity: factorIntensity)
+        bearVal += sFrac("SecurityBreach")
+            * bear(minVal: -0.0012819675168380737, maxVal: -0.0009009755168380737, intensity: factorIntensity)
+        bearVal += sFrac("BubblePop")
+            * bear(minVal: -0.002244817890762329, maxVal: -0.001280529890762329, intensity: factorIntensity)
+        bearVal += sFrac("StablecoinMeltdown")
+            * bear(minVal: -0.0009681346159477233, maxVal: -0.0004600706159477233, intensity: factorIntensity)
+        bearVal += sFrac("BlackSwan")
+            * bear(minVal: -0.478662, maxVal: -0.319108, intensity: factorIntensity)
+        bearVal += sFrac("BearMarket")
+            * bear(minVal: -0.0010278802752494812, maxVal: -0.0007278802752494812, intensity: factorIntensity)
+        bearVal += sFrac("MaturingMarket")
+            * bear(minVal: -0.0020343461055486196, maxVal: -0.0010537001055486196, intensity: factorIntensity)
+        bearVal += sFrac("Recession")
+            * bear(minVal: -0.0010516462467487811, maxVal: -0.0007494520467487811, intensity: factorIntensity)
         
         // Let tilt go negative if total < 0
         let total = bullVal + bearVal
@@ -324,9 +328,4 @@ struct SettingsView: View {
         let logistic = 1.0 / (1.0 + exp(-steepness * (x - 0.5)))
         return 1.0 - logistic
     }
-}
-
-/// Normal logistic S-curve in 0..1
-private func sCurve(_ x: Double, steepness: Double = 6.0) -> Double {
-    return 1.0 / (1.0 + exp(-steepness * (x - 0.5)))
 }

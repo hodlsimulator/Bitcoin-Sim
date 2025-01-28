@@ -452,12 +452,12 @@ extension SettingsView {
                 // Re-sync factor’s internal value to the universal slider
                 syncSingleFactorWithSlider(key)
                 // Force fraction to zero momentarily, no animation
-                factorEnableFrac[key] = 0
+                simSettings.factorEnableFrac[key] = 0
             }
         }
         // Now animate from 0..1 or 1..0
         withAnimation(.easeInOut(duration: 0.6)) {
-            factorEnableFrac[key] = isOn ? 1 : 0
+            simSettings.factorEnableFrac[key] = isOn ? 1 : 0
         }
     }
     
