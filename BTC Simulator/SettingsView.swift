@@ -200,9 +200,14 @@ struct SettingsView: View {
     
     // MARK: - Net Tilt Calculation
     var displayedTilt: Double {
+        // if every factor fraction is 0 => return 0
+        if simSettings.factorEnableFrac.values.allSatisfy({ $0 == 0.0 }) {
+            return 0.0  // neutral
+        }
+        
         let alpha = 4.0
-        let baseline = baselineNetTilt()  // all factors on at 0.5
-        let raw = computeActiveNetTilt()  // actual toggles + intensities
+        let baseline = baselineNetTilt()
+        let raw = computeActiveNetTilt()
         let shifted = raw - baseline
         let scaleFactor = 5.0
         return tanh(alpha * shifted * scaleFactor)
