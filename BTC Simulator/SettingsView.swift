@@ -11,7 +11,6 @@ struct SettingsView: View {
     @EnvironmentObject var simSettings: SimulationSettings
     
     @AppStorage("hasOnboarded") var didFinishOnboarding = false
-    
     @AppStorage("showAdvancedSettings") private var showAdvancedSettings: Bool = false
     
     @AppStorage("factorIntensity") var factorIntensity: Double = 0.5
@@ -20,7 +19,6 @@ struct SettingsView: View {
     @State var showResetCriteriaConfirmation = false
     @State var activeFactor: String? = nil
     
-    // Just listing factor keys for clarity
     private let bullishKeys: [String] = [
         "Halving", "InstitutionalDemand", "CountryAdoption", "RegulatoryClarity",
         "EtfApproval", "TechBreakthrough", "ScarcityEvents", "GlobalMacroHedge",
@@ -31,13 +29,22 @@ struct SettingsView: View {
         "StablecoinMeltdown", "BlackSwan", "BearMarket", "MaturingMarket",
         "Recession"
     ]
-    
     private var totalFactors: Int {
         bullishKeys.count + bearishKeys.count
     }
     
+    // Keep toggles weaker
+    private let factorWeight = 0.05
+    
+    // We measure your default tilt & max swing, then normalise around them
+    @State private var defaultTilt: Double = 0.0
+    @State private var maxSwing: Double = 1.0
+    
+    // For turning animations on/off
+    @State private var hasCapturedDefault = false
+    @State private var hasAppeared = false
+    
     init() {
-        // Navigation bar styling ...
         let opaqueAppearance = UINavigationBarAppearance()
         opaqueAppearance.configureWithOpaqueBackground()
         opaqueAppearance.backgroundColor = UIColor(white: 0.12, alpha: 1.0)
@@ -74,7 +81,7 @@ struct SettingsView: View {
     }
     
     var body: some View {
-        let mainForm = Form {
+        Form {
             
             // 1) Tilt Bar
             overallTiltSection
@@ -122,11 +129,19 @@ struct SettingsView: View {
         .environment(\.colorScheme, .dark)
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.large)
+        
+        // Keep the shiftAllFactors logic
         .onChange(of: factorIntensity) { newVal in
             let delta = newVal - oldFactorIntensity
             oldFactorIntensity = newVal
             shiftAllFactors(by: delta)
         }
+        
+        // Animate changes only after we've appeared & captured default
+        .animation(hasAppeared ? .easeInOut(duration: 0.3) : nil, value: factorIntensity)
+        .animation(hasAppeared ? .easeInOut(duration: 0.3) : nil, value: simSettings.factorEnableFrac)
+        .animation(hasAppeared ? .easeInOut(duration: 0.3) : nil, value: displayedTilt)
+        
         .overlayPreferenceValue(TooltipAnchorKey.self) { allAnchors in
             GeometryReader { proxy in
                 if let item = allAnchors.last {
@@ -171,9 +186,6 @@ struct SettingsView: View {
                 }
             }
         }
-        .transaction { txn in
-            txn.animation = nil
-        }
         .attachFactorWatchers(
             simSettings: simSettings,
             factorIntensity: factorIntensity,
@@ -182,7 +194,68 @@ struct SettingsView: View {
             updateUniversalFactorIntensity: updateUniversalFactorIntensity
         )
         
-        return mainForm
+        .onAppear {
+            // Hide animations for initial load
+            hasAppeared = false
+            
+            // Wait a little so toggles from simSettings definitely load
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                defaultTilt = computeActiveNetTilt()
+                
+                // Check how far "all bull" or "all bear" are from that default
+                let allBull = computeIfAllBullish() - defaultTilt
+                let allBear = computeIfAllBearish() - defaultTilt
+                maxSwing = max(abs(allBull), abs(allBear), 0.00001) // no zero division
+                
+                hasCapturedDefault = true
+                // Turn animations on now that default is established
+                hasAppeared = true
+            }
+        }
+    }
+    
+    // ---------------------------------------------------------------------------------
+    // "All-bull" & "all-bear" to figure out the maximum possible tilt from default
+    // ---------------------------------------------------------------------------------
+    
+    private func computeIfAllBullish() -> Double {
+        // Pretend factorIntensity=1.0 for max effect
+        let effective = invertedSCurve(1.0, steepness: 12.0)
+        var sum = 0.0
+        
+        // Force all bullish toggles "on"
+        for _ in bullishKeys {
+            let frac = gentleSCurve(1.0, steepness: 2.0)
+            sum += frac * factorWeight
+        }
+        // Force all bearish toggles "off"
+        for _ in bearishKeys {
+            let frac = gentleSCurve(0.0, steepness: 2.0)
+            sum -= frac * factorWeight
+        }
+        
+        let normalised = sum / Double(totalFactors)
+        return normalised * effective
+    }
+
+    private func computeIfAllBearish() -> Double {
+        // Also pretend factorIntensity=1.0
+        let effective = invertedSCurve(1.0, steepness: 12.0)
+        var sum = 0.0
+        
+        // Force all bullish toggles "off"
+        for _ in bullishKeys {
+            let frac = gentleSCurve(0.0, steepness: 2.0)
+            sum += frac * factorWeight
+        }
+        // Force all bearish toggles "on"
+        for _ in bearishKeys {
+            let frac = gentleSCurve(1.0, steepness: 2.0)
+            sum -= frac * factorWeight
+        }
+        
+        let normalised = sum / Double(totalFactors)
+        return normalised * effective
     }
     
     // ------------------ Helpers ------------------
@@ -205,58 +278,55 @@ struct SettingsView: View {
     // -----------------------------------
     
     var displayedTilt: Double {
-        // All off => neutral
-        if simSettings.factorEnableFrac.values.allSatisfy({ $0 == 0.0 }) {
-            return 0.0
-        }
+        // If we haven't measured default yet, show 0 so we appear neutral
+        if !hasCapturedDefault { return 0.0 }
         
-        // We'll apply an offset from the baseline, then a tanh scaling
-        let alpha = 4.0
-        let scaleFactor = 5.0
+        // normalise by maxSwing
+        let fraction = (computeActiveNetTilt() - defaultTilt) / maxSwing
         
-        let raw = computeActiveNetTilt()
-        let base = baselineNetTilt() // we subtract this
-        let shifted = raw - base
+        // scale fraction to let the bar reach ±1
+        let scaled = fraction * 1.5
         
-        return tanh(alpha * shifted * scaleFactor)
-    }
-    
-    // UPDATED BASELINE: do the same sum-of-sCurves but with fraction=1 for every factor,
-    // then multiply by `invertedSCurve(0.5)`, so it exactly matches a scenario of “all toggles on at 0.5”.
-    private func baselineNetTilt() -> Double {
-        // Pretend each factor is turned on fully => fraction=1 => s-curve(1)
-        let fractionIfOn = gentleSCurve(1.0, steepness: 3.0) // ~0.8187, not 1.0
-        let effectiveAtMid = invertedSCurve(0.5, steepness: 6.0) // typically 0.5
-        
-        var sum = 0.0
-        for _ in bullishKeys {
-            sum += fractionIfOn
-        }
-        for _ in bearishKeys {
-            sum -= fractionIfOn
-        }
-        
-        let normalised = sum / Double(totalFactors)
-        return normalised * effectiveAtMid
+        // moderate alpha so we’re not too sharp near 0
+        return tanh(8.0 * scaled)
     }
     
     private func computeActiveNetTilt() -> Double {
-        let effective = invertedSCurve(factorIntensity, steepness: 6.0)
+        // The "global slider" effect
+        let effective = invertedSCurve(factorIntensity, steepness: 12.0)
         
         var sum = 0.0
         for key in bullishKeys {
             let raw = simSettings.factorEnableFrac[key] ?? 0.0
-            let frac = gentleSCurve(raw, steepness: 3.0)
-            sum += frac
+            // toggles are gentle => steepness=2.0
+            let frac = gentleSCurve(raw, steepness: 2.0)
+            sum += frac * factorWeight
         }
         for key in bearishKeys {
             let raw = simSettings.factorEnableFrac[key] ?? 0.0
-            let frac = gentleSCurve(raw, steepness: 3.0)
-            sum -= frac
+            let frac = gentleSCurve(raw, steepness: 2.0)
+            sum -= frac * factorWeight
         }
         
         let normalised = sum / Double(totalFactors)
         return normalised * effective
+    }
+    
+    // Optional older baseline logic
+    private func baselineNetTilt() -> Double {
+        let fractionIfOn = gentleSCurve(1.0, steepness: 4.0)
+        let effectiveAtMid = invertedSCurve(0.5, steepness: 12.0)
+        
+        var sum = 0.0
+        for _ in bullishKeys {
+            sum += fractionIfOn * factorWeight
+        }
+        for _ in bearishKeys {
+            sum -= fractionIfOn * factorWeight
+        }
+        
+        let normalised = sum / Double(totalFactors)
+        return normalised * effectiveAtMid
     }
     
     private func gentleSCurve(_ x: Double, steepness: Double = 3.0) -> Double {
@@ -264,6 +334,7 @@ struct SettingsView: View {
     }
     
     private func invertedSCurve(_ x: Double, steepness: Double = 6.0) -> Double {
+        // It's a normal logistic from 0..1
         return 1.0 / (1.0 + exp(-steepness * (x - 0.5)))
     }
 }
