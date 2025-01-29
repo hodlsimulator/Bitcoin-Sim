@@ -297,17 +297,17 @@ extension SettingsView {
     
     /// Animate turning a factor on/off. (For partial S-curve transitions, adapt as needed.)
     func animateFactor(_ key: String, isOn: Bool) {
-        // 1) Immediately set fraction to 0 with no animation (so it doesn't jump)
-        withAnimation(.none) {
-            if isOn {
-                // Re-sync factor’s underlying value to the universal slider
-                syncSingleFactorWithSlider(key)
+        if isOn {
+            // Turning on: restore previous fraction or default to 1
+            withAnimation(.easeInOut(duration: 0.6)) {
+                simSettings.factorEnableFrac[key] = lastFactorFrac[key] ?? 1.0
+            }
+        } else {
+            // Turning off: save the fraction so we can restore it later
+            lastFactorFrac[key] = simSettings.factorEnableFrac[key] ?? 1.0
+            withAnimation(.easeInOut(duration: 0.6)) {
                 simSettings.factorEnableFrac[key] = 0
             }
-        }
-        // 2) Animate from 0..1 (turn on) or 1..0 (turn off)
-        withAnimation(.easeInOut(duration: 0.6)) {
-            simSettings.factorEnableFrac[key] = isOn ? 1 : 0
         }
     }
     

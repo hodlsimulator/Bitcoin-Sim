@@ -19,6 +19,8 @@ struct SettingsView: View {
     @State var showResetCriteriaConfirmation = false
     @State var activeFactor: String? = nil
     
+    @State var lastFactorFrac: [String: Double] = [:]
+    
     private let bullishKeys: [String] = [
         "Halving", "InstitutionalDemand", "CountryAdoption", "RegulatoryClarity",
         "EtfApproval", "TechBreakthrough", "ScarcityEvents", "GlobalMacroHedge",
@@ -190,33 +192,6 @@ struct SettingsView: View {
                     .transition(.opacity)
                     .zIndex(999)
                 }
-            }
-        }
-        
-        // Instead of attachFactorWatchers(...), we add watchers as mini-views in an overlay:
-        .overlay {
-            ZStack {
-                // A) Numeric watchers
-                UnifiedValueWatchersA(
-                    simSettings: simSettings,
-                    updateUniversalFactorIntensity: updateUniversalFactorIntensity
-                )
-                UnifiedValueWatchersB(
-                    simSettings: simSettings,
-                    updateUniversalFactorIntensity: updateUniversalFactorIntensity
-                )
-                UnifiedValueWatchersC(
-                    simSettings: simSettings,
-                    updateUniversalFactorIntensity: updateUniversalFactorIntensity
-                )
-                
-                // B) Bullish toggles
-                FactorToggleBullishA(simSettings: simSettings)
-                FactorToggleBullishB(simSettings: simSettings)
-                
-                // C) Bearish toggles
-                FactorToggleBearishA(simSettings: simSettings)
-                FactorToggleBearishB(simSettings: simSettings)
             }
         }
         
