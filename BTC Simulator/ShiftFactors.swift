@@ -168,11 +168,10 @@ extension SettingsView {
         func accumulateFactor(factorKey: String,
                               value: Double,
                               minVal: Double,
-                              maxVal: Double)
-        {
+                              maxVal: Double) {
             let frac = simSettings.factorEnableFrac[factorKey] ?? 0.0
             if frac > 0 {
-                // normalise factor's current value to 0..1
+                // normalise factor’s current value to 0..1
                 let norm = (value - minVal) / (maxVal - minVal)
                 totalWeightedNorm += norm * frac
                 totalFrac += frac
@@ -292,140 +291,145 @@ extension SettingsView {
         // Weighted average of 0..1 across toggled-on factors
         let newIntensity = totalWeightedNorm / totalFrac
         
-        factorIntensity = newIntensity
-        oldFactorIntensity = newIntensity
+        // Update the global factorIntensity in SimulationSettings
+        simSettings.factorIntensity = newIntensity
     }
     
-    /// Sync a single factor to the current universal slider (avoiding jumps).
-    /// This sets the factor’s underlying value based on the global `factorIntensity`
-    /// so it lines up with the same proportion [minVal...maxVal].
-    private func syncSingleFactorWithSlider(_ currentValue: inout Double,
-                                            minVal: Double,
-                                            maxVal: Double)
-    {
-        let t = factorIntensity
-        currentValue = minVal + t * (maxVal - minVal)
-    }
-    
-    /// Animate turning a factor on/off. (For partial S-curve transitions, you might adapt.)
+    /// Animate turning a factor on/off. (For partial S-curve transitions, adapt as needed.)
     func animateFactor(_ key: String, isOn: Bool) {
+        // 1) Immediately set fraction to 0 with no animation (so it doesn't jump)
         withAnimation(.none) {
             if isOn {
-                // Re-sync factor’s internal value to the universal slider
+                // Re-sync factor’s underlying value to the universal slider
                 syncSingleFactorWithSlider(key)
-                // Force fraction to zero momentarily, no animation
                 simSettings.factorEnableFrac[key] = 0
-                
-                print("DEBUG: animateFactor => \(key) toggled ON, fraction after zero =>",
-                      simSettings.factorEnableFrac[key] ?? -1)
             }
         }
-        // Now animate from 0..1 or 1..0
+        // 2) Animate from 0..1 (turn on) or 1..0 (turn off)
         withAnimation(.easeInOut(duration: 0.6)) {
             simSettings.factorEnableFrac[key] = isOn ? 1 : 0
-            print("DEBUG: animateFactor => \(key), isOn=\(isOn), final fraction =>",
-                  simSettings.factorEnableFrac[key] ?? -1)
         }
     }
     
-    /// Actually sync that factor's numeric "unified" value:
+    /// Actually sync that factor's numeric "unified" value to `simSettings.factorIntensity`.
     private func syncSingleFactorWithSlider(_ factorKey: String) {
-        // Dispatch to the same logic above, but pick correct min/max
+        // Dispatch to the same logic below, passing simSettings
         switch factorKey {
             
         // BULLISH
         case "Halving":
             syncFactorToSlider(&simSettings.halvingBumpUnified,
                                minVal: 0.2773386887,
-                               maxVal: 0.3823386887)
+                               maxVal: 0.3823386887,
+                               simSettings: simSettings)
         case "InstitutionalDemand":
             syncFactorToSlider(&simSettings.maxDemandBoostUnified,
                                minVal: 0.00105315,
-                               maxVal: 0.00142485)
+                               maxVal: 0.00142485,
+                               simSettings: simSettings)
         case "CountryAdoption":
             syncFactorToSlider(&simSettings.maxCountryAdBoostUnified,
                                minVal: 0.0009882799977,
-                               maxVal: 0.0012868959977)
+                               maxVal: 0.0012868959977,
+                               simSettings: simSettings)
         case "RegulatoryClarity":
             syncFactorToSlider(&simSettings.maxClarityBoostUnified,
                                minVal: 0.0005979474861605167,
-                               maxVal: 0.0008361034861605167)
+                               maxVal: 0.0008361034861605167,
+                               simSettings: simSettings)
         case "EtfApproval":
             syncFactorToSlider(&simSettings.maxEtfBoostUnified,
                                minVal: 0.0014880183160305023,
-                               maxVal: 0.0020880183160305023)
+                               maxVal: 0.0020880183160305023,
+                               simSettings: simSettings)
         case "TechBreakthrough":
             syncFactorToSlider(&simSettings.maxTechBoostUnified,
                                minVal: 0.0005015753579173088,
-                               maxVal: 0.0007150633579173088)
+                               maxVal: 0.0007150633579173088,
+                               simSettings: simSettings)
         case "ScarcityEvents":
             syncFactorToSlider(&simSettings.maxScarcityBoostUnified,
                                minVal: 0.00035112353681182863,
-                               maxVal: 0.00047505153681182863)
+                               maxVal: 0.00047505153681182863,
+                               simSettings: simSettings)
         case "GlobalMacroHedge":
             syncFactorToSlider(&simSettings.maxMacroBoostUnified,
                                minVal: 0.0002868789724932909,
-                               maxVal: 0.0004126829724932909)
+                               maxVal: 0.0004126829724932909,
+                               simSettings: simSettings)
         case "StablecoinShift":
             syncFactorToSlider(&simSettings.maxStablecoinBoostUnified,
                                minVal: 0.0002704809116327763,
-                               maxVal: 0.0003919609116327763)
+                               maxVal: 0.0003919609116327763,
+                               simSettings: simSettings)
         case "DemographicAdoption":
             syncFactorToSlider(&simSettings.maxDemoBoostUnified,
                                minVal: 0.0008661432036626339,
-                               maxVal: 0.0012578432036626339)
+                               maxVal: 0.0012578432036626339,
+                               simSettings: simSettings)
         case "AltcoinFlight":
             syncFactorToSlider(&simSettings.maxAltcoinBoostUnified,
                                minVal: 0.0002381864461803342,
-                               maxVal: 0.0003222524461803342)
+                               maxVal: 0.0003222524461803342,
+                               simSettings: simSettings)
         case "AdoptionFactor":
             syncFactorToSlider(&simSettings.adoptionBaseFactorUnified,
                                minVal: 0.0013638349088897705,
-                               maxVal: 0.0018451869088897705)
+                               maxVal: 0.0018451869088897705,
+                               simSettings: simSettings)
             
         // BEARISH
         case "RegClampdown":
             syncFactorToSlider(&simSettings.maxClampDownUnified,
                                minVal: -0.0014273392243542672,
-                               maxVal: -0.0008449512243542672)
+                               maxVal: -0.0008449512243542672,
+                               simSettings: simSettings)
         case "CompetitorCoin":
             syncFactorToSlider(&simSettings.maxCompetitorBoostUnified,
                                minVal: -0.0011842141746411323,
-                               maxVal: -0.0008454221746411323)
+                               maxVal: -0.0008454221746411323,
+                               simSettings: simSettings)
         case "SecurityBreach":
             syncFactorToSlider(&simSettings.breachImpactUnified,
                                minVal: -0.0012819675168380737,
-                               maxVal: -0.0009009755168380737)
+                               maxVal: -0.0009009755168380737,
+                               simSettings: simSettings)
         case "BubblePop":
             syncFactorToSlider(&simSettings.maxPopDropUnified,
                                minVal: -0.002244817890762329,
-                               maxVal: -0.001280529890762329)
+                               maxVal: -0.001280529890762329,
+                               simSettings: simSettings)
         case "StablecoinMeltdown":
             syncFactorToSlider(&simSettings.maxMeltdownDropUnified,
                                minVal: -0.0009681346159477233,
-                               maxVal: -0.0004600706159477233)
+                               maxVal: -0.0004600706159477233,
+                               simSettings: simSettings)
         case "BlackSwan":
             syncFactorToSlider(&simSettings.blackSwanDropUnified,
                                minVal: -0.478662,
-                               maxVal: -0.319108)
+                               maxVal: -0.319108,
+                               simSettings: simSettings)
         case "BearMarket":
             syncFactorToSlider(&simSettings.bearWeeklyDriftUnified,
                                minVal: -0.0010278802752494812,
-                               maxVal: -0.0007278802752494812)
+                               maxVal: -0.0007278802752494812,
+                               simSettings: simSettings)
         case "MaturingMarket":
             syncFactorToSlider(&simSettings.maxMaturingDropUnified,
                                minVal: -0.0020343461055486196,
-                               maxVal: -0.0010537001055486196)
+                               maxVal: -0.0010537001055486196,
+                               simSettings: simSettings)
         case "Recession":
             syncFactorToSlider(&simSettings.maxRecessionDropUnified,
                                minVal: -0.0010516462467487811,
-                               maxVal: -0.0007494520467487811)
+                               maxVal: -0.0007494520467487811,
+                               simSettings: simSettings)
         default:
             break
         }
     }
     
-    /// Toggle the tooltip for a factor
+    /// Toggle the tooltip for a factor.
     func toggleFactor(_ tappedTitle: String) {
         withAnimation {
             if activeFactor == tappedTitle {
@@ -435,4 +439,16 @@ extension SettingsView {
             }
         }
     }
+}
+
+/// A standalone helper that sets `currentValue` proportionally
+/// based on `simSettings.factorIntensity`.
+func syncFactorToSlider(
+    _ currentValue: inout Double,
+    minVal: Double,
+    maxVal: Double,
+    simSettings: SimulationSettings
+) {
+    let t = simSettings.factorIntensity
+    currentValue = minVal + t * (maxVal - minVal)
 }

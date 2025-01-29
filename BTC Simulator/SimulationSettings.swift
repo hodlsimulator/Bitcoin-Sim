@@ -9,7 +9,7 @@ import SwiftUI
 
 class SimulationSettings: ObservableObject {
     
-    // MARK: - Fraction-Based Toggles
+    // MARK: - Factor Toggling
     @Published var factorEnableFrac: [String: Double] = [
         "Halving": 1.0,
         "InstitutionalDemand": 1.0,
@@ -32,16 +32,37 @@ class SimulationSettings: ObservableObject {
         "BearMarket": 1.0,
         "MaturingMarket": 1.0,
         "Recession": 1.0,
-    ]
-    
-    // MARK: - Universal Slider
-    @AppStorage("factorIntensity") var factorIntensity: Double = 0.5
-    
-    init() {
-        // Initialization
-        isUpdating = false
-        isInitialized = false
+    ] {
+        didSet {
+            guard isInitialized else { return }
+            saveFactorEnableFrac()
+        }
     }
+    
+    // MARK: - Tilt Baseline
+    @Published var defaultTilt: Double = 0.0 {
+        didSet {
+            guard isInitialized else { return }
+            saveTiltState()
+        }
+    }
+    
+    @Published var maxSwing: Double = 1.0 {
+        didSet {
+            guard isInitialized else { return }
+            saveTiltState()
+        }
+    }
+    
+    @Published var hasCapturedDefault: Bool = false {
+        didSet {
+            guard isInitialized else { return }
+            saveTiltState()
+        }
+    }
+    
+    // Global factor intensity
+    @AppStorage("factorIntensity") var factorIntensity: Double = 0.5
     
     var inputManager: PersistentInputManager?
     
@@ -73,14 +94,14 @@ class SimulationSettings: ObservableObject {
     var isInitialized = false
     var isUpdating = false
     
-    /// MARK: Settings Toggles
+    // MARK: - Settings Toggles
     @Published var useLognormalGrowth: Bool = true {
         didSet {
             guard isInitialized else { return }
             print("didSet: useLognormalGrowth changed to \(useLognormalGrowth)")
             UserDefaults.standard.set(useLognormalGrowth, forKey: "useLognormalGrowth")
             
-            // Force annualStep to true whenever lognormalGrowth is turned off
+            // Force annualStep true whenever lognormalGrowth is turned off
             if !useLognormalGrowth {
                 useAnnualStep = true
             }
@@ -135,7 +156,6 @@ class SimulationSettings: ObservableObject {
         }
     }
     
-    
     @Published var useVolShocks: Bool = true {
         didSet {
             guard isInitialized else { return }
@@ -158,7 +178,7 @@ class SimulationSettings: ObservableObject {
             print("didSet: useAutoCorrelation changed to \(useAutoCorrelation)")
             UserDefaults.standard.set(useAutoCorrelation, forKey: "useAutoCorrelation")
             
-            // Force meanReversion off whenever autocorrelation is turned off:
+            // Force meanReversion off whenever autocorrelation is turned off
             if !useAutoCorrelation {
                 useMeanReversion = false
             }
@@ -198,7 +218,7 @@ class SimulationSettings: ObservableObject {
         }
     }
     
-    // MARK: - New Regime Switching Toggle
+    // MARK: - Regime Switching Toggle
     @Published var useRegimeSwitching: Bool = false {
         didSet {
             guard isInitialized else { return }
@@ -207,10 +227,37 @@ class SimulationSettings: ObservableObject {
         }
     }
     
+    // MARK: - Private keys
+    private let factorEnableFracKey = "factorEnableFrac"
+    private let defaultTiltKey = "defaultTilt"
+    private let maxSwingKey = "maxSwing"
+    private let hasCapturedDefaultKey = "capturedTilt"
+    
+    // MARK: - Init
+    init() {
+        isUpdating = false
+        isInitialized = false
+        
+        // Load user defaults
+        loadFromUserDefaults()
+        
+        // If there's no baseline set yet, provide a default so tilt bar can move
+        if !hasCapturedDefault {
+            defaultTilt = 0.0
+            maxSwing = 1.0
+            hasCapturedDefault = true
+            saveTiltState()
+        }
+        
+        // Now ready to respond to changes
+        isInitialized = true
+    }
+    
     func finalizeToggleStateAfterLoad() {
         isUpdating = false
     }
     
+    // Example helpers
     private func turnOffMonthlyToggles() {
         useHalvingMonthly = false
         useInstitutionalDemandMonthly = false
@@ -264,7 +311,7 @@ class SimulationSettings: ObservableObject {
     func loadFromUserDefaults() {
         let defaults = UserDefaults.standard
         
-        isInitialized = true
+        isInitialized = false
         
         useLognormalGrowth = defaults.bool(forKey: "useLognormalGrowth")
         lockedRandomSeed = defaults.bool(forKey: "lockedRandomSeed")
@@ -279,36 +326,46 @@ class SimulationSettings: ObservableObject {
         lockHistoricalSampling = defaults.bool(forKey: "lockHistoricalSampling")
         useRegimeSwitching = defaults.bool(forKey: "useRegimeSwitching")
         
-        // NEW: check if the key exists; if not, default to true.
-        if defaults.object(forKey: "useExtendedHistoricalSampling") == nil {
-            useExtendedHistoricalSampling = true // first-time install => on by default
-        } else {
-            useExtendedHistoricalSampling = defaults.bool(forKey: "useExtendedHistoricalSampling")
-        }
-        
+        // Extended sampling
         if defaults.object(forKey: "useExtendedHistoricalSampling") == nil {
             useExtendedHistoricalSampling = true
         } else {
             useExtendedHistoricalSampling = defaults.bool(forKey: "useExtendedHistoricalSampling")
         }
         
-        // Autocorrelation:
+        // factorEnableFrac
+        loadFactorEnableFrac()
+        
+        // Autocorrelation default
         if defaults.object(forKey: "autoCorrelationStrength") == nil {
-            self.autoCorrelationStrength = 0.05  // new default
+            autoCorrelationStrength = 0.05
         } else {
-            self.autoCorrelationStrength = defaults.double(forKey: "autoCorrelationStrength")
+            autoCorrelationStrength = defaults.double(forKey: "autoCorrelationStrength")
         }
         
+        // Mean reversion default
         if defaults.object(forKey: "meanReversionTarget") == nil {
-            self.meanReversionTarget = 0.03  // new default
+            meanReversionTarget = 0.03
         } else {
-            self.meanReversionTarget = defaults.double(forKey: "meanReversionTarget")
+            meanReversionTarget = defaults.double(forKey: "meanReversionTarget")
         }
         
+        // Mean reversion toggle default
         if defaults.object(forKey: "useMeanReversion") == nil {
-            useMeanReversion = true  // your chosen default
+            useMeanReversion = true
         } else {
             useMeanReversion = defaults.bool(forKey: "useMeanReversion")
+        }
+        
+        // Load tilt properties
+        if defaults.object(forKey: defaultTiltKey) != nil {
+            defaultTilt = defaults.double(forKey: defaultTiltKey)
+        }
+        if defaults.object(forKey: maxSwingKey) != nil {
+            maxSwing = defaults.double(forKey: maxSwingKey)
+        }
+        if defaults.object(forKey: hasCapturedDefaultKey) != nil {
+            hasCapturedDefault = defaults.bool(forKey: hasCapturedDefaultKey)
         }
     }
     
@@ -325,10 +382,32 @@ class SimulationSettings: ObservableObject {
         defaults.set(autoCorrelationStrength, forKey: "autoCorrelationStrength")
         defaults.set(meanReversionTarget, forKey: "meanReversionTarget")
         defaults.set(lockHistoricalSampling, forKey: "lockHistoricalSampling")
-        
-        // save the new toggle
         defaults.set(useRegimeSwitching, forKey: "useRegimeSwitching")
         
+        // factorEnableFrac is saved automatically in its didSet
         defaults.synchronize()
+    }
+    
+    // Save the tilt baseline to UserDefaults
+    private func saveTiltState() {
+        let defaults = UserDefaults.standard
+        defaults.set(defaultTilt, forKey: defaultTiltKey)
+        defaults.set(maxSwing, forKey: maxSwingKey)
+        defaults.set(hasCapturedDefault, forKey: hasCapturedDefaultKey)
+    }
+    
+    private func loadFactorEnableFrac() {
+        let defaults = UserDefaults.standard
+        if let data = defaults.data(forKey: factorEnableFracKey),
+           let loaded = try? JSONDecoder().decode([String: Double].self, from: data) {
+            factorEnableFrac = loaded
+        }
+    }
+    
+    private func saveFactorEnableFrac() {
+        let defaults = UserDefaults.standard
+        if let encoded = try? JSONEncoder().encode(factorEnableFrac) {
+            defaults.set(encoded, forKey: factorEnableFracKey)
+        }
     }
 }

@@ -34,15 +34,15 @@ struct SettingsView: View {
     }
     
     // Keep toggles weaker
-    private let factorWeight = 0.05
-    
-    // We measure your default tilt & max swing, then normalise around them
-    @State private var defaultTilt: Double = 0.0
-    @State private var maxSwing: Double = 1.0
+    private let factorWeight = 0.04
     
     // For turning animations on/off
-    @State private var hasCapturedDefault = false
     @State private var hasAppeared = false
+    
+    // For skipping the very first toggle-off animation
+    @State private var firstToggleOff = true
+    @State private var disableAnimationNow = false
+    @State private var oldFactorEnableFrac: [String: Double] = [:]
     
     init() {
         let opaqueAppearance = UINavigationBarAppearance()
@@ -82,7 +82,6 @@ struct SettingsView: View {
     
     var body: some View {
         Form {
-            
             // 1) Tilt Bar
             overallTiltSection
             
@@ -137,11 +136,18 @@ struct SettingsView: View {
             shiftAllFactors(by: delta)
         }
         
-        // Animate changes only after we've appeared & captured default
+        // Animate factor toggles normally, except skip the very first toggle-off
+        .animation(
+            hasAppeared
+            ? (disableAnimationNow ? nil : .easeInOut(duration: 0.3))
+            : nil,
+            value: simSettings.factorEnableFrac
+        )
+        // We also animate factorIntensity changes, and the tilt bar
         .animation(hasAppeared ? .easeInOut(duration: 0.3) : nil, value: factorIntensity)
-        .animation(hasAppeared ? .easeInOut(duration: 0.3) : nil, value: simSettings.factorEnableFrac)
         .animation(hasAppeared ? .easeInOut(duration: 0.3) : nil, value: displayedTilt)
         
+        // Handles the tooltips
         .overlayPreferenceValue(TooltipAnchorKey.self) { allAnchors in
             GeometryReader { proxy in
                 if let item = allAnchors.last {
@@ -160,8 +166,8 @@ struct SettingsView: View {
                     let clampedX = max(10, min(proposedX, proxy.size.width - bubbleWidth - 10))
                     
                     let proposedY = (arrowDirection == .up)
-                        ? (anchorY + offset)
-                        : (anchorY - offset - bubbleHeight)
+                    ? (anchorY + offset)
+                    : (anchorY - offset - bubbleHeight)
                     let clampedY = max(10, min(proposedY, proxy.size.height - bubbleHeight - 10))
                     
                     ZStack {
@@ -186,31 +192,54 @@ struct SettingsView: View {
                 }
             }
         }
-        .attachFactorWatchers(
-            simSettings: simSettings,
-            factorIntensity: factorIntensity,
-            oldFactorIntensity: oldFactorIntensity,
-            animateFactor: animateFactor,
-            updateUniversalFactorIntensity: updateUniversalFactorIntensity
-        )
         
-        .onAppear {
-            // Hide animations for initial load
-            hasAppeared = false
-            
-            // Wait a little so toggles from simSettings definitely load
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                defaultTilt = computeActiveNetTilt()
+        // Instead of attachFactorWatchers(...), we add watchers as mini-views in an overlay:
+        .overlay {
+            ZStack {
+                // A) Numeric watchers
+                UnifiedValueWatchersA(
+                    simSettings: simSettings,
+                    updateUniversalFactorIntensity: updateUniversalFactorIntensity
+                )
+                UnifiedValueWatchersB(
+                    simSettings: simSettings,
+                    updateUniversalFactorIntensity: updateUniversalFactorIntensity
+                )
+                UnifiedValueWatchersC(
+                    simSettings: simSettings,
+                    updateUniversalFactorIntensity: updateUniversalFactorIntensity
+                )
                 
-                // Check how far "all bull" or "all bear" are from that default
-                let allBull = computeIfAllBullish() - defaultTilt
-                let allBear = computeIfAllBearish() - defaultTilt
-                maxSwing = max(abs(allBull), abs(allBear), 0.00001) // no zero division
+                // B) Bullish toggles
+                FactorToggleBullishA(simSettings: simSettings)
+                FactorToggleBullishB(simSettings: simSettings)
                 
-                hasCapturedDefault = true
-                // Turn animations on now that default is established
-                hasAppeared = true
+                // C) Bearish toggles
+                FactorToggleBearishA(simSettings: simSettings)
+                FactorToggleBearishB(simSettings: simSettings)
             }
+        }
+        
+        // Detect when the very first toggle-off happens, so we can skip animation
+        .onChange(of: simSettings.factorEnableFrac) { newVal in
+            disableAnimationNow = false
+            if firstToggleOff {
+                for (key, oldVal) in oldFactorEnableFrac {
+                    let newValue = newVal[key] ?? 0.0
+                    if oldVal > 0.5 && newValue < 0.5 {
+                        disableAnimationNow = true
+                        firstToggleOff = false
+                        break
+                    }
+                }
+            }
+            oldFactorEnableFrac = newVal
+        }
+        
+        // Just update oldFactorEnableFrac & enable animations
+        .onAppear {
+            oldFactorEnableFrac = simSettings.factorEnableFrac
+            hasAppeared = true
         }
     }
     
@@ -218,17 +247,15 @@ struct SettingsView: View {
     // "All-bull" & "all-bear" to figure out the maximum possible tilt from default
     // ---------------------------------------------------------------------------------
     
-    private func computeIfAllBullish() -> Double {
+    func computeIfAllBullish() -> Double {
         // Pretend factorIntensity=1.0 for max effect
         let effective = invertedSCurve(1.0, steepness: 12.0)
         var sum = 0.0
         
-        // Force all bullish toggles "on"
         for _ in bullishKeys {
             let frac = gentleSCurve(1.0, steepness: 2.0)
             sum += frac * factorWeight
         }
-        // Force all bearish toggles "off"
         for _ in bearishKeys {
             let frac = gentleSCurve(0.0, steepness: 2.0)
             sum -= frac * factorWeight
@@ -238,17 +265,15 @@ struct SettingsView: View {
         return normalised * effective
     }
 
-    private func computeIfAllBearish() -> Double {
+    func computeIfAllBearish() -> Double {
         // Also pretend factorIntensity=1.0
         let effective = invertedSCurve(1.0, steepness: 12.0)
         var sum = 0.0
         
-        // Force all bullish toggles "off"
         for _ in bullishKeys {
             let frac = gentleSCurve(0.0, steepness: 2.0)
             sum += frac * factorWeight
         }
-        // Force all bearish toggles "on"
         for _ in bearishKeys {
             let frac = gentleSCurve(1.0, steepness: 2.0)
             sum -= frac * factorWeight
@@ -258,47 +283,27 @@ struct SettingsView: View {
         return normalised * effective
     }
     
-    // ------------------ Helpers ------------------
-    
-    func syncFactorToSlider(
-        _ currentValue: inout Double,
-        minVal: Double,
-        maxVal: Double
-    ) {
-        let t = factorIntensity
-        currentValue = minVal + t * (maxVal - minVal)
-    }
-    
-    private func updateUniversalFactorIntensity(_: String) {
-        // optional stub
-    }
-    
     // -----------------------------------
     // Net Tilt Calculation
     // -----------------------------------
     
     var displayedTilt: Double {
-        // If we haven't measured default yet, show 0 so we appear neutral
-        if !hasCapturedDefault { return 0.0 }
-        
-        // normalise by maxSwing
-        let fraction = (computeActiveNetTilt() - defaultTilt) / maxSwing
-        
-        // scale fraction to let the bar reach ±1
-        let scaled = fraction * 1.5
-        
-        // moderate alpha so we’re not too sharp near 0
+        // If we haven't saved a baseline tilt yet, show 0
+        if !simSettings.hasCapturedDefault {
+            return 0.0
+        }
+        let fraction = (computeActiveNetTilt() - simSettings.defaultTilt)
+                       / simSettings.maxSwing
+        let scaled = fraction * 1.7
         return tanh(8.0 * scaled)
     }
     
-    private func computeActiveNetTilt() -> Double {
-        // The "global slider" effect
+    func computeActiveNetTilt() -> Double {
         let effective = invertedSCurve(factorIntensity, steepness: 12.0)
         
         var sum = 0.0
         for key in bullishKeys {
             let raw = simSettings.factorEnableFrac[key] ?? 0.0
-            // toggles are gentle => steepness=2.0
             let frac = gentleSCurve(raw, steepness: 2.0)
             sum += frac * factorWeight
         }
@@ -312,29 +317,16 @@ struct SettingsView: View {
         return normalised * effective
     }
     
-    // Optional older baseline logic
-    private func baselineNetTilt() -> Double {
-        let fractionIfOn = gentleSCurve(1.0, steepness: 4.0)
-        let effectiveAtMid = invertedSCurve(0.5, steepness: 12.0)
-        
-        var sum = 0.0
-        for _ in bullishKeys {
-            sum += fractionIfOn * factorWeight
-        }
-        for _ in bearishKeys {
-            sum -= fractionIfOn * factorWeight
-        }
-        
-        let normalised = sum / Double(totalFactors)
-        return normalised * effectiveAtMid
-    }
-    
+    // Helper s-curves
     private func gentleSCurve(_ x: Double, steepness: Double = 3.0) -> Double {
         return 1.0 / (1.0 + exp(-steepness * (x - 0.5)))
     }
     
     private func invertedSCurve(_ x: Double, steepness: Double = 6.0) -> Double {
-        // It's a normal logistic from 0..1
         return 1.0 / (1.0 + exp(-steepness * (x - 0.5)))
+    }
+    
+    private func updateUniversalFactorIntensity(_: String) {
+        // optional stub
     }
 }

@@ -39,18 +39,18 @@ extension SettingsView {
         Section {
             HStack {
                 Button {
-                    factorIntensity = 0.0
+                    simSettings.factorIntensity = 0.0
                 } label: {
                     Image(systemName: "chart.line.downtrend.xyaxis")
                         .foregroundColor(.red)
                 }
                 .buttonStyle(.plain)
 
-                Slider(value: $factorIntensity, in: 0...1, step: 0.01)
+                Slider(value: $simSettings.factorIntensity, in: 0...1, step: 0.01)
                     .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
 
                 Button {
-                    factorIntensity = 1.0
+                    simSettings.factorIntensity = 1.0
                 } label: {
                     Image(systemName: "chart.line.uptrend.xyaxis")
                         .foregroundColor(.green)
@@ -90,9 +90,15 @@ extension SettingsView {
         Section {
             Button(action: {
                 simSettings.restoreDefaults()
-                // Also reset the universal slider:
-                factorIntensity = 0.5
+                simSettings.factorIntensity = 0.5
                 oldFactorIntensity = 0.5
+
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    simSettings.defaultTilt = computeActiveNetTilt()
+                    let allBull = computeIfAllBullish() - simSettings.defaultTilt
+                    let allBear = computeIfAllBearish() - simSettings.defaultTilt
+                    simSettings.maxSwing = max(abs(allBull), abs(allBear), 0.00001)
+                }
             }) {
                 HStack {
                     Text("Restore Defaults")
@@ -126,8 +132,11 @@ extension SettingsView {
             .alert("Confirm Reset", isPresented: $showResetCriteriaConfirmation, actions: {
                 Button("Reset", role: .destructive) {
                     simSettings.restoreDefaults()
+                    
+                    // "didFinishOnboarding" is in scope now:
                     didFinishOnboarding = false
-                    factorIntensity = 0.5
+                    
+                    simSettings.factorIntensity = 0.5
                     oldFactorIntensity = 0.5
                 }
                 Button("Cancel", role: .cancel) { }
