@@ -10,19 +10,22 @@ import SwiftUI
 extension SettingsView {
     
     /// Shift all factors by `delta`, but only if that factor is toggled on
-    /// (via simSettings.useXYZWeekly) and its fraction > 0. This prevents
-    /// accidentally switching the factor fully off when dragging left.
+    /// (via simSettings.useXYZWeekly). The fraction influences the *speed* at which it moves,
+    /// but we no longer skip if fraction == 0. (If the user explicitly toggles the factor off,
+    /// then `isOn` will be false, which also skips the shift.)
     func shiftAllFactors(by delta: Double) {
         
-        // Clamps x into [minVal, maxVal].
+        // Clamp x into [minVal, maxVal].
         func clamp(_ x: Double, minVal: Double, maxVal: Double) -> Double {
             let lower = min(minVal, maxVal)
             let upper = max(minVal, maxVal)
             return max(lower, min(upper, x))
         }
         
-        /// Shifts `oldValue` by `delta * (maxVal - minVal)`,
-        /// but only if the factor is toggled on (`isOn`) and fraction > 0.
+        /// Shifts `oldValue` by `delta * range * fraction`, if factor is toggled on.
+        /// The fraction is read from simSettings.factorEnableFrac, but we no longer skip
+        /// if fraction == 0 in case you're dragging it. (If factor is really off,
+        /// then `isOn` will be false anyway.)
         func maybeShift(
             key: String,
             isOn: Bool,
@@ -30,23 +33,16 @@ extension SettingsView {
             minVal: Double,
             maxVal: Double
         ) {
-            // 1) If factor is toggled off, skip.
             guard isOn else { return }
             
-            // 2) If fraction is 0, skip.
             let frac = simSettings.factorEnableFrac[key] ?? 0.0
-            guard frac > 0 else { return }
-            
-            // 3) Don’t go beyond min/max if we’re already at the edge.
             let range = maxVal - minVal
-            if oldValue <= minVal && delta < 0 { return }
-            if oldValue >= maxVal && delta > 0 { return }
             
-            // 4) Scale the shift by fraction, so partially enabled factors move less.
+            // Scale the shift by fraction. If fraction is zero or very small,
+            // it’ll move less (or not at all), but we don’t skip entirely.
             let scaledDelta = delta * range * frac
-            let newValue = clamp(oldValue + scaledDelta, minVal: minVal, maxVal: maxVal)
             
-            // 5) Update if it changed meaningfully
+            let newValue = clamp(oldValue + scaledDelta, minVal: minVal, maxVal: maxVal)
             if abs(newValue - oldValue) > 1e-7 {
                 oldValue = newValue
             }
@@ -181,15 +177,12 @@ extension SettingsView {
                    maxVal: -0.0007494520467487811)
     }
     
-    /// Compute an overall “factorIntensity” as an average of each toggled-on factor’s normalised value
-    /// weighted by its fraction. If a factor is off or fraction=0, it’s ignored.
+    /// Same as before, but now every toggled-on factor can truly reach min or max.
     func updateUniversalFactorIntensity() {
         
         var totalWeightedNorm = 0.0
         var totalFrac = 0.0
         
-        // Normalises current `value` from [minVal, maxVal] into 0..1,
-        // then multiplies by fraction and accumulates.
         func accumulateFactor(
             key: String,
             isOn: Bool,
@@ -206,7 +199,7 @@ extension SettingsView {
             totalFrac += frac
         }
         
-        // -- BULLISH --
+        // --- BULLISH ---
         accumulateFactor(key: "Halving",
                          isOn: simSettings.useHalvingWeekly,
                          value: simSettings.halvingBumpUnified,
@@ -279,7 +272,7 @@ extension SettingsView {
                          minVal: 0.0013638349088897705,
                          maxVal: 0.0018451869088897705)
         
-        // -- BEARISH --
+        // --- BEARISH ---
         accumulateFactor(key: "RegClampdown",
                          isOn: simSettings.useRegClampdownWeekly,
                          value: simSettings.maxClampDownUnified,
@@ -342,7 +335,7 @@ extension SettingsView {
         simSettings.factorIntensity = newIntensity
     }
     
-    /// Animate turning a factor on/off. (Same as before, no change needed.)
+    /// Animate factor on/off (unchanged).
     func animateFactor(_ key: String, isOn: Bool) {
         if isOn {
             withAnimation(.easeInOut(duration: 0.6)) {
@@ -356,10 +349,9 @@ extension SettingsView {
         }
     }
     
-    /// Sync the factor’s numeric value to `simSettings.factorIntensity` (unchanged).
+    /// Sync factor’s value to `simSettings.factorIntensity` (unchanged).
     private func syncSingleFactorWithSlider(_ factorKey: String) {
         switch factorKey {
-            
         // BULLISH
         case "Halving":
             syncFactorToSlider(&simSettings.halvingBumpUnified,
@@ -421,7 +413,7 @@ extension SettingsView {
                                minVal: 0.0013638349088897705,
                                maxVal: 0.0018451869088897705,
                                simSettings: simSettings)
-            
+        
         // BEARISH
         case "RegClampdown":
             syncFactorToSlider(&simSettings.maxClampDownUnified,
@@ -474,8 +466,8 @@ extension SettingsView {
     }
 }
 
-/// Sets `currentValue` proportionally within [minVal, maxVal]
-/// based on `simSettings.factorIntensity` (unchanged).
+/// Unchanged helper that sets `currentValue` in [minVal, maxVal]
+/// based on `simSettings.factorIntensity`.
 func syncFactorToSlider(
     _ currentValue: inout Double,
     minVal: Double,
@@ -485,3 +477,4 @@ func syncFactorToSlider(
     let t = simSettings.factorIntensity
     currentValue = minVal + t * (maxVal - minVal)
 }
+    

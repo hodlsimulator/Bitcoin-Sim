@@ -72,10 +72,9 @@ struct FactorToggleRow: View {
     /// Called when user taps the row’s title
     let onTitleTap: (String) -> Void
 
-    /// NEW: decide whether we show X% or just X
+    /// Decide whether to display sliderValue as a percentage or raw number
     let displayAsPercent: Bool
 
-    // Provide default values so existing calls don’t need to specify them.
     init(
         iconName: String? = nil,
         title: String,
@@ -138,6 +137,13 @@ struct FactorToggleRow: View {
                 Toggle("", isOn: $isOn)
                     .labelsHidden()
                     .tint(.orange)
+                    .onChange(of: isOn) { newValue in
+                        // If factor just got toggled on, set slider to midpoint
+                        if newValue {
+                            let mid = (sliderRange.lowerBound + sliderRange.upperBound) / 2.0
+                            sliderValue = mid
+                        }
+                    }
             }
 
             // Slider row
@@ -146,14 +152,14 @@ struct FactorToggleRow: View {
                     .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
                     .disabled(!isOn)
 
-                // If this is Halving, show 0.48% directly.
+                // If this is "Halving", show sliderValue as ".4f%" directly
                 if title == "Halving" {
                     Text(String(format: "%.4f%%", sliderValue))
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .frame(width: 70, alignment: .trailing)
                         .disabled(!isOn)
-                }   
+                }
                 else if displayAsPercent {
                     Text(String(format: "%.4f%%", sliderValue * 100))
                         .font(.caption)
@@ -172,5 +178,5 @@ struct FactorToggleRow: View {
         }
         .padding(.vertical, 4)
         .opacity(isOn ? 1.0 : 0.5)
-    }   
+    }
 }
