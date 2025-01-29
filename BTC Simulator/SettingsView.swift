@@ -21,6 +21,7 @@ struct SettingsView: View {
     
     @State var lastFactorFrac: [String: Double] = [:]
     
+    // Factor keys
     private let bullishKeys: [String] = [
         "Halving", "InstitutionalDemand", "CountryAdoption", "RegulatoryClarity",
         "EtfApproval", "TechBreakthrough", "ScarcityEvents", "GlobalMacroHedge",
@@ -50,61 +51,40 @@ struct SettingsView: View {
         setupNavBarAppearance()
     }
     
-    // ----------------------------------------------------
-    // 1) Our main Form "content" in a separate property
-    // ----------------------------------------------------
-    private var mainForm: some View {
+    var body: some View {
         Form {
-            // 1) Tilt Bar
+            // These sections are all defined in SettingsSections.swift (extension)
             overallTiltSection
-            
-            // 2) Universal Factor Intensity
             factorIntensitySection
-            
-            // 3) Toggle All Factors
             toggleAllSection
-            
-            // 4) "Restore Defaults"
             restoreDefaultsSection
             
-            // 5) Bullish Factors Section
             BullishFactorsSection(
                 activeFactor: $activeFactor,
-                // Provide the missing closures here:
                 toggleFactor: { factorName in
-                    // e.g. show a tooltip or do nothing
                     activeFactor = factorName
                 },
                 factorEnableFrac: $simSettings.factorEnableFrac,
                 animateFactor: { factorName, isOn in
-                    // e.g. do some logging or animation
                     print("Animating Bullish factor: \(factorName), isOn=\(isOn)")
                 }
             )
             .environmentObject(simSettings)
             
-            // 6) Bearish Factors Section
             BearishFactorsSection(
                 activeFactor: $activeFactor,
                 toggleFactor: { factorName in
-                    // e.g. show a tooltip or do nothing
                     activeFactor = factorName
                 },
                 factorEnableFrac: $simSettings.factorEnableFrac,
                 animateFactor: { factorName, isOn in
-                    // e.g. do some logging or animation
                     print("Animating Bearish factor: \(factorName), isOn=\(isOn)")
                 }
             )
             .environmentObject(simSettings)
             
-            // 7) Advanced Disclosure
-            AdvancedSettingsSection(showAdvancedSettings: $showAdvancedSettings)
-            
-            // 8) About
+            // The rest of your sections from SettingsSections.swift
             aboutSection
-            
-            // 9) Reset All
             resetCriteriaSection
         }
         .listStyle(.insetGrouped)
@@ -113,23 +93,52 @@ struct SettingsView: View {
         .environment(\.colorScheme, .dark)
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.large)
-    }
-    
-    // ----------------------------------------------------
-    // 2) Our watchers overlay in a separate property
-    // ----------------------------------------------------
-    private var watchersOverlay: some View {
-        ZStack {
-            UnifiedValueWatchersA(simSettings: simSettings)
-            UnifiedValueWatchersB(simSettings: simSettings)
-            UnifiedValueWatchersC(simSettings: simSettings)
+        
+        // A) Factor intensity onChange
+        .onChange(of: factorIntensity) { newVal in
+            let delta = newVal - oldFactorIntensity
+            oldFactorIntensity = newVal
+            shiftAllFactors(by: delta)
+        }
+        
+        // B) Animate factor toggles & tilt
+        .animation(hasAppeared ? (disableAnimationNow ? nil : .easeInOut(duration: 0.3)) : nil,
+                   value: simSettings.factorEnableFrac)
+        .animation(hasAppeared ? .easeInOut(duration: 0.3) : nil, value: factorIntensity)
+        .animation(hasAppeared ? .easeInOut(duration: 0.3) : nil, value: displayedTilt)
+        
+        // C) Tooltips overlay
+        .overlayPreferenceValue(TooltipAnchorKey.self) { allItems in
+            tooltipOverlay(allItems)
+        }
+        
+        // D) Detect first toggle-off
+        .onChange(of: simSettings.factorEnableFrac) { newVal in
+            disableAnimationNow = false
+            if firstToggleOff {
+                for (key, oldVal) in oldFactorEnableFrac {
+                    let newValue = newVal[key] ?? 0.0
+                    if oldVal > 0.5 && newValue < 0.5 {
+                        disableAnimationNow = true
+                        firstToggleOff = false
+                        break
+                    }
+                }
+            }
+            oldFactorEnableFrac = newVal
+        }
+        .onAppear {
+            oldFactorEnableFrac = simSettings.factorEnableFrac
+            hasAppeared = true
         }
     }
     
-    // ----------------------------------------------------
-    // 3) Our tooltip overlay logic in a helper function
-    //    Now using TooltipItem to match your UIComponents.swift
-    // ----------------------------------------------------
+    // MARK: - Overlay watchers, if you want them
+    // If you want watchersOverlay, you can do .overlay(watchersOverlay)
+    // For now I've omitted it, but you can adapt:
+    // .overlay { watchersOverlay }
+    
+    // MARK: - Tooltips overlay function
     @ViewBuilder
     private func tooltipOverlay(_ allItems: [TooltipItem]) -> some View {
         GeometryReader { proxy in
@@ -137,7 +146,7 @@ struct SettingsView: View {
                 let bubbleWidth: CGFloat = 240
                 let bubbleHeight: CGFloat = 220
                 let offset: CGFloat = 8
-                let anchorPoint = proxy[item.anchor] // item.anchor is Anchor<CGPoint>
+                let anchorPoint = proxy[item.anchor]
                 
                 let anchorX = anchorPoint.x
                 let anchorYBase = anchorPoint.y
@@ -176,60 +185,35 @@ struct SettingsView: View {
         }
     }
     
-    // ----------------------------------------------------
-    // 4) The main body now composes these pieces
-    // ----------------------------------------------------
-    var body: some View {
-        // A) The main form
-        mainForm
-            // B) Factor intensity onChange
-            .onChange(of: factorIntensity) { newVal in
-                let delta = newVal - oldFactorIntensity
-                oldFactorIntensity = newVal
-                shiftAllFactors(by: delta)
-            }
-            // C) Animate factor toggles & tilt
-            .animation(hasAppeared ? (disableAnimationNow ? nil : .easeInOut(duration: 0.3)) : nil,
-                       value: simSettings.factorEnableFrac)
-            .animation(hasAppeared ? .easeInOut(duration: 0.3) : nil, value: factorIntensity)
-            .animation(hasAppeared ? .easeInOut(duration: 0.3) : nil, value: displayedTilt)
-            
-            // D) Tooltips overlay
-            .overlayPreferenceValue(TooltipAnchorKey.self) { allItems in
-                tooltipOverlay(allItems)
-            }
-            
-            // E) Detect the first toggle-off
-            .onChange(of: simSettings.factorEnableFrac) { newVal in
-                disableAnimationNow = false
-                if firstToggleOff {
-                    for (key, oldVal) in oldFactorEnableFrac {
-                        let newValue = newVal[key] ?? 0.0
-                        // If oldVal was > 0.5 and newVal < 0.5 => skip anim
-                        if oldVal > 0.5 && newValue < 0.5 {
-                            disableAnimationNow = true
-                            firstToggleOff = false
-                            break
-                        }
-                    }
-                }
-                oldFactorEnableFrac = newVal
-            }
-            .onAppear {
-                oldFactorEnableFrac = simSettings.factorEnableFrac
-                hasAppeared = true
-            }
-            
-            // F) Our watchers for the factor fractions
-            .overlay { watchersOverlay }
+    // MARK: - SHIFT & TILT logic
+    func computeActiveNetTilt() -> Double {
+        let effective = invertedSCurve(factorIntensity, steepness: 12.0)
+        
+        var sum = 0.0
+        for key in bullishKeys {
+            let raw = simSettings.factorEnableFrac[key] ?? 0.0
+            let frac = gentleSCurve(raw, steepness: 2.0)
+            sum += frac * factorWeight
+        }
+        for key in bearishKeys {
+            let raw = simSettings.factorEnableFrac[key] ?? 0.0
+            let frac = gentleSCurve(raw, steepness: 2.0)
+            sum -= frac * factorWeight
+        }
+        
+        let normalised = sum / Double(totalFactors)
+        return normalised * effective
     }
     
-    // ----------------------------------------------------
-    // 5) The rest of your tilt logic, etc.
-    // ----------------------------------------------------
-    
-    // No redeclaration of unify watchers or expansions you have elsewhere
-    // Just referencing them here, as requested
+    var displayedTilt: Double {
+        if !simSettings.hasCapturedDefault {
+            return 0.0
+        }
+        let fraction = (computeActiveNetTilt() - simSettings.defaultTilt)
+                       / simSettings.maxSwing
+        let scaled = fraction * 1.7
+        return tanh(8.0 * scaled)
+    }
     
     func computeIfAllBullish() -> Double {
         let effective = invertedSCurve(1.0, steepness: 12.0)
@@ -265,35 +249,6 @@ struct SettingsView: View {
         return normalised * effective
     }
     
-    var displayedTilt: Double {
-        if !simSettings.hasCapturedDefault {
-            return 0.0
-        }
-        let fraction = (computeActiveNetTilt() - simSettings.defaultTilt)
-                       / simSettings.maxSwing
-        let scaled = fraction * 1.7
-        return tanh(8.0 * scaled)
-    }
-    
-    func computeActiveNetTilt() -> Double {
-        let effective = invertedSCurve(factorIntensity, steepness: 12.0)
-        
-        var sum = 0.0
-        for key in bullishKeys {
-            let raw = simSettings.factorEnableFrac[key] ?? 0.0
-            let frac = gentleSCurve(raw, steepness: 2.0)
-            sum += frac * factorWeight
-        }
-        for key in bearishKeys {
-            let raw = simSettings.factorEnableFrac[key] ?? 0.0
-            let frac = gentleSCurve(raw, steepness: 2.0)
-            sum -= frac * factorWeight
-        }
-        
-        let normalised = sum / Double(totalFactors)
-        return normalised * effective
-    }
-    
     private func gentleSCurve(_ x: Double, steepness: Double = 3.0) -> Double {
         1.0 / (1.0 + exp(-steepness * (x - 0.5)))
     }
@@ -302,7 +257,6 @@ struct SettingsView: View {
         1.0 / (1.0 + exp(-steepness * (x - 0.5)))
     }
     
-    // Example nav bar styling you said you have
     private func setupNavBarAppearance() {
         let opaqueAppearance = UINavigationBarAppearance()
         opaqueAppearance.configureWithOpaqueBackground()

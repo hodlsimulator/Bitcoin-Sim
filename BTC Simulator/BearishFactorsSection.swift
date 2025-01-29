@@ -1,4 +1,3 @@
-//
 //  BearishFactorsSection.swift
 //  BTCMonteCarlo
 //
@@ -34,13 +33,9 @@ struct BearishFactorsSection: View {
                         simSettings.useRegClampdownWeekly
                     },
                     set: { newValue in
-                        simSettings.useRegClampdownWeekly  = newValue
+                        simSettings.useRegClampdownWeekly = newValue
                         simSettings.useRegClampdownMonthly = newValue
-                        
-                        factorEnableFrac["RegClampdown"] = newValue
-                            ? (factorEnableFrac["RegClampdown"] ?? 1.0)
-                            : 0.0
-                        
+                        factorEnableFrac["RegClampdown"] = newValue ? -0.0011361452243542672 : 0.0 // Set midpoint when on
                         animateFactor("RegClampdown", newValue)
                     }
                 ),
@@ -67,13 +62,9 @@ struct BearishFactorsSection: View {
                         simSettings.useCompetitorCoinWeekly
                     },
                     set: { newValue in
-                        simSettings.useCompetitorCoinWeekly  = newValue
+                        simSettings.useCompetitorCoinWeekly = newValue
                         simSettings.useCompetitorCoinMonthly = newValue
-                        
-                        factorEnableFrac["CompetitorCoin"] = newValue
-                            ? (factorEnableFrac["CompetitorCoin"] ?? 1.0)
-                            : 0.0
-                        
+                        factorEnableFrac["CompetitorCoin"] = newValue ? -0.0010148181746411323 : 0.0 // Set midpoint when on
                         animateFactor("CompetitorCoin", newValue)
                     }
                 ),
@@ -100,13 +91,9 @@ struct BearishFactorsSection: View {
                         simSettings.useSecurityBreachWeekly
                     },
                     set: { newValue in
-                        simSettings.useSecurityBreachWeekly  = newValue
+                        simSettings.useSecurityBreachWeekly = newValue
                         simSettings.useSecurityBreachMonthly = newValue
-                        
-                        factorEnableFrac["SecurityBreach"] = newValue
-                            ? (factorEnableFrac["SecurityBreach"] ?? 1.0)
-                            : 0.0
-                        
+                        factorEnableFrac["SecurityBreach"] = newValue ? -0.0010914715168380737 : 0.0 // Set midpoint when on
                         animateFactor("SecurityBreach", newValue)
                     }
                 ),
@@ -133,13 +120,9 @@ struct BearishFactorsSection: View {
                         simSettings.useBubblePopWeekly
                     },
                     set: { newValue in
-                        simSettings.useBubblePopWeekly  = newValue
+                        simSettings.useBubblePopWeekly = newValue
                         simSettings.useBubblePopMonthly = newValue
-                        
-                        factorEnableFrac["BubblePop"] = newValue
-                            ? (factorEnableFrac["BubblePop"] ?? 1.0)
-                            : 0.0
-                        
+                        factorEnableFrac["BubblePop"] = newValue ? -0.001762673890762329 : 0.0 // Set midpoint when on
                         animateFactor("BubblePop", newValue)
                     }
                 ),
@@ -166,13 +149,9 @@ struct BearishFactorsSection: View {
                         simSettings.useStablecoinMeltdownWeekly
                     },
                     set: { newValue in
-                        simSettings.useStablecoinMeltdownWeekly  = newValue
+                        simSettings.useStablecoinMeltdownWeekly = newValue
                         simSettings.useStablecoinMeltdownMonthly = newValue
-                        
-                        factorEnableFrac["StablecoinMeltdown"] = newValue
-                            ? (factorEnableFrac["StablecoinMeltdown"] ?? 1.0)
-                            : 0.0
-                        
+                        factorEnableFrac["StablecoinMeltdown"] = newValue ? -0.0007141026159477233 : 0.0 // Set midpoint when on
                         animateFactor("StablecoinMeltdown", newValue)
                     }
                 ),
@@ -199,13 +178,9 @@ struct BearishFactorsSection: View {
                         simSettings.useBlackSwanWeekly
                     },
                     set: { newValue in
-                        simSettings.useBlackSwanWeekly  = newValue
+                        simSettings.useBlackSwanWeekly = newValue
                         simSettings.useBlackSwanMonthly = newValue
-                        
-                        factorEnableFrac["BlackSwan"] = newValue
-                            ? (factorEnableFrac["BlackSwan"] ?? 1.0)
-                            : 0.0
-                        
+                        factorEnableFrac["BlackSwan"] = newValue ? -0.398885 : 0.0 // Set midpoint when on
                         animateFactor("BlackSwan", newValue)
                     }
                 ),
@@ -232,13 +207,9 @@ struct BearishFactorsSection: View {
                         simSettings.useBearMarketWeekly
                     },
                     set: { newValue in
-                        simSettings.useBearMarketWeekly  = newValue
+                        simSettings.useBearMarketWeekly = newValue
                         simSettings.useBearMarketMonthly = newValue
-                        
-                        factorEnableFrac["BearMarket"] = newValue
-                            ? (factorEnableFrac["BearMarket"] ?? 1.0)
-                            : 0.0
-                        
+                        factorEnableFrac["BearMarket"] = newValue ? -0.0008778802752494812 : 0.0 // Set midpoint when on
                         animateFactor("BearMarket", newValue)
                     }
                 ),
@@ -265,13 +236,9 @@ struct BearishFactorsSection: View {
                         simSettings.useMaturingMarketWeekly
                     },
                     set: { newValue in
-                        simSettings.useMaturingMarketWeekly  = newValue
+                        simSettings.useMaturingMarketWeekly = newValue
                         simSettings.useMaturingMarketMonthly = newValue
-                        
-                        factorEnableFrac["MaturingMarket"] = newValue
-                            ? (factorEnableFrac["MaturingMarket"] ?? 1.0)
-                            : 0.0
-                        
+                        factorEnableFrac["MaturingMarket"] = newValue ? -0.0015440231055486196 : 0.0 // Set midpoint when on
                         animateFactor("MaturingMarket", newValue)
                     }
                 ),
@@ -298,13 +265,9 @@ struct BearishFactorsSection: View {
                         simSettings.useRecessionWeekly
                     },
                     set: { newValue in
-                        simSettings.useRecessionWeekly  = newValue
+                        simSettings.useRecessionWeekly = newValue
                         simSettings.useRecessionMonthly = newValue
-                        
-                        factorEnableFrac["Recession"] = newValue
-                            ? (factorEnableFrac["Recession"] ?? 1.0)
-                            : 0.0
-                        
+                        factorEnableFrac["Recession"] = newValue ? -0.0009005491467487811 : 0.0 // Set midpoint when on
                         animateFactor("Recession", newValue)
                     }
                 ),

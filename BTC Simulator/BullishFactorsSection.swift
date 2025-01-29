@@ -1,4 +1,3 @@
-//
 //  BullishFactorsSection.swift
 //  BTCMonteCarlo
 //
@@ -30,20 +29,14 @@ struct BullishFactorsSection: View {
             FactorToggleRow(
                 iconName: "globe.europe.africa",
                 title: "Halving",
-                // Now purely uses simSettings.useHalvingWeekly for on/off
                 isOn: Binding<Bool>(
                     get: {
                         simSettings.useHalvingWeekly
                     },
                     set: { newValue in
-                        simSettings.useHalvingWeekly  = newValue
+                        simSettings.useHalvingWeekly = newValue
                         simSettings.useHalvingMonthly = newValue
-                        
-                        // If you want to keep factorEnableFrac in sync, do:
-                        factorEnableFrac["Halving"] = newValue
-                            ? (factorEnableFrac["Halving"] ?? 1.0)
-                            : 0.0
-                        
+                        factorEnableFrac["Halving"] = newValue ? 0.3298386887 : 0.0 // Set midpoint when on
                         animateFactor("Halving", newValue)
                     }
                 ),
@@ -71,13 +64,9 @@ struct BullishFactorsSection: View {
                         simSettings.useInstitutionalDemandWeekly
                     },
                     set: { newValue in
-                        simSettings.useInstitutionalDemandWeekly  = newValue
+                        simSettings.useInstitutionalDemandWeekly = newValue
                         simSettings.useInstitutionalDemandMonthly = newValue
-                        
-                        factorEnableFrac["InstitutionalDemand"] = newValue
-                            ? (factorEnableFrac["InstitutionalDemand"] ?? 1.0)
-                            : 0.0
-                        
+                        factorEnableFrac["InstitutionalDemand"] = newValue ? 0.001239 : 0.0 // Set midpoint when on
                         animateFactor("InstitutionalDemand", newValue)
                     }
                 ),
@@ -104,13 +93,9 @@ struct BullishFactorsSection: View {
                         simSettings.useCountryAdoptionWeekly
                     },
                     set: { newValue in
-                        simSettings.useCountryAdoptionWeekly  = newValue
+                        simSettings.useCountryAdoptionWeekly = newValue
                         simSettings.useCountryAdoptionMonthly = newValue
-                        
-                        factorEnableFrac["CountryAdoption"] = newValue
-                            ? (factorEnableFrac["CountryAdoption"] ?? 1.0)
-                            : 0.0
-                        
+                        factorEnableFrac["CountryAdoption"] = newValue ? 0.0011375879977 : 0.0 // Set midpoint when on
                         animateFactor("CountryAdoption", newValue)
                     }
                 ),
@@ -138,13 +123,9 @@ struct BullishFactorsSection: View {
                         simSettings.useRegulatoryClarityWeekly
                     },
                     set: { newValue in
-                        simSettings.useRegulatoryClarityWeekly  = newValue
+                        simSettings.useRegulatoryClarityWeekly = newValue
                         simSettings.useRegulatoryClarityMonthly = newValue
-                        
-                        factorEnableFrac["RegulatoryClarity"] = newValue
-                            ? (factorEnableFrac["RegulatoryClarity"] ?? 1.0)
-                            : 0.0
-                        
+                        factorEnableFrac["RegulatoryClarity"] = newValue ? 0.0007170254861605167 : 0.0 // Set midpoint when on
                         animateFactor("RegulatoryClarity", newValue)
                     }
                 ),
@@ -172,13 +153,9 @@ struct BullishFactorsSection: View {
                         simSettings.useEtfApprovalWeekly
                     },
                     set: { newValue in
-                        simSettings.useEtfApprovalWeekly  = newValue
+                        simSettings.useEtfApprovalWeekly = newValue
                         simSettings.useEtfApprovalMonthly = newValue
-                        
-                        factorEnableFrac["EtfApproval"] = newValue
-                            ? (factorEnableFrac["EtfApproval"] ?? 1.0)
-                            : 0.0
-                        
+                        factorEnableFrac["EtfApproval"] = newValue ? 0.0017880183160305023 : 0.0 // Set midpoint when on
                         animateFactor("EtfApproval", newValue)
                     }
                 ),
@@ -206,13 +183,9 @@ struct BullishFactorsSection: View {
                         simSettings.useTechBreakthroughWeekly
                     },
                     set: { newValue in
-                        simSettings.useTechBreakthroughWeekly  = newValue
+                        simSettings.useTechBreakthroughWeekly = newValue
                         simSettings.useTechBreakthroughMonthly = newValue
-                        
-                        factorEnableFrac["TechBreakthrough"] = newValue
-                            ? (factorEnableFrac["TechBreakthrough"] ?? 1.0)
-                            : 0.0
-                        
+                        factorEnableFrac["TechBreakthrough"] = newValue ? 0.0006083193579173088 : 0.0 // Set midpoint when on
                         animateFactor("TechBreakthrough", newValue)
                     }
                 ),
@@ -240,13 +213,9 @@ struct BullishFactorsSection: View {
                         simSettings.useScarcityEventsWeekly
                     },
                     set: { newValue in
-                        simSettings.useScarcityEventsWeekly  = newValue
+                        simSettings.useScarcityEventsWeekly = newValue
                         simSettings.useScarcityEventsMonthly = newValue
-                        
-                        factorEnableFrac["ScarcityEvents"] = newValue
-                            ? (factorEnableFrac["ScarcityEvents"] ?? 1.0)
-                            : 0.0
-                        
+                        factorEnableFrac["ScarcityEvents"] = newValue ? 0.00041308753681182863 : 0.0 // Set midpoint when on
                         animateFactor("ScarcityEvents", newValue)
                     }
                 ),
@@ -274,13 +243,9 @@ struct BullishFactorsSection: View {
                         simSettings.useGlobalMacroHedgeWeekly
                     },
                     set: { newValue in
-                        simSettings.useGlobalMacroHedgeWeekly  = newValue
+                        simSettings.useGlobalMacroHedgeWeekly = newValue
                         simSettings.useGlobalMacroHedgeMonthly = newValue
-                        
-                        factorEnableFrac["GlobalMacroHedge"] = newValue
-                            ? (factorEnableFrac["GlobalMacroHedge"] ?? 1.0)
-                            : 0.0
-                        
+                        factorEnableFrac["GlobalMacroHedge"] = newValue ? 0.0003497809724932909 : 0.0 // Set midpoint when on
                         animateFactor("GlobalMacroHedge", newValue)
                     }
                 ),
@@ -308,13 +273,9 @@ struct BullishFactorsSection: View {
                         simSettings.useStablecoinShiftWeekly
                     },
                     set: { newValue in
-                        simSettings.useStablecoinShiftWeekly  = newValue
+                        simSettings.useStablecoinShiftWeekly = newValue
                         simSettings.useStablecoinShiftMonthly = newValue
-                        
-                        factorEnableFrac["StablecoinShift"] = newValue
-                            ? (factorEnableFrac["StablecoinShift"] ?? 1.0)
-                            : 0.0
-                        
+                        factorEnableFrac["StablecoinShift"] = newValue ? 0.0003312209116327763 : 0.0 // Set midpoint when on
                         animateFactor("StablecoinShift", newValue)
                     }
                 ),
@@ -341,13 +302,9 @@ struct BullishFactorsSection: View {
                         simSettings.useDemographicAdoptionWeekly
                     },
                     set: { newValue in
-                        simSettings.useDemographicAdoptionWeekly  = newValue
+                        simSettings.useDemographicAdoptionWeekly = newValue
                         simSettings.useDemographicAdoptionMonthly = newValue
-                        
-                        factorEnableFrac["DemographicAdoption"] = newValue
-                            ? (factorEnableFrac["DemographicAdoption"] ?? 1.0)
-                            : 0.0
-                        
+                        factorEnableFrac["DemographicAdoption"] = newValue ? 0.0010619932036626339 : 0.0 // Set midpoint when on
                         animateFactor("DemographicAdoption", newValue)
                     }
                 ),
@@ -374,13 +331,9 @@ struct BullishFactorsSection: View {
                         simSettings.useAltcoinFlightWeekly
                     },
                     set: { newValue in
-                        simSettings.useAltcoinFlightWeekly  = newValue
+                        simSettings.useAltcoinFlightWeekly = newValue
                         simSettings.useAltcoinFlightMonthly = newValue
-                        
-                        factorEnableFrac["AltcoinFlight"] = newValue
-                            ? (factorEnableFrac["AltcoinFlight"] ?? 1.0)
-                            : 0.0
-                        
+                        factorEnableFrac["AltcoinFlight"] = newValue ? 0.0002802194461803342 : 0.0 // Set midpoint when on
                         animateFactor("AltcoinFlight", newValue)
                     }
                 ),
@@ -407,13 +360,9 @@ struct BullishFactorsSection: View {
                         simSettings.useAdoptionFactorWeekly
                     },
                     set: { newValue in
-                        simSettings.useAdoptionFactorWeekly  = newValue
+                        simSettings.useAdoptionFactorWeekly = newValue
                         simSettings.useAdoptionFactorMonthly = newValue
-                        
-                        factorEnableFrac["AdoptionFactor"] = newValue
-                            ? (factorEnableFrac["AdoptionFactor"] ?? 1.0)
-                            : 0.0
-                        
+                        factorEnableFrac["AdoptionFactor"] = newValue ? 0.0016045109088897705 : 0.0 // Set midpoint when on
                         animateFactor("AdoptionFactor", newValue)
                     }
                 ),
