@@ -10,16 +10,16 @@ import SwiftUI
 struct BearishFactorsSection: View {
     @EnvironmentObject var simSettings: SimulationSettings
     
-    // The currently active tooltip factor
+    // Currently active tooltip factor
     @Binding var activeFactor: String?
     
     // For tooltips on title tap
     let toggleFactor: (String) -> Void
     
-    // Fraction toggles
+    // Fraction toggles (just for slider intensity)
     @Binding var factorEnableFrac: [String: Double]
     
-    // A closure that does the smooth 0..1 or 1..0 animation
+    // A closure for your optional on/off animation
     let animateFactor: (String, Bool) -> Void
     
     var body: some View {
@@ -31,9 +31,16 @@ struct BearishFactorsSection: View {
                 title: "Regulatory Clampdown",
                 isOn: Binding<Bool>(
                     get: {
-                        (factorEnableFrac["RegClampdown"] ?? 0.0) > 0.5
+                        simSettings.useRegClampdownWeekly
                     },
                     set: { newValue in
+                        simSettings.useRegClampdownWeekly  = newValue
+                        simSettings.useRegClampdownMonthly = newValue
+                        
+                        factorEnableFrac["RegClampdown"] = newValue
+                            ? (factorEnableFrac["RegClampdown"] ?? 1.0)
+                            : 0.0
+                        
                         animateFactor("RegClampdown", newValue)
                     }
                 ),
@@ -56,8 +63,17 @@ struct BearishFactorsSection: View {
                 iconName: "bitcoinsign.circle",
                 title: "Competitor Coin",
                 isOn: Binding<Bool>(
-                    get: { (factorEnableFrac["CompetitorCoin"] ?? 0.0) > 0.5 },
+                    get: {
+                        simSettings.useCompetitorCoinWeekly
+                    },
                     set: { newValue in
+                        simSettings.useCompetitorCoinWeekly  = newValue
+                        simSettings.useCompetitorCoinMonthly = newValue
+                        
+                        factorEnableFrac["CompetitorCoin"] = newValue
+                            ? (factorEnableFrac["CompetitorCoin"] ?? 1.0)
+                            : 0.0
+                        
                         animateFactor("CompetitorCoin", newValue)
                     }
                 ),
@@ -80,8 +96,17 @@ struct BearishFactorsSection: View {
                 iconName: "lock.shield",
                 title: "Security Breach",
                 isOn: Binding<Bool>(
-                    get: { (factorEnableFrac["SecurityBreach"] ?? 0.0) > 0.5 },
+                    get: {
+                        simSettings.useSecurityBreachWeekly
+                    },
                     set: { newValue in
+                        simSettings.useSecurityBreachWeekly  = newValue
+                        simSettings.useSecurityBreachMonthly = newValue
+                        
+                        factorEnableFrac["SecurityBreach"] = newValue
+                            ? (factorEnableFrac["SecurityBreach"] ?? 1.0)
+                            : 0.0
+                        
                         animateFactor("SecurityBreach", newValue)
                     }
                 ),
@@ -104,8 +129,17 @@ struct BearishFactorsSection: View {
                 iconName: "bubble.left.and.bubble.right.fill",
                 title: "Bubble Pop",
                 isOn: Binding<Bool>(
-                    get: { (factorEnableFrac["BubblePop"] ?? 0.0) > 0.5 },
+                    get: {
+                        simSettings.useBubblePopWeekly
+                    },
                     set: { newValue in
+                        simSettings.useBubblePopWeekly  = newValue
+                        simSettings.useBubblePopMonthly = newValue
+                        
+                        factorEnableFrac["BubblePop"] = newValue
+                            ? (factorEnableFrac["BubblePop"] ?? 1.0)
+                            : 0.0
+                        
                         animateFactor("BubblePop", newValue)
                     }
                 ),
@@ -128,8 +162,17 @@ struct BearishFactorsSection: View {
                 iconName: "exclamationmark.triangle.fill",
                 title: "Stablecoin Meltdown",
                 isOn: Binding<Bool>(
-                    get: { (factorEnableFrac["StablecoinMeltdown"] ?? 0.0) > 0.5 },
+                    get: {
+                        simSettings.useStablecoinMeltdownWeekly
+                    },
                     set: { newValue in
+                        simSettings.useStablecoinMeltdownWeekly  = newValue
+                        simSettings.useStablecoinMeltdownMonthly = newValue
+                        
+                        factorEnableFrac["StablecoinMeltdown"] = newValue
+                            ? (factorEnableFrac["StablecoinMeltdown"] ?? 1.0)
+                            : 0.0
+                        
                         animateFactor("StablecoinMeltdown", newValue)
                     }
                 ),
@@ -152,8 +195,17 @@ struct BearishFactorsSection: View {
                 iconName: "tornado",
                 title: "Black Swan Events",
                 isOn: Binding<Bool>(
-                    get: { (factorEnableFrac["BlackSwan"] ?? 0.0) > 0.5 },
+                    get: {
+                        simSettings.useBlackSwanWeekly
+                    },
                     set: { newValue in
+                        simSettings.useBlackSwanWeekly  = newValue
+                        simSettings.useBlackSwanMonthly = newValue
+                        
+                        factorEnableFrac["BlackSwan"] = newValue
+                            ? (factorEnableFrac["BlackSwan"] ?? 1.0)
+                            : 0.0
+                        
                         animateFactor("BlackSwan", newValue)
                     }
                 ),
@@ -176,8 +228,17 @@ struct BearishFactorsSection: View {
                 iconName: "chart.bar.xaxis",
                 title: "Bear Market Conditions",
                 isOn: Binding<Bool>(
-                    get: { (factorEnableFrac["BearMarket"] ?? 0.0) > 0.5 },
+                    get: {
+                        simSettings.useBearMarketWeekly
+                    },
                     set: { newValue in
+                        simSettings.useBearMarketWeekly  = newValue
+                        simSettings.useBearMarketMonthly = newValue
+                        
+                        factorEnableFrac["BearMarket"] = newValue
+                            ? (factorEnableFrac["BearMarket"] ?? 1.0)
+                            : 0.0
+                        
                         animateFactor("BearMarket", newValue)
                     }
                 ),
@@ -200,8 +261,17 @@ struct BearishFactorsSection: View {
                 iconName: "chart.line.downtrend.xyaxis",
                 title: "Declining ARR / Maturing Market",
                 isOn: Binding<Bool>(
-                    get: { (factorEnableFrac["MaturingMarket"] ?? 0.0) > 0.5 },
+                    get: {
+                        simSettings.useMaturingMarketWeekly
+                    },
                     set: { newValue in
+                        simSettings.useMaturingMarketWeekly  = newValue
+                        simSettings.useMaturingMarketMonthly = newValue
+                        
+                        factorEnableFrac["MaturingMarket"] = newValue
+                            ? (factorEnableFrac["MaturingMarket"] ?? 1.0)
+                            : 0.0
+                        
                         animateFactor("MaturingMarket", newValue)
                     }
                 ),
@@ -224,8 +294,17 @@ struct BearishFactorsSection: View {
                 iconName: "chart.line.downtrend.xyaxis.circle.fill",
                 title: "Recession / Macro Crash",
                 isOn: Binding<Bool>(
-                    get: { (factorEnableFrac["Recession"] ?? 0.0) > 0.5 },
+                    get: {
+                        simSettings.useRecessionWeekly
+                    },
                     set: { newValue in
+                        simSettings.useRecessionWeekly  = newValue
+                        simSettings.useRecessionMonthly = newValue
+                        
+                        factorEnableFrac["Recession"] = newValue
+                            ? (factorEnableFrac["Recession"] ?? 1.0)
+                            : 0.0
+                        
                         animateFactor("Recession", newValue)
                     }
                 ),
@@ -242,7 +321,6 @@ struct BearishFactorsSection: View {
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor
             )
-            
         }
         .listRowBackground(Color(white: 0.15))
     }

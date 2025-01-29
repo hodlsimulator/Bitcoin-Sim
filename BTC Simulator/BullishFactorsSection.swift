@@ -16,10 +16,11 @@ struct BullishFactorsSection: View {
     // For tooltips on title tap
     let toggleFactor: (String) -> Void
     
-    // Fraction toggles
+    // Keep if you still want fractional weighting logic
+    // but NOT for toggling the factor on/off!
     @Binding var factorEnableFrac: [String: Double]
     
-    // A closure that does the smooth 0..1 or 1..0 animation
+    // Called when a toggle changes (if you still want an animation/log)
     let animateFactor: (String, Bool) -> Void
     
     var body: some View {
@@ -29,11 +30,20 @@ struct BullishFactorsSection: View {
             FactorToggleRow(
                 iconName: "globe.europe.africa",
                 title: "Halving",
+                // Now purely uses simSettings.useHalvingWeekly for on/off
                 isOn: Binding<Bool>(
                     get: {
-                        (factorEnableFrac["Halving"] ?? 0.0) > 0.5
+                        simSettings.useHalvingWeekly
                     },
                     set: { newValue in
+                        simSettings.useHalvingWeekly  = newValue
+                        simSettings.useHalvingMonthly = newValue
+                        
+                        // If you want to keep factorEnableFrac in sync, do:
+                        factorEnableFrac["Halving"] = newValue
+                            ? (factorEnableFrac["Halving"] ?? 1.0)
+                            : 0.0
+                        
                         animateFactor("Halving", newValue)
                     }
                 ),
@@ -57,8 +67,17 @@ struct BullishFactorsSection: View {
                 iconName: "bitcoinsign.bank.building",
                 title: "Institutional Demand",
                 isOn: Binding<Bool>(
-                    get: { (factorEnableFrac["InstitutionalDemand"] ?? 0.0) > 0.5 },
+                    get: {
+                        simSettings.useInstitutionalDemandWeekly
+                    },
                     set: { newValue in
+                        simSettings.useInstitutionalDemandWeekly  = newValue
+                        simSettings.useInstitutionalDemandMonthly = newValue
+                        
+                        factorEnableFrac["InstitutionalDemand"] = newValue
+                            ? (factorEnableFrac["InstitutionalDemand"] ?? 1.0)
+                            : 0.0
+                        
                         animateFactor("InstitutionalDemand", newValue)
                     }
                 ),
@@ -81,8 +100,17 @@ struct BullishFactorsSection: View {
                 iconName: "flag.fill",
                 title: "Country Adoption",
                 isOn: Binding<Bool>(
-                    get: { (factorEnableFrac["CountryAdoption"] ?? 0.0) > 0.5 },
+                    get: {
+                        simSettings.useCountryAdoptionWeekly
+                    },
                     set: { newValue in
+                        simSettings.useCountryAdoptionWeekly  = newValue
+                        simSettings.useCountryAdoptionMonthly = newValue
+                        
+                        factorEnableFrac["CountryAdoption"] = newValue
+                            ? (factorEnableFrac["CountryAdoption"] ?? 1.0)
+                            : 0.0
+                        
                         animateFactor("CountryAdoption", newValue)
                     }
                 ),
@@ -94,7 +122,8 @@ struct BullishFactorsSection: View {
                     ? 0.0011375879977
                     : 0.005515515952320099,
                 parameterDescription: """
-                    Nations adopting BTC as legal tender or in their reserves create surges in demand and legitimacy.
+                    Nations adopting BTC as legal tender or in their reserves
+                    create surges in demand and legitimacy.
                     """,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor
@@ -105,8 +134,17 @@ struct BullishFactorsSection: View {
                 iconName: "checkmark.shield",
                 title: "Regulatory Clarity",
                 isOn: Binding<Bool>(
-                    get: { (factorEnableFrac["RegulatoryClarity"] ?? 0.0) > 0.5 },
+                    get: {
+                        simSettings.useRegulatoryClarityWeekly
+                    },
                     set: { newValue in
+                        simSettings.useRegulatoryClarityWeekly  = newValue
+                        simSettings.useRegulatoryClarityMonthly = newValue
+                        
+                        factorEnableFrac["RegulatoryClarity"] = newValue
+                            ? (factorEnableFrac["RegulatoryClarity"] ?? 1.0)
+                            : 0.0
+                        
                         animateFactor("RegulatoryClarity", newValue)
                     }
                 ),
@@ -118,7 +156,8 @@ struct BullishFactorsSection: View {
                     ? 0.0007170254861605167
                     : 0.0040737327,
                 parameterDescription: """
-                    Clear, favourable regulations can reduce uncertainty and risk, drawing more capital into BTC.
+                    Clear, favourable regulations can reduce uncertainty and risk,
+                    drawing more capital into BTC.
                     """,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor
@@ -129,8 +168,17 @@ struct BullishFactorsSection: View {
                 iconName: "building.2.crop.circle",
                 title: "ETF Approval",
                 isOn: Binding<Bool>(
-                    get: { (factorEnableFrac["EtfApproval"] ?? 0.0) > 0.5 },
+                    get: {
+                        simSettings.useEtfApprovalWeekly
+                    },
                     set: { newValue in
+                        simSettings.useEtfApprovalWeekly  = newValue
+                        simSettings.useEtfApprovalMonthly = newValue
+                        
+                        factorEnableFrac["EtfApproval"] = newValue
+                            ? (factorEnableFrac["EtfApproval"] ?? 1.0)
+                            : 0.0
+                        
                         animateFactor("EtfApproval", newValue)
                     }
                 ),
@@ -142,7 +190,8 @@ struct BullishFactorsSection: View {
                     ? 0.0017880183160305023
                     : 0.0057142851,
                 parameterDescription: """
-                    Spot BTC ETFs allow traditional investors to gain exposure without custody, broadening the market.
+                    Spot BTC ETFs allow traditional investors to gain exposure
+                    without custody, broadening the market.
                     """,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor
@@ -153,8 +202,17 @@ struct BullishFactorsSection: View {
                 iconName: "sparkles",
                 title: "Tech Breakthrough",
                 isOn: Binding<Bool>(
-                    get: { (factorEnableFrac["TechBreakthrough"] ?? 0.0) > 0.5 },
+                    get: {
+                        simSettings.useTechBreakthroughWeekly
+                    },
                     set: { newValue in
+                        simSettings.useTechBreakthroughWeekly  = newValue
+                        simSettings.useTechBreakthroughMonthly = newValue
+                        
+                        factorEnableFrac["TechBreakthrough"] = newValue
+                            ? (factorEnableFrac["TechBreakthrough"] ?? 1.0)
+                            : 0.0
+                        
                         animateFactor("TechBreakthrough", newValue)
                     }
                 ),
@@ -166,7 +224,8 @@ struct BullishFactorsSection: View {
                     ? 0.0006083193579173088
                     : 0.0028387091,
                 parameterDescription: """
-                    Major protocol/L2 improvements can generate optimism, e.g. better scalability or privacy.
+                    Major protocol/L2 improvements can generate optimism,
+                    e.g. better scalability or privacy.
                     """,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor
@@ -177,8 +236,17 @@ struct BullishFactorsSection: View {
                 iconName: "scalemass",
                 title: "Scarcity Events",
                 isOn: Binding<Bool>(
-                    get: { (factorEnableFrac["ScarcityEvents"] ?? 0.0) > 0.5 },
+                    get: {
+                        simSettings.useScarcityEventsWeekly
+                    },
                     set: { newValue in
+                        simSettings.useScarcityEventsWeekly  = newValue
+                        simSettings.useScarcityEventsMonthly = newValue
+                        
+                        factorEnableFrac["ScarcityEvents"] = newValue
+                            ? (factorEnableFrac["ScarcityEvents"] ?? 1.0)
+                            : 0.0
+                        
                         animateFactor("ScarcityEvents", newValue)
                     }
                 ),
@@ -190,7 +258,8 @@ struct BullishFactorsSection: View {
                     ? 0.00041308753681182863
                     : 0.0032928705475521085,
                 parameterDescription: """
-                    Unusual supply reductions (e.g. large holders removing coins from exchanges) can elevate price.
+                    Unusual supply reductions (e.g. large holders removing coins
+                    from exchanges) can elevate price.
                     """,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor
@@ -201,8 +270,17 @@ struct BullishFactorsSection: View {
                 iconName: "globe.americas.fill",
                 title: "Global Macro Hedge",
                 isOn: Binding<Bool>(
-                    get: { (factorEnableFrac["GlobalMacroHedge"] ?? 0.0) > 0.5 },
+                    get: {
+                        simSettings.useGlobalMacroHedgeWeekly
+                    },
                     set: { newValue in
+                        simSettings.useGlobalMacroHedgeWeekly  = newValue
+                        simSettings.useGlobalMacroHedgeMonthly = newValue
+                        
+                        factorEnableFrac["GlobalMacroHedge"] = newValue
+                            ? (factorEnableFrac["GlobalMacroHedge"] ?? 1.0)
+                            : 0.0
+                        
                         animateFactor("GlobalMacroHedge", newValue)
                     }
                 ),
@@ -214,7 +292,8 @@ struct BullishFactorsSection: View {
                     ? 0.0003497809724932909
                     : 0.0032442397,
                 parameterDescription: """
-                    During macro uncertainty, BTC’s “digital gold” narrative can attract investors seeking a hedge.
+                    During macro uncertainty, BTC’s “digital gold” narrative
+                    can attract investors seeking a hedge.
                     """,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor
@@ -225,8 +304,17 @@ struct BullishFactorsSection: View {
                 iconName: "dollarsign.arrow.circlepath",
                 title: "Stablecoin Shift",
                 isOn: Binding<Bool>(
-                    get: { (factorEnableFrac["StablecoinShift"] ?? 0.0) > 0.5 },
+                    get: {
+                        simSettings.useStablecoinShiftWeekly
+                    },
                     set: { newValue in
+                        simSettings.useStablecoinShiftWeekly  = newValue
+                        simSettings.useStablecoinShiftMonthly = newValue
+                        
+                        factorEnableFrac["StablecoinShift"] = newValue
+                            ? (factorEnableFrac["StablecoinShift"] ?? 1.0)
+                            : 0.0
+                        
                         animateFactor("StablecoinShift", newValue)
                     }
                 ),
@@ -249,8 +337,17 @@ struct BullishFactorsSection: View {
                 iconName: "person.3.fill",
                 title: "Demographic Adoption",
                 isOn: Binding<Bool>(
-                    get: { (factorEnableFrac["DemographicAdoption"] ?? 0.0) > 0.5 },
+                    get: {
+                        simSettings.useDemographicAdoptionWeekly
+                    },
                     set: { newValue in
+                        simSettings.useDemographicAdoptionWeekly  = newValue
+                        simSettings.useDemographicAdoptionMonthly = newValue
+                        
+                        factorEnableFrac["DemographicAdoption"] = newValue
+                            ? (factorEnableFrac["DemographicAdoption"] ?? 1.0)
+                            : 0.0
+                        
                         animateFactor("DemographicAdoption", newValue)
                     }
                 ),
@@ -273,9 +370,18 @@ struct BullishFactorsSection: View {
                 iconName: "bitcoinsign.circle.fill",
                 title: "Altcoin Flight",
                 isOn: Binding<Bool>(
-                    get: { (factorEnableFrac["AltcoinFlight"] ?? 0.0) > 0.5 },
+                    get: {
+                        simSettings.useAltcoinFlightWeekly
+                    },
                     set: { newValue in
-                        animateFactor("AltcoinFlight", newValue )
+                        simSettings.useAltcoinFlightWeekly  = newValue
+                        simSettings.useAltcoinFlightMonthly = newValue
+                        
+                        factorEnableFrac["AltcoinFlight"] = newValue
+                            ? (factorEnableFrac["AltcoinFlight"] ?? 1.0)
+                            : 0.0
+                        
+                        animateFactor("AltcoinFlight", newValue)
                     }
                 ),
                 sliderValue: $simSettings.maxAltcoinBoostUnified,
@@ -297,9 +403,18 @@ struct BullishFactorsSection: View {
                 iconName: "arrow.up.right.circle.fill",
                 title: "Adoption Factor (Incremental Drift)",
                 isOn: Binding<Bool>(
-                    get: { (factorEnableFrac["AdoptionFactor"] ?? 0.0) > 0.5 },
+                    get: {
+                        simSettings.useAdoptionFactorWeekly
+                    },
                     set: { newValue in
-                        animateFactor("AdoptionFactor", newValue )
+                        simSettings.useAdoptionFactorWeekly  = newValue
+                        simSettings.useAdoptionFactorMonthly = newValue
+                        
+                        factorEnableFrac["AdoptionFactor"] = newValue
+                            ? (factorEnableFrac["AdoptionFactor"] ?? 1.0)
+                            : 0.0
+                        
+                        animateFactor("AdoptionFactor", newValue)
                     }
                 ),
                 sliderValue: $simSettings.adoptionBaseFactorUnified,
