@@ -9,14 +9,49 @@ import SwiftUI
 
 extension SettingsView {
     
+    // Helper to check if a given factor is toggled ON in simSettings.
+    // (Matches your useXYZWeekly booleans.)
+    private func isFactorEnabled(_ key: String) -> Bool {
+        switch key {
+            
+            // BULLISH
+        case "Halving":               return simSettings.useHalvingWeekly
+        case "InstitutionalDemand":   return simSettings.useInstitutionalDemandWeekly
+        case "CountryAdoption":       return simSettings.useCountryAdoptionWeekly
+        case "RegulatoryClarity":     return simSettings.useRegulatoryClarityWeekly
+        case "EtfApproval":           return simSettings.useEtfApprovalWeekly
+        case "TechBreakthrough":      return simSettings.useTechBreakthroughWeekly
+        case "ScarcityEvents":        return simSettings.useScarcityEventsWeekly
+        case "GlobalMacroHedge":      return simSettings.useGlobalMacroHedgeWeekly
+        case "StablecoinShift":       return simSettings.useStablecoinShiftWeekly
+        case "DemographicAdoption":   return simSettings.useDemographicAdoptionWeekly
+        case "AltcoinFlight":         return simSettings.useAltcoinFlightWeekly
+        case "AdoptionFactor":        return simSettings.useAdoptionFactorWeekly
+            
+            // BEARISH
+        case "RegClampdown":          return simSettings.useRegClampdownWeekly
+        case "CompetitorCoin":        return simSettings.useCompetitorCoinWeekly
+        case "SecurityBreach":        return simSettings.useSecurityBreachWeekly
+        case "BubblePop":             return simSettings.useBubblePopWeekly
+        case "StablecoinMeltdown":    return simSettings.useStablecoinMeltdownWeekly
+        case "BlackSwan":             return simSettings.useBlackSwanWeekly
+        case "BearMarket":            return simSettings.useBearMarketWeekly
+        case "MaturingMarket":        return simSettings.useMaturingMarketWeekly
+        case "Recession":             return simSettings.useRecessionWeekly
+            
+        default:
+            return false
+        }
+    }
+    
     /// Shift all factors by `delta`, but only if that factor is toggled on
-    /// (via simSettings.useXYZWeekly). The fraction influences the *speed* at which it moves,
-    /// but we no longer skip if fraction == 0. (If the user explicitly toggles the factor off,
-    /// then `isOn` will be false, which also skips the shift.)
+    /// (via e.g. simSettings.useXYZWeekly). The fraction influences the *speed* at which it moves,
+    /// but we no longer skip if fraction == 0. If the user explicitly toggles the factor off,
+    /// then `isOn` will be false, which also skips the shift.
     func shiftAllFactors(by delta: Double) {
-        print("DEBUG: shiftAllFactors called with delta: \(delta)") // Log when it's being called
+        print("DEBUG: shiftAllFactors called with delta: \(delta)")
         
-        // Clamp x into [minVal, maxVal].
+        // For convenience, clamp x into [minVal, maxVal].
         func clamp(_ x: Double, minVal: Double, maxVal: Double) -> Double {
             let lower = min(minVal, maxVal)
             let upper = max(minVal, maxVal)
@@ -24,6 +59,7 @@ extension SettingsView {
         }
 
         /// Shifts `oldValue` by `delta * range * fraction`, if factor is toggled on.
+        /// `key` is the factor name, `isOn` is the real toggle, `oldValue` is mutated.
         func maybeShift(
             key: String,
             isOn: Bool,
@@ -41,7 +77,7 @@ extension SettingsView {
             
             let newValue = clamp(oldValue + scaledDelta, minVal: minVal, maxVal: maxVal)
             
-            // Print debug info
+            // Debug info
             print("DEBUG: Shifting \(key):")
             print("  isOn: \(isOn), frac: \(frac), oldValue: \(oldValue), delta: \(delta), scaledDelta: \(scaledDelta), newValue: \(newValue)")
             
@@ -50,37 +86,38 @@ extension SettingsView {
             }
         }
         
-        // Apply the maybeShift function to each factor
+        // ---------------- 1) SHIFT FRACTION VALUES IN factorEnableFrac ----------------
+        // Bullish fraction range is 0..1
         for key in bullishKeys {
-            // Unwrap the optional value for isOn and oldValue before passing to maybeShift
-            if let oldValue = simSettings.factorEnableFrac[key] {
-                maybeShift(
-                    key: key,
-                    isOn: oldValue > 0.0, // Determine if the factor is "on"
-                    oldValue: &simSettings.factorEnableFrac[key]!,
-                    minVal: 0.0,
-                    maxVal: 1.0
-                )
+            if let oldFrac = simSettings.factorEnableFrac[key] {
+                let toggledOn = isFactorEnabled(key)
+                var mutableFrac = oldFrac
+                maybeShift(key: key,
+                           isOn: toggledOn,
+                           oldValue: &mutableFrac,
+                           minVal: 0.0,
+                           maxVal: 1.0)
+                simSettings.factorEnableFrac[key] = mutableFrac
             }
         }
         
+        // Bearish fraction also stored in 0..1, even though the real numeric is negative
         for key in bearishKeys {
-            // Unwrap the optional value for isOn and oldValue before passing to maybeShift
-            if let oldValue = simSettings.factorEnableFrac[key] {
-                maybeShift(
-                    key: key,
-                    isOn: oldValue > 0.0, // Determine if the factor is "on"
-                    oldValue: &simSettings.factorEnableFrac[key]!,
-                    minVal: -1.0,
-                    maxVal: 0.0
-                )
+            if let oldFrac = simSettings.factorEnableFrac[key] {
+                let toggledOn = isFactorEnabled(key)
+                var mutableFrac = oldFrac
+                maybeShift(key: key,
+                           isOn: toggledOn,
+                           oldValue: &mutableFrac,
+                           minVal: 0.0,
+                           maxVal: 1.0)
+                simSettings.factorEnableFrac[key] = mutableFrac
             }
         }
         
-        // Additional code to ensure any other necessary state changes happen
-        print("DEBUG: Completed shifting all factors")
+        print("DEBUG: Completed shifting fraction-based factorEnableFrac")
         
-        // ---------------- BULLISH FACTORS ----------------
+        // ---------------- 2) SHIFT REAL NUMERIC VALUES (BULLISH) ----------------
         maybeShift(key: "Halving",
                    isOn: simSettings.useHalvingWeekly,
                    oldValue: &simSettings.halvingBumpUnified,
@@ -153,7 +190,7 @@ extension SettingsView {
                    minVal: 0.0013638349088897705,
                    maxVal: 0.0018451869088897705)
         
-        // ---------------- BEARISH FACTORS ----------------
+        // ---------------- 3) SHIFT REAL NUMERIC VALUES (BEARISH) ----------------
         maybeShift(key: "RegClampdown",
                    isOn: simSettings.useRegClampdownWeekly,
                    oldValue: &simSettings.maxClampDownUnified,
@@ -207,9 +244,11 @@ extension SettingsView {
                    oldValue: &simSettings.maxRecessionDropUnified,
                    minVal: -0.0010516462467487811,
                    maxVal: -0.0007494520467487811)
+        
+        print("DEBUG: Completed shifting all factors")
     }
     
-    /// Same as before, but now every toggled-on factor can truly reach min or max.
+    /// Update factorIntensity by scanning all toggled-on factors, computing a weighted average of their normalised positions.
     func updateUniversalFactorIntensity() {
         
         var totalWeightedNorm = 0.0
@@ -226,12 +265,13 @@ extension SettingsView {
             let frac = simSettings.factorEnableFrac[key] ?? 0.0
             guard frac > 0 else { return }
             
-            let norm = (value - minVal) / (maxVal - minVal)  // 0..1
+            // Normalise value into 0..1
+            let norm = (value - minVal) / (maxVal - minVal)
             totalWeightedNorm += norm * frac
             totalFrac += frac
         }
         
-        // --- BULLISH ---
+        // ---------- BULLISH ----------
         accumulateFactor(key: "Halving",
                          isOn: simSettings.useHalvingWeekly,
                          value: simSettings.halvingBumpUnified,
@@ -304,7 +344,7 @@ extension SettingsView {
                          minVal: 0.0013638349088897705,
                          maxVal: 0.0018451869088897705)
         
-        // --- BEARISH ---
+        // ---------- BEARISH ----------
         accumulateFactor(key: "RegClampdown",
                          isOn: simSettings.useRegClampdownWeekly,
                          value: simSettings.maxClampDownUnified,
@@ -381,132 +421,15 @@ extension SettingsView {
         }
     }
     
-    /// Sync factor’s value to `simSettings.factorIntensity` (unchanged).
-    private func syncSingleFactorWithSlider(_ factorKey: String) {
-        switch factorKey {
-        // BULLISH
-        case "Halving":
-            syncFactorToSlider(&simSettings.halvingBumpUnified,
-                               minVal: 0.2773386887,
-                               maxVal: 0.3823386887,
-                               simSettings: simSettings)
-        case "InstitutionalDemand":
-            syncFactorToSlider(&simSettings.maxDemandBoostUnified,
-                               minVal: 0.00105315,
-                               maxVal: 0.00142485,
-                               simSettings: simSettings)
-        case "CountryAdoption":
-            syncFactorToSlider(&simSettings.maxCountryAdBoostUnified,
-                               minVal: 0.0009882799977,
-                               maxVal: 0.0012868959977,
-                               simSettings: simSettings)
-        case "RegulatoryClarity":
-            syncFactorToSlider(&simSettings.maxClarityBoostUnified,
-                               minVal: 0.0005979474861605167,
-                               maxVal: 0.0008361034861605167,
-                               simSettings: simSettings)
-        case "EtfApproval":
-            syncFactorToSlider(&simSettings.maxEtfBoostUnified,
-                               minVal: 0.0014880183160305023,
-                               maxVal: 0.0020880183160305023,
-                               simSettings: simSettings)
-        case "TechBreakthrough":
-            syncFactorToSlider(&simSettings.maxTechBoostUnified,
-                               minVal: 0.0005015753579173088,
-                               maxVal: 0.0007150633579173088,
-                               simSettings: simSettings)
-        case "ScarcityEvents":
-            syncFactorToSlider(&simSettings.maxScarcityBoostUnified,
-                               minVal: 0.00035112353681182863,
-                               maxVal: 0.00047505153681182863,
-                               simSettings: simSettings)
-        case "GlobalMacroHedge":
-            syncFactorToSlider(&simSettings.maxMacroBoostUnified,
-                               minVal: 0.0002868789724932909,
-                               maxVal: 0.0004126829724932909,
-                               simSettings: simSettings)
-        case "StablecoinShift":
-            syncFactorToSlider(&simSettings.maxStablecoinBoostUnified,
-                               minVal: 0.0002704809116327763,
-                               maxVal: 0.0003919609116327763,
-                               simSettings: simSettings)
-        case "DemographicAdoption":
-            syncFactorToSlider(&simSettings.maxDemoBoostUnified,
-                               minVal: 0.0008661432036626339,
-                               maxVal: 0.0012578432036626339,
-                               simSettings: simSettings)
-        case "AltcoinFlight":
-            syncFactorToSlider(&simSettings.maxAltcoinBoostUnified,
-                               minVal: 0.0002381864461803342,
-                               maxVal: 0.0003222524461803342,
-                               simSettings: simSettings)
-        case "AdoptionFactor":
-            syncFactorToSlider(&simSettings.adoptionBaseFactorUnified,
-                               minVal: 0.0013638349088897705,
-                               maxVal: 0.0018451869088897705,
-                               simSettings: simSettings)
-        
-        // BEARISH
-        case "RegClampdown":
-            syncFactorToSlider(&simSettings.maxClampDownUnified,
-                               minVal: -0.0014273392243542672,
-                               maxVal: -0.0008449512243542672,
-                               simSettings: simSettings)
-        case "CompetitorCoin":
-            syncFactorToSlider(&simSettings.maxCompetitorBoostUnified,
-                               minVal: -0.0011842141746411323,
-                               maxVal: -0.0008454221746411323,
-                               simSettings: simSettings)
-        case "SecurityBreach":
-            syncFactorToSlider(&simSettings.breachImpactUnified,
-                               minVal: -0.0012819675168380737,
-                               maxVal: -0.0009009755168380737,
-                               simSettings: simSettings)
-        case "BubblePop":
-            syncFactorToSlider(&simSettings.maxPopDropUnified,
-                               minVal: -0.002244817890762329,
-                               maxVal: -0.001280529890762329,
-                               simSettings: simSettings)
-        case "StablecoinMeltdown":
-            syncFactorToSlider(&simSettings.maxMeltdownDropUnified,
-                               minVal: -0.0009681346159477233,
-                               maxVal: -0.0004600706159477233,
-                               simSettings: simSettings)
-        case "BlackSwan":
-            syncFactorToSlider(&simSettings.blackSwanDropUnified,
-                               minVal: -0.478662,
-                               maxVal: -0.319108,
-                               simSettings: simSettings)
-        case "BearMarket":
-            syncFactorToSlider(&simSettings.bearWeeklyDriftUnified,
-                               minVal: -0.0010278802752494812,
-                               maxVal: -0.0007278802752494812,
-                               simSettings: simSettings)
-        case "MaturingMarket":
-            syncFactorToSlider(&simSettings.maxMaturingDropUnified,
-                               minVal: -0.0020343461055486196,
-                               maxVal: -0.0010537001055486196,
-                               simSettings: simSettings)
-        case "Recession":
-            syncFactorToSlider(&simSettings.maxRecessionDropUnified,
-                               minVal: -0.0010516462467487811,
-                               maxVal: -0.0007494520467487811,
-                               simSettings: simSettings)
-        default:
-            break
-        }
+    /// Sync factor’s value to `simSettings.factorIntensity`.
+    /// Provide it here so the compiler can see it.
+    func syncFactorToSlider(
+        _ currentValue: inout Double,
+        minVal: Double,
+        maxVal: Double,
+        simSettings: SimulationSettings
+    ) {
+        let t = simSettings.factorIntensity
+        currentValue = minVal + t * (maxVal - minVal)
     }
 }
-
-/// Unchanged helper that sets `currentValue` in [minVal, maxVal]
-/// based on `simSettings.factorIntensity`.
-func syncFactorToSlider(
-    _ currentValue: inout Double,
-    minVal: Double,
-    maxVal: Double,
-    simSettings: SimulationSettings
-) {
-    let t = simSettings.factorIntensity
-    currentValue = minVal + t * (maxVal - minVal)
-}
-    
