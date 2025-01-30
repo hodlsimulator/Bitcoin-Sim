@@ -25,31 +25,51 @@ struct BullishFactorsSection: View {
     var body: some View {
         Section("Bullish Factors") {
             
-            // HALVING
+            // MARK: - HALVING
             FactorToggleRow(
                 iconName: "globe.europe.africa",
                 title: "Halving",
                 isOn: Binding<Bool>(
-                    get: {
-                        simSettings.useHalvingWeekly
-                    },
+                    get: { simSettings.useHalvingWeekly },
                     set: { newValue in
                         simSettings.useHalvingWeekly = newValue
                         simSettings.useHalvingMonthly = newValue
-                        // Set fraction to midpoint if on, else 0
-                        factorEnableFrac["Halving"] = newValue ? 0.3298386887 : 0.0
+                        
+                        if newValue {
+                            // If toggled on, assign the numeric default based on weekly vs monthly
+                            let numericVal = simSettings.periodUnit == .weeks
+                                ? 0.3298386887
+                                : 0.35
+                            simSettings.halvingBumpUnified = numericVal
+                            
+                            // Convert numeric value to a 0..1 fraction for the tilt
+                            let fraction = simSettings.fractionFromValue(
+                                "Halving",
+                                value: numericVal,
+                                isWeekly: (simSettings.periodUnit == .weeks)
+                            )
+                            factorEnableFrac["Halving"] = fraction
+                        } else {
+                            factorEnableFrac["Halving"] = 0.0
+                        }
+                        
                         animateFactor("Halving", newValue)
                     }
                 ),
-                // NOTE: Modified slider to also update factorEnableFrac
                 sliderValue: Binding<Double>(
-                    get: {
-                        simSettings.halvingBumpUnified
-                    },
+                    get: { simSettings.halvingBumpUnified },
                     set: { newVal in
+                        // Update the real numeric value
                         simSettings.halvingBumpUnified = newVal
+                        
+                        // Also update the tilt fraction if toggled on
                         if simSettings.useHalvingWeekly {
-                            factorEnableFrac["Halving"] = newVal
+                            let fraction = simSettings.fractionFromValue(
+                                "Halving",
+                                value: newVal,
+                                isWeekly: (simSettings.periodUnit == .weeks)
+                            )
+                            factorEnableFrac["Halving"] = fraction
                         } else {
                             factorEnableFrac["Halving"] = 0.0
                         }
@@ -69,29 +89,46 @@ struct BullishFactorsSection: View {
                 onTitleTap: toggleFactor
             )
             
-            // INSTITUTIONAL DEMAND
+            // MARK: - INSTITUTIONAL DEMAND
             FactorToggleRow(
                 iconName: "bitcoinsign.bank.building",
                 title: "Institutional Demand",
                 isOn: Binding<Bool>(
-                    get: {
-                        simSettings.useInstitutionalDemandWeekly
-                    },
+                    get: { simSettings.useInstitutionalDemandWeekly },
                     set: { newValue in
                         simSettings.useInstitutionalDemandWeekly = newValue
                         simSettings.useInstitutionalDemandMonthly = newValue
-                        factorEnableFrac["InstitutionalDemand"] = newValue ? 0.001239 : 0.0
+                        
+                        if newValue {
+                            let numericVal = simSettings.periodUnit == .weeks
+                                ? 0.001239
+                                : 0.0056589855
+                            simSettings.maxDemandBoostUnified = numericVal
+                            
+                            let fraction = simSettings.fractionFromValue(
+                                "InstitutionalDemand",
+                                value: numericVal,
+                                isWeekly: (simSettings.periodUnit == .weeks)
+                            )
+                            factorEnableFrac["InstitutionalDemand"] = fraction
+                        } else {
+                            factorEnableFrac["InstitutionalDemand"] = 0.0
+                        }
+                        
                         animateFactor("InstitutionalDemand", newValue)
                     }
                 ),
                 sliderValue: Binding<Double>(
-                    get: {
-                        simSettings.maxDemandBoostUnified
-                    },
+                    get: { simSettings.maxDemandBoostUnified },
                     set: { newVal in
                         simSettings.maxDemandBoostUnified = newVal
                         if simSettings.useInstitutionalDemandWeekly {
-                            factorEnableFrac["InstitutionalDemand"] = newVal
+                            let fraction = simSettings.fractionFromValue(
+                                "InstitutionalDemand",
+                                value: newVal,
+                                isWeekly: (simSettings.periodUnit == .weeks)
+                            )
+                            factorEnableFrac["InstitutionalDemand"] = fraction
                         } else {
                             factorEnableFrac["InstitutionalDemand"] = 0.0
                         }
@@ -110,29 +147,46 @@ struct BullishFactorsSection: View {
                 onTitleTap: toggleFactor
             )
             
-            // COUNTRY ADOPTION
+            // MARK: - COUNTRY ADOPTION
             FactorToggleRow(
                 iconName: "flag.fill",
                 title: "Country Adoption",
                 isOn: Binding<Bool>(
-                    get: {
-                        simSettings.useCountryAdoptionWeekly
-                    },
+                    get: { simSettings.useCountryAdoptionWeekly },
                     set: { newValue in
                         simSettings.useCountryAdoptionWeekly = newValue
                         simSettings.useCountryAdoptionMonthly = newValue
-                        factorEnableFrac["CountryAdoption"] = newValue ? 0.0011375879977 : 0.0
+                        
+                        if newValue {
+                            let numericVal = simSettings.periodUnit == .weeks
+                                ? 0.0011375879977
+                                : 0.005515515952320099
+                            simSettings.maxCountryAdBoostUnified = numericVal
+                            
+                            let fraction = simSettings.fractionFromValue(
+                                "CountryAdoption",
+                                value: numericVal,
+                                isWeekly: (simSettings.periodUnit == .weeks)
+                            )
+                            factorEnableFrac["CountryAdoption"] = fraction
+                        } else {
+                            factorEnableFrac["CountryAdoption"] = 0.0
+                        }
+                        
                         animateFactor("CountryAdoption", newValue)
                     }
                 ),
                 sliderValue: Binding<Double>(
-                    get: {
-                        simSettings.maxCountryAdBoostUnified
-                    },
+                    get: { simSettings.maxCountryAdBoostUnified },
                     set: { newVal in
                         simSettings.maxCountryAdBoostUnified = newVal
                         if simSettings.useCountryAdoptionWeekly {
-                            factorEnableFrac["CountryAdoption"] = newVal
+                            let fraction = simSettings.fractionFromValue(
+                                "CountryAdoption",
+                                value: newVal,
+                                isWeekly: (simSettings.periodUnit == .weeks)
+                            )
+                            factorEnableFrac["CountryAdoption"] = fraction
                         } else {
                             factorEnableFrac["CountryAdoption"] = 0.0
                         }
@@ -152,29 +206,46 @@ struct BullishFactorsSection: View {
                 onTitleTap: toggleFactor
             )
             
-            // REGULATORY CLARITY
+            // MARK: - REGULATORY CLARITY
             FactorToggleRow(
                 iconName: "checkmark.shield",
                 title: "Regulatory Clarity",
                 isOn: Binding<Bool>(
-                    get: {
-                        simSettings.useRegulatoryClarityWeekly
-                    },
+                    get: { simSettings.useRegulatoryClarityWeekly },
                     set: { newValue in
                         simSettings.useRegulatoryClarityWeekly = newValue
                         simSettings.useRegulatoryClarityMonthly = newValue
-                        factorEnableFrac["RegulatoryClarity"] = newValue ? 0.0007170254861605167 : 0.0
+                        
+                        if newValue {
+                            let numericVal = simSettings.periodUnit == .weeks
+                                ? 0.0007170254861605167
+                                : 0.0040737327
+                            simSettings.maxClarityBoostUnified = numericVal
+                            
+                            let fraction = simSettings.fractionFromValue(
+                                "RegulatoryClarity",
+                                value: numericVal,
+                                isWeekly: (simSettings.periodUnit == .weeks)
+                            )
+                            factorEnableFrac["RegulatoryClarity"] = fraction
+                        } else {
+                            factorEnableFrac["RegulatoryClarity"] = 0.0
+                        }
+                        
                         animateFactor("RegulatoryClarity", newValue)
                     }
                 ),
                 sliderValue: Binding<Double>(
-                    get: {
-                        simSettings.maxClarityBoostUnified
-                    },
+                    get: { simSettings.maxClarityBoostUnified },
                     set: { newVal in
                         simSettings.maxClarityBoostUnified = newVal
                         if simSettings.useRegulatoryClarityWeekly {
-                            factorEnableFrac["RegulatoryClarity"] = newVal
+                            let fraction = simSettings.fractionFromValue(
+                                "RegulatoryClarity",
+                                value: newVal,
+                                isWeekly: (simSettings.periodUnit == .weeks)
+                            )
+                            factorEnableFrac["RegulatoryClarity"] = fraction
                         } else {
                             factorEnableFrac["RegulatoryClarity"] = 0.0
                         }
@@ -194,29 +265,46 @@ struct BullishFactorsSection: View {
                 onTitleTap: toggleFactor
             )
             
-            // ETF APPROVAL
+            // MARK: - ETF APPROVAL
             FactorToggleRow(
                 iconName: "building.2.crop.circle",
                 title: "ETF Approval",
                 isOn: Binding<Bool>(
-                    get: {
-                        simSettings.useEtfApprovalWeekly
-                    },
+                    get: { simSettings.useEtfApprovalWeekly },
                     set: { newValue in
                         simSettings.useEtfApprovalWeekly = newValue
                         simSettings.useEtfApprovalMonthly = newValue
-                        factorEnableFrac["EtfApproval"] = newValue ? 0.0017880183160305023 : 0.0
+                        
+                        if newValue {
+                            let numericVal = simSettings.periodUnit == .weeks
+                                ? 0.0017880183160305023
+                                : 0.0057142851
+                            simSettings.maxEtfBoostUnified = numericVal
+                            
+                            let fraction = simSettings.fractionFromValue(
+                                "EtfApproval",
+                                value: numericVal,
+                                isWeekly: (simSettings.periodUnit == .weeks)
+                            )
+                            factorEnableFrac["EtfApproval"] = fraction
+                        } else {
+                            factorEnableFrac["EtfApproval"] = 0.0
+                        }
+                        
                         animateFactor("EtfApproval", newValue)
                     }
                 ),
                 sliderValue: Binding<Double>(
-                    get: {
-                        simSettings.maxEtfBoostUnified
-                    },
+                    get: { simSettings.maxEtfBoostUnified },
                     set: { newVal in
                         simSettings.maxEtfBoostUnified = newVal
                         if simSettings.useEtfApprovalWeekly {
-                            factorEnableFrac["EtfApproval"] = newVal
+                            let fraction = simSettings.fractionFromValue(
+                                "EtfApproval",
+                                value: newVal,
+                                isWeekly: (simSettings.periodUnit == .weeks)
+                            )
+                            factorEnableFrac["EtfApproval"] = fraction
                         } else {
                             factorEnableFrac["EtfApproval"] = 0.0
                         }
@@ -236,29 +324,46 @@ struct BullishFactorsSection: View {
                 onTitleTap: toggleFactor
             )
             
-            // TECH BREAKTHROUGH
+            // MARK: - TECH BREAKTHROUGH
             FactorToggleRow(
                 iconName: "sparkles",
                 title: "Tech Breakthrough",
                 isOn: Binding<Bool>(
-                    get: {
-                        simSettings.useTechBreakthroughWeekly
-                    },
+                    get: { simSettings.useTechBreakthroughWeekly },
                     set: { newValue in
                         simSettings.useTechBreakthroughWeekly = newValue
                         simSettings.useTechBreakthroughMonthly = newValue
-                        factorEnableFrac["TechBreakthrough"] = newValue ? 0.0006083193579173088 : 0.0
+                        
+                        if newValue {
+                            let numericVal = simSettings.periodUnit == .weeks
+                                ? 0.0006083193579173088
+                                : 0.0028387091
+                            simSettings.maxTechBoostUnified = numericVal
+                            
+                            let fraction = simSettings.fractionFromValue(
+                                "TechBreakthrough",
+                                value: numericVal,
+                                isWeekly: (simSettings.periodUnit == .weeks)
+                            )
+                            factorEnableFrac["TechBreakthrough"] = fraction
+                        } else {
+                            factorEnableFrac["TechBreakthrough"] = 0.0
+                        }
+                        
                         animateFactor("TechBreakthrough", newValue)
                     }
                 ),
                 sliderValue: Binding<Double>(
-                    get: {
-                        simSettings.maxTechBoostUnified
-                    },
+                    get: { simSettings.maxTechBoostUnified },
                     set: { newVal in
                         simSettings.maxTechBoostUnified = newVal
                         if simSettings.useTechBreakthroughWeekly {
-                            factorEnableFrac["TechBreakthrough"] = newVal
+                            let fraction = simSettings.fractionFromValue(
+                                "TechBreakthrough",
+                                value: newVal,
+                                isWeekly: (simSettings.periodUnit == .weeks)
+                            )
+                            factorEnableFrac["TechBreakthrough"] = fraction
                         } else {
                             factorEnableFrac["TechBreakthrough"] = 0.0
                         }
@@ -278,29 +383,46 @@ struct BullishFactorsSection: View {
                 onTitleTap: toggleFactor
             )
             
-            // SCARCITY EVENTS
+            // MARK: - SCARCITY EVENTS
             FactorToggleRow(
                 iconName: "scalemass",
                 title: "Scarcity Events",
                 isOn: Binding<Bool>(
-                    get: {
-                        simSettings.useScarcityEventsWeekly
-                    },
+                    get: { simSettings.useScarcityEventsWeekly },
                     set: { newValue in
                         simSettings.useScarcityEventsWeekly = newValue
                         simSettings.useScarcityEventsMonthly = newValue
-                        factorEnableFrac["ScarcityEvents"] = newValue ? 0.00041308753681182863 : 0.0
+                        
+                        if newValue {
+                            let numericVal = simSettings.periodUnit == .weeks
+                                ? 0.00041308753681182863
+                                : 0.0032928705475521085
+                            simSettings.maxScarcityBoostUnified = numericVal
+                            
+                            let fraction = simSettings.fractionFromValue(
+                                "ScarcityEvents",
+                                value: numericVal,
+                                isWeekly: (simSettings.periodUnit == .weeks)
+                            )
+                            factorEnableFrac["ScarcityEvents"] = fraction
+                        } else {
+                            factorEnableFrac["ScarcityEvents"] = 0.0
+                        }
+                        
                         animateFactor("ScarcityEvents", newValue)
                     }
                 ),
                 sliderValue: Binding<Double>(
-                    get: {
-                        simSettings.maxScarcityBoostUnified
-                    },
+                    get: { simSettings.maxScarcityBoostUnified },
                     set: { newVal in
                         simSettings.maxScarcityBoostUnified = newVal
                         if simSettings.useScarcityEventsWeekly {
-                            factorEnableFrac["ScarcityEvents"] = newVal
+                            let fraction = simSettings.fractionFromValue(
+                                "ScarcityEvents",
+                                value: newVal,
+                                isWeekly: (simSettings.periodUnit == .weeks)
+                            )
+                            factorEnableFrac["ScarcityEvents"] = fraction
                         } else {
                             factorEnableFrac["ScarcityEvents"] = 0.0
                         }
@@ -320,29 +442,46 @@ struct BullishFactorsSection: View {
                 onTitleTap: toggleFactor
             )
             
-            // GLOBAL MACRO HEDGE
+            // MARK: - GLOBAL MACRO HEDGE
             FactorToggleRow(
                 iconName: "globe.americas.fill",
                 title: "Global Macro Hedge",
                 isOn: Binding<Bool>(
-                    get: {
-                        simSettings.useGlobalMacroHedgeWeekly
-                    },
+                    get: { simSettings.useGlobalMacroHedgeWeekly },
                     set: { newValue in
                         simSettings.useGlobalMacroHedgeWeekly = newValue
                         simSettings.useGlobalMacroHedgeMonthly = newValue
-                        factorEnableFrac["GlobalMacroHedge"] = newValue ? 0.0003497809724932909 : 0.0
+                        
+                        if newValue {
+                            let numericVal = simSettings.periodUnit == .weeks
+                                ? 0.0003497809724932909
+                                : 0.0032442397
+                            simSettings.maxMacroBoostUnified = numericVal
+                            
+                            let fraction = simSettings.fractionFromValue(
+                                "GlobalMacroHedge",
+                                value: numericVal,
+                                isWeekly: (simSettings.periodUnit == .weeks)
+                            )
+                            factorEnableFrac["GlobalMacroHedge"] = fraction
+                        } else {
+                            factorEnableFrac["GlobalMacroHedge"] = 0.0
+                        }
+                        
                         animateFactor("GlobalMacroHedge", newValue)
                     }
                 ),
                 sliderValue: Binding<Double>(
-                    get: {
-                        simSettings.maxMacroBoostUnified
-                    },
+                    get: { simSettings.maxMacroBoostUnified },
                     set: { newVal in
                         simSettings.maxMacroBoostUnified = newVal
                         if simSettings.useGlobalMacroHedgeWeekly {
-                            factorEnableFrac["GlobalMacroHedge"] = newVal
+                            let fraction = simSettings.fractionFromValue(
+                                "GlobalMacroHedge",
+                                value: newVal,
+                                isWeekly: (simSettings.periodUnit == .weeks)
+                            )
+                            factorEnableFrac["GlobalMacroHedge"] = fraction
                         } else {
                             factorEnableFrac["GlobalMacroHedge"] = 0.0
                         }
@@ -362,29 +501,46 @@ struct BullishFactorsSection: View {
                 onTitleTap: toggleFactor
             )
             
-            // STABLECOIN SHIFT
+            // MARK: - STABLECOIN SHIFT
             FactorToggleRow(
                 iconName: "dollarsign.arrow.circlepath",
                 title: "Stablecoin Shift",
                 isOn: Binding<Bool>(
-                    get: {
-                        simSettings.useStablecoinShiftWeekly
-                    },
+                    get: { simSettings.useStablecoinShiftWeekly },
                     set: { newValue in
                         simSettings.useStablecoinShiftWeekly = newValue
                         simSettings.useStablecoinShiftMonthly = newValue
-                        factorEnableFrac["StablecoinShift"] = newValue ? 0.0003312209116327763 : 0.0
+                        
+                        if newValue {
+                            let numericVal = simSettings.periodUnit == .weeks
+                                ? 0.0003312209116327763
+                                : 0.0023041475
+                            simSettings.maxStablecoinBoostUnified = numericVal
+                            
+                            let fraction = simSettings.fractionFromValue(
+                                "StablecoinShift",
+                                value: numericVal,
+                                isWeekly: (simSettings.periodUnit == .weeks)
+                            )
+                            factorEnableFrac["StablecoinShift"] = fraction
+                        } else {
+                            factorEnableFrac["StablecoinShift"] = 0.0
+                        }
+                        
                         animateFactor("StablecoinShift", newValue)
                     }
                 ),
                 sliderValue: Binding<Double>(
-                    get: {
-                        simSettings.maxStablecoinBoostUnified
-                    },
+                    get: { simSettings.maxStablecoinBoostUnified },
                     set: { newVal in
                         simSettings.maxStablecoinBoostUnified = newVal
                         if simSettings.useStablecoinShiftWeekly {
-                            factorEnableFrac["StablecoinShift"] = newVal
+                            let fraction = simSettings.fractionFromValue(
+                                "StablecoinShift",
+                                value: newVal,
+                                isWeekly: (simSettings.periodUnit == .weeks)
+                            )
+                            factorEnableFrac["StablecoinShift"] = fraction
                         } else {
                             factorEnableFrac["StablecoinShift"] = 0.0
                         }
@@ -403,29 +559,46 @@ struct BullishFactorsSection: View {
                 onTitleTap: toggleFactor
             )
             
-            // DEMOGRAPHIC ADOPTION
+            // MARK: - DEMOGRAPHIC ADOPTION
             FactorToggleRow(
                 iconName: "person.3.fill",
                 title: "Demographic Adoption",
                 isOn: Binding<Bool>(
-                    get: {
-                        simSettings.useDemographicAdoptionWeekly
-                    },
+                    get: { simSettings.useDemographicAdoptionWeekly },
                     set: { newValue in
                         simSettings.useDemographicAdoptionWeekly = newValue
                         simSettings.useDemographicAdoptionMonthly = newValue
-                        factorEnableFrac["DemographicAdoption"] = newValue ? 0.0010619932036626339 : 0.0
+                        
+                        if newValue {
+                            let numericVal = simSettings.periodUnit == .weeks
+                                ? 0.0010619932036626339
+                                : 0.007291124714649915
+                            simSettings.maxDemoBoostUnified = numericVal
+                            
+                            let fraction = simSettings.fractionFromValue(
+                                "DemographicAdoption",
+                                value: numericVal,
+                                isWeekly: (simSettings.periodUnit == .weeks)
+                            )
+                            factorEnableFrac["DemographicAdoption"] = fraction
+                        } else {
+                            factorEnableFrac["DemographicAdoption"] = 0.0
+                        }
+                        
                         animateFactor("DemographicAdoption", newValue)
                     }
                 ),
                 sliderValue: Binding<Double>(
-                    get: {
-                        simSettings.maxDemoBoostUnified
-                    },
+                    get: { simSettings.maxDemoBoostUnified },
                     set: { newVal in
                         simSettings.maxDemoBoostUnified = newVal
                         if simSettings.useDemographicAdoptionWeekly {
-                            factorEnableFrac["DemographicAdoption"] = newVal
+                            let fraction = simSettings.fractionFromValue(
+                                "DemographicAdoption",
+                                value: newVal,
+                                isWeekly: (simSettings.periodUnit == .weeks)
+                            )
+                            factorEnableFrac["DemographicAdoption"] = fraction
                         } else {
                             factorEnableFrac["DemographicAdoption"] = 0.0
                         }
@@ -444,29 +617,46 @@ struct BullishFactorsSection: View {
                 onTitleTap: toggleFactor
             )
             
-            // ALTCOIN FLIGHT
+            // MARK: - ALTCOIN FLIGHT
             FactorToggleRow(
                 iconName: "bitcoinsign.circle.fill",
                 title: "Altcoin Flight",
                 isOn: Binding<Bool>(
-                    get: {
-                        simSettings.useAltcoinFlightWeekly
-                    },
+                    get: { simSettings.useAltcoinFlightWeekly },
                     set: { newValue in
                         simSettings.useAltcoinFlightWeekly = newValue
                         simSettings.useAltcoinFlightMonthly = newValue
-                        factorEnableFrac["AltcoinFlight"] = newValue ? 0.0002802194461803342 : 0.0
+                        
+                        if newValue {
+                            let numericVal = simSettings.periodUnit == .weeks
+                                ? 0.0002802194461803342
+                                : 0.0021566817
+                            simSettings.maxAltcoinBoostUnified = numericVal
+                            
+                            let fraction = simSettings.fractionFromValue(
+                                "AltcoinFlight",
+                                value: numericVal,
+                                isWeekly: (simSettings.periodUnit == .weeks)
+                            )
+                            factorEnableFrac["AltcoinFlight"] = fraction
+                        } else {
+                            factorEnableFrac["AltcoinFlight"] = 0.0
+                        }
+                        
                         animateFactor("AltcoinFlight", newValue)
                     }
                 ),
                 sliderValue: Binding<Double>(
-                    get: {
-                        simSettings.maxAltcoinBoostUnified
-                    },
+                    get: { simSettings.maxAltcoinBoostUnified },
                     set: { newVal in
                         simSettings.maxAltcoinBoostUnified = newVal
                         if simSettings.useAltcoinFlightWeekly {
-                            factorEnableFrac["AltcoinFlight"] = newVal
+                            let fraction = simSettings.fractionFromValue(
+                                "AltcoinFlight",
+                                value: newVal,
+                                isWeekly: (simSettings.periodUnit == .weeks)
+                            )
+                            factorEnableFrac["AltcoinFlight"] = fraction
                         } else {
                             factorEnableFrac["AltcoinFlight"] = 0.0
                         }
@@ -485,29 +675,46 @@ struct BullishFactorsSection: View {
                 onTitleTap: toggleFactor
             )
             
-            // ADOPTION FACTOR (Incremental Drift)
+            // MARK: - ADOPTION FACTOR (Incremental Drift)
             FactorToggleRow(
                 iconName: "arrow.up.right.circle.fill",
                 title: "Adoption Factor (Incremental Drift)",
                 isOn: Binding<Bool>(
-                    get: {
-                        simSettings.useAdoptionFactorWeekly
-                    },
+                    get: { simSettings.useAdoptionFactorWeekly },
                     set: { newValue in
                         simSettings.useAdoptionFactorWeekly = newValue
                         simSettings.useAdoptionFactorMonthly = newValue
-                        factorEnableFrac["AdoptionFactor"] = newValue ? 0.0016045109088897705 : 0.0
+                        
+                        if newValue {
+                            let numericVal = simSettings.periodUnit == .weeks
+                                ? 0.0016045109088897705
+                                : 0.014660959934071304
+                            simSettings.adoptionBaseFactorUnified = numericVal
+                            
+                            let fraction = simSettings.fractionFromValue(
+                                "AdoptionFactor",
+                                value: numericVal,
+                                isWeekly: (simSettings.periodUnit == .weeks)
+                            )
+                            factorEnableFrac["AdoptionFactor"] = fraction
+                        } else {
+                            factorEnableFrac["AdoptionFactor"] = 0.0
+                        }
+                        
                         animateFactor("AdoptionFactor", newValue)
                     }
                 ),
                 sliderValue: Binding<Double>(
-                    get: {
-                        simSettings.adoptionBaseFactorUnified
-                    },
+                    get: { simSettings.adoptionBaseFactorUnified },
                     set: { newVal in
                         simSettings.adoptionBaseFactorUnified = newVal
                         if simSettings.useAdoptionFactorWeekly {
-                            factorEnableFrac["AdoptionFactor"] = newVal
+                            let fraction = simSettings.fractionFromValue(
+                                "AdoptionFactor",
+                                value: newVal,
+                                isWeekly: (simSettings.periodUnit == .weeks)
+                            )
+                            factorEnableFrac["AdoptionFactor"] = fraction
                         } else {
                             factorEnableFrac["AdoptionFactor"] = 0.0
                         }
@@ -525,7 +732,6 @@ struct BullishFactorsSection: View {
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor
             )
-            
         }
         .listRowBackground(Color(white: 0.15))
     }

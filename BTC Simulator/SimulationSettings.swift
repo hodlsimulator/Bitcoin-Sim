@@ -365,3 +365,151 @@ class SimulationSettings: ObservableObject {
         }
     }
 }
+
+// MARK: - Factor Range Helpers (Fraction <-> Value)
+// ------------------------------------------------
+// Example approach: for each factor, define the numeric range in weeks vs. monthly.
+// We do a simple linear map of [minVal..maxVal] onto [0..1] for the tilt fraction.
+
+extension SimulationSettings {
+    
+    /// Converts a real numeric value into a 0..1 fraction for the tilt.
+    /// If factor is unknown, we default to clamping in [0..1].
+    func fractionFromValue(_ factorName: String, value: Double, isWeekly: Bool) -> Double {
+        let (minVal, maxVal) = factorRange(for: factorName, isWeekly: isWeekly)
+        
+        // linear mapping to 0..1
+        if maxVal <= minVal { return 0.0 }
+        let rawFraction = (value - minVal) / (maxVal - minVal)
+        return max(0.0, min(1.0, rawFraction))
+    }
+    
+    /// Converts a 0..1 fraction back to a real numeric value for the model.
+    func valueFromFraction(_ factorName: String, fraction: Double, isWeekly: Bool) -> Double {
+        let (minVal, maxVal) = factorRange(for: factorName, isWeekly: isWeekly)
+        
+        // linear mapping from fraction to value
+        let clippedFrac = max(0.0, min(1.0, fraction))
+        return (clippedFrac * (maxVal - minVal)) + minVal
+    }
+    
+    /// Return (minVal, maxVal) for the factor depending on weekly vs. monthly.
+    /// You can fill in all your factors here.
+    private func factorRange(for factorName: String, isWeekly: Bool) -> (Double, Double) {
+        switch factorName {
+        // ------ Bullish Factors ------
+        case "Halving":
+            return isWeekly
+                ? (0.2773386887, 0.3823386887)
+                : (0.2975, 0.4025)
+            
+        case "InstitutionalDemand":
+            return isWeekly
+                ? (0.00105315, 0.00142485)
+                : (0.0048101384, 0.0065078326)
+            
+        case "CountryAdoption":
+            return isWeekly
+                ? (0.0009882799977, 0.0012868959977)
+                : (0.004688188952320099, 0.006342842952320099)
+            
+        case "RegulatoryClarity":
+            return isWeekly
+                ? (0.0005979474861605167, 0.0008361034861605167)
+                : (0.0034626727, 0.0046847927)
+            
+        case "EtfApproval":
+            return isWeekly
+                ? (0.0014880183160305023, 0.0020880183160305023)
+                : (0.0048571421, 0.0065714281)
+            
+        case "TechBreakthrough":
+            return isWeekly
+                ? (0.0005015753579173088, 0.0007150633579173088)
+                : (0.0024129091, 0.0032645091)
+            
+        case "ScarcityEvents":
+            return isWeekly
+                ? (0.00035112353681182863, 0.00047505153681182863)
+                : (0.0027989405475521085, 0.0037868005475521085)
+            
+        case "GlobalMacroHedge":
+            return isWeekly
+                ? (0.0002868789724932909, 0.0004126829724932909)
+                : (0.0027576037, 0.0037308757)
+            
+        case "StablecoinShift":
+            return isWeekly
+                ? (0.0002704809116327763, 0.0003919609116327763)
+                : (0.0019585255, 0.0026497695)
+            
+        case "DemographicAdoption":
+            return isWeekly
+                ? (0.0008661432036626339, 0.0012578432036626339)
+                : (0.006197455714649915, 0.008384793714649915)
+            
+        case "AltcoinFlight":
+            return isWeekly
+                ? (0.0002381864461803342, 0.0003222524461803342)
+                : (0.0018331797, 0.0024801837)
+            
+        case "AdoptionFactor":
+            return isWeekly
+                ? (0.0013638349088897705, 0.0018451869088897705)
+                : (0.012461815934071304, 0.016860103934071304)
+            
+        // ------ Bearish Factors ------
+        case "RegClampdown":
+            return isWeekly
+                ? (-0.0014273392243542672, -0.0008449512243542672)
+                : (-0.023, -0.017)
+            
+        case "CompetitorCoin":
+            return isWeekly
+                ? (-0.0011842141746411323, -0.0008454221746411323)
+                : (-0.0092, -0.0068)
+            
+        case "SecurityBreach":
+            return isWeekly
+                ? (-0.0012819675168380737, -0.0009009755168380737)
+                : (-0.00805, -0.00595)
+            
+        case "BubblePop":
+            return isWeekly
+                ? (-0.002244817890762329, -0.001280529890762329)
+                : (-0.0115, -0.0085)
+            
+        case "StablecoinMeltdown":
+            return isWeekly
+                ? (-0.0009681346159477233, -0.0004600706159477233)
+                : (-0.013, -0.007)
+            
+        case "BlackSwan":
+            // Big negative range
+            return isWeekly
+                ? (-0.478662, -0.319108)
+                : (-0.48, -0.32)
+            
+        case "BearMarket":
+            return isWeekly
+                ? (-0.0010278802752494812, -0.0007278802752494812)
+                : (-0.013, -0.007)
+            
+        case "MaturingMarket":
+            return isWeekly
+                ? (-0.0020343461055486196, -0.0010537001055486196)
+                : (-0.013, -0.007)
+            
+        case "Recession":
+            // Notice the weekly range is narrower but negative,
+            // monthly range is also negative but different scale
+            return isWeekly
+                ? (-0.0010516462467487811, -0.0007494520467487811)
+                : (-0.0015958890, -0.0013057270)
+            
+        default:
+            // Fallback
+            return (0.0, 1.0)
+        }
+    }
+}
