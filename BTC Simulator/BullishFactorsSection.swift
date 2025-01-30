@@ -1,3 +1,4 @@
+//
 //  BullishFactorsSection.swift
 //  BTCMonteCarlo
 //
@@ -15,8 +16,7 @@ struct BullishFactorsSection: View {
     // For tooltips on title tap
     let toggleFactor: (String) -> Void
     
-    // Keep if you still want fractional weighting logic
-    // but NOT for toggling the factor on/off!
+    // Keep if you still want fractional weighting logic but NOT for toggling the factor on/off
     @Binding var factorEnableFrac: [String: Double]
     
     // Called when a toggle changes (if you still want an animation/log)
@@ -36,11 +36,25 @@ struct BullishFactorsSection: View {
                     set: { newValue in
                         simSettings.useHalvingWeekly = newValue
                         simSettings.useHalvingMonthly = newValue
-                        factorEnableFrac["Halving"] = newValue ? 0.3298386887 : 0.0 // Set midpoint when on
+                        // Set fraction to midpoint if on, else 0
+                        factorEnableFrac["Halving"] = newValue ? 0.3298386887 : 0.0
                         animateFactor("Halving", newValue)
                     }
                 ),
-                sliderValue: $simSettings.halvingBumpUnified,
+                // NOTE: Modified slider to also update factorEnableFrac
+                sliderValue: Binding<Double>(
+                    get: {
+                        simSettings.halvingBumpUnified
+                    },
+                    set: { newVal in
+                        simSettings.halvingBumpUnified = newVal
+                        if simSettings.useHalvingWeekly {
+                            factorEnableFrac["Halving"] = newVal
+                        } else {
+                            factorEnableFrac["Halving"] = 0.0
+                        }
+                    }
+                ),
                 sliderRange: simSettings.periodUnit == .weeks
                     ? 0.2773386887 ... 0.3823386887
                     : 0.2975 ... 0.4025,
@@ -66,11 +80,23 @@ struct BullishFactorsSection: View {
                     set: { newValue in
                         simSettings.useInstitutionalDemandWeekly = newValue
                         simSettings.useInstitutionalDemandMonthly = newValue
-                        factorEnableFrac["InstitutionalDemand"] = newValue ? 0.001239 : 0.0 // Set midpoint when on
+                        factorEnableFrac["InstitutionalDemand"] = newValue ? 0.001239 : 0.0
                         animateFactor("InstitutionalDemand", newValue)
                     }
                 ),
-                sliderValue: $simSettings.maxDemandBoostUnified,
+                sliderValue: Binding<Double>(
+                    get: {
+                        simSettings.maxDemandBoostUnified
+                    },
+                    set: { newVal in
+                        simSettings.maxDemandBoostUnified = newVal
+                        if simSettings.useInstitutionalDemandWeekly {
+                            factorEnableFrac["InstitutionalDemand"] = newVal
+                        } else {
+                            factorEnableFrac["InstitutionalDemand"] = 0.0
+                        }
+                    }
+                ),
                 sliderRange: simSettings.periodUnit == .weeks
                     ? 0.00105315 ... 0.00142485
                     : 0.0048101384 ... 0.0065078326,
@@ -95,11 +121,23 @@ struct BullishFactorsSection: View {
                     set: { newValue in
                         simSettings.useCountryAdoptionWeekly = newValue
                         simSettings.useCountryAdoptionMonthly = newValue
-                        factorEnableFrac["CountryAdoption"] = newValue ? 0.0011375879977 : 0.0 // Set midpoint when on
+                        factorEnableFrac["CountryAdoption"] = newValue ? 0.0011375879977 : 0.0
                         animateFactor("CountryAdoption", newValue)
                     }
                 ),
-                sliderValue: $simSettings.maxCountryAdBoostUnified,
+                sliderValue: Binding<Double>(
+                    get: {
+                        simSettings.maxCountryAdBoostUnified
+                    },
+                    set: { newVal in
+                        simSettings.maxCountryAdBoostUnified = newVal
+                        if simSettings.useCountryAdoptionWeekly {
+                            factorEnableFrac["CountryAdoption"] = newVal
+                        } else {
+                            factorEnableFrac["CountryAdoption"] = 0.0
+                        }
+                    }
+                ),
                 sliderRange: simSettings.periodUnit == .weeks
                     ? 0.0009882799977 ... 0.0012868959977
                     : 0.004688188952320099 ... 0.006342842952320099,
@@ -125,11 +163,23 @@ struct BullishFactorsSection: View {
                     set: { newValue in
                         simSettings.useRegulatoryClarityWeekly = newValue
                         simSettings.useRegulatoryClarityMonthly = newValue
-                        factorEnableFrac["RegulatoryClarity"] = newValue ? 0.0007170254861605167 : 0.0 // Set midpoint when on
+                        factorEnableFrac["RegulatoryClarity"] = newValue ? 0.0007170254861605167 : 0.0
                         animateFactor("RegulatoryClarity", newValue)
                     }
                 ),
-                sliderValue: $simSettings.maxClarityBoostUnified,
+                sliderValue: Binding<Double>(
+                    get: {
+                        simSettings.maxClarityBoostUnified
+                    },
+                    set: { newVal in
+                        simSettings.maxClarityBoostUnified = newVal
+                        if simSettings.useRegulatoryClarityWeekly {
+                            factorEnableFrac["RegulatoryClarity"] = newVal
+                        } else {
+                            factorEnableFrac["RegulatoryClarity"] = 0.0
+                        }
+                    }
+                ),
                 sliderRange: simSettings.periodUnit == .weeks
                     ? 0.0005979474861605167 ... 0.0008361034861605167
                     : 0.0034626727 ... 0.0046847927,
@@ -155,11 +205,23 @@ struct BullishFactorsSection: View {
                     set: { newValue in
                         simSettings.useEtfApprovalWeekly = newValue
                         simSettings.useEtfApprovalMonthly = newValue
-                        factorEnableFrac["EtfApproval"] = newValue ? 0.0017880183160305023 : 0.0 // Set midpoint when on
+                        factorEnableFrac["EtfApproval"] = newValue ? 0.0017880183160305023 : 0.0
                         animateFactor("EtfApproval", newValue)
                     }
                 ),
-                sliderValue: $simSettings.maxEtfBoostUnified,
+                sliderValue: Binding<Double>(
+                    get: {
+                        simSettings.maxEtfBoostUnified
+                    },
+                    set: { newVal in
+                        simSettings.maxEtfBoostUnified = newVal
+                        if simSettings.useEtfApprovalWeekly {
+                            factorEnableFrac["EtfApproval"] = newVal
+                        } else {
+                            factorEnableFrac["EtfApproval"] = 0.0
+                        }
+                    }
+                ),
                 sliderRange: simSettings.periodUnit == .weeks
                     ? 0.0014880183160305023 ... 0.0020880183160305023
                     : 0.0048571421 ... 0.0065714281,
@@ -185,11 +247,23 @@ struct BullishFactorsSection: View {
                     set: { newValue in
                         simSettings.useTechBreakthroughWeekly = newValue
                         simSettings.useTechBreakthroughMonthly = newValue
-                        factorEnableFrac["TechBreakthrough"] = newValue ? 0.0006083193579173088 : 0.0 // Set midpoint when on
+                        factorEnableFrac["TechBreakthrough"] = newValue ? 0.0006083193579173088 : 0.0
                         animateFactor("TechBreakthrough", newValue)
                     }
                 ),
-                sliderValue: $simSettings.maxTechBoostUnified,
+                sliderValue: Binding<Double>(
+                    get: {
+                        simSettings.maxTechBoostUnified
+                    },
+                    set: { newVal in
+                        simSettings.maxTechBoostUnified = newVal
+                        if simSettings.useTechBreakthroughWeekly {
+                            factorEnableFrac["TechBreakthrough"] = newVal
+                        } else {
+                            factorEnableFrac["TechBreakthrough"] = 0.0
+                        }
+                    }
+                ),
                 sliderRange: simSettings.periodUnit == .weeks
                     ? 0.0005015753579173088 ... 0.0007150633579173088
                     : 0.0024129091 ... 0.0032645091,
@@ -215,11 +289,23 @@ struct BullishFactorsSection: View {
                     set: { newValue in
                         simSettings.useScarcityEventsWeekly = newValue
                         simSettings.useScarcityEventsMonthly = newValue
-                        factorEnableFrac["ScarcityEvents"] = newValue ? 0.00041308753681182863 : 0.0 // Set midpoint when on
+                        factorEnableFrac["ScarcityEvents"] = newValue ? 0.00041308753681182863 : 0.0
                         animateFactor("ScarcityEvents", newValue)
                     }
                 ),
-                sliderValue: $simSettings.maxScarcityBoostUnified,
+                sliderValue: Binding<Double>(
+                    get: {
+                        simSettings.maxScarcityBoostUnified
+                    },
+                    set: { newVal in
+                        simSettings.maxScarcityBoostUnified = newVal
+                        if simSettings.useScarcityEventsWeekly {
+                            factorEnableFrac["ScarcityEvents"] = newVal
+                        } else {
+                            factorEnableFrac["ScarcityEvents"] = 0.0
+                        }
+                    }
+                ),
                 sliderRange: simSettings.periodUnit == .weeks
                     ? 0.00035112353681182863 ... 0.00047505153681182863
                     : 0.0027989405475521085 ... 0.0037868005475521085,
@@ -245,11 +331,23 @@ struct BullishFactorsSection: View {
                     set: { newValue in
                         simSettings.useGlobalMacroHedgeWeekly = newValue
                         simSettings.useGlobalMacroHedgeMonthly = newValue
-                        factorEnableFrac["GlobalMacroHedge"] = newValue ? 0.0003497809724932909 : 0.0 // Set midpoint when on
+                        factorEnableFrac["GlobalMacroHedge"] = newValue ? 0.0003497809724932909 : 0.0
                         animateFactor("GlobalMacroHedge", newValue)
                     }
                 ),
-                sliderValue: $simSettings.maxMacroBoostUnified,
+                sliderValue: Binding<Double>(
+                    get: {
+                        simSettings.maxMacroBoostUnified
+                    },
+                    set: { newVal in
+                        simSettings.maxMacroBoostUnified = newVal
+                        if simSettings.useGlobalMacroHedgeWeekly {
+                            factorEnableFrac["GlobalMacroHedge"] = newVal
+                        } else {
+                            factorEnableFrac["GlobalMacroHedge"] = 0.0
+                        }
+                    }
+                ),
                 sliderRange: simSettings.periodUnit == .weeks
                     ? 0.0002868789724932909 ... 0.0004126829724932909
                     : 0.0027576037 ... 0.0037308757,
@@ -275,11 +373,23 @@ struct BullishFactorsSection: View {
                     set: { newValue in
                         simSettings.useStablecoinShiftWeekly = newValue
                         simSettings.useStablecoinShiftMonthly = newValue
-                        factorEnableFrac["StablecoinShift"] = newValue ? 0.0003312209116327763 : 0.0 // Set midpoint when on
+                        factorEnableFrac["StablecoinShift"] = newValue ? 0.0003312209116327763 : 0.0
                         animateFactor("StablecoinShift", newValue)
                     }
                 ),
-                sliderValue: $simSettings.maxStablecoinBoostUnified,
+                sliderValue: Binding<Double>(
+                    get: {
+                        simSettings.maxStablecoinBoostUnified
+                    },
+                    set: { newVal in
+                        simSettings.maxStablecoinBoostUnified = newVal
+                        if simSettings.useStablecoinShiftWeekly {
+                            factorEnableFrac["StablecoinShift"] = newVal
+                        } else {
+                            factorEnableFrac["StablecoinShift"] = 0.0
+                        }
+                    }
+                ),
                 sliderRange: simSettings.periodUnit == .weeks
                     ? 0.0002704809116327763 ... 0.0003919609116327763
                     : 0.0019585255 ... 0.0026497695,
@@ -304,11 +414,23 @@ struct BullishFactorsSection: View {
                     set: { newValue in
                         simSettings.useDemographicAdoptionWeekly = newValue
                         simSettings.useDemographicAdoptionMonthly = newValue
-                        factorEnableFrac["DemographicAdoption"] = newValue ? 0.0010619932036626339 : 0.0 // Set midpoint when on
+                        factorEnableFrac["DemographicAdoption"] = newValue ? 0.0010619932036626339 : 0.0
                         animateFactor("DemographicAdoption", newValue)
                     }
                 ),
-                sliderValue: $simSettings.maxDemoBoostUnified,
+                sliderValue: Binding<Double>(
+                    get: {
+                        simSettings.maxDemoBoostUnified
+                    },
+                    set: { newVal in
+                        simSettings.maxDemoBoostUnified = newVal
+                        if simSettings.useDemographicAdoptionWeekly {
+                            factorEnableFrac["DemographicAdoption"] = newVal
+                        } else {
+                            factorEnableFrac["DemographicAdoption"] = 0.0
+                        }
+                    }
+                ),
                 sliderRange: simSettings.periodUnit == .weeks
                     ? 0.0008661432036626339 ... 0.0012578432036626339
                     : 0.006197455714649915 ... 0.008384793714649915,
@@ -333,11 +455,23 @@ struct BullishFactorsSection: View {
                     set: { newValue in
                         simSettings.useAltcoinFlightWeekly = newValue
                         simSettings.useAltcoinFlightMonthly = newValue
-                        factorEnableFrac["AltcoinFlight"] = newValue ? 0.0002802194461803342 : 0.0 // Set midpoint when on
+                        factorEnableFrac["AltcoinFlight"] = newValue ? 0.0002802194461803342 : 0.0
                         animateFactor("AltcoinFlight", newValue)
                     }
                 ),
-                sliderValue: $simSettings.maxAltcoinBoostUnified,
+                sliderValue: Binding<Double>(
+                    get: {
+                        simSettings.maxAltcoinBoostUnified
+                    },
+                    set: { newVal in
+                        simSettings.maxAltcoinBoostUnified = newVal
+                        if simSettings.useAltcoinFlightWeekly {
+                            factorEnableFrac["AltcoinFlight"] = newVal
+                        } else {
+                            factorEnableFrac["AltcoinFlight"] = 0.0
+                        }
+                    }
+                ),
                 sliderRange: simSettings.periodUnit == .weeks
                     ? 0.0002381864461803342 ... 0.0003222524461803342
                     : 0.0018331797 ... 0.0024801837,
@@ -351,7 +485,7 @@ struct BullishFactorsSection: View {
                 onTitleTap: toggleFactor
             )
             
-            // ADOPTION FACTOR
+            // ADOPTION FACTOR (Incremental Drift)
             FactorToggleRow(
                 iconName: "arrow.up.right.circle.fill",
                 title: "Adoption Factor (Incremental Drift)",
@@ -362,11 +496,23 @@ struct BullishFactorsSection: View {
                     set: { newValue in
                         simSettings.useAdoptionFactorWeekly = newValue
                         simSettings.useAdoptionFactorMonthly = newValue
-                        factorEnableFrac["AdoptionFactor"] = newValue ? 0.0016045109088897705 : 0.0 // Set midpoint when on
+                        factorEnableFrac["AdoptionFactor"] = newValue ? 0.0016045109088897705 : 0.0
                         animateFactor("AdoptionFactor", newValue)
                     }
                 ),
-                sliderValue: $simSettings.adoptionBaseFactorUnified,
+                sliderValue: Binding<Double>(
+                    get: {
+                        simSettings.adoptionBaseFactorUnified
+                    },
+                    set: { newVal in
+                        simSettings.adoptionBaseFactorUnified = newVal
+                        if simSettings.useAdoptionFactorWeekly {
+                            factorEnableFrac["AdoptionFactor"] = newVal
+                        } else {
+                            factorEnableFrac["AdoptionFactor"] = 0.0
+                        }
+                    }
+                ),
                 sliderRange: simSettings.periodUnit == .weeks
                     ? 0.0013638349088897705 ... 0.0018451869088897705
                     : 0.012461815934071304 ... 0.016860103934071304,
@@ -379,6 +525,7 @@ struct BullishFactorsSection: View {
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor
             )
+            
         }
         .listRowBackground(Color(white: 0.15))
     }

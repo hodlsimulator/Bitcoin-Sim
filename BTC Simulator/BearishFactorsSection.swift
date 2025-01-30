@@ -1,3 +1,4 @@
+//
 //  BearishFactorsSection.swift
 //  BTCMonteCarlo
 //
@@ -35,11 +36,24 @@ struct BearishFactorsSection: View {
                     set: { newValue in
                         simSettings.useRegClampdownWeekly = newValue
                         simSettings.useRegClampdownMonthly = newValue
-                        factorEnableFrac["RegClampdown"] = newValue ? -0.0011361452243542672 : 0.0 // Set midpoint when on
+                        // Set fraction to midpoint if on, else 0
+                        factorEnableFrac["RegClampdown"] = newValue ? -0.0011361452243542672 : 0.0
                         animateFactor("RegClampdown", newValue)
                     }
                 ),
-                sliderValue: $simSettings.maxClampDownUnified,
+                sliderValue: Binding<Double>(
+                    get: {
+                        simSettings.maxClampDownUnified
+                    },
+                    set: { newVal in
+                        simSettings.maxClampDownUnified = newVal
+                        if simSettings.useRegClampdownWeekly {
+                            factorEnableFrac["RegClampdown"] = newVal
+                        } else {
+                            factorEnableFrac["RegClampdown"] = 0.0
+                        }
+                    }
+                ),
                 sliderRange: simSettings.periodUnit == .weeks
                     ? -0.0014273392243542672 ... -0.0008449512243542672
                     : -0.023 ... -0.017,
@@ -64,11 +78,23 @@ struct BearishFactorsSection: View {
                     set: { newValue in
                         simSettings.useCompetitorCoinWeekly = newValue
                         simSettings.useCompetitorCoinMonthly = newValue
-                        factorEnableFrac["CompetitorCoin"] = newValue ? -0.0010148181746411323 : 0.0 // Set midpoint when on
+                        factorEnableFrac["CompetitorCoin"] = newValue ? -0.0010148181746411323 : 0.0
                         animateFactor("CompetitorCoin", newValue)
                     }
                 ),
-                sliderValue: $simSettings.maxCompetitorBoostUnified,
+                sliderValue: Binding<Double>(
+                    get: {
+                        simSettings.maxCompetitorBoostUnified
+                    },
+                    set: { newVal in
+                        simSettings.maxCompetitorBoostUnified = newVal
+                        if simSettings.useCompetitorCoinWeekly {
+                            factorEnableFrac["CompetitorCoin"] = newVal
+                        } else {
+                            factorEnableFrac["CompetitorCoin"] = 0.0
+                        }
+                    }
+                ),
                 sliderRange: simSettings.periodUnit == .weeks
                     ? -0.0011842141746411323 ... -0.0008454221746411323
                     : -0.0092 ... -0.0068,
@@ -93,11 +119,23 @@ struct BearishFactorsSection: View {
                     set: { newValue in
                         simSettings.useSecurityBreachWeekly = newValue
                         simSettings.useSecurityBreachMonthly = newValue
-                        factorEnableFrac["SecurityBreach"] = newValue ? -0.0010914715168380737 : 0.0 // Set midpoint when on
+                        factorEnableFrac["SecurityBreach"] = newValue ? -0.0010914715168380737 : 0.0
                         animateFactor("SecurityBreach", newValue)
                     }
                 ),
-                sliderValue: $simSettings.breachImpactUnified,
+                sliderValue: Binding<Double>(
+                    get: {
+                        simSettings.breachImpactUnified
+                    },
+                    set: { newVal in
+                        simSettings.breachImpactUnified = newVal
+                        if simSettings.useSecurityBreachWeekly {
+                            factorEnableFrac["SecurityBreach"] = newVal
+                        } else {
+                            factorEnableFrac["SecurityBreach"] = 0.0
+                        }
+                    }
+                ),
                 sliderRange: simSettings.periodUnit == .weeks
                     ? -0.0012819675168380737 ... -0.0009009755168380737
                     : -0.00805 ... -0.00595,
@@ -122,11 +160,23 @@ struct BearishFactorsSection: View {
                     set: { newValue in
                         simSettings.useBubblePopWeekly = newValue
                         simSettings.useBubblePopMonthly = newValue
-                        factorEnableFrac["BubblePop"] = newValue ? -0.001762673890762329 : 0.0 // Set midpoint when on
+                        factorEnableFrac["BubblePop"] = newValue ? -0.001762673890762329 : 0.0
                         animateFactor("BubblePop", newValue)
                     }
                 ),
-                sliderValue: $simSettings.maxPopDropUnified,
+                sliderValue: Binding<Double>(
+                    get: {
+                        simSettings.maxPopDropUnified
+                    },
+                    set: { newVal in
+                        simSettings.maxPopDropUnified = newVal
+                        if simSettings.useBubblePopWeekly {
+                            factorEnableFrac["BubblePop"] = newVal
+                        } else {
+                            factorEnableFrac["BubblePop"] = 0.0
+                        }
+                    }
+                ),
                 sliderRange: simSettings.periodUnit == .weeks
                     ? -0.002244817890762329 ... -0.001280529890762329
                     : -0.0115 ... -0.0085,
@@ -151,11 +201,23 @@ struct BearishFactorsSection: View {
                     set: { newValue in
                         simSettings.useStablecoinMeltdownWeekly = newValue
                         simSettings.useStablecoinMeltdownMonthly = newValue
-                        factorEnableFrac["StablecoinMeltdown"] = newValue ? -0.0007141026159477233 : 0.0 // Set midpoint when on
+                        factorEnableFrac["StablecoinMeltdown"] = newValue ? -0.0007141026159477233 : 0.0
                         animateFactor("StablecoinMeltdown", newValue)
                     }
                 ),
-                sliderValue: $simSettings.maxMeltdownDropUnified,
+                sliderValue: Binding<Double>(
+                    get: {
+                        simSettings.maxMeltdownDropUnified
+                    },
+                    set: { newVal in
+                        simSettings.maxMeltdownDropUnified = newVal
+                        if simSettings.useStablecoinMeltdownWeekly {
+                            factorEnableFrac["StablecoinMeltdown"] = newVal
+                        } else {
+                            factorEnableFrac["StablecoinMeltdown"] = 0.0
+                        }
+                    }
+                ),
                 sliderRange: simSettings.periodUnit == .weeks
                     ? -0.0009681346159477233 ... -0.0004600706159477233
                     : -0.013 ... -0.007,
@@ -180,11 +242,23 @@ struct BearishFactorsSection: View {
                     set: { newValue in
                         simSettings.useBlackSwanWeekly = newValue
                         simSettings.useBlackSwanMonthly = newValue
-                        factorEnableFrac["BlackSwan"] = newValue ? -0.398885 : 0.0 // Set midpoint when on
+                        factorEnableFrac["BlackSwan"] = newValue ? -0.398885 : 0.0
                         animateFactor("BlackSwan", newValue)
                     }
                 ),
-                sliderValue: $simSettings.blackSwanDropUnified,
+                sliderValue: Binding<Double>(
+                    get: {
+                        simSettings.blackSwanDropUnified
+                    },
+                    set: { newVal in
+                        simSettings.blackSwanDropUnified = newVal
+                        if simSettings.useBlackSwanWeekly {
+                            factorEnableFrac["BlackSwan"] = newVal
+                        } else {
+                            factorEnableFrac["BlackSwan"] = 0.0
+                        }
+                    }
+                ),
                 sliderRange: simSettings.periodUnit == .weeks
                     ? -0.478662 ... -0.319108
                     : -0.48 ... -0.32,
@@ -209,11 +283,23 @@ struct BearishFactorsSection: View {
                     set: { newValue in
                         simSettings.useBearMarketWeekly = newValue
                         simSettings.useBearMarketMonthly = newValue
-                        factorEnableFrac["BearMarket"] = newValue ? -0.0008778802752494812 : 0.0 // Set midpoint when on
+                        factorEnableFrac["BearMarket"] = newValue ? -0.0008778802752494812 : 0.0
                         animateFactor("BearMarket", newValue)
                     }
                 ),
-                sliderValue: $simSettings.bearWeeklyDriftUnified,
+                sliderValue: Binding<Double>(
+                    get: {
+                        simSettings.bearWeeklyDriftUnified
+                    },
+                    set: { newVal in
+                        simSettings.bearWeeklyDriftUnified = newVal
+                        if simSettings.useBearMarketWeekly {
+                            factorEnableFrac["BearMarket"] = newVal
+                        } else {
+                            factorEnableFrac["BearMarket"] = 0.0
+                        }
+                    }
+                ),
                 sliderRange: simSettings.periodUnit == .weeks
                     ? -0.0010278802752494812 ... -0.0007278802752494812
                     : -0.013 ... -0.007,
@@ -238,11 +324,23 @@ struct BearishFactorsSection: View {
                     set: { newValue in
                         simSettings.useMaturingMarketWeekly = newValue
                         simSettings.useMaturingMarketMonthly = newValue
-                        factorEnableFrac["MaturingMarket"] = newValue ? -0.0015440231055486196 : 0.0 // Set midpoint when on
+                        factorEnableFrac["MaturingMarket"] = newValue ? -0.0015440231055486196 : 0.0
                         animateFactor("MaturingMarket", newValue)
                     }
                 ),
-                sliderValue: $simSettings.maxMaturingDropUnified,
+                sliderValue: Binding<Double>(
+                    get: {
+                        simSettings.maxMaturingDropUnified
+                    },
+                    set: { newVal in
+                        simSettings.maxMaturingDropUnified = newVal
+                        if simSettings.useMaturingMarketWeekly {
+                            factorEnableFrac["MaturingMarket"] = newVal
+                        } else {
+                            factorEnableFrac["MaturingMarket"] = 0.0
+                        }
+                    }
+                ),
                 sliderRange: simSettings.periodUnit == .weeks
                     ? -0.0020343461055486196 ... -0.0010537001055486196
                     : -0.013 ... -0.007,
@@ -267,11 +365,23 @@ struct BearishFactorsSection: View {
                     set: { newValue in
                         simSettings.useRecessionWeekly = newValue
                         simSettings.useRecessionMonthly = newValue
-                        factorEnableFrac["Recession"] = newValue ? -0.0009005491467487811 : 0.0 // Set midpoint when on
+                        factorEnableFrac["Recession"] = newValue ? -0.0009005491467487811 : 0.0
                         animateFactor("Recession", newValue)
                     }
                 ),
-                sliderValue: $simSettings.maxRecessionDropUnified,
+                sliderValue: Binding<Double>(
+                    get: {
+                        simSettings.maxRecessionDropUnified
+                    },
+                    set: { newVal in
+                        simSettings.maxRecessionDropUnified = newVal
+                        if simSettings.useRecessionWeekly {
+                            factorEnableFrac["Recession"] = newVal
+                        } else {
+                            factorEnableFrac["Recession"] = 0.0
+                        }
+                    }
+                ),
                 sliderRange: simSettings.periodUnit == .weeks
                     ? -0.0010516462467487811 ... -0.0007494520467487811
                     : -0.0015958890 ... -0.0013057270,

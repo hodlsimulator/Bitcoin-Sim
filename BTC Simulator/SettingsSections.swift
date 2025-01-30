@@ -89,15 +89,27 @@ extension SettingsView {
     var restoreDefaultsSection: some View {
         Section {
             Button(action: {
+                // 1) Reset everything
                 simSettings.restoreDefaults()
+                
+                // 2) Put the global factor slider back to 0.5
                 simSettings.factorIntensity = 0.5
                 oldFactorIntensity = 0.5
-
+                
+                // 3) Capture a fresh baseline tilt & maxSwing AFTER defaults are set
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    simSettings.defaultTilt = computeActiveNetTilt()
-                    let allBull = computeIfAllBullish() - simSettings.defaultTilt
-                    let allBear = computeIfAllBearish() - simSettings.defaultTilt
+                    let tiltNow = computeActiveNetTilt()
+                    
+                    // This is your new baseline
+                    simSettings.defaultTilt = tiltNow
+                    simSettings.hasCapturedDefault = true
+                    
+                    // Update maxSwing
+                    let allBull = computeIfAllBullish() - tiltNow
+                    let allBear = computeIfAllBearish() - tiltNow
                     simSettings.maxSwing = max(abs(allBull), abs(allBear), 0.00001)
+                    
+                    print("DEBUG: After restore, defaultTilt set to \(tiltNow). maxSwing=\(simSettings.maxSwing)")
                 }
             }) {
                 HStack {

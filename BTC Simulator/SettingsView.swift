@@ -22,12 +22,12 @@ struct SettingsView: View {
     @State var lastFactorFrac: [String: Double] = [:]
     
     // Factor keys
-    private let bullishKeys: [String] = [
+    let bullishKeys: [String] = [
         "Halving", "InstitutionalDemand", "CountryAdoption", "RegulatoryClarity",
         "EtfApproval", "TechBreakthrough", "ScarcityEvents", "GlobalMacroHedge",
         "StablecoinShift", "DemographicAdoption", "AltcoinFlight", "AdoptionFactor"
     ]
-    private let bearishKeys: [String] = [
+    let bearishKeys: [String] = [
         "RegClampdown", "CompetitorCoin", "SecurityBreach", "BubblePop",
         "StablecoinMeltdown", "BlackSwan", "BearMarket", "MaturingMarket",
         "Recession"
@@ -46,6 +46,8 @@ struct SettingsView: View {
     @State private var firstToggleOff = true
     @State private var disableAnimationNow = false
     @State private var oldFactorEnableFrac: [String: Double] = [:]
+    
+    @State var tiltBarValue: Double = 0.0
     
     init() {
         setupNavBarAppearance()
@@ -96,9 +98,24 @@ struct SettingsView: View {
         
         // A) Factor intensity onChange
         .onChange(of: factorIntensity) { newVal in
+            print("DEBUG: Slider value updated to: \(newVal)")
+            
+            // Use oldFactorIntensity so we get an actual delta
             let delta = newVal - oldFactorIntensity
-            oldFactorIntensity = newVal
+            print("DEBUG: factorIntensity changed to \(newVal), delta = \(delta)")
+            
+            if delta == 0 {
+                print("DEBUG: No change in slider value (delta is zero).")
+            }
+            
+            // Update all factors based on the change
             shiftAllFactors(by: delta)
+            
+            // Store the new factor intensity as old
+            oldFactorIntensity = newVal
+            
+            // Manually trigger tilt bar update
+            tiltBarValue = displayedTilt
         }
         
         // B) Animate factor toggles & tilt
@@ -112,13 +129,13 @@ struct SettingsView: View {
             tooltipOverlay(allItems)
         }
         
-        // D) Detect first toggle-off
+        // D) Detect first toggle-off & also update tilt whenever factorEnableFrac changes
         .onChange(of: simSettings.factorEnableFrac) { newVal in
             disableAnimationNow = false
             if firstToggleOff {
                 for (key, oldVal) in oldFactorEnableFrac {
-                    let newValue = newVal[key] ?? 0.0
-                    if oldVal > 0.5 && newValue < 0.5 {
+                    let updatedVal = newVal[key] ?? 0.0
+                    if oldVal > 0.5 && updatedVal < 0.5 {
                         disableAnimationNow = true
                         firstToggleOff = false
                         break
@@ -126,8 +143,12 @@ struct SettingsView: View {
                 }
             }
             oldFactorEnableFrac = newVal
+            
+            // Ensure tilt bar updates when toggles/sliders change
+            tiltBarValue = displayedTilt
         }
         .onAppear {
+            // Record the initial fraction dictionary
             oldFactorEnableFrac = simSettings.factorEnableFrac
             hasAppeared = true
         }
@@ -185,34 +206,54 @@ struct SettingsView: View {
         }
     }
     
-    // MARK: - SHIFT & TILT logic
     func computeActiveNetTilt() -> Double {
-        let effective = invertedSCurve(factorIntensity, steepness: 12.0)
+        let eff = invertedSCurve(factorIntensity, steepness: 12.0)
+        // We'll track partialSum to see how bullish vs. bearish net out
+        var partialSum = 0.0
         
-        var sum = 0.0
-        for key in bullishKeys {
+        // Sum up bullish keys
+        let bullishTotal = bullishKeys.reduce(0.0) { accum, key in
             let raw = simSettings.factorEnableFrac[key] ?? 0.0
             let frac = gentleSCurve(raw, steepness: 2.0)
-            sum += frac * factorWeight
-        }
-        for key in bearishKeys {
-            let raw = simSettings.factorEnableFrac[key] ?? 0.0
-            let frac = gentleSCurve(raw, steepness: 2.0)
-            sum -= frac * factorWeight
+            return accum + frac * factorWeight
         }
         
-        let normalised = sum / Double(totalFactors)
-        return normalised * effective
+        // Sum up bearish keys
+        let bearishTotal = bearishKeys.reduce(0.0) { accum, key in
+            let raw = simSettings.factorEnableFrac[key] ?? 0.0
+            let frac = gentleSCurve(raw, steepness: 2.0)
+            return accum + frac * factorWeight
+        }
+        
+        partialSum = bullishTotal - bearishTotal
+        let normalised = partialSum / Double(totalFactors)
+        let netTilt = normalised * eff
+        
+        print("DEBUG: computeActiveNetTilt => netTilt=\(netTilt) (partialSum=\(partialSum), eff=\(eff))")
+        return netTilt
     }
     
     var displayedTilt: Double {
-        if !simSettings.hasCapturedDefault {
+        guard simSettings.hasCapturedDefault else {
+            // If we haven’t captured a baseline tilt yet, bail out
             return 0.0
         }
-        let fraction = (computeActiveNetTilt() - simSettings.defaultTilt)
-                       / simSettings.maxSwing
+        
+        let activeTilt = computeActiveNetTilt()
+        let diff = activeTilt - simSettings.defaultTilt
+        
+        if abs(diff) < 1e-10 {
+            print("DEBUG: displayedTilt => NO offset (activeTilt == default).")
+        } else {
+            print("DEBUG: displayedTilt => activeTilt=\(activeTilt), defaultTilt=\(simSettings.defaultTilt), diff=\(diff)")
+        }
+        
+        let fraction = diff / max(simSettings.maxSwing, 1e-9)  // prevent division by zero
         let scaled = fraction * 1.7
-        return tanh(8.0 * scaled)
+        let finalTilt = tanh(8.0 * scaled)
+        
+        print("DEBUG: displayedTilt => fraction=\(fraction), finalTilt=\(finalTilt)")
+        return finalTilt
     }
     
     func computeIfAllBullish() -> Double {

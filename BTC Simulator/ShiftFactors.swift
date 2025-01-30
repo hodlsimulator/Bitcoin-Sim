@@ -14,6 +14,7 @@ extension SettingsView {
     /// but we no longer skip if fraction == 0. (If the user explicitly toggles the factor off,
     /// then `isOn` will be false, which also skips the shift.)
     func shiftAllFactors(by delta: Double) {
+        print("DEBUG: shiftAllFactors called with delta: \(delta)") // Log when it's being called
         
         // Clamp x into [minVal, maxVal].
         func clamp(_ x: Double, minVal: Double, maxVal: Double) -> Double {
@@ -21,11 +22,8 @@ extension SettingsView {
             let upper = max(minVal, maxVal)
             return max(lower, min(upper, x))
         }
-        
+
         /// Shifts `oldValue` by `delta * range * fraction`, if factor is toggled on.
-        /// The fraction is read from simSettings.factorEnableFrac, but we no longer skip
-        /// if fraction == 0 in case you're dragging it. (If factor is really off,
-        /// then `isOn` will be false anyway.)
         func maybeShift(
             key: String,
             isOn: Bool,
@@ -38,15 +36,49 @@ extension SettingsView {
             let frac = simSettings.factorEnableFrac[key] ?? 0.0
             let range = maxVal - minVal
             
-            // Scale the shift by fraction. If fraction is zero or very small,
-            // it’ll move less (or not at all), but we don’t skip entirely.
+            // Scale the shift by fraction
             let scaledDelta = delta * range * frac
             
             let newValue = clamp(oldValue + scaledDelta, minVal: minVal, maxVal: maxVal)
+            
+            // Print debug info
+            print("DEBUG: Shifting \(key):")
+            print("  isOn: \(isOn), frac: \(frac), oldValue: \(oldValue), delta: \(delta), scaledDelta: \(scaledDelta), newValue: \(newValue)")
+            
             if abs(newValue - oldValue) > 1e-7 {
                 oldValue = newValue
             }
         }
+        
+        // Apply the maybeShift function to each factor
+        for key in bullishKeys {
+            // Unwrap the optional value for isOn and oldValue before passing to maybeShift
+            if let oldValue = simSettings.factorEnableFrac[key] {
+                maybeShift(
+                    key: key,
+                    isOn: oldValue > 0.0, // Determine if the factor is "on"
+                    oldValue: &simSettings.factorEnableFrac[key]!,
+                    minVal: 0.0,
+                    maxVal: 1.0
+                )
+            }
+        }
+        
+        for key in bearishKeys {
+            // Unwrap the optional value for isOn and oldValue before passing to maybeShift
+            if let oldValue = simSettings.factorEnableFrac[key] {
+                maybeShift(
+                    key: key,
+                    isOn: oldValue > 0.0, // Determine if the factor is "on"
+                    oldValue: &simSettings.factorEnableFrac[key]!,
+                    minVal: -1.0,
+                    maxVal: 0.0
+                )
+            }
+        }
+        
+        // Additional code to ensure any other necessary state changes happen
+        print("DEBUG: Completed shifting all factors")
         
         // ---------------- BULLISH FACTORS ----------------
         maybeShift(key: "Halving",
