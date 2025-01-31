@@ -207,7 +207,7 @@ struct SettingsView: View {
         let diff = activeTilt - simSettings.defaultTilt
         let fraction = diff / max(simSettings.maxSwing, 1e-9)
         let scaled = fraction * 1.7
-        let finalTilt = tanh(15.0 * scaled)
+        let finalTilt = tanh(50.0 * scaled)
         return finalTilt
     }
     
@@ -215,30 +215,35 @@ struct SettingsView: View {
         let effective = invertedSCurve(1.0, steepness: 12.0)
         var sum = 0.0
         for _ in bullishKeys {
-            let frac = gentleSCurve(1.0, steepness: 2.0)
+            // Higher steepness => closer to 1.0
+            let frac = gentleSCurve(1.0, steepness: 6.0)
             sum += frac * factorWeight
         }
         for _ in bearishKeys {
-            let frac = gentleSCurve(0.0, steepness: 2.0)
+            let frac = gentleSCurve(0.0, steepness: 6.0)
             sum -= frac * factorWeight
         }
+        // Keep normalising by totalFactors for consistency
         let normalised = sum / Double(totalFactors)
-        return normalised * effective
+        // Then boost the result so the tilt bar can fill up
+        let boosted = normalised * effective * 2.0  // <-- pick a boost factor
+        return boosted
     }
-    
+
     func computeIfAllBearish() -> Double {
         let effective = invertedSCurve(1.0, steepness: 12.0)
         var sum = 0.0
         for _ in bullishKeys {
-            let frac = gentleSCurve(0.0, steepness: 2.0)
+            let frac = gentleSCurve(0.0, steepness: 6.0)
             sum += frac * factorWeight
         }
         for _ in bearishKeys {
-            let frac = gentleSCurve(1.0, steepness: 2.0)
+            let frac = gentleSCurve(1.0, steepness: 6.0)
             sum -= frac * factorWeight
         }
         let normalised = sum / Double(totalFactors)
-        return normalised * effective
+        let boosted = normalised * effective * 2.0
+        return boosted
     }
     
     private func gentleSCurve(_ x: Double, steepness: Double = 3.0) -> Double {
