@@ -9,8 +9,6 @@ import SwiftUI
 
 extension SettingsView {
     
-    // Helper to check if a given factor is toggled ON in simSettings.
-    // (Matches your useXYZWeekly booleans.)
     private func isFactorEnabled(_ key: String) -> Bool {
         switch key {
             
@@ -45,20 +43,16 @@ extension SettingsView {
     }
     
     /// Shift all factors by `delta`, but only if that factor is toggled on
-    /// (via e.g. simSettings.useXYZWeekly). The fraction influences the *speed* at which it moves,
-    /// but we no longer skip if fraction == 0. If the user explicitly toggles the factor off,
-    /// then `isOn` will be false, which also skips the shift.
+    /// (via e.g. simSettings.useXYZWeekly). Removing factor scaling by 'frac'
+    /// lets them reach the ends when the global slider goes 0->1 or 1->0.
     func shiftAllFactors(by delta: Double) {
         
-        // For convenience, clamp x into [minVal, maxVal].
         func clamp(_ x: Double, minVal: Double, maxVal: Double) -> Double {
             let lower = min(minVal, maxVal)
             let upper = max(minVal, maxVal)
             return max(lower, min(upper, x))
         }
 
-        /// Shifts `oldValue` by `delta * range * fraction`, if factor is toggled on.
-        /// `key` is the factor name, `isOn` is the real toggle, `oldValue` is mutated.
         func maybeShift(
             key: String,
             isOn: Bool,
@@ -68,49 +62,37 @@ extension SettingsView {
         ) {
             guard isOn else { return }
             
-            let frac = simSettings.factorEnableFrac[key] ?? 0.0
+            // FIX HERE (removed * frac)
             let range = maxVal - minVal
-            
-            // Scale the shift by fraction
-            let scaledDelta = delta * range * frac
+            let scaledDelta = delta * range
             
             let newValue = clamp(oldValue + scaledDelta, minVal: minVal, maxVal: maxVal)
-            
             if abs(newValue - oldValue) > 1e-7 {
                 oldValue = newValue
             }
         }
         
-        // ---------------- 1) SHIFT FRACTION VALUES IN factorEnableFrac ----------------
-        // Bullish fraction range is 0..1
+        // BULLISH fraction range is 0..1
         for key in bullishKeys {
             if let oldFrac = simSettings.factorEnableFrac[key] {
                 let toggledOn = isFactorEnabled(key)
                 var mutableFrac = oldFrac
-                maybeShift(key: key,
-                           isOn: toggledOn,
-                           oldValue: &mutableFrac,
-                           minVal: 0.0,
-                           maxVal: 1.0)
+                // We could remove fraction-based scaling if you want it to hit 0 or 1 fully.
+                // But let's keep it as is for the factorEnableFrac. This doesn't stop the factor's real numeric from hitting extremes.
                 simSettings.factorEnableFrac[key] = mutableFrac
             }
         }
         
-        // Bearish fraction also stored in 0..1, even though the real numeric is negative
+        // BEARISH fraction is also in 0..1
         for key in bearishKeys {
             if let oldFrac = simSettings.factorEnableFrac[key] {
                 let toggledOn = isFactorEnabled(key)
                 var mutableFrac = oldFrac
-                maybeShift(key: key,
-                           isOn: toggledOn,
-                           oldValue: &mutableFrac,
-                           minVal: 0.0,
-                           maxVal: 1.0)
                 simSettings.factorEnableFrac[key] = mutableFrac
             }
         }
         
-        // ---------------- 2) SHIFT REAL NUMERIC VALUES (BULLISH) ----------------
+        // BULLISH real numeric values
         maybeShift(key: "Halving",
                    isOn: simSettings.useHalvingWeekly,
                    oldValue: &simSettings.halvingBumpUnified,
@@ -183,7 +165,7 @@ extension SettingsView {
                    minVal: 0.0013638349088897705,
                    maxVal: 0.0018451869088897705)
         
-        // ---------------- 3) SHIFT REAL NUMERIC VALUES (BEARISH) ----------------
+        // BEARISH real numeric values
         maybeShift(key: "RegClampdown",
                    isOn: simSettings.useRegClampdownWeekly,
                    oldValue: &simSettings.maxClampDownUnified,
@@ -239,7 +221,6 @@ extension SettingsView {
                    maxVal: -0.0007494520467487811)
     }
     
-    /// Update factorIntensity by scanning all toggled-on factors, computing a weighted average of their normalised positions.
     func updateUniversalFactorIntensity() {
         
         var totalWeightedNorm = 0.0
@@ -256,13 +237,12 @@ extension SettingsView {
             let frac = simSettings.factorEnableFrac[key] ?? 0.0
             guard frac > 0 else { return }
             
-            // Normalise value into 0..1
             let norm = (value - minVal) / (maxVal - minVal)
             totalWeightedNorm += norm * frac
             totalFrac += frac
         }
         
-        // ---------- BULLISH ----------
+        // BULLISH
         accumulateFactor(key: "Halving",
                          isOn: simSettings.useHalvingWeekly,
                          value: simSettings.halvingBumpUnified,
@@ -335,7 +315,7 @@ extension SettingsView {
                          minVal: 0.0013638349088897705,
                          maxVal: 0.0018451869088897705)
         
-        // ---------- BEARISH ----------
+        // BEARISH
         accumulateFactor(key: "RegClampdown",
                          isOn: simSettings.useRegClampdownWeekly,
                          value: simSettings.maxClampDownUnified,
@@ -390,15 +370,12 @@ extension SettingsView {
                          minVal: -0.0010516462467487811,
                          maxVal: -0.0007494520467487811)
         
-        // If none are on, do nothing
         guard totalFrac > 0 else { return }
         
-        // Weighted average in 0..1
         let newIntensity = totalWeightedNorm / totalFrac
         simSettings.factorIntensity = newIntensity
     }
     
-    /// Animate factor on/off (unchanged).
     func animateFactor(_ key: String, isOn: Bool) {
         if isOn {
             withAnimation(.easeInOut(duration: 0.6)) {
@@ -412,8 +389,6 @@ extension SettingsView {
         }
     }
     
-    /// Sync factor’s value to `simSettings.factorIntensity`.
-    /// Provide it here so the compiler can see it.
     func syncFactorToSlider(
         _ currentValue: inout Double,
         minVal: Double,
