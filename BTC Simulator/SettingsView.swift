@@ -104,6 +104,8 @@ struct SettingsView: View {
         .onChange(of: simSettings.factorEnableFrac) { newVal in
             guard hasAppeared else { return }
             disableAnimationNow = false
+
+            // 1) Possibly skip animations for the first toggle-off
             if firstToggleOff {
                 for (key, oldVal) in oldFactorEnableFrac {
                     let updatedVal = newVal[key] ?? 0.0
@@ -114,13 +116,44 @@ struct SettingsView: View {
                     }
                 }
             }
+
+            // 2) Check if we just turned everything off or turned some factor on
+            let wasAllOffBefore = oldFactorEnableFrac.values.allSatisfy { $0 == 0.0 }
+            let isAllOffNow = newVal.values.allSatisfy { $0 == 0.0 }
+            
+            // Detect if any factor was newly enabled (went from 0 → >0)
+            var newlyEnabledFactorFound = false
+            for (factorName, newFrac) in newVal {
+                let oldFrac = oldFactorEnableFrac[factorName] ?? 0.0
+                if oldFrac == 0.0 && newFrac > 0.0 {
+                    newlyEnabledFactorFound = true
+                    break
+                }
+            }
+
             oldFactorEnableFrac = newVal
+
+            // 3) If we just went from some-on to all-off, treat that as neutral baseline=0
+            if !wasAllOffBefore && isAllOffNow {
+                simSettings.defaultTilt = 0.0
+                simSettings.hasCapturedDefault = true
+                simSettings.maxSwing = 1.0
+            }
+
+            // 4) If at least one factor was newly enabled, sync to slider so it gets the full s-curve
+            if newlyEnabledFactorFound {
+                simSettings.syncAllFactorsToIntensity(simSettings.factorIntensity)
+            }
+
+            // Finally, recalc tiltBarValue
             simSettings.tiltBarValue = displayedTilt
         }
+        
         // 3) On appear => one-time skip if we have a loaded tilt
         .onAppear {
             oldFactorEnableFrac = simSettings.factorEnableFrac
             hasAppeared = true
+            
             // If you loaded a value from defaults, keep it; if zero, initialise
             if abs(simSettings.tiltBarValue) < 0.0000001 {
                 simSettings.tiltBarValue = displayedTilt
