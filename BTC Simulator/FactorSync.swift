@@ -16,6 +16,9 @@ extension SimulationSettings {
     /// - t > 0.5 => factor > default (toward maxVal)
     ///
     /// We check `periodUnit == .weeks` or `.months` to pick which min/max/defaults to use.
+    ///
+    /// **Added**: we skip adjusting any factor whose `factorEnableFrac["FactorName"]` == 0,
+    /// so that "turned off" factors remain off even when the global slider moves.
     func syncAllFactorsToIntensity(_ t: Double) {
         
         if periodUnit == .weeks {
@@ -26,6 +29,7 @@ extension SimulationSettings {
             
             // Halving
             syncOneFactor(
+                factorName: "Halving",
                 t: t,
                 midVal: SimulationSettings.defaultHalvingBumpWeekly,
                 minVal: 0.2773386887,
@@ -36,6 +40,7 @@ extension SimulationSettings {
             
             // Institutional Demand
             syncOneFactor(
+                factorName: "InstitutionalDemand",
                 t: t,
                 midVal: SimulationSettings.defaultMaxDemandBoostWeekly,
                 minVal: 0.00105315,
@@ -46,6 +51,7 @@ extension SimulationSettings {
             
             // Country Adoption
             syncOneFactor(
+                factorName: "CountryAdoption",
                 t: t,
                 midVal: SimulationSettings.defaultMaxCountryAdBoostWeekly,
                 minVal: 0.0009882799977,
@@ -56,6 +62,7 @@ extension SimulationSettings {
             
             // Regulatory Clarity
             syncOneFactor(
+                factorName: "RegulatoryClarity",
                 t: t,
                 midVal: SimulationSettings.defaultMaxClarityBoostWeekly,
                 minVal: 0.0005979474861605167,
@@ -66,6 +73,7 @@ extension SimulationSettings {
             
             // ETF Approval
             syncOneFactor(
+                factorName: "EtfApproval",
                 t: t,
                 midVal: SimulationSettings.defaultMaxEtfBoostWeekly,
                 minVal: 0.0014880183160305023,
@@ -76,6 +84,7 @@ extension SimulationSettings {
             
             // Tech Breakthrough
             syncOneFactor(
+                factorName: "TechBreakthrough",
                 t: t,
                 midVal: SimulationSettings.defaultMaxTechBoostWeekly,
                 minVal: 0.0005015753579173088,
@@ -86,6 +95,7 @@ extension SimulationSettings {
             
             // Scarcity Events
             syncOneFactor(
+                factorName: "ScarcityEvents",
                 t: t,
                 midVal: SimulationSettings.defaultMaxScarcityBoostWeekly,
                 minVal: 0.00035112353681182863,
@@ -96,6 +106,7 @@ extension SimulationSettings {
             
             // Global Macro Hedge
             syncOneFactor(
+                factorName: "GlobalMacroHedge",
                 t: t,
                 midVal: SimulationSettings.defaultMaxMacroBoostWeekly,
                 minVal: 0.0002868789724932909,
@@ -106,6 +117,7 @@ extension SimulationSettings {
             
             // Stablecoin Shift
             syncOneFactor(
+                factorName: "StablecoinShift",
                 t: t,
                 midVal: SimulationSettings.defaultMaxStablecoinBoostWeekly,
                 minVal: 0.0002704809116327763,
@@ -116,6 +128,7 @@ extension SimulationSettings {
             
             // Demographic Adoption
             syncOneFactor(
+                factorName: "DemographicAdoption",
                 t: t,
                 midVal: SimulationSettings.defaultMaxDemoBoostWeekly,
                 minVal: 0.0008661432036626339,
@@ -126,6 +139,7 @@ extension SimulationSettings {
             
             // Altcoin Flight
             syncOneFactor(
+                factorName: "AltcoinFlight",
                 t: t,
                 midVal: SimulationSettings.defaultMaxAltcoinBoostWeekly,
                 minVal: 0.0002381864461803342,
@@ -134,8 +148,9 @@ extension SimulationSettings {
                 maxAltcoinBoostUnified = newVal
             }
             
-            // Adoption Factor
+            // AdoptionFactor
             syncOneFactor(
+                factorName: "AdoptionFactor",
                 t: t,
                 midVal: SimulationSettings.defaultAdoptionBaseFactorWeekly,
                 minVal: 0.0013638349088897705,
@@ -150,6 +165,7 @@ extension SimulationSettings {
             
             // Reg Clampdown
             syncOneFactor(
+                factorName: "RegClampdown",
                 t: t,
                 midVal: SimulationSettings.defaultMaxClampDownWeekly,
                 minVal: -0.0014273392243542672,
@@ -160,6 +176,7 @@ extension SimulationSettings {
             
             // Competitor Coin
             syncOneFactor(
+                factorName: "CompetitorCoin",
                 t: t,
                 midVal: SimulationSettings.defaultMaxCompetitorBoostWeekly,
                 minVal: -0.0011842141746411323,
@@ -170,6 +187,7 @@ extension SimulationSettings {
             
             // Security Breach
             syncOneFactor(
+                factorName: "SecurityBreach",
                 t: t,
                 midVal: SimulationSettings.defaultBreachImpactWeekly,
                 minVal: -0.0012819675168380737,
@@ -180,6 +198,7 @@ extension SimulationSettings {
             
             // Bubble Pop
             syncOneFactor(
+                factorName: "BubblePop",
                 t: t,
                 midVal: SimulationSettings.defaultMaxPopDropWeekly,
                 minVal: -0.002244817890762329,
@@ -190,6 +209,7 @@ extension SimulationSettings {
             
             // Stablecoin Meltdown
             syncOneFactor(
+                factorName: "StablecoinMeltdown",
                 t: t,
                 midVal: SimulationSettings.defaultMaxMeltdownDropWeekly,
                 minVal: -0.0009681346159477233,
@@ -200,6 +220,7 @@ extension SimulationSettings {
             
             // Black Swan
             syncOneFactor(
+                factorName: "BlackSwan",
                 t: t,
                 midVal: SimulationSettings.defaultBlackSwanDropWeekly,
                 minVal: -0.478662,
@@ -210,6 +231,7 @@ extension SimulationSettings {
             
             // Bear Market
             syncOneFactor(
+                factorName: "BearMarket",
                 t: t,
                 midVal: SimulationSettings.defaultBearWeeklyDriftWeekly,
                 minVal: -0.0010278802752494812,
@@ -220,6 +242,7 @@ extension SimulationSettings {
             
             // Maturing Market
             syncOneFactor(
+                factorName: "MaturingMarket",
                 t: t,
                 midVal: SimulationSettings.defaultMaxMaturingDropWeekly,
                 minVal: -0.0020343461055486196,
@@ -230,6 +253,7 @@ extension SimulationSettings {
             
             // Recession
             syncOneFactor(
+                factorName: "Recession",
                 t: t,
                 midVal: SimulationSettings.defaultMaxRecessionDropWeekly,
                 minVal: -0.0010516462467487811,
@@ -245,6 +269,7 @@ extension SimulationSettings {
             
             // Halving
             syncOneFactor(
+                factorName: "Halving",
                 t: t,
                 midVal: SimulationSettings.defaultHalvingBumpMonthly, // e.g. 0.35
                 minVal: 0.2975,
@@ -255,6 +280,7 @@ extension SimulationSettings {
             
             // Institutional Demand
             syncOneFactor(
+                factorName: "InstitutionalDemand",
                 t: t,
                 midVal: SimulationSettings.defaultMaxDemandBoostMonthly,
                 minVal: 0.0048101384,
@@ -265,6 +291,7 @@ extension SimulationSettings {
             
             // Country Adoption
             syncOneFactor(
+                factorName: "CountryAdoption",
                 t: t,
                 midVal: SimulationSettings.defaultMaxCountryAdBoostMonthly,
                 minVal: 0.004688188952320099,
@@ -275,8 +302,9 @@ extension SimulationSettings {
             
             // Regulatory Clarity
             syncOneFactor(
+                factorName: "RegulatoryClarity",
                 t: t,
-                midVal: SimulationSettings.defaultMaxClarityBoostMonthly, // ~0.0040737327
+                midVal: SimulationSettings.defaultMaxClarityBoostMonthly,
                 minVal: 0.0034626727,
                 maxVal: 0.0046847927
             ) { newVal in
@@ -285,6 +313,7 @@ extension SimulationSettings {
             
             // ETF Approval
             syncOneFactor(
+                factorName: "EtfApproval",
                 t: t,
                 midVal: SimulationSettings.defaultMaxEtfBoostMonthly,
                 minVal: 0.0048571421,
@@ -295,6 +324,7 @@ extension SimulationSettings {
             
             // Tech Breakthrough
             syncOneFactor(
+                factorName: "TechBreakthrough",
                 t: t,
                 midVal: SimulationSettings.defaultMaxTechBoostMonthly,
                 minVal: 0.0024129091,
@@ -305,6 +335,7 @@ extension SimulationSettings {
             
             // Scarcity Events
             syncOneFactor(
+                factorName: "ScarcityEvents",
                 t: t,
                 midVal: SimulationSettings.defaultMaxScarcityBoostMonthly,
                 minVal: 0.0027989405475521085,
@@ -315,6 +346,7 @@ extension SimulationSettings {
             
             // Global Macro Hedge
             syncOneFactor(
+                factorName: "GlobalMacroHedge",
                 t: t,
                 midVal: SimulationSettings.defaultMaxMacroBoostMonthly,
                 minVal: 0.0027576037,
@@ -325,6 +357,7 @@ extension SimulationSettings {
             
             // Stablecoin Shift
             syncOneFactor(
+                factorName: "StablecoinShift",
                 t: t,
                 midVal: SimulationSettings.defaultMaxStablecoinBoostMonthly,
                 minVal: 0.0019585255,
@@ -335,6 +368,7 @@ extension SimulationSettings {
             
             // Demographic Adoption
             syncOneFactor(
+                factorName: "DemographicAdoption",
                 t: t,
                 midVal: SimulationSettings.defaultMaxDemoBoostMonthly,
                 minVal: 0.006197455714649915,
@@ -345,6 +379,7 @@ extension SimulationSettings {
             
             // Altcoin Flight
             syncOneFactor(
+                factorName: "AltcoinFlight",
                 t: t,
                 midVal: SimulationSettings.defaultMaxAltcoinBoostMonthly,
                 minVal: 0.0018331797,
@@ -355,6 +390,7 @@ extension SimulationSettings {
             
             // Adoption Factor
             syncOneFactor(
+                factorName: "AdoptionFactor",
                 t: t,
                 midVal: SimulationSettings.defaultAdoptionBaseFactorMonthly,
                 minVal: 0.012461815934071304,
@@ -369,8 +405,9 @@ extension SimulationSettings {
             
             // Reg Clampdown
             syncOneFactor(
+                factorName: "RegClampdown",
                 t: t,
-                midVal: SimulationSettings.defaultMaxClampDownMonthly, // -0.02
+                midVal: SimulationSettings.defaultMaxClampDownMonthly,
                 minVal: -0.023,
                 maxVal: -0.017
             ) { newVal in
@@ -379,8 +416,9 @@ extension SimulationSettings {
             
             // Competitor Coin
             syncOneFactor(
+                factorName: "CompetitorCoin",
                 t: t,
-                midVal: SimulationSettings.defaultMaxCompetitorBoostMonthly, // -0.008
+                midVal: SimulationSettings.defaultMaxCompetitorBoostMonthly,
                 minVal: -0.0092,
                 maxVal: -0.0068
             ) { newVal in
@@ -389,8 +427,9 @@ extension SimulationSettings {
             
             // Security Breach
             syncOneFactor(
+                factorName: "SecurityBreach",
                 t: t,
-                midVal: SimulationSettings.defaultBreachImpactMonthly, // -0.007
+                midVal: SimulationSettings.defaultBreachImpactMonthly,
                 minVal: -0.00805,
                 maxVal: -0.00595
             ) { newVal in
@@ -399,8 +438,9 @@ extension SimulationSettings {
             
             // Bubble Pop
             syncOneFactor(
+                factorName: "BubblePop",
                 t: t,
-                midVal: SimulationSettings.defaultMaxPopDropMonthly, // -0.01
+                midVal: SimulationSettings.defaultMaxPopDropMonthly,
                 minVal: -0.0115,
                 maxVal: -0.0085
             ) { newVal in
@@ -409,8 +449,9 @@ extension SimulationSettings {
             
             // Stablecoin Meltdown
             syncOneFactor(
+                factorName: "StablecoinMeltdown",
                 t: t,
-                midVal: SimulationSettings.defaultMaxMeltdownDropMonthly, // -0.01
+                midVal: SimulationSettings.defaultMaxMeltdownDropMonthly,
                 minVal: -0.013,
                 maxVal: -0.007
             ) { newVal in
@@ -419,8 +460,9 @@ extension SimulationSettings {
             
             // Black Swan
             syncOneFactor(
+                factorName: "BlackSwan",
                 t: t,
-                midVal: SimulationSettings.defaultBlackSwanDropMonthly, // -0.4
+                midVal: SimulationSettings.defaultBlackSwanDropMonthly,
                 minVal: -0.48,
                 maxVal: -0.32
             ) { newVal in
@@ -429,8 +471,9 @@ extension SimulationSettings {
             
             // Bear Market
             syncOneFactor(
+                factorName: "BearMarket",
                 t: t,
-                midVal: SimulationSettings.defaultBearWeeklyDriftMonthly, // -0.01
+                midVal: SimulationSettings.defaultBearWeeklyDriftMonthly,
                 minVal: -0.013,
                 maxVal: -0.007
             ) { newVal in
@@ -439,8 +482,9 @@ extension SimulationSettings {
             
             // Maturing Market
             syncOneFactor(
+                factorName: "MaturingMarket",
                 t: t,
-                midVal: SimulationSettings.defaultMaxMaturingDropMonthly, // -0.01
+                midVal: SimulationSettings.defaultMaxMaturingDropMonthly,
                 minVal: -0.013,
                 maxVal: -0.007
             ) { newVal in
@@ -449,8 +493,9 @@ extension SimulationSettings {
             
             // Recession
             syncOneFactor(
+                factorName: "Recession",
                 t: t,
-                midVal: SimulationSettings.defaultMaxRecessionDropMonthly, // ~-0.001450808
+                midVal: SimulationSettings.defaultMaxRecessionDropMonthly,
                 minVal: -0.0015958890,
                 maxVal: -0.0013057270
             ) { newVal in
@@ -463,13 +508,22 @@ extension SimulationSettings {
     ///  - t = 0.5 => midVal
     ///  - t < 0.5 => from midVal down to minVal
     ///  - t > 0.5 => from midVal up to maxVal
+    ///
+    /// **Added**: Skips changing any factor whose `factorEnableFrac[factorName] == 0` (completely off).
     private func syncOneFactor(
+        factorName: String,
         t: Double,
         midVal: Double,
         minVal: Double,
         maxVal: Double,
         assign: (Double) -> Void
     ) {
+        // If factorEnableFrac is zero, that means factor is "off", so skip it
+        if let frac = factorEnableFrac[factorName], frac == 0.0 {
+            return
+        }
+        
+        // Otherwise, compute new value based on t
         if t < 0.5 {
             let ratio = t / 0.5 // ratio in [0..1]
             let newVal = midVal - (midVal - minVal) * (1.0 - ratio)
