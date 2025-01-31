@@ -182,16 +182,22 @@ struct SettingsView: View {
     }
     
     func computeActiveNetTilt() -> Double {
+        // If absolutely every factor is zero, no bullish or bearish tilt
+        let anyActive = simSettings.factorEnableFrac.values.contains { $0 > 0.0 }
+        guard anyActive else {
+            return 0.0
+        }
+
+        // Otherwise, run your existing tilt logic
         let eff = invertedSCurve(factorIntensity, steepness: 12.0)
         var partialSum = 0.0
+
         let bullishTotal = bullishKeys.reduce(0.0) { accum, key in
-            let raw = simSettings.factorEnableFrac[key] ?? 0.0
-            let frac = raw
+            let frac = simSettings.factorEnableFrac[key] ?? 0.0
             return accum + frac * factorWeight
         }
         let bearishTotal = bearishKeys.reduce(0.0) { accum, key in
-            let raw = simSettings.factorEnableFrac[key] ?? 0.0
-            let frac = raw
+            let frac = simSettings.factorEnableFrac[key] ?? 0.0
             return accum + frac * factorWeight
         }
         partialSum = bullishTotal - bearishTotal
@@ -201,6 +207,13 @@ struct SettingsView: View {
     }
     
     var displayedTilt: Double {
+        // 1) If literally all factors are off, force neutral = 0
+        let allOff = simSettings.factorEnableFrac.values.allSatisfy { $0 == 0.0 }
+        if allOff {
+            return 0.0
+        }
+        
+        // 2) Otherwise do your usual difference from baseline
         guard simSettings.hasCapturedDefault else {
             return 0.0
         }
