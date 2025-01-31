@@ -185,12 +185,12 @@ struct SettingsView: View {
         var partialSum = 0.0
         let bullishTotal = bullishKeys.reduce(0.0) { accum, key in
             let raw = simSettings.factorEnableFrac[key] ?? 0.0
-            let frac = gentleSCurve(raw, steepness: 2.0)
+            let frac = raw
             return accum + frac * factorWeight
         }
         let bearishTotal = bearishKeys.reduce(0.0) { accum, key in
             let raw = simSettings.factorEnableFrac[key] ?? 0.0
-            let frac = gentleSCurve(raw, steepness: 2.0)
+            let frac = raw
             return accum + frac * factorWeight
         }
         partialSum = bullishTotal - bearishTotal
