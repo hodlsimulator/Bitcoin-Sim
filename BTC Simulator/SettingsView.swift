@@ -55,7 +55,6 @@ struct SettingsView: View {
     
     var body: some View {
         Form {
-            // These sections are all defined in SettingsSections.swift (extension)
             overallTiltSection
             factorIntensitySection
             toggleAllSection
@@ -85,7 +84,10 @@ struct SettingsView: View {
             )
             .environmentObject(simSettings)
             
-            // The rest of your sections from SettingsSections.swift
+            // Insert AdvancedSettingsSection here, just before the about section
+            AdvancedSettingsSection(showAdvancedSettings: $showAdvancedSettings)
+                .environmentObject(simSettings)
+            
             aboutSection
             resetCriteriaSection
         }
@@ -95,41 +97,22 @@ struct SettingsView: View {
         .environment(\.colorScheme, .dark)
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.large)
-        
-        // A) Factor intensity onChange
         .onChange(of: factorIntensity) { newVal in
-            print("DEBUG: Slider value updated to: \(newVal)")
-            
-            // Use oldFactorIntensity so we get an actual delta
             let delta = newVal - oldFactorIntensity
-            print("DEBUG: factorIntensity changed to \(newVal), delta = \(delta)")
-            
             if delta == 0 {
                 print("DEBUG: No change in slider value (delta is zero).")
             }
-            
-            // Update all factors based on the change
             shiftAllFactors(by: delta)
-            
-            // Store the new factor intensity as old
             oldFactorIntensity = newVal
-            
-            // Manually trigger tilt bar update
             tiltBarValue = displayedTilt
         }
-        
-        // B) Animate factor toggles & tilt
         .animation(hasAppeared ? (disableAnimationNow ? nil : .easeInOut(duration: 0.3)) : nil,
                    value: simSettings.factorEnableFrac)
         .animation(hasAppeared ? .easeInOut(duration: 0.3) : nil, value: factorIntensity)
         .animation(hasAppeared ? .easeInOut(duration: 0.3) : nil, value: displayedTilt)
-        
-        // C) Tooltips overlay
         .overlayPreferenceValue(TooltipAnchorKey.self) { allItems in
             tooltipOverlay(allItems)
         }
-        
-        // D) Detect first toggle-off & also update tilt whenever factorEnableFrac changes
         .onChange(of: simSettings.factorEnableFrac) { newVal in
             disableAnimationNow = false
             if firstToggleOff {
@@ -143,23 +126,14 @@ struct SettingsView: View {
                 }
             }
             oldFactorEnableFrac = newVal
-            
-            // Ensure tilt bar updates when toggles/sliders change
             tiltBarValue = displayedTilt
         }
         .onAppear {
-            // Record the initial fraction dictionary
             oldFactorEnableFrac = simSettings.factorEnableFrac
             hasAppeared = true
         }
     }
     
-    // MARK: - Overlay watchers, if you want them
-    // If you want watchersOverlay, you can do .overlay(watchersOverlay)
-    // For now I've omitted it, but you can adapt:
-    // .overlay { watchersOverlay }
-    
-    // MARK: - Tooltips overlay function
     @ViewBuilder
     private func tooltipOverlay(_ allItems: [TooltipItem]) -> some View {
         GeometryReader { proxy in
@@ -208,58 +182,38 @@ struct SettingsView: View {
     
     func computeActiveNetTilt() -> Double {
         let eff = invertedSCurve(factorIntensity, steepness: 12.0)
-        // We'll track partialSum to see how bullish vs. bearish net out
         var partialSum = 0.0
-        
-        // Sum up bullish keys
         let bullishTotal = bullishKeys.reduce(0.0) { accum, key in
             let raw = simSettings.factorEnableFrac[key] ?? 0.0
             let frac = gentleSCurve(raw, steepness: 2.0)
             return accum + frac * factorWeight
         }
-        
-        // Sum up bearish keys
         let bearishTotal = bearishKeys.reduce(0.0) { accum, key in
             let raw = simSettings.factorEnableFrac[key] ?? 0.0
             let frac = gentleSCurve(raw, steepness: 2.0)
             return accum + frac * factorWeight
         }
-        
         partialSum = bullishTotal - bearishTotal
         let normalised = partialSum / Double(totalFactors)
         let netTilt = normalised * eff
-        
-        print("DEBUG: computeActiveNetTilt => netTilt=\(netTilt) (partialSum=\(partialSum), eff=\(eff))")
         return netTilt
     }
     
     var displayedTilt: Double {
         guard simSettings.hasCapturedDefault else {
-            // If we haven’t captured a baseline tilt yet, bail out
             return 0.0
         }
-        
         let activeTilt = computeActiveNetTilt()
         let diff = activeTilt - simSettings.defaultTilt
-        
-        if abs(diff) < 1e-10 {
-            print("DEBUG: displayedTilt => NO offset (activeTilt == default).")
-        } else {
-            print("DEBUG: displayedTilt => activeTilt=\(activeTilt), defaultTilt=\(simSettings.defaultTilt), diff=\(diff)")
-        }
-        
-        let fraction = diff / max(simSettings.maxSwing, 1e-9)  // prevent division by zero
+        let fraction = diff / max(simSettings.maxSwing, 1e-9)
         let scaled = fraction * 1.7
         let finalTilt = tanh(8.0 * scaled)
-        
-        print("DEBUG: displayedTilt => fraction=\(fraction), finalTilt=\(finalTilt)")
         return finalTilt
     }
     
     func computeIfAllBullish() -> Double {
         let effective = invertedSCurve(1.0, steepness: 12.0)
         var sum = 0.0
-        
         for _ in bullishKeys {
             let frac = gentleSCurve(1.0, steepness: 2.0)
             sum += frac * factorWeight
@@ -268,7 +222,6 @@ struct SettingsView: View {
             let frac = gentleSCurve(0.0, steepness: 2.0)
             sum -= frac * factorWeight
         }
-        
         let normalised = sum / Double(totalFactors)
         return normalised * effective
     }
@@ -276,7 +229,6 @@ struct SettingsView: View {
     func computeIfAllBearish() -> Double {
         let effective = invertedSCurve(1.0, steepness: 12.0)
         var sum = 0.0
-        
         for _ in bullishKeys {
             let frac = gentleSCurve(0.0, steepness: 2.0)
             sum += frac * factorWeight
@@ -285,7 +237,6 @@ struct SettingsView: View {
             let frac = gentleSCurve(1.0, steepness: 2.0)
             sum -= frac * factorWeight
         }
-        
         let normalised = sum / Double(totalFactors)
         return normalised * effective
     }

@@ -49,7 +49,6 @@ extension SettingsView {
     /// but we no longer skip if fraction == 0. If the user explicitly toggles the factor off,
     /// then `isOn` will be false, which also skips the shift.
     func shiftAllFactors(by delta: Double) {
-        print("DEBUG: shiftAllFactors called with delta: \(delta)")
         
         // For convenience, clamp x into [minVal, maxVal].
         func clamp(_ x: Double, minVal: Double, maxVal: Double) -> Double {
@@ -76,10 +75,6 @@ extension SettingsView {
             let scaledDelta = delta * range * frac
             
             let newValue = clamp(oldValue + scaledDelta, minVal: minVal, maxVal: maxVal)
-            
-            // Debug info
-            print("DEBUG: Shifting \(key):")
-            print("  isOn: \(isOn), frac: \(frac), oldValue: \(oldValue), delta: \(delta), scaledDelta: \(scaledDelta), newValue: \(newValue)")
             
             if abs(newValue - oldValue) > 1e-7 {
                 oldValue = newValue
@@ -114,8 +109,6 @@ extension SettingsView {
                 simSettings.factorEnableFrac[key] = mutableFrac
             }
         }
-        
-        print("DEBUG: Completed shifting fraction-based factorEnableFrac")
         
         // ---------------- 2) SHIFT REAL NUMERIC VALUES (BULLISH) ----------------
         maybeShift(key: "Halving",
@@ -244,8 +237,6 @@ extension SettingsView {
                    oldValue: &simSettings.maxRecessionDropUnified,
                    minVal: -0.0010516462467487811,
                    maxVal: -0.0007494520467487811)
-        
-        print("DEBUG: Completed shifting all factors")
     }
     
     /// Update factorIntensity by scanning all toggled-on factors, computing a weighted average of their normalised positions.

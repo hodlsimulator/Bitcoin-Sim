@@ -109,7 +109,6 @@ extension SettingsView {
                     let allBear = computeIfAllBearish() - tiltNow
                     simSettings.maxSwing = max(abs(allBull), abs(allBear), 0.00001)
                     
-                    print("DEBUG: After restore, defaultTilt set to \(tiltNow). maxSwing=\(simSettings.maxSwing)")
                 }
             }) {
                 HStack {

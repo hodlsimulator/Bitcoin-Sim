@@ -20,11 +20,8 @@ extension SimulationSettings {
         set {
             let oldValue = useRegClampdownWeekly
             if oldValue == newValue { return }
-            print("didSet: useRegClampdownWeekly changed to \(newValue).")
             objectWillChange.send()
             UserDefaults.standard.set(newValue, forKey: "useRegClampdownWeekly")
-            let storedVal = UserDefaults.standard.bool(forKey: "useRegClampdownWeekly")
-            print("DEBUG: After toggling, userDefaults[useRegClampdownWeekly] = \(storedVal)")
         }
     }
     
@@ -36,11 +33,8 @@ extension SimulationSettings {
         set {
             let oldVal = maxClampDownWeekly
             if oldVal == newValue { return }
-            print("didSet: maxClampDownWeekly changed to \(newValue).")
             objectWillChange.send()
             UserDefaults.standard.set(newValue, forKey: "maxClampDownWeekly")
-            let storedVal = UserDefaults.standard.double(forKey: "maxClampDownWeekly")
-            print("DEBUG: After updating, userDefaults[maxClampDownWeekly] = \(storedVal)")
         }
     }
     
@@ -51,11 +45,8 @@ extension SimulationSettings {
         set {
             let oldValue = useRegClampdownMonthly
             if oldValue == newValue { return }
-            print("didSet: useRegClampdownMonthly changed to \(newValue).")
             objectWillChange.send()
             UserDefaults.standard.set(newValue, forKey: "useRegClampdownMonthly")
-            let storedVal = UserDefaults.standard.bool(forKey: "useRegClampdownMonthly")
-            print("DEBUG: After toggling, userDefaults[useRegClampdownMonthly] = \(storedVal)")
         }
     }
     
@@ -67,11 +58,8 @@ extension SimulationSettings {
         set {
             let oldVal = maxClampDownMonthly
             if oldVal == newValue { return }
-            print("didSet: maxClampDownMonthly changed to \(newValue).")
             objectWillChange.send()
             UserDefaults.standard.set(newValue, forKey: "maxClampDownMonthly")
-            let storedVal = UserDefaults.standard.double(forKey: "maxClampDownMonthly")
-            print("DEBUG: After updating, userDefaults[maxClampDownMonthly] = \(storedVal)")
         }
     }
     
@@ -82,11 +70,8 @@ extension SimulationSettings {
         set {
             let oldValue = useCompetitorCoinWeekly
             if oldValue == newValue { return }
-            print("didSet: useCompetitorCoinWeekly changed to \(newValue).")
             objectWillChange.send()
             UserDefaults.standard.set(newValue, forKey: "useCompetitorCoinWeekly")
-            let storedVal = UserDefaults.standard.bool(forKey: "useCompetitorCoinWeekly")
-            print("DEBUG: After toggling, userDefaults[useCompetitorCoinWeekly] = \(storedVal)")
         }
     }
     
@@ -98,11 +83,8 @@ extension SimulationSettings {
         set {
             let oldVal = maxCompetitorBoostWeekly
             if oldVal == newValue { return }
-            print("didSet: maxCompetitorBoostWeekly changed to \(newValue).")
             objectWillChange.send()
             UserDefaults.standard.set(newValue, forKey: "maxCompetitorBoostWeekly")
-            let storedVal = UserDefaults.standard.double(forKey: "maxCompetitorBoostWeekly")
-            print("DEBUG: After updating, userDefaults[maxCompetitorBoostWeekly] = \(storedVal)")
         }
     }
     
@@ -113,11 +95,8 @@ extension SimulationSettings {
         set {
             let oldValue = useCompetitorCoinMonthly
             if oldValue == newValue { return }
-            print("didSet: useCompetitorCoinMonthly changed to \(newValue).")
             objectWillChange.send()
             UserDefaults.standard.set(newValue, forKey: "useCompetitorCoinMonthly")
-            let storedVal = UserDefaults.standard.bool(forKey: "useCompetitorCoinMonthly")
-            print("DEBUG: After toggling, userDefaults[useCompetitorCoinMonthly] = \(storedVal)")
         }
     }
     
@@ -129,11 +108,8 @@ extension SimulationSettings {
         set {
             let oldVal = maxCompetitorBoostMonthly
             if oldVal == newValue { return }
-            print("didSet: maxCompetitorBoostMonthly changed to \(newValue).")
             objectWillChange.send()
             UserDefaults.standard.set(newValue, forKey: "maxCompetitorBoostMonthly")
-            let storedVal = UserDefaults.standard.double(forKey: "maxCompetitorBoostMonthly")
-            print("DEBUG: After updating, userDefaults[maxCompetitorBoostMonthly] = \(storedVal)")
         }
     }
     
@@ -144,11 +120,8 @@ extension SimulationSettings {
         set {
             let oldValue = useSecurityBreachWeekly
             if oldValue == newValue { return }
-            print("didSet: useSecurityBreachWeekly changed to \(newValue).")
             objectWillChange.send()
             UserDefaults.standard.set(newValue, forKey: "useSecurityBreachWeekly")
-            let storedVal = UserDefaults.standard.bool(forKey: "useSecurityBreachWeekly")
-            print("DEBUG: After toggling, userDefaults[useSecurityBreachWeekly] = \(storedVal)")
         }
     }
     
@@ -160,11 +133,8 @@ extension SimulationSettings {
         set {
             let oldVal = breachImpactWeekly
             if oldVal == newValue { return }
-            print("didSet: breachImpactWeekly changed to \(newValue).")
             objectWillChange.send()
             UserDefaults.standard.set(newValue, forKey: "breachImpactWeekly")
-            let storedVal = UserDefaults.standard.double(forKey: "breachImpactWeekly")
-            print("DEBUG: After updating, userDefaults[breachImpactWeekly] = \(storedVal)")
         }
     }
     
@@ -175,11 +145,8 @@ extension SimulationSettings {
         set {
             let oldValue = useSecurityBreachMonthly
             if oldValue == newValue { return }
-            print("didSet: useSecurityBreachMonthly changed to \(newValue).")
             objectWillChange.send()
             UserDefaults.standard.set(newValue, forKey: "useSecurityBreachMonthly")
-            let storedVal = UserDefaults.standard.bool(forKey: "useSecurityBreachMonthly")
-            print("DEBUG: After toggling, userDefaults[useSecurityBreachMonthly] = \(storedVal)")
         }
     }
     
@@ -191,11 +158,8 @@ extension SimulationSettings {
         set {
             let oldVal = breachImpactMonthly
             if oldVal == newValue { return }
-            print("didSet: breachImpactMonthly changed to \(newValue).")
             objectWillChange.send()
             UserDefaults.standard.set(newValue, forKey: "breachImpactMonthly")
-            let storedVal = UserDefaults.standard.double(forKey: "breachImpactMonthly")
-            print("DEBUG: After updating, userDefaults[breachImpactMonthly] = \(storedVal)")
         }
     }
     
@@ -206,11 +170,8 @@ extension SimulationSettings {
         set {
             let oldValue = useBubblePopWeekly
             if oldValue == newValue { return }
-            print("didSet: useBubblePopWeekly changed to \(newValue).")
             objectWillChange.send()
             UserDefaults.standard.set(newValue, forKey: "useBubblePopWeekly")
-            let storedVal = UserDefaults.standard.bool(forKey: "useBubblePopWeekly")
-            print("DEBUG: After toggling, userDefaults[useBubblePopWeekly] = \(storedVal)")
         }
     }
     
@@ -222,11 +183,8 @@ extension SimulationSettings {
         set {
             let oldVal = maxPopDropWeekly
             if oldVal == newValue { return }
-            print("didSet: maxPopDropWeekly changed to \(newValue).")
             objectWillChange.send()
             UserDefaults.standard.set(newValue, forKey: "maxPopDropWeekly")
-            let storedVal = UserDefaults.standard.double(forKey: "maxPopDropWeekly")
-            print("DEBUG: After updating, userDefaults[maxPopDropWeekly] = \(storedVal)")
         }
     }
     
@@ -237,11 +195,8 @@ extension SimulationSettings {
         set {
             let oldValue = useBubblePopMonthly
             if oldValue == newValue { return }
-            print("didSet: useBubblePopMonthly changed to \(newValue).")
             objectWillChange.send()
             UserDefaults.standard.set(newValue, forKey: "useBubblePopMonthly")
-            let storedVal = UserDefaults.standard.bool(forKey: "useBubblePopMonthly")
-            print("DEBUG: After toggling, userDefaults[useBubblePopMonthly] = \(storedVal)")
         }
     }
     
@@ -253,11 +208,8 @@ extension SimulationSettings {
         set {
             let oldVal = maxPopDropMonthly
             if oldVal == newValue { return }
-            print("didSet: maxPopDropMonthly changed to \(newValue).")
             objectWillChange.send()
             UserDefaults.standard.set(newValue, forKey: "maxPopDropMonthly")
-            let storedVal = UserDefaults.standard.double(forKey: "maxPopDropMonthly")
-            print("DEBUG: After updating, userDefaults[maxPopDropMonthly] = \(storedVal)")
         }
     }
     
@@ -268,11 +220,8 @@ extension SimulationSettings {
         set {
             let oldValue = useStablecoinMeltdownWeekly
             if oldValue == newValue { return }
-            print("didSet: useStablecoinMeltdownWeekly changed to \(newValue).")
             objectWillChange.send()
             UserDefaults.standard.set(newValue, forKey: "useStablecoinMeltdownWeekly")
-            let storedVal = UserDefaults.standard.bool(forKey: "useStablecoinMeltdownWeekly")
-            print("DEBUG: After toggling, userDefaults[useStablecoinMeltdownWeekly] = \(storedVal)")
         }
     }
     
@@ -284,11 +233,8 @@ extension SimulationSettings {
         set {
             let oldVal = maxMeltdownDropWeekly
             if oldVal == newValue { return }
-            print("didSet: maxMeltdownDropWeekly changed to \(newValue).")
             objectWillChange.send()
             UserDefaults.standard.set(newValue, forKey: "maxMeltdownDropWeekly")
-            let storedVal = UserDefaults.standard.double(forKey: "maxMeltdownDropWeekly")
-            print("DEBUG: After updating, userDefaults[maxMeltdownDropWeekly] = \(storedVal)")
         }
     }
     
@@ -299,11 +245,8 @@ extension SimulationSettings {
         set {
             let oldValue = useStablecoinMeltdownMonthly
             if oldValue == newValue { return }
-            print("didSet: useStablecoinMeltdownMonthly changed to \(newValue).")
             objectWillChange.send()
             UserDefaults.standard.set(newValue, forKey: "useStablecoinMeltdownMonthly")
-            let storedVal = UserDefaults.standard.bool(forKey: "useStablecoinMeltdownMonthly")
-            print("DEBUG: After toggling, userDefaults[useStablecoinMeltdownMonthly] = \(storedVal)")
         }
     }
     
@@ -315,11 +258,8 @@ extension SimulationSettings {
         set {
             let oldVal = maxMeltdownDropMonthly
             if oldVal == newValue { return }
-            print("didSet: maxMeltdownDropMonthly changed to \(newValue).")
             objectWillChange.send()
             UserDefaults.standard.set(newValue, forKey: "maxMeltdownDropMonthly")
-            let storedVal = UserDefaults.standard.double(forKey: "maxMeltdownDropMonthly")
-            print("DEBUG: After updating, userDefaults[maxMeltdownDropMonthly] = \(storedVal)")
         }
     }
     
@@ -330,11 +270,8 @@ extension SimulationSettings {
         set {
             let oldValue = useBlackSwanWeekly
             if oldValue == newValue { return }
-            print("didSet: useBlackSwanWeekly changed to \(newValue).")
             objectWillChange.send()
             UserDefaults.standard.set(newValue, forKey: "useBlackSwanWeekly")
-            let storedVal = UserDefaults.standard.bool(forKey: "useBlackSwanWeekly")
-            print("DEBUG: After toggling, userDefaults[useBlackSwanWeekly] = \(storedVal)")
         }
     }
     
@@ -346,11 +283,8 @@ extension SimulationSettings {
         set {
             let oldVal = blackSwanDropWeekly
             if oldVal == newValue { return }
-            print("didSet: blackSwanDropWeekly changed to \(newValue).")
             objectWillChange.send()
             UserDefaults.standard.set(newValue, forKey: "blackSwanDropWeekly")
-            let storedVal = UserDefaults.standard.double(forKey: "blackSwanDropWeekly")
-            print("DEBUG: After updating, userDefaults[blackSwanDropWeekly] = \(storedVal)")
         }
     }
     
@@ -361,11 +295,8 @@ extension SimulationSettings {
         set {
             let oldValue = useBlackSwanMonthly
             if oldValue == newValue { return }
-            print("didSet: useBlackSwanMonthly changed to \(newValue).")
             objectWillChange.send()
             UserDefaults.standard.set(newValue, forKey: "useBlackSwanMonthly")
-            let storedVal = UserDefaults.standard.bool(forKey: "useBlackSwanMonthly")
-            print("DEBUG: After toggling, userDefaults[useBlackSwanMonthly] = \(storedVal)")
         }
     }
     
@@ -377,11 +308,8 @@ extension SimulationSettings {
         set {
             let oldVal = blackSwanDropMonthly
             if oldVal == newValue { return }
-            print("didSet: blackSwanDropMonthly changed to \(newValue).")
             objectWillChange.send()
             UserDefaults.standard.set(newValue, forKey: "blackSwanDropMonthly")
-            let storedVal = UserDefaults.standard.double(forKey: "blackSwanDropMonthly")
-            print("DEBUG: After updating, userDefaults[blackSwanDropMonthly] = \(storedVal)")
         }
     }
     
@@ -392,11 +320,8 @@ extension SimulationSettings {
         set {
             let oldValue = useBearMarketWeekly
             if oldValue == newValue { return }
-            print("didSet: useBearMarketWeekly changed to \(newValue).")
             objectWillChange.send()
             UserDefaults.standard.set(newValue, forKey: "useBearMarketWeekly")
-            let storedVal = UserDefaults.standard.bool(forKey: "useBearMarketWeekly")
-            print("DEBUG: After toggling, userDefaults[useBearMarketWeekly] = \(storedVal)")
         }
     }
     
@@ -408,11 +333,8 @@ extension SimulationSettings {
         set {
             let oldVal = bearWeeklyDriftWeekly
             if oldVal == newValue { return }
-            print("didSet: bearWeeklyDriftWeekly changed to \(newValue).")
             objectWillChange.send()
             UserDefaults.standard.set(newValue, forKey: "bearWeeklyDriftWeekly")
-            let storedVal = UserDefaults.standard.double(forKey: "bearWeeklyDriftWeekly")
-            print("DEBUG: After updating, userDefaults[bearWeeklyDriftWeekly] = \(storedVal)")
         }
     }
     
@@ -423,11 +345,8 @@ extension SimulationSettings {
         set {
             let oldValue = useBearMarketMonthly
             if oldValue == newValue { return }
-            print("didSet: useBearMarketMonthly changed to \(newValue).")
             objectWillChange.send()
             UserDefaults.standard.set(newValue, forKey: "useBearMarketMonthly")
-            let storedVal = UserDefaults.standard.bool(forKey: "useBearMarketMonthly")
-            print("DEBUG: After toggling, userDefaults[useBearMarketMonthly] = \(storedVal)")
         }
     }
     
@@ -439,11 +358,8 @@ extension SimulationSettings {
         set {
             let oldVal = bearWeeklyDriftMonthly
             if oldVal == newValue { return }
-            print("didSet: bearWeeklyDriftMonthly changed to \(newValue).")
             objectWillChange.send()
             UserDefaults.standard.set(newValue, forKey: "bearWeeklyDriftMonthly")
-            let storedVal = UserDefaults.standard.double(forKey: "bearWeeklyDriftMonthly")
-            print("DEBUG: After updating, userDefaults[bearWeeklyDriftMonthly] = \(storedVal)")
         }
     }
     
@@ -454,11 +370,8 @@ extension SimulationSettings {
         set {
             let oldValue = useMaturingMarketWeekly
             if oldValue == newValue { return }
-            print("didSet: useMaturingMarketWeekly changed to \(newValue).")
             objectWillChange.send()
             UserDefaults.standard.set(newValue, forKey: "useMaturingMarketWeekly")
-            let storedVal = UserDefaults.standard.bool(forKey: "useMaturingMarketWeekly")
-            print("DEBUG: After toggling, userDefaults[useMaturingMarketWeekly] = \(storedVal)")
         }
     }
     
@@ -470,11 +383,8 @@ extension SimulationSettings {
         set {
             let oldVal = maxMaturingDropWeekly
             if oldVal == newValue { return }
-            print("didSet: maxMaturingDropWeekly changed to \(newValue).")
             objectWillChange.send()
             UserDefaults.standard.set(newValue, forKey: "maxMaturingDropWeekly")
-            let storedVal = UserDefaults.standard.double(forKey: "maxMaturingDropWeekly")
-            print("DEBUG: After updating, userDefaults[maxMaturingDropWeekly] = \(storedVal)")
         }
     }
     
@@ -485,11 +395,8 @@ extension SimulationSettings {
         set {
             let oldValue = useMaturingMarketMonthly
             if oldValue == newValue { return }
-            print("didSet: useMaturingMarketMonthly changed to \(newValue).")
             objectWillChange.send()
             UserDefaults.standard.set(newValue, forKey: "useMaturingMarketMonthly")
-            let storedVal = UserDefaults.standard.bool(forKey: "useMaturingMarketMonthly")
-            print("DEBUG: After toggling, userDefaults[useMaturingMarketMonthly] = \(storedVal)")
         }
     }
     
@@ -501,11 +408,8 @@ extension SimulationSettings {
         set {
             let oldVal = maxMaturingDropMonthly
             if oldVal == newValue { return }
-            print("didSet: maxMaturingDropMonthly changed to \(newValue).")
             objectWillChange.send()
             UserDefaults.standard.set(newValue, forKey: "maxMaturingDropMonthly")
-            let storedVal = UserDefaults.standard.double(forKey: "maxMaturingDropMonthly")
-            print("DEBUG: After updating, userDefaults[maxMaturingDropMonthly] = \(storedVal)")
         }
     }
     
@@ -516,11 +420,8 @@ extension SimulationSettings {
         set {
             let oldValue = useRecessionWeekly
             if oldValue == newValue { return }
-            print("didSet: useRecessionWeekly changed to \(newValue).")
             objectWillChange.send()
             UserDefaults.standard.set(newValue, forKey: "useRecessionWeekly")
-            let storedVal = UserDefaults.standard.bool(forKey: "useRecessionWeekly")
-            print("DEBUG: After toggling, userDefaults[useRecessionWeekly] = \(storedVal)")
         }
     }
     
@@ -532,11 +433,8 @@ extension SimulationSettings {
         set {
             let oldVal = maxRecessionDropWeekly
             if oldVal == newValue { return }
-            print("didSet: maxRecessionDropWeekly changed to \(newValue).")
             objectWillChange.send()
             UserDefaults.standard.set(newValue, forKey: "maxRecessionDropWeekly")
-            let storedVal = UserDefaults.standard.double(forKey: "maxRecessionDropWeekly")
-            print("DEBUG: After updating, userDefaults[maxRecessionDropWeekly] = \(storedVal)")
         }
     }
     
@@ -547,11 +445,8 @@ extension SimulationSettings {
         set {
             let oldValue = useRecessionMonthly
             if oldValue == newValue { return }
-            print("didSet: useRecessionMonthly changed to \(newValue).")
             objectWillChange.send()
             UserDefaults.standard.set(newValue, forKey: "useRecessionMonthly")
-            let storedVal = UserDefaults.standard.bool(forKey: "useRecessionMonthly")
-            print("DEBUG: After toggling, userDefaults[useRecessionMonthly] = \(storedVal)")
         }
     }
     
@@ -563,11 +458,8 @@ extension SimulationSettings {
         set {
             let oldVal = maxRecessionDropMonthly
             if oldVal == newValue { return }
-            print("didSet: maxRecessionDropMonthly changed to \(newValue).")
             objectWillChange.send()
             UserDefaults.standard.set(newValue, forKey: "maxRecessionDropMonthly")
-            let storedVal = UserDefaults.standard.double(forKey: "maxRecessionDropMonthly")
-            print("DEBUG: After updating, userDefaults[maxRecessionDropMonthly] = \(storedVal)")
         }
     }
 }

@@ -395,7 +395,7 @@ extension SimulationSettings {
     
     /// Return (minVal, maxVal) for the factor depending on weekly vs. monthly.
     /// You can fill in all your factors here.
-    private func factorRange(for factorName: String, isWeekly: Bool) -> (Double, Double) {
+    func factorRange(for factorName: String, isWeekly: Bool) -> (Double, Double) {
         switch factorName {
         // ------ Bullish Factors ------
         case "Halving":
