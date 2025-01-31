@@ -98,12 +98,7 @@ struct SettingsView: View {
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.large)
         .onChange(of: factorIntensity) { newVal in
-            let delta = newVal - oldFactorIntensity
-            if delta == 0 {
-                print("DEBUG: No change in slider value (delta is zero).")
-            }
-            shiftAllFactors(by: delta)
-            oldFactorIntensity = newVal
+            simSettings.syncAllFactorsToIntensity(newVal)
             tiltBarValue = displayedTilt
         }
         .animation(hasAppeared ? (disableAnimationNow ? nil : .easeInOut(duration: 0.3)) : nil,
