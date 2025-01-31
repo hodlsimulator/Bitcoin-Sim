@@ -207,7 +207,7 @@ struct SettingsView: View {
         let diff = activeTilt - simSettings.defaultTilt
         let fraction = diff / max(simSettings.maxSwing, 1e-9)
         let scaled = fraction * 1.7
-        let finalTilt = tanh(8.0 * scaled)
+        let finalTilt = tanh(15.0 * scaled)
         return finalTilt
     }
     
