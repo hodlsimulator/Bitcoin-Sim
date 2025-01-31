@@ -14,12 +14,14 @@ extension SettingsView {
         Section {
             HStack {
                 GeometryReader { geo in
-                    let tilt = displayedTilt
+                    // Use the *persisted* tilt from simSettings here
+                    let tilt = simSettings.tiltBarValue
+
                     ZStack(alignment: tilt >= 0 ? .leading : .trailing) {
                         Rectangle()
                             .fill(Color.gray.opacity(0.3))
                             .frame(height: 8)
-
+                        
                         Rectangle()
                             .fill(tilt >= 0 ? .green : .red)
                             .frame(width: geo.size.width * abs(tilt), height: 8)
@@ -108,8 +110,10 @@ extension SettingsView {
                     let allBull = computeIfAllBullish() - tiltNow
                     let allBear = computeIfAllBearish() - tiltNow
                     simSettings.maxSwing = max(abs(allBull), abs(allBear), 0.00001)
-                    
                 }
+                
+                // 4) Reset tilt bar to neutral
+                simSettings.tiltBarValue = 0.0
             }) {
                 HStack {
                     Text("Restore Defaults")
@@ -149,6 +153,7 @@ extension SettingsView {
                     
                     simSettings.factorIntensity = 0.5
                     oldFactorIntensity = 0.5
+                    simSettings.tiltBarValue = 0.0
                 }
                 Button("Cancel", role: .cancel) { }
             }, message: {

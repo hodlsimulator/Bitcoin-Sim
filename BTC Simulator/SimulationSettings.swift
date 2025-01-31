@@ -61,6 +61,15 @@ class SimulationSettings: ObservableObject {
         }
     }
     
+    // MARK: - Tilt Bar Value (newly added for persistence)
+    @Published var tiltBarValue: Double = 0.0 {
+        didSet {
+            // Only save after init is done
+            guard isInitialized else { return }
+            saveTiltBarValue()
+        }
+    }
+    
     // Global factor intensity
     @AppStorage("factorIntensity") var factorIntensity: Double = 0.5
     
@@ -232,6 +241,7 @@ class SimulationSettings: ObservableObject {
     private let defaultTiltKey = "defaultTilt"
     private let maxSwingKey = "maxSwing"
     private let hasCapturedDefaultKey = "capturedTilt"
+    private let tiltBarValueKey = "tiltBarValue" // new
     
     // MARK: - Init
     init() {
@@ -266,6 +276,7 @@ class SimulationSettings: ObservableObject {
     func loadFromUserDefaults() {
         let defaults = UserDefaults.standard
         
+        // Temporarily mark as not initialized
         isInitialized = false
         
         useLognormalGrowth = defaults.bool(forKey: "useLognormalGrowth")
@@ -322,6 +333,16 @@ class SimulationSettings: ObservableObject {
         if defaults.object(forKey: hasCapturedDefaultKey) != nil {
             hasCapturedDefault = defaults.bool(forKey: hasCapturedDefaultKey)
         }
+        
+        // Load tiltBarValue
+        if defaults.object(forKey: tiltBarValueKey) != nil {
+            tiltBarValue = defaults.double(forKey: tiltBarValueKey)
+        } else {
+            tiltBarValue = 0.0
+        }
+        
+        // Mark as initialized now that we've loaded everything
+        isInitialized = true
     }
     
     func saveToUserDefaults() {
@@ -363,6 +384,11 @@ class SimulationSettings: ObservableObject {
         if let encoded = try? JSONEncoder().encode(factorEnableFrac) {
             defaults.set(encoded, forKey: factorEnableFracKey)
         }
+    }
+    
+    // Save the tilt bar value
+    private func saveTiltBarValue() {
+        UserDefaults.standard.set(tiltBarValue, forKey: tiltBarValueKey)
     }
 }
 
@@ -501,8 +527,6 @@ extension SimulationSettings {
                 : (-0.013, -0.007)
             
         case "Recession":
-            // Notice the weekly range is narrower but negative,
-            // monthly range is also negative but different scale
             return isWeekly
                 ? (-0.0010516462467487811, -0.0007494520467487811)
                 : (-0.0015958890, -0.0013057270)

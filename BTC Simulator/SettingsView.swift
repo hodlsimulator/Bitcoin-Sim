@@ -47,8 +47,6 @@ struct SettingsView: View {
     @State private var disableAnimationNow = false
     @State private var oldFactorEnableFrac: [String: Double] = [:]
     
-    @State var tiltBarValue: Double = 0.0
-    
     init() {
         setupNavBarAppearance()
     }
@@ -84,7 +82,6 @@ struct SettingsView: View {
             )
             .environmentObject(simSettings)
             
-            // Insert AdvancedSettingsSection here, just before the about section
             AdvancedSettingsSection(showAdvancedSettings: $showAdvancedSettings)
                 .environmentObject(simSettings)
             
@@ -97,18 +94,15 @@ struct SettingsView: View {
         .environment(\.colorScheme, .dark)
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.large)
-        .onChange(of: factorIntensity) { newVal in
-            simSettings.syncAllFactorsToIntensity(newVal)
-            tiltBarValue = displayedTilt
+        // 1) Factor intensity change => recalc tilt
+        .onChange(of: factorIntensity) { _ in
+            guard hasAppeared else { return }
+            simSettings.syncAllFactorsToIntensity(factorIntensity)
+            simSettings.tiltBarValue = displayedTilt
         }
-        .animation(hasAppeared ? (disableAnimationNow ? nil : .easeInOut(duration: 0.3)) : nil,
-                   value: simSettings.factorEnableFrac)
-        .animation(hasAppeared ? .easeInOut(duration: 0.3) : nil, value: factorIntensity)
-        .animation(hasAppeared ? .easeInOut(duration: 0.3) : nil, value: displayedTilt)
-        .overlayPreferenceValue(TooltipAnchorKey.self) { allItems in
-            tooltipOverlay(allItems)
-        }
+        // 2) Factor toggles => recalc tilt
         .onChange(of: simSettings.factorEnableFrac) { newVal in
+            guard hasAppeared else { return }
             disableAnimationNow = false
             if firstToggleOff {
                 for (key, oldVal) in oldFactorEnableFrac {
@@ -121,11 +115,23 @@ struct SettingsView: View {
                 }
             }
             oldFactorEnableFrac = newVal
-            tiltBarValue = displayedTilt
+            simSettings.tiltBarValue = displayedTilt
         }
+        // 3) On appear => one-time skip if we have a loaded tilt
         .onAppear {
             oldFactorEnableFrac = simSettings.factorEnableFrac
             hasAppeared = true
+            // If you loaded a value from defaults, keep it; if zero, initialise
+            if abs(simSettings.tiltBarValue) < 0.0000001 {
+                simSettings.tiltBarValue = displayedTilt
+            }
+        }
+        .animation(hasAppeared ? (disableAnimationNow ? nil : .easeInOut(duration: 0.3)) : nil,
+                   value: simSettings.factorEnableFrac)
+        .animation(hasAppeared ? .easeInOut(duration: 0.3) : nil, value: factorIntensity)
+        .animation(hasAppeared ? .easeInOut(duration: 0.3) : nil, value: displayedTilt)
+        .overlayPreferenceValue(TooltipAnchorKey.self) { allItems in
+            tooltipOverlay(allItems)
         }
     }
     
