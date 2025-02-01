@@ -14,17 +14,32 @@ extension SettingsView {
         Section {
             HStack {
                 GeometryReader { geo in
-                    // Use the *persisted* tilt from simSettings here
                     let tilt = simSettings.tiltBarValue
+                    let absTilt = abs(tilt)
+                    let computedWidth = geo.size.width * absTilt
+                    // If computedWidth is within 1 point of geo.size.width, clamp it
+                    let fillWidth = (geo.size.width - computedWidth) < 1 ? geo.size.width : computedWidth
 
-                    ZStack(alignment: tilt >= 0 ? .leading : .trailing) {
+                    ZStack(alignment: .leading) {
+                        // Background bar
                         Rectangle()
                             .fill(Color.gray.opacity(0.3))
                             .frame(height: 8)
                         
-                        Rectangle()
-                            .fill(tilt >= 0 ? .green : .red)
-                            .frame(width: geo.size.width * abs(tilt), height: 8)
+                        if tilt >= 0 {
+                            // Green fill for bullish tilt, anchored to the left.
+                            Rectangle()
+                                .fill(Color.green)
+                                .frame(width: computedWidth, height: 8)
+                                .animation(.easeInOut(duration: 0.3), value: computedWidth)
+                        } else {
+                            // Red fill for bearish tilt, offset so its right edge is fixed.
+                            Rectangle()
+                                .fill(Color.red)
+                                .frame(width: fillWidth, height: 8)
+                                .offset(x: geo.size.width - fillWidth)
+                                .animation(.easeInOut(duration: 0.3), value: fillWidth)
+                        }
                     }
                 }
                 .frame(height: 8)

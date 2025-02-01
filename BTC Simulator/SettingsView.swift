@@ -13,10 +13,8 @@ struct SettingsView: View {
     @AppStorage("hasOnboarded") var didFinishOnboarding = false
     @AppStorage("showAdvancedSettings") private var showAdvancedSettings: Bool = false
     
-    // Global slider
-    // @AppStorage("factorIntensity") var factorIntensity: Double = 0.5
+    // Global slider (and related tilt storage)
     @State var oldFactorIntensity: Double = 0.5
-    // New state variable to store the previous default tilt
     @State var storedDefaultTilt: Double? = nil
     
     @State var showResetCriteriaConfirmation = false
@@ -148,7 +146,9 @@ struct SettingsView: View {
     
     var body: some View {
         let mainForm = Form {
+            // Updated overall tilt bar section:
             overallTiltSection
+            
             factorIntensitySection
             toggleAllSection
             restoreDefaultsSection
@@ -248,7 +248,6 @@ struct SettingsView: View {
                     }
                 }
                 
-                // When toggling all off, store the current default tilt and set it to 0
                 if !wasAllOffBefore && isAllOffNow {
                     storedDefaultTilt = simSettings.defaultTilt
                     simSettings.defaultTilt = 0.0
@@ -256,7 +255,6 @@ struct SettingsView: View {
                     simSettings.maxSwing = 1.0
                 }
                 
-                // When toggling back on, restore the stored default tilt with an animation
                 if wasAllOffBefore && !isAllOffNow {
                     if let storedTilt = storedDefaultTilt {
                         withAnimation(.easeInOut(duration: 0.3)) {
@@ -277,6 +275,85 @@ struct SettingsView: View {
             .animation(hasAppeared ? .easeInOut(duration: 0.3) : nil, value: simSettings.factorIntensity)
             .animation(hasAppeared ? .easeInOut(duration: 0.3) : nil, value: displayedTilt)
     }
+    
+    // ----- Tilt Calculation & Helpers -----
+    
+    var displayedTilt: Double {
+        let allOff = simSettings.factorEnableFrac.values.allSatisfy { $0 == 0.0 }
+        if allOff { return 0.0 }
+        guard simSettings.hasCapturedDefault else { return 0.0 }
+        
+        let activeTilt = computeActiveNetTilt()
+        let diff = activeTilt - simSettings.defaultTilt
+        // Assume an expected maximum difference of ~0.001.
+        let fraction = diff / 0.001
+        // Using arctan gives a less steep start and smooth finish.
+        let finalTilt = (2.6 / .pi) * atan(2.0 * fraction)
+        return finalTilt
+    }
+    
+    func computeActiveNetTilt() -> Double {
+        let anyActive = simSettings.factorEnableFrac.values.contains { $0 > 0.0 }
+        guard anyActive else {
+            return 0.0
+        }
+        let eff = invertedSCurve(simSettings.factorIntensity, steepness: 12.0)
+        
+        let bullishTotal = bullishKeys.reduce(0.0) { accum, key in
+            let frac = simSettings.factorEnableFrac[key] ?? 0.0
+            return accum + frac * factorWeight
+        }
+        let bearishTotal = bearishKeys.reduce(0.0) { accum, key in
+            let frac = simSettings.factorEnableFrac[key] ?? 0.0
+            return accum + frac * factorWeight
+        }
+        let partialSum = bullishTotal - bearishTotal
+        let normalised = partialSum / Double(totalFactors)
+        let netTilt = normalised * eff
+        return netTilt
+    }
+    
+    func computeIfAllBullish() -> Double {
+        let effective = invertedSCurve(1.0, steepness: 12.0)
+        var sum = 0.0
+        for _ in bullishKeys {
+            let frac = gentleSCurve(1.0, steepness: 6.0)
+            sum += frac * factorWeight
+        }
+        for _ in bearishKeys {
+            let frac = gentleSCurve(0.0, steepness: 6.0)
+            sum -= frac * factorWeight
+        }
+        let normalised = sum / Double(totalFactors)
+        let boosted = normalised * effective * 2.0
+        return boosted
+    }
+    
+    func computeIfAllBearish() -> Double {
+        let effective = invertedSCurve(1.0, steepness: 12.0)
+        var sum = 0.0
+        for _ in bullishKeys {
+            let frac = gentleSCurve(0.0, steepness: 6.0)
+            sum += frac * factorWeight
+        }
+        for _ in bearishKeys {
+            let frac = gentleSCurve(1.0, steepness: 6.0)
+            sum -= frac * factorWeight
+        }
+        let normalised = sum / Double(totalFactors)
+        let boosted = normalised * effective * 2.0
+        return boosted
+    }
+    
+    private func gentleSCurve(_ x: Double, steepness: Double = 3.0) -> Double {
+        1.0 / (1.0 + exp(-steepness * (x - 0.5)))
+    }
+    
+    private func invertedSCurve(_ x: Double, steepness: Double = 6.0) -> Double {
+        1.0 / (1.0 + exp(-steepness * (x - 0.5)))
+    }
+    
+    // ----- Tooltip Overlay -----
     
     @ViewBuilder
     private func tooltipOverlay(_ allItems: [TooltipItem]) -> some View {
@@ -322,83 +399,6 @@ struct SettingsView: View {
                 .zIndex(999)
             }
         }
-    }
-    
-    // ----- Tilt Calculation & Helpers -----
-    
-    func computeActiveNetTilt() -> Double {
-        let anyActive = simSettings.factorEnableFrac.values.contains { $0 > 0.0 }
-        guard anyActive else {
-            return 0.0
-        }
-        let eff = invertedSCurve(simSettings.factorIntensity, steepness: 12.0)
-        
-        let bullishTotal = bullishKeys.reduce(0.0) { accum, key in
-            let frac = simSettings.factorEnableFrac[key] ?? 0.0
-            return accum + frac * factorWeight
-        }
-        let bearishTotal = bearishKeys.reduce(0.0) { accum, key in
-            let frac = simSettings.factorEnableFrac[key] ?? 0.0
-            return accum + frac * factorWeight
-        }
-        let partialSum = bullishTotal - bearishTotal
-        let normalised = partialSum / Double(totalFactors)
-        let netTilt = normalised * eff
-        return netTilt
-    }
-    
-    var displayedTilt: Double {
-        let allOff = simSettings.factorEnableFrac.values.allSatisfy { $0 == 0.0 }
-        if allOff { return 0.0 }
-        guard simSettings.hasCapturedDefault else { return 0.0 }
-
-        let activeTilt = computeActiveNetTilt()
-        let diff = activeTilt - simSettings.defaultTilt
-        // Assume an expected maximum difference of ~0.001.
-        let fraction = diff / 0.001
-        // Using arctan gives a less steep beginning and keeps moving at the end.
-        let finalTilt = (2.6 / .pi) * atan(2.0 * fraction)
-        return finalTilt
-    }
-    
-    func computeIfAllBullish() -> Double {
-        let effective = invertedSCurve(1.0, steepness: 12.0)
-        var sum = 0.0
-        for _ in bullishKeys {
-            let frac = gentleSCurve(1.0, steepness: 6.0)
-            sum += frac * factorWeight
-        }
-        for _ in bearishKeys {
-            let frac = gentleSCurve(0.0, steepness: 6.0)
-            sum -= frac * factorWeight
-        }
-        let normalised = sum / Double(totalFactors)
-        let boosted = normalised * effective * 2.0
-        return boosted
-    }
-
-    func computeIfAllBearish() -> Double {
-        let effective = invertedSCurve(1.0, steepness: 12.0)
-        var sum = 0.0
-        for _ in bullishKeys {
-            let frac = gentleSCurve(0.0, steepness: 6.0)
-            sum += frac * factorWeight
-        }
-        for _ in bearishKeys {
-            let frac = gentleSCurve(1.0, steepness: 6.0)
-            sum -= frac * factorWeight
-        }
-        let normalised = sum / Double(totalFactors)
-        let boosted = normalised * effective * 2.0
-        return boosted
-    }
-    
-    private func gentleSCurve(_ x: Double, steepness: Double = 3.0) -> Double {
-        1.0 / (1.0 + exp(-steepness * (x - 0.5)))
-    }
-    
-    private func invertedSCurve(_ x: Double, steepness: Double = 6.0) -> Double {
-        1.0 / (1.0 + exp(-steepness * (x - 0.5)))
     }
     
     // ----- Nav Bar Appearance -----

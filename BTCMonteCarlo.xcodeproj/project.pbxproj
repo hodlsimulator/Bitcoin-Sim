@@ -81,6 +81,7 @@
 		E1E31C4D2D433DB800ED22E6 /* BlockBootstrapSimulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1E31C4C2D433DB600ED22E6 /* BlockBootstrapSimulator.swift */; };
 		E1E31C4F2D4349E000ED22E6 /* DataLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1E31C4E2D4349DE00ED22E6 /* DataLoader.swift */; };
 		E1E31C512D438DD900ED22E6 /* GarchCalibrator.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1E31C502D438DD700ED22E6 /* GarchCalibrator.swift */; };
+		E1F1CB5E2D4EDC58003DB24F /* TiltBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F1CB5D2D4EDC56003DB24F /* TiltBarView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -160,6 +161,7 @@
 		E1E31C4C2D433DB600ED22E6 /* BlockBootstrapSimulator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockBootstrapSimulator.swift; sourceTree = "<group>"; };
 		E1E31C4E2D4349DE00ED22E6 /* DataLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataLoader.swift; sourceTree = "<group>"; };
 		E1E31C502D438DD700ED22E6 /* GarchCalibrator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GarchCalibrator.swift; sourceTree = "<group>"; };
+		E1F1CB5D2D4EDC56003DB24F /* TiltBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TiltBarView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -263,6 +265,7 @@
 				E14D24102D3A9524007CC11A /* SimulationSettings+UnifiedFactors.swift */,
 				E14D23F42D374258007CC11A /* SimulationSummaryCardView.swift */,
 				E1A1E52C2D2E39E3008F7658 /* SnapshotExtensions.swift */,
+				E1F1CB5D2D4EDC56003DB24F /* TiltBarView.swift */,
 				E1A1E5262D2E371B008F7658 /* TipsData.swift */,
 				E1B7B0A42D47532B00B60EC6 /* UIComponents.swift */,
 				E19D113B2D42F81A00E3A55E /* UtilityExtensions.swift */,
@@ -467,6 +470,7 @@
 				E1A1E52B2D2E3975008F7658 /* InteractiveBitcoinSymbol3DSpinner.swift in Sources */,
 				E1B7B0A12D44FD3600B60EC6 /* BigNumberExtensions.swift in Sources */,
 				E1E31C4D2D433DB800ED22E6 /* BlockBootstrapSimulator.swift in Sources */,
+				E1F1CB5E2D4EDC58003DB24F /* TiltBarView.swift in Sources */,
 				E1883F3A2D1DD94F007AA90B /* SimulationSettings.swift in Sources */,
 				E1B7B09B2D44DEAF00B60EC6 /* AdvancedSettingsSection.swift in Sources */,
 				E14D24092D3A677F007CC11A /* SettingsPrinter.swift in Sources */,
