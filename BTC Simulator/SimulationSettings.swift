@@ -40,9 +40,6 @@ class SimulationSettings: ObservableObject {
     }
     
     // ----- NEW: manual offsets -----
-    // This stores for each factor the difference between the user-adjusted value
-    // and the "base" value computed from factorIntensity. Then the global slider
-    // won't overwrite custom tweaks.
     @Published var manualOffsets: [String: Double] = [:]
     
     // MARK: - Tilt Baseline
@@ -65,7 +62,7 @@ class SimulationSettings: ObservableObject {
         }
     }
     
-    // MARK: - Tilt Bar Value (newly added for persistence)
+    // MARK: - Tilt Bar Value (persisted)
     @Published var tiltBarValue: Double = 0.0 {
         didSet {
             guard isInitialized else { return }
@@ -78,7 +75,16 @@ class SimulationSettings: ObservableObject {
     
     var inputManager: PersistentInputManager?
     
-    @Published var userIsActuallyTogglingAll = false
+    // MARK: - Toggle All
+    @Published var userIsActuallyTogglingAll = false {
+        didSet {
+            // When toggling finishes (becomes false), reset the tilt bar.
+            if !userIsActuallyTogglingAll {
+                resetTiltBar()
+            }
+        }
+    }
+    
     @Published var isOnboarding: Bool = false
     @Published var periodUnit: PeriodUnit = .weeks {
         didSet {
@@ -112,8 +118,6 @@ class SimulationSettings: ObservableObject {
             guard isInitialized else { return }
             print("didSet: useLognormalGrowth changed to \(useLognormalGrowth)")
             UserDefaults.standard.set(useLognormalGrowth, forKey: "useLognormalGrowth")
-            
-            // Force annualStep true whenever lognormalGrowth is turned off
             if !useLognormalGrowth {
                 useAnnualStep = true
             }
@@ -189,8 +193,6 @@ class SimulationSettings: ObservableObject {
             guard isInitialized else { return }
             print("didSet: useAutoCorrelation changed to \(useAutoCorrelation)")
             UserDefaults.standard.set(useAutoCorrelation, forKey: "useAutoCorrelation")
-            
-            // Force meanReversion off whenever autocorrelation is turned off
             if !useAutoCorrelation {
                 useMeanReversion = false
             }
@@ -254,7 +256,7 @@ class SimulationSettings: ObservableObject {
         // Load user defaults
         loadFromUserDefaults()
         
-        // If there's no baseline set yet, provide a default so tilt bar can move
+        // If there's no baseline yet, set defaults so the tilt bar can move
         if !hasCapturedDefault {
             defaultTilt = 0.0
             maxSwing = 1.0
@@ -270,12 +272,22 @@ class SimulationSettings: ObservableObject {
         isUpdating = false
     }
     
-    /// Converts a real numeric value into a 0..1 fraction for the tilt.
-    /// If factor is unknown, we default to clamping in [0..1].
+    // MARK: - Tilt Bar Reset
+    func resetTiltBar() {
+        // Remove any stored tiltBarValue from UserDefaults
+        UserDefaults.standard.removeObject(forKey: tiltBarValueKey)
+        // Reset tilt properties to neutral values
+        tiltBarValue = 0.0
+        defaultTilt = 0.0
+        maxSwing = 1.0
+        hasCapturedDefault = true
+        saveTiltState()
+        saveTiltBarValue()
+    }
+    
+    /// Converts a numeric value into a fraction (0..1) based on the factor's range.
     func fractionFromValue(_ factorName: String, value: Double, isWeekly: Bool) -> Double {
         let (minVal, maxVal) = factorRange(for: factorName, isWeekly: isWeekly)
-        
-        // linear mapping to 0..1
         if maxVal <= minVal { return 0.0 }
         let rawFraction = (value - minVal) / (maxVal - minVal)
         return max(0.0, min(1.0, rawFraction))
@@ -285,7 +297,7 @@ class SimulationSettings: ObservableObject {
     
     func loadFromUserDefaults() {
         let defaults = UserDefaults.standard
-        isInitialized = false  // Temporarily mark as not initialized
+        isInitialized = false
         
         useLognormalGrowth = defaults.bool(forKey: "useLognormalGrowth")
         lockedRandomSeed = defaults.bool(forKey: "lockedRandomSeed")
@@ -300,38 +312,32 @@ class SimulationSettings: ObservableObject {
         lockHistoricalSampling = defaults.bool(forKey: "lockHistoricalSampling")
         useRegimeSwitching = defaults.bool(forKey: "useRegimeSwitching")
         
-        // Extended sampling
         if defaults.object(forKey: "useExtendedHistoricalSampling") == nil {
             useExtendedHistoricalSampling = true
         } else {
             useExtendedHistoricalSampling = defaults.bool(forKey: "useExtendedHistoricalSampling")
         }
         
-        // factorEnableFrac
         loadFactorEnableFrac()
         
-        // Autocorrelation default
         if defaults.object(forKey: "autoCorrelationStrength") == nil {
             autoCorrelationStrength = 0.05
         } else {
             autoCorrelationStrength = defaults.double(forKey: "autoCorrelationStrength")
         }
         
-        // Mean reversion default
         if defaults.object(forKey: "meanReversionTarget") == nil {
             meanReversionTarget = 0.03
         } else {
             meanReversionTarget = defaults.double(forKey: "meanReversionTarget")
         }
         
-        // Mean reversion toggle default
         if defaults.object(forKey: "useMeanReversion") == nil {
             useMeanReversion = true
         } else {
             useMeanReversion = defaults.bool(forKey: "useMeanReversion")
         }
         
-        // Load tilt properties
         if defaults.object(forKey: defaultTiltKey) != nil {
             defaultTilt = defaults.double(forKey: defaultTiltKey)
         }
@@ -342,14 +348,12 @@ class SimulationSettings: ObservableObject {
             hasCapturedDefault = defaults.bool(forKey: hasCapturedDefaultKey)
         }
         
-        // Load tiltBarValue
         if defaults.object(forKey: tiltBarValueKey) != nil {
             tiltBarValue = defaults.double(forKey: tiltBarValueKey)
         } else {
             tiltBarValue = 0.0
         }
         
-        // Mark as initialized now that we've loaded everything
         isInitialized = true
     }
     
@@ -398,147 +402,88 @@ class SimulationSettings: ObservableObject {
     }
     
     // MARK: - Factor Range Helpers
-    // ------------------------------------------------
-    
     func factorRange(for factorName: String, isWeekly: Bool) -> (Double, Double) {
         switch factorName {
-            // BULLISH
         case "Halving":
-            return isWeekly
-            ? (0.2773386887, 0.3823386887)
-            : (0.2975, 0.4025)
+            return isWeekly ? (0.2773386887, 0.3823386887) : (0.2975, 0.4025)
         case "InstitutionalDemand":
-            return isWeekly
-            ? (0.00105315, 0.00142485)
-            : (0.0048101384, 0.0065078326)
+            return isWeekly ? (0.00105315, 0.00142485) : (0.0048101384, 0.0065078326)
         case "CountryAdoption":
-            return isWeekly
-            ? (0.0009882799977, 0.0012868959977)
-            : (0.004688188952320099, 0.006342842952320099)
+            return isWeekly ? (0.0009882799977, 0.0012868959977) : (0.004688188952320099, 0.006342842952320099)
         case "RegulatoryClarity":
-            return isWeekly
-            ? (0.0005979474861605167, 0.0008361034861605167)
-            : (0.0034626727, 0.0046847927)
+            return isWeekly ? (0.0005979474861605167, 0.0008361034861605167) : (0.0034626727, 0.0046847927)
         case "EtfApproval":
-            return isWeekly
-            ? (0.0014880183160305023, 0.0020880183160305023)
-            : (0.0048571421, 0.0065714281)
+            return isWeekly ? (0.0014880183160305023, 0.0020880183160305023) : (0.0048571421, 0.0065714281)
         case "TechBreakthrough":
-            return isWeekly
-            ? (0.0005015753579173088, 0.0007150633579173088)
-            : (0.0024129091, 0.0032645091)
+            return isWeekly ? (0.0005015753579173088, 0.0007150633579173088) : (0.0024129091, 0.0032645091)
         case "ScarcityEvents":
-            return isWeekly
-            ? (0.00035112353681182863, 0.00047505153681182863)
-            : (0.0027989405475521085, 0.0037868005475521085)
+            return isWeekly ? (0.00035112353681182863, 0.00047505153681182863) : (0.0027989405475521085, 0.0037868005475521085)
         case "GlobalMacroHedge":
-            return isWeekly
-            ? (0.0002868789724932909, 0.0004126829724932909)
-            : (0.0027576037, 0.0037308757)
+            return isWeekly ? (0.0002868789724932909, 0.0004126829724932909) : (0.0027576037, 0.0037308757)
         case "StablecoinShift":
-            return isWeekly
-            ? (0.0002704809116327763, 0.0003919609116327763)
-            : (0.0019585255, 0.0026497695)
+            return isWeekly ? (0.0002704809116327763, 0.0003919609116327763) : (0.0019585255, 0.0026497695)
         case "DemographicAdoption":
-            return isWeekly
-            ? (0.0008661432036626339, 0.0012578432036626339)
-            : (0.006197455714649915, 0.008384793714649915)
+            return isWeekly ? (0.0008661432036626339, 0.0012578432036626339) : (0.006197455714649915, 0.008384793714649915)
         case "AltcoinFlight":
-            return isWeekly
-            ? (0.0002381864461803342, 0.0003222524461803342)
-            : (0.0018331797, 0.0024801837)
+            return isWeekly ? (0.0002381864461803342, 0.0003222524461803342) : (0.0018331797, 0.0024801837)
         case "AdoptionFactor":
-            return isWeekly
-            ? (0.0013638349088897705, 0.0018451869088897705)
-            : (0.012461815934071304, 0.016860103934071304)
-            
-            // BEARISH
+            return isWeekly ? (0.0013638349088897705, 0.0018451869088897705) : (0.012461815934071304, 0.016860103934071304)
         case "RegClampdown":
-            return isWeekly
-            ? (-0.0014273392243542672, -0.0008449512243542672)
-            : (-0.023, -0.017)
+            return isWeekly ? (-0.0014273392243542672, -0.0008449512243542672) : (-0.023, -0.017)
         case "CompetitorCoin":
-            return isWeekly
-            ? (-0.0011842141746411323, -0.0008454221746411323)
-            : (-0.0092, -0.0068)
+            return isWeekly ? (-0.0011842141746411323, -0.0008454221746411323) : (-0.0092, -0.0068)
         case "SecurityBreach":
-            return isWeekly
-            ? (-0.0012819675168380737, -0.0009009755168380737)
-            : (-0.00805, -0.00595)
+            return isWeekly ? (-0.0012819675168380737, -0.0009009755168380737) : (-0.00805, -0.00595)
         case "BubblePop":
-            return isWeekly
-            ? (-0.002244817890762329, -0.001280529890762329)
-            : (-0.0115, -0.0085)
+            return isWeekly ? (-0.002244817890762329, -0.001280529890762329) : (-0.0115, -0.0085)
         case "StablecoinMeltdown":
-            return isWeekly
-            ? (-0.0009681346159477233, -0.0004600706159477233)
-            : (-0.013, -0.007)
+            return isWeekly ? (-0.0009681346159477233, -0.0004600706159477233) : (-0.013, -0.007)
         case "BlackSwan":
-            return isWeekly
-            ? (-0.478662, -0.319108)
-            : (-0.48, -0.32)
+            return isWeekly ? (-0.478662, -0.319108) : (-0.48, -0.32)
         case "BearMarket":
-            return isWeekly
-            ? (-0.0010278802752494812, -0.0007278802752494812)
-            : (-0.013, -0.007)
+            return isWeekly ? (-0.0010278802752494812, -0.0007278802752494812) : (-0.013, -0.007)
         case "MaturingMarket":
-            return isWeekly
-            ? (-0.0020343461055486196, -0.0010537001055486196)
-            : (-0.013, -0.007)
+            return isWeekly ? (-0.0020343461055486196, -0.0010537001055486196) : (-0.013, -0.007)
         case "Recession":
-            return isWeekly
-            ? (-0.0010516462467487811, -0.0007494520467487811)
-            : (-0.0015958890, -0.0013057270)
-            
+            return isWeekly ? (-0.0010516462467487811, -0.0007494520467487811) : (-0.0015958890, -0.0013057270)
         default:
             return (0.0, 1.0)
         }
     }
     
-    /// Computes the “base” value for a factor at the current factorIntensity, ignoring any manual offset.
-    /// Adjust to match your actual logic for how you want the factor’s baseline to move from min..max.
+    /// Computes the base value for a factor based on the global factorIntensity.
     func baseValForFactor(_ factorName: String, intensity: Double) -> Double {
         let isWeekly = (periodUnit == .weeks)
         let (minVal, maxVal) = factorRange(for: factorName, isWeekly: isWeekly)
-        
-        // We'll treat 0.5 intensity as midpoint, <0.5 slides to minVal, >0.5 slides to maxVal
         let midVal = (minVal + maxVal) / 2.0
         
         if intensity < 0.5 {
-            let ratio = intensity / 0.5 // [0..1]
-            // Slide from midVal -> minVal as ratio goes from 0..1
+            let ratio = intensity / 0.5
             return midVal - (midVal - minVal) * (1.0 - ratio)
         } else {
-            let ratio = (intensity - 0.5) / 0.5 // [0..1]
-            // Slide from midVal -> maxVal
+            let ratio = (intensity - 0.5) / 0.5
             return midVal + (maxVal - midVal) * ratio
         }
     }
     
-    /// Called by your global slider to sync a single factor to the global factorIntensity,
-    /// plus any manual offset. So the factor won't reset your custom tweaks.
+    /// Syncs a factor's value to the global intensity plus any manual offset.
     func syncSingleFactorToIntensity(_ factorName: String) {
-        // Only sync if the factor is on (fraction > 0)
         guard let frac = factorEnableFrac[factorName], frac > 0 else { return }
-        // Compute the base value from the global intensity
         let base = baseValForFactor(factorName, intensity: factorIntensity)
-        // Retrieve the stored manual offset without resetting it
         let offset = manualOffsets[factorName] ?? 0.0
         let newVal = base + offset
         setNumericValue(for: factorName, to: newVal)
     }
     
-    // Whenever user adjusts a factor’s slider, call updateManualOffset so we
-    // store (currentValue - baseVal), ensuring your custom tweak persists.
+    /// Updates the manual offset when a factor's slider is changed.
     func updateManualOffset(factorName: String, actualValue: Double) {
         let base = baseValForFactor(factorName, intensity: factorIntensity)
         manualOffsets[factorName] = actualValue - base
     }
     
-    /// Actually assign newVal to the right property
+    /// Sets the new numeric value for a given factor.
     func setNumericValue(for factorName: String, to newVal: Double) {
         switch factorName {
-            // BULLISH
         case "Halving":
             halvingBumpUnified = newVal
         case "InstitutionalDemand":
@@ -563,8 +508,6 @@ class SimulationSettings: ObservableObject {
             maxAltcoinBoostUnified = newVal
         case "AdoptionFactor":
             adoptionBaseFactorUnified = newVal
-            
-            // BEARISH
         case "RegClampdown":
             maxClampDownUnified = newVal
         case "CompetitorCoin":
@@ -583,7 +526,6 @@ class SimulationSettings: ObservableObject {
             maxMaturingDropUnified = newVal
         case "Recession":
             maxRecessionDropUnified = newVal
-            
         default:
             break
         }

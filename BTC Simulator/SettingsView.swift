@@ -20,7 +20,7 @@ struct SettingsView: View {
     @State var showResetCriteriaConfirmation = false
     @State var activeFactor: String? = nil
     
-    // Stores the actual numeric value of each factor (halvingBumpUnified, etc.) before toggling off
+    // Stores the actual numeric value of each factor before toggling off
     @State var lastFactorValue: [String: Double] = [:]
     
     // Factor keys
@@ -47,7 +47,7 @@ struct SettingsView: View {
     @State private var disableAnimationNow = false
     @State private var oldFactorEnableFrac: [String: Double] = [:]
     
-    // A helper dictionary to get/set each factor’s numeric property via your “unified” extension.
+    // A helper dictionary to get/set each factor’s numeric property.
     private var factorAccessors: [String: (get: () -> Double, set: (Double) -> Void)] {
         [
             // ---------- BULLISH ----------
@@ -199,12 +199,13 @@ struct SettingsView: View {
                     simSettings.tiltBarValue = displayedTilt
                 }
             }
-            // Sync all factors to the new global slider value (so offsets are preserved)
+            // When the global intensity slider changes…
             .onChange(of: factorIntensity) { newValue in
                 guard hasAppeared else { return }
                 simSettings.syncAllFactorsToIntensity(newValue)
                 simSettings.tiltBarValue = displayedTilt
             }
+            // When the factor toggles change…
             .onChange(of: simSettings.factorEnableFrac) { newVal in
                 disableAnimationNow = false
 
@@ -220,25 +221,25 @@ struct SettingsView: View {
                 }
 
                 let wasAllOffBefore = oldFactorEnableFrac.values.allSatisfy { $0 == 0.0 }
+                let isAllOffNow = newVal.values.allSatisfy { $0 == 0.0 }
 
                 // Store/restore custom values on toggle
                 for factorName in newVal.keys {
                     let oldFrac = oldFactorEnableFrac[factorName] ?? 0.0
                     let newFrac = newVal[factorName] ?? 0.0
 
-                    // Turned OFF? Store current numeric value.
+                    // When turned OFF, store the current numeric value.
                     if oldFrac > 0.0, newFrac == 0.0 {
                         if let accessor = factorAccessors[factorName] {
                             lastFactorValue[factorName] = accessor.get()
                         }
                     }
-                    // Turned ON? Restore the stored custom value.
+                    // When turned ON, restore the stored value.
                     else if oldFrac == 0.0, newFrac > 0.0 {
                         if let storedVal = lastFactorValue[factorName] {
                             let t = factorIntensity
-                            if let baseVal = simSettings.baseValue(for: factorName, intensity: t) {
-                                simSettings.manualOffsets[factorName] = storedVal - baseVal
-                            }
+                            // Note: using baseValForFactor (or your equivalent baseValue method)
+                            simSettings.manualOffsets[factorName] = storedVal - simSettings.baseValForFactor(factorName, intensity: t)
                             withTransaction(Transaction(animation: nil)) {
                                 factorAccessors[factorName]?.set(storedVal)
                             }
@@ -250,23 +251,25 @@ struct SettingsView: View {
                     }
                 }
 
-                oldFactorEnableFrac = newVal
-
-                let isAllOffNow = newVal.values.allSatisfy { $0 == 0.0 }
+                // NEW: When toggling from all OFF to ON, update the baseline to the current tilt.
+                if wasAllOffBefore && !isAllOffNow {
+                    simSettings.defaultTilt = computeActiveNetTilt()
+                }
+                
+                // When toggling from ON to OFF, reset the baseline.
                 if !wasAllOffBefore && isAllOffNow {
                     simSettings.defaultTilt = 0.0
                     simSettings.hasCapturedDefault = true
                     simSettings.maxSwing = 1.0
                 }
 
+                oldFactorEnableFrac = newVal
+
                 simSettings.tiltBarValue = displayedTilt
 
-                // Force a re-sync of all factors so the restored manual offsets are applied.
+                // Force a re-sync of all factors so that restored manual offsets take effect.
                 simSettings.syncAllFactorsToIntensity(factorIntensity)
             }
-            // If you want to re-enable factorEnableFrac animation, uncomment here
-            // .animation(hasAppeared ? (disableAnimationNow ? nil : .easeInOut(duration: 0.3)) : nil,
-            //            value: simSettings.factorEnableFrac)
             .animation(hasAppeared ? .easeInOut(duration: 0.3) : nil, value: factorIntensity)
             .animation(hasAppeared ? .easeInOut(duration: 0.3) : nil, value: displayedTilt)
     }
