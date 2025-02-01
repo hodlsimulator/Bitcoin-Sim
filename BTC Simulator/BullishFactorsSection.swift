@@ -32,27 +32,16 @@ struct BullishFactorsSection: View {
                 isOn: Binding<Bool>(
                     get: { simSettings.useHalvingWeekly },
                     set: { newValue in
+                        // Toggle on/off but don't force a default numericVal here
                         simSettings.useHalvingWeekly = newValue
                         simSettings.useHalvingMonthly = newValue
                         
                         if newValue {
-                            // If toggled on, assign the numeric default based on weekly vs monthly
-                            let numericVal = simSettings.periodUnit == .weeks
-                                ? 0.3298386887
-                                : 0.35
-                            simSettings.halvingBumpUnified = numericVal
-                            
-                            // Convert numeric value to a 0..1 fraction for the tilt
-                            let fraction = simSettings.fractionFromValue(
-                                "Halving",
-                                value: numericVal,
-                                isWeekly: (simSettings.periodUnit == .weeks)
-                            )
-                            factorEnableFrac["Halving"] = fraction
+                            // Just let SettingsView restore any previous custom numeric
+                            // Don’t overwrite with a “default”
                         } else {
                             factorEnableFrac["Halving"] = 0.0
                         }
-                        
                         animateFactor("Halving", newValue)
                     }
                 ),
@@ -100,17 +89,7 @@ struct BullishFactorsSection: View {
                         simSettings.useInstitutionalDemandMonthly = newValue
                         
                         if newValue {
-                            let numericVal = simSettings.periodUnit == .weeks
-                                ? 0.001239
-                                : 0.0056589855
-                            simSettings.maxDemandBoostUnified = numericVal
-                            
-                            let fraction = simSettings.fractionFromValue(
-                                "InstitutionalDemand",
-                                value: numericVal,
-                                isWeekly: (simSettings.periodUnit == .weeks)
-                            )
-                            factorEnableFrac["InstitutionalDemand"] = fraction
+                            // Don’t force a numeric default here
                         } else {
                             factorEnableFrac["InstitutionalDemand"] = 0.0
                         }
@@ -158,17 +137,7 @@ struct BullishFactorsSection: View {
                         simSettings.useCountryAdoptionMonthly = newValue
                         
                         if newValue {
-                            let numericVal = simSettings.periodUnit == .weeks
-                                ? 0.0011375879977
-                                : 0.005515515952320099
-                            simSettings.maxCountryAdBoostUnified = numericVal
-                            
-                            let fraction = simSettings.fractionFromValue(
-                                "CountryAdoption",
-                                value: numericVal,
-                                isWeekly: (simSettings.periodUnit == .weeks)
-                            )
-                            factorEnableFrac["CountryAdoption"] = fraction
+                            // Don’t force a numeric default
                         } else {
                             factorEnableFrac["CountryAdoption"] = 0.0
                         }
@@ -217,17 +186,7 @@ struct BullishFactorsSection: View {
                         simSettings.useRegulatoryClarityMonthly = newValue
                         
                         if newValue {
-                            let numericVal = simSettings.periodUnit == .weeks
-                                ? 0.0007170254861605167
-                                : 0.0040737327
-                            simSettings.maxClarityBoostUnified = numericVal
-                            
-                            let fraction = simSettings.fractionFromValue(
-                                "RegulatoryClarity",
-                                value: numericVal,
-                                isWeekly: (simSettings.periodUnit == .weeks)
-                            )
-                            factorEnableFrac["RegulatoryClarity"] = fraction
+                            // No forced numeric
                         } else {
                             factorEnableFrac["RegulatoryClarity"] = 0.0
                         }
@@ -276,17 +235,7 @@ struct BullishFactorsSection: View {
                         simSettings.useEtfApprovalMonthly = newValue
                         
                         if newValue {
-                            let numericVal = simSettings.periodUnit == .weeks
-                                ? 0.0017880183160305023
-                                : 0.0057142851
-                            simSettings.maxEtfBoostUnified = numericVal
-                            
-                            let fraction = simSettings.fractionFromValue(
-                                "EtfApproval",
-                                value: numericVal,
-                                isWeekly: (simSettings.periodUnit == .weeks)
-                            )
-                            factorEnableFrac["EtfApproval"] = fraction
+                            // No forced numeric
                         } else {
                             factorEnableFrac["EtfApproval"] = 0.0
                         }
@@ -335,17 +284,7 @@ struct BullishFactorsSection: View {
                         simSettings.useTechBreakthroughMonthly = newValue
                         
                         if newValue {
-                            let numericVal = simSettings.periodUnit == .weeks
-                                ? 0.0006083193579173088
-                                : 0.0028387091
-                            simSettings.maxTechBoostUnified = numericVal
-                            
-                            let fraction = simSettings.fractionFromValue(
-                                "TechBreakthrough",
-                                value: numericVal,
-                                isWeekly: (simSettings.periodUnit == .weeks)
-                            )
-                            factorEnableFrac["TechBreakthrough"] = fraction
+                            // No forced numeric
                         } else {
                             factorEnableFrac["TechBreakthrough"] = 0.0
                         }
@@ -394,17 +333,7 @@ struct BullishFactorsSection: View {
                         simSettings.useScarcityEventsMonthly = newValue
                         
                         if newValue {
-                            let numericVal = simSettings.periodUnit == .weeks
-                                ? 0.00041308753681182863
-                                : 0.0032928705475521085
-                            simSettings.maxScarcityBoostUnified = numericVal
-                            
-                            let fraction = simSettings.fractionFromValue(
-                                "ScarcityEvents",
-                                value: numericVal,
-                                isWeekly: (simSettings.periodUnit == .weeks)
-                            )
-                            factorEnableFrac["ScarcityEvents"] = fraction
+                            // No forced numeric
                         } else {
                             factorEnableFrac["ScarcityEvents"] = 0.0
                         }
@@ -453,17 +382,7 @@ struct BullishFactorsSection: View {
                         simSettings.useGlobalMacroHedgeMonthly = newValue
                         
                         if newValue {
-                            let numericVal = simSettings.periodUnit == .weeks
-                                ? 0.0003497809724932909
-                                : 0.0032442397
-                            simSettings.maxMacroBoostUnified = numericVal
-                            
-                            let fraction = simSettings.fractionFromValue(
-                                "GlobalMacroHedge",
-                                value: numericVal,
-                                isWeekly: (simSettings.periodUnit == .weeks)
-                            )
-                            factorEnableFrac["GlobalMacroHedge"] = fraction
+                            // No forced numeric
                         } else {
                             factorEnableFrac["GlobalMacroHedge"] = 0.0
                         }
@@ -512,17 +431,7 @@ struct BullishFactorsSection: View {
                         simSettings.useStablecoinShiftMonthly = newValue
                         
                         if newValue {
-                            let numericVal = simSettings.periodUnit == .weeks
-                                ? 0.0003312209116327763
-                                : 0.0023041475
-                            simSettings.maxStablecoinBoostUnified = numericVal
-                            
-                            let fraction = simSettings.fractionFromValue(
-                                "StablecoinShift",
-                                value: numericVal,
-                                isWeekly: (simSettings.periodUnit == .weeks)
-                            )
-                            factorEnableFrac["StablecoinShift"] = fraction
+                            // No forced numeric
                         } else {
                             factorEnableFrac["StablecoinShift"] = 0.0
                         }
@@ -570,17 +479,7 @@ struct BullishFactorsSection: View {
                         simSettings.useDemographicAdoptionMonthly = newValue
                         
                         if newValue {
-                            let numericVal = simSettings.periodUnit == .weeks
-                                ? 0.0010619932036626339
-                                : 0.007291124714649915
-                            simSettings.maxDemoBoostUnified = numericVal
-                            
-                            let fraction = simSettings.fractionFromValue(
-                                "DemographicAdoption",
-                                value: numericVal,
-                                isWeekly: (simSettings.periodUnit == .weeks)
-                            )
-                            factorEnableFrac["DemographicAdoption"] = fraction
+                            // No forced numeric
                         } else {
                             factorEnableFrac["DemographicAdoption"] = 0.0
                         }
@@ -628,17 +527,7 @@ struct BullishFactorsSection: View {
                         simSettings.useAltcoinFlightMonthly = newValue
                         
                         if newValue {
-                            let numericVal = simSettings.periodUnit == .weeks
-                                ? 0.0002802194461803342
-                                : 0.0021566817
-                            simSettings.maxAltcoinBoostUnified = numericVal
-                            
-                            let fraction = simSettings.fractionFromValue(
-                                "AltcoinFlight",
-                                value: numericVal,
-                                isWeekly: (simSettings.periodUnit == .weeks)
-                            )
-                            factorEnableFrac["AltcoinFlight"] = fraction
+                            // No forced numeric
                         } else {
                             factorEnableFrac["AltcoinFlight"] = 0.0
                         }
@@ -686,17 +575,7 @@ struct BullishFactorsSection: View {
                         simSettings.useAdoptionFactorMonthly = newValue
                         
                         if newValue {
-                            let numericVal = simSettings.periodUnit == .weeks
-                                ? 0.0016045109088897705
-                                : 0.014660959934071304
-                            simSettings.adoptionBaseFactorUnified = numericVal
-                            
-                            let fraction = simSettings.fractionFromValue(
-                                "AdoptionFactor",
-                                value: numericVal,
-                                isWeekly: (simSettings.periodUnit == .weeks)
-                            )
-                            factorEnableFrac["AdoptionFactor"] = fraction
+                            // No forced numeric
                         } else {
                             factorEnableFrac["AdoptionFactor"] = 0.0
                         }

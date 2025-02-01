@@ -536,4 +536,62 @@ extension SimulationSettings {
             return (0.0, 1.0)
         }
     }
+    
+    /// Sync exactly one factor to the global `factorIntensity`.
+        /// Similar logic as `syncOneFactor(...)`, but applies to just one factor.
+        func syncSingleFactorToIntensity(_ factorName: String, factorIntensity: Double) {
+            // If the factor is off (frac=0), skip
+            guard let frac = factorEnableFrac[factorName], frac > 0 else {
+                return
+            }
+
+            // Figure out if we are weekly or monthly
+            let isWeekly = (periodUnit == .weeks)
+            
+            // Get that factor’s minVal, maxVal from your `factorRange(...)` function
+            let (minVal, maxVal) = factorRange(for: factorName, isWeekly: isWeekly)
+            
+            // If you want to do the “centered at a default” approach, you need the factor’s midVal.
+            // But you do that in `syncOneFactor(...)` by passing a known defaultHalvingBumpWeekly, etc.
+            // For a quick approach, let’s just say “midVal = (minVal + maxVal)/2”.
+            // If you want the real default from your code, you can do a switch statement or replicate your existing approach.
+            
+            let midVal = (minVal + maxVal) / 2.0
+            
+            // Now do the same mapping:
+            if factorIntensity < 0.5 {
+                let ratio = factorIntensity / 0.5 // ratio in [0..1]
+                let newVal = midVal - (midVal - minVal) * (1.0 - ratio)
+                assignValue(to: factorName, newVal: newVal)
+            } else {
+                let ratio = (factorIntensity - 0.5) / 0.5 // ratio in [0..1]
+                let newVal = midVal + (maxVal - midVal) * ratio
+                assignValue(to: factorName, newVal: newVal)
+            }
+        }
+        
+        /// A helper that assigns `newVal` to the correct property
+        private func assignValue(to factorName: String, newVal: Double) {
+            switch factorName {
+                case "Halving":
+                    halvingBumpUnified = newVal
+                case "InstitutionalDemand":
+                    maxDemandBoostUnified = newVal
+                // etc. for each factor
+                default:
+                    break
+            }
+        }
+    
+    func setNumericValue(for factorName: String, to newVal: Double) {
+            switch factorName {
+            case "Halving":
+                halvingBumpUnified = newVal
+            case "InstitutionalDemand":
+                maxDemandBoostUnified = newVal
+            // etc. for each factor
+            default:
+                break
+            }
+        }
 }

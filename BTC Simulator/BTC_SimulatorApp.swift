@@ -104,7 +104,7 @@ struct BTCMonteCarloApp: App {
             }
             .onAppear {
                 // Load user defaults
-                simSettings.loadFromUserDefaults()
+                // simSettings.loadFromUserDefaults()
                 simSettings.isOnboarding = !didFinishOnboarding
 
                 // 1. Load weekly data

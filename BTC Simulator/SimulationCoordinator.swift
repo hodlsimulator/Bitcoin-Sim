@@ -34,7 +34,7 @@ class SimulationCoordinator: ObservableObject {
 
     var chartDataCache: ChartDataCache
     var mempoolDataManager: MempoolDataManager?
-    private var simSettings: SimulationSettings
+    private(set) var simSettings: SimulationSettings
     private var inputManager: PersistentInputManager
         
     @Published var simChartSelection: SimChartSelection

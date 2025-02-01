@@ -379,10 +379,10 @@ extension SettingsView {
     func animateFactor(_ key: String, isOn: Bool) {
         if isOn {
             withAnimation(.easeInOut(duration: 0.6)) {
-                simSettings.factorEnableFrac[key] = lastFactorFrac[key] ?? 1.0
+                simSettings.factorEnableFrac[key] = lastFactorValue[key] ?? 1.0
             }
         } else {
-            lastFactorFrac[key] = simSettings.factorEnableFrac[key] ?? 1.0
+            lastFactorValue[key] = simSettings.factorEnableFrac[key] ?? 1.0
             withAnimation(.easeInOut(duration: 0.6)) {
                 simSettings.factorEnableFrac[key] = 0
             }
