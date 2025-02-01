@@ -14,7 +14,7 @@ struct SettingsView: View {
     @AppStorage("showAdvancedSettings") private var showAdvancedSettings: Bool = false
     
     // Global slider
-    @AppStorage("factorIntensity") var factorIntensity: Double = 0.5
+    // @AppStorage("factorIntensity") var factorIntensity: Double = 0.5
     @State var oldFactorIntensity: Double = 0.5
     
     @State var showResetCriteriaConfirmation = false
@@ -45,7 +45,7 @@ struct SettingsView: View {
     @State private var hasAppeared = false
     @State private var firstToggleOff = true
     @State private var disableAnimationNow = false
-    @State private var oldFactorEnableFrac: [String: Double] = [:]
+    @State var oldFactorEnableFrac: [String: Double] = [:]
     
     // A helper dictionary to get/set each factor’s numeric property.
     private var factorAccessors: [String: (get: () -> Double, set: (Double) -> Void)] {
@@ -199,12 +199,14 @@ struct SettingsView: View {
                     simSettings.tiltBarValue = displayedTilt
                 }
             }
-            .onChange(of: factorIntensity) { newValue in
+            .onChange(of: simSettings.factorIntensity) { newValue in
                 guard hasAppeared else { return }
                 simSettings.syncAllFactorsToIntensity(newValue)
                 simSettings.tiltBarValue = displayedTilt
             }
             .onChange(of: simSettings.factorEnableFrac) { newVal in
+                guard !simSettings.isRestoringDefaults else { return }
+                
                 disableAnimationNow = false
 
                 if firstToggleOff {
@@ -231,7 +233,7 @@ struct SettingsView: View {
                         }
                     } else if oldFrac == 0.0, newFrac > 0.0 {
                         if let storedVal = lastFactorValue[factorName] {
-                            let t = factorIntensity
+                            let t = simSettings.factorIntensity
                             simSettings.manualOffsets[factorName] = storedVal - simSettings.baseValForFactor(factorName, intensity: t)
                             withTransaction(Transaction(animation: nil)) {
                                 factorAccessors[factorName]?.set(storedVal)
@@ -258,9 +260,9 @@ struct SettingsView: View {
 
                 simSettings.tiltBarValue = displayedTilt
 
-                simSettings.syncAllFactorsToIntensity(factorIntensity)
+                simSettings.syncAllFactorsToIntensity(simSettings.factorIntensity)
             }
-            .animation(hasAppeared ? .easeInOut(duration: 0.3) : nil, value: factorIntensity)
+            .animation(hasAppeared ? .easeInOut(duration: 0.3) : nil, value: simSettings.factorIntensity)
             .animation(hasAppeared ? .easeInOut(duration: 0.3) : nil, value: displayedTilt)
     }
     
@@ -317,7 +319,7 @@ struct SettingsView: View {
         guard anyActive else {
             return 0.0
         }
-        let eff = invertedSCurve(factorIntensity, steepness: 12.0)
+        let eff = invertedSCurve(simSettings.factorIntensity, steepness: 12.0)
         
         let bullishTotal = bullishKeys.reduce(0.0) { accum, key in
             let frac = simSettings.factorEnableFrac[key] ?? 0.0

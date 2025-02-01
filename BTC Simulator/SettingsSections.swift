@@ -91,29 +91,21 @@ extension SettingsView {
     var restoreDefaultsSection: some View {
         Section {
             Button(action: {
-                // 1) Reset everything
                 simSettings.restoreDefaults()
-                
-                // 2) Put the global factor slider back to 0.5
+                lastFactorValue = [:]  // Clear leftover values
+                // Immediately set oldFactorEnableFrac to match the newly assigned factorEnableFrac
+                // so that onChange doesn't see a difference after isRestoringDefaults = false
+                oldFactorEnableFrac = simSettings.factorEnableFrac
                 simSettings.factorIntensity = 0.5
-                oldFactorIntensity = 0.5
-                
-                // 3) Sync factors & capture a fresh baseline AFTER defaults are set
+
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                     simSettings.syncAllFactorsToIntensity(0.5)
-                    
                     let tiltNow = computeActiveNetTilt()
-                    
-                    // Make that the new baseline
                     simSettings.defaultTilt = tiltNow
                     simSettings.hasCapturedDefault = true
-                    
-                    // Update maxSwing
                     let allBull = computeIfAllBullish() - tiltNow
                     let allBear = computeIfAllBearish() - tiltNow
                     simSettings.maxSwing = max(abs(allBull), abs(allBear), 0.00001)
-                    
-                    // Finally, set the tilt bar to zero so it shows neutral
                     simSettings.tiltBarValue = 0.0
                 }
             }) {

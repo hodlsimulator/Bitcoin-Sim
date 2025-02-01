@@ -137,12 +137,22 @@ struct FactorToggleRow: View {
                 Toggle("", isOn: $isOn)
                     .labelsHidden()
                     .tint(.orange)
-                // Removed the onChange that forced sliderValue to midpoint
             }
 
             // Slider row
             HStack {
-                Slider(value: $sliderValue, in: sliderRange)
+                // Normalise the slider value from sliderRange to 0...1.
+                let range = sliderRange.upperBound - sliderRange.lowerBound
+                let normalizedBinding = Binding<Double>(
+                    get: {
+                        (sliderValue - sliderRange.lowerBound) / range
+                    },
+                    set: { newNormalized in
+                        sliderValue = sliderRange.lowerBound + newNormalized * range
+                    }
+                )
+
+                Slider(value: normalizedBinding, in: 0...1)
                     .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
                     .disabled(!isOn)
 

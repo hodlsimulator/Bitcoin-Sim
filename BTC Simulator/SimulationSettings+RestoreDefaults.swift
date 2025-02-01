@@ -9,15 +9,17 @@ import SwiftUI
 
 extension SimulationSettings {
     func restoreDefaults() {
+        // 1) Signal that we're doing a bulk restore so onChange logic is skipped
+        isRestoringDefaults = true
         print("RESTORE DEFAULTS CALLED!")
+        
         let defaults = UserDefaults.standard
         
-        // Remove the old factorIntensity from user defaults (optional)
+        // If you want to remove old factorIntensity from user defaults
         UserDefaults.standard.removeObject(forKey: "factorIntensity")
-        // Then set it to 0.5
         factorIntensity = 0.5
         
-        // Clear all manual offsets so that no custom adjustments remain.
+        // Clear all manual offsets and leftover stored values
         manualOffsets = [:]
 
         // Keep any general toggles you want to preserve:
@@ -332,67 +334,67 @@ extension SimulationSettings {
         // each "unified" factor to a default/midpoint value.
         // --------------------------------------------------
         
-        factorEnableFrac["Halving"] = 1.0
+        factorEnableFrac["Halving"] = 0.5
         halvingBumpUnified = 0.3298386887 // midpoint of 0.2773386887...0.3823386887
 
-        factorEnableFrac["InstitutionalDemand"] = 1.0
+        factorEnableFrac["InstitutionalDemand"] = 0.5
         maxDemandBoostUnified = 0.001239 // midpoint of 0.00105315...0.00142485
 
-        factorEnableFrac["CountryAdoption"] = 1.0
+        factorEnableFrac["CountryAdoption"] = 0.5
         maxCountryAdBoostUnified = 0.0011375879977
 
-        factorEnableFrac["RegulatoryClarity"] = 1.0
+        factorEnableFrac["RegulatoryClarity"] = 0.5
         maxClarityBoostUnified = 0.0007170254861605167
 
-        factorEnableFrac["EtfApproval"] = 1.0
+        factorEnableFrac["EtfApproval"] = 0.5
         maxEtfBoostUnified = 0.0017880183160305023
 
-        factorEnableFrac["TechBreakthrough"] = 1.0
+        factorEnableFrac["TechBreakthrough"] = 0.5
         maxTechBoostUnified = 0.0006083193579173088
 
-        factorEnableFrac["ScarcityEvents"] = 1.0
+        factorEnableFrac["ScarcityEvents"] = 0.5
         maxScarcityBoostUnified = 0.00041308753681182863
 
-        factorEnableFrac["GlobalMacroHedge"] = 1.0
+        factorEnableFrac["GlobalMacroHedge"] = 0.5
         maxMacroBoostUnified = 0.0003497809724932909
 
-        factorEnableFrac["StablecoinShift"] = 1.0
+        factorEnableFrac["StablecoinShift"] = 0.5
         maxStablecoinBoostUnified = 0.0003312209116327763
 
-        factorEnableFrac["DemographicAdoption"] = 1.0
+        factorEnableFrac["DemographicAdoption"] = 0.5
         maxDemoBoostUnified = 0.001061993203662634
 
-        factorEnableFrac["AltcoinFlight"] = 1.0
+        factorEnableFrac["AltcoinFlight"] = 0.5
         maxAltcoinBoostUnified = 0.0002802194461803342
 
-        factorEnableFrac["AdoptionFactor"] = 1.0
+        factorEnableFrac["AdoptionFactor"] = 0.5
         adoptionBaseFactorUnified = 0.0016045109088897705
 
-        factorEnableFrac["RegClampdown"] = 1.0
+        factorEnableFrac["RegClampdown"] = 0.5
         maxClampDownUnified = -0.0011361452243542672
 
-        factorEnableFrac["CompetitorCoin"] = 1.0
+        factorEnableFrac["CompetitorCoin"] = 0.5
         maxCompetitorBoostUnified = -0.0010148181746411323
 
-        factorEnableFrac["SecurityBreach"] = 1.0
+        factorEnableFrac["SecurityBreach"] = 0.5
         breachImpactUnified = -0.0010914715168380737
 
-        factorEnableFrac["BubblePop"] = 1.0
+        factorEnableFrac["BubblePop"] = 0.5
         maxPopDropUnified = -0.001762673890762329
 
-        factorEnableFrac["StablecoinMeltdown"] = 1.0
+        factorEnableFrac["StablecoinMeltdown"] = 0.5
         maxMeltdownDropUnified = -0.0007141026159477233
 
-        factorEnableFrac["BlackSwan"] = 1.0
+        factorEnableFrac["BlackSwan"] = 0.5
         blackSwanDropUnified = -0.398885
 
-        factorEnableFrac["BearMarket"] = 1.0
+        factorEnableFrac["BearMarket"] = 0.5
         bearWeeklyDriftUnified = -0.0008778802752494812
 
-        factorEnableFrac["MaturingMarket"] = 1.0
+        factorEnableFrac["MaturingMarket"] = 0.5
         maxMaturingDropUnified = -0.0015440231055486196
 
-        factorEnableFrac["Recession"] = 1.0
+        factorEnableFrac["Recession"] = 0.5
         maxRecessionDropUnified = -0.0009005491467487811
         
         // Finally, toggle everything on for the *current* period
@@ -409,5 +411,10 @@ extension SimulationSettings {
         
         // Write changes to disk
         defaults.synchronize()
+        
+        // 2) Delay turning isRestoringDefaults off so factorEnableFrac changes “settle”
+        DispatchQueue.main.async {
+            self.isRestoringDefaults = false
+        }
     }
 }

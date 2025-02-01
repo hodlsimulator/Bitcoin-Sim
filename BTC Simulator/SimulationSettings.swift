@@ -9,6 +9,8 @@ import SwiftUI
 
 class SimulationSettings: ObservableObject {
     
+    @Published var isRestoringDefaults: Bool = false
+
     // MARK: - Factor Toggling
     @Published var factorEnableFrac: [String: Double] = [
         "Halving": 1.0,
