@@ -233,13 +233,16 @@ struct SettingsView: View {
                             lastFactorValue[factorName] = accessor.get()
                         }
                     }
-                    // Turned ON? Restore the stored custom value
+                    // Turned ON? Restore the stored custom value without animation
                     else if oldFrac == 0.0, newFrac > 0.0 {
                         if let storedVal = lastFactorValue[factorName] {
-                            factorAccessors[factorName]?.set(storedVal)
+                            withTransaction(Transaction(animation: nil)) {
+                                factorAccessors[factorName]?.set(storedVal)
+                            }
                         } else {
-                            // If none stored, pick a default (e.g. 0.5)
-                            factorAccessors[factorName]?.set(0.5)
+                            withTransaction(Transaction(animation: nil)) {
+                                factorAccessors[factorName]?.set(0.5)
+                            }
                         }
                     }
                 }
@@ -258,8 +261,8 @@ struct SettingsView: View {
                 // Finally, recalc tiltBarValue
                 simSettings.tiltBarValue = displayedTilt
             }
-            .animation(hasAppeared ? (disableAnimationNow ? nil : .easeInOut(duration: 0.3)) : nil,
-                       value: simSettings.factorEnableFrac)
+            // .animation(hasAppeared ? (disableAnimationNow ? nil : .easeInOut(duration: 0.3)) : nil,
+            //           value: simSettings.factorEnableFrac)
             .animation(hasAppeared ? .easeInOut(duration: 0.3) : nil, value: factorIntensity)
             .animation(hasAppeared ? .easeInOut(duration: 0.3) : nil, value: displayedTilt)
     }

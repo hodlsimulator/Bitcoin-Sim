@@ -137,13 +137,7 @@ struct FactorToggleRow: View {
                 Toggle("", isOn: $isOn)
                     .labelsHidden()
                     .tint(.orange)
-                    .onChange(of: isOn) { newValue in
-                        // If factor just got toggled on, set slider to midpoint
-                        if newValue {
-                            let mid = (sliderRange.lowerBound + sliderRange.upperBound) / 2.0
-                            sliderValue = mid
-                        }
-                    }
+                // Removed the onChange that forced sliderValue to midpoint
             }
 
             // Slider row
@@ -152,15 +146,13 @@ struct FactorToggleRow: View {
                     .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
                     .disabled(!isOn)
 
-                // If this is "Halving", show sliderValue as ".4f%" directly
                 if title == "Halving" {
                     Text(String(format: "%.4f%%", sliderValue))
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .frame(width: 70, alignment: .trailing)
                         .disabled(!isOn)
-                }
-                else if displayAsPercent {
+                } else if displayAsPercent {
                     Text(String(format: "%.4f%%", sliderValue * 100))
                         .font(.caption)
                         .foregroundColor(.secondary)
