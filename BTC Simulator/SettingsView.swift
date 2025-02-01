@@ -208,7 +208,6 @@ struct SettingsView: View {
             .onChange(of: simSettings.factorEnableFrac) { newVal in
                 disableAnimationNow = false
 
-                // Possibly skip animations for first toggle-off
                 if firstToggleOff {
                     for (key, oldVal) in oldFactorEnableFrac {
                         let updatedVal = newVal[key] ?? 0.0
@@ -220,23 +219,26 @@ struct SettingsView: View {
                     }
                 }
 
-                // Remember if everything was OFF prior
                 let wasAllOffBefore = oldFactorEnableFrac.values.allSatisfy { $0 == 0.0 }
 
-                // ---- SINGLE PASS: store/restore custom values on toggle ----
+                // Store/restore custom values on toggle
                 for factorName in newVal.keys {
                     let oldFrac = oldFactorEnableFrac[factorName] ?? 0.0
                     let newFrac = newVal[factorName] ?? 0.0
 
-                    // Turned OFF? Store current numeric
+                    // Turned OFF? Store current numeric value.
                     if oldFrac > 0.0, newFrac == 0.0 {
                         if let accessor = factorAccessors[factorName] {
                             lastFactorValue[factorName] = accessor.get()
                         }
                     }
-                    // Turned ON? Restore the stored custom value without animation
+                    // Turned ON? Restore the stored custom value.
                     else if oldFrac == 0.0, newFrac > 0.0 {
                         if let storedVal = lastFactorValue[factorName] {
+                            let t = factorIntensity
+                            if let baseVal = simSettings.baseValue(for: factorName, intensity: t) {
+                                simSettings.manualOffsets[factorName] = storedVal - baseVal
+                            }
                             withTransaction(Transaction(animation: nil)) {
                                 factorAccessors[factorName]?.set(storedVal)
                             }
@@ -248,10 +250,8 @@ struct SettingsView: View {
                     }
                 }
 
-                // Update oldFactorEnableFrac after the single pass
                 oldFactorEnableFrac = newVal
 
-                // Check if everything just switched OFF => neutral tilt
                 let isAllOffNow = newVal.values.allSatisfy { $0 == 0.0 }
                 if !wasAllOffBefore && isAllOffNow {
                     simSettings.defaultTilt = 0.0
@@ -259,8 +259,10 @@ struct SettingsView: View {
                     simSettings.maxSwing = 1.0
                 }
 
-                // Finally, recalc tiltBarValue
                 simSettings.tiltBarValue = displayedTilt
+
+                // Force a re-sync of all factors so the restored manual offsets are applied.
+                simSettings.syncAllFactorsToIntensity(factorIntensity)
             }
             // If you want to re-enable factorEnableFrac animation, uncomment here
             // .animation(hasAppeared ? (disableAnimationNow ? nil : .easeInOut(duration: 0.3)) : nil,

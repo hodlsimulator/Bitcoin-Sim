@@ -548,4 +548,260 @@ extension SimulationSettings {
         
         assign(computedVal)
     }
+    
+    func baseValue(for factorName: String, intensity t: Double) -> Double? {
+            switch periodUnit {
+            case .weeks:
+                switch factorName {
+                
+                // ----------------
+                // BULLISH (WEEKLY)
+                // ----------------
+                case "Halving":
+                    return computeBase(t: t,
+                                       midVal: SimulationSettings.defaultHalvingBumpWeekly,
+                                       minVal: 0.2773386887,
+                                       maxVal: 0.3823386887)
+                case "InstitutionalDemand":
+                    return computeBase(t: t,
+                                       midVal: SimulationSettings.defaultMaxDemandBoostWeekly,
+                                       minVal: 0.00105315,
+                                       maxVal: 0.00142485)
+                case "CountryAdoption":
+                    return computeBase(t: t,
+                                       midVal: SimulationSettings.defaultMaxCountryAdBoostWeekly,
+                                       minVal: 0.0009882799977,
+                                       maxVal: 0.0012868959977)
+                case "RegulatoryClarity":
+                    return computeBase(t: t,
+                                       midVal: SimulationSettings.defaultMaxClarityBoostWeekly,
+                                       minVal: 0.0005979474861605167,
+                                       maxVal: 0.0008361034861605167)
+                case "EtfApproval":
+                    return computeBase(t: t,
+                                       midVal: SimulationSettings.defaultMaxEtfBoostWeekly,
+                                       minVal: 0.0014880183160305023,
+                                       maxVal: 0.0020880183160305023)
+                case "TechBreakthrough":
+                    return computeBase(t: t,
+                                       midVal: SimulationSettings.defaultMaxTechBoostWeekly,
+                                       minVal: 0.0005015753579173088,
+                                       maxVal: 0.0007150633579173088)
+                case "ScarcityEvents":
+                    return computeBase(t: t,
+                                       midVal: SimulationSettings.defaultMaxScarcityBoostWeekly,
+                                       minVal: 0.00035112353681182863,
+                                       maxVal: 0.00047505153681182863)
+                case "GlobalMacroHedge":
+                    return computeBase(t: t,
+                                       midVal: SimulationSettings.defaultMaxMacroBoostWeekly,
+                                       minVal: 0.0002868789724932909,
+                                       maxVal: 0.0004126829724932909)
+                case "StablecoinShift":
+                    return computeBase(t: t,
+                                       midVal: SimulationSettings.defaultMaxStablecoinBoostWeekly,
+                                       minVal: 0.0002704809116327763,
+                                       maxVal: 0.0003919609116327763)
+                case "DemographicAdoption":
+                    return computeBase(t: t,
+                                       midVal: SimulationSettings.defaultMaxDemoBoostWeekly,
+                                       minVal: 0.0008661432036626339,
+                                       maxVal: 0.0012578432036626339)
+                case "AltcoinFlight":
+                    return computeBase(t: t,
+                                       midVal: SimulationSettings.defaultMaxAltcoinBoostWeekly,
+                                       minVal: 0.0002381864461803342,
+                                       maxVal: 0.0003222524461803342)
+                case "AdoptionFactor":
+                    return computeBase(t: t,
+                                       midVal: SimulationSettings.defaultAdoptionBaseFactorWeekly,
+                                       minVal: 0.0013638349088897705,
+                                       maxVal: 0.0018451869088897705)
+
+                // ----------------
+                // BEARISH (WEEKLY)
+                // ----------------
+                case "RegClampdown":
+                    return computeBase(t: t,
+                                       midVal: SimulationSettings.defaultMaxClampDownWeekly,
+                                       minVal: -0.0014273392243542672,
+                                       maxVal: -0.0008449512243542672)
+                case "CompetitorCoin":
+                    return computeBase(t: t,
+                                       midVal: SimulationSettings.defaultMaxCompetitorBoostWeekly,
+                                       minVal: -0.0011842141746411323,
+                                       maxVal: -0.0008454221746411323)
+                case "SecurityBreach":
+                    return computeBase(t: t,
+                                       midVal: SimulationSettings.defaultBreachImpactWeekly,
+                                       minVal: -0.0012819675168380737,
+                                       maxVal: -0.0009009755168380737)
+                case "BubblePop":
+                    return computeBase(t: t,
+                                       midVal: SimulationSettings.defaultMaxPopDropWeekly,
+                                       minVal: -0.002244817890762329,
+                                       maxVal: -0.001280529890762329)
+                case "StablecoinMeltdown":
+                    return computeBase(t: t,
+                                       midVal: SimulationSettings.defaultMaxMeltdownDropWeekly,
+                                       minVal: -0.0009681346159477233,
+                                       maxVal: -0.0004600706159477233)
+                case "BlackSwan":
+                    return computeBase(t: t,
+                                       midVal: SimulationSettings.defaultBlackSwanDropWeekly,
+                                       minVal: -0.478662,
+                                       maxVal: -0.319108)
+                case "BearMarket":
+                    return computeBase(t: t,
+                                       midVal: SimulationSettings.defaultBearWeeklyDriftWeekly,
+                                       minVal: -0.0010278802752494812,
+                                       maxVal: -0.0007278802752494812)
+                case "MaturingMarket":
+                    return computeBase(t: t,
+                                       midVal: SimulationSettings.defaultMaxMaturingDropWeekly,
+                                       minVal: -0.0020343461055486196,
+                                       maxVal: -0.0010537001055486196)
+                case "Recession":
+                    return computeBase(t: t,
+                                       midVal: SimulationSettings.defaultMaxRecessionDropWeekly,
+                                       minVal: -0.0010516462467487811,
+                                       maxVal: -0.0007494520467487811)
+
+                default:
+                    return nil
+                }
+                
+            case .months:
+                switch factorName {
+                
+                // -----------------
+                // BULLISH (MONTHLY)
+                // -----------------
+                case "Halving":
+                    return computeBase(t: t,
+                                       midVal: SimulationSettings.defaultHalvingBumpMonthly,
+                                       minVal: 0.2975,
+                                       maxVal: 0.4025)
+                case "InstitutionalDemand":
+                    return computeBase(t: t,
+                                       midVal: SimulationSettings.defaultMaxDemandBoostMonthly,
+                                       minVal: 0.0048101384,
+                                       maxVal: 0.0065078326)
+                case "CountryAdoption":
+                    return computeBase(t: t,
+                                       midVal: SimulationSettings.defaultMaxCountryAdBoostMonthly,
+                                       minVal: 0.004688188952320099,
+                                       maxVal: 0.006342842952320099)
+                case "RegulatoryClarity":
+                    return computeBase(t: t,
+                                       midVal: SimulationSettings.defaultMaxClarityBoostMonthly,
+                                       minVal: 0.0034626727,
+                                       maxVal: 0.0046847927)
+                case "EtfApproval":
+                    return computeBase(t: t,
+                                       midVal: SimulationSettings.defaultMaxEtfBoostMonthly,
+                                       minVal: 0.0048571421,
+                                       maxVal: 0.0065714281)
+                case "TechBreakthrough":
+                    return computeBase(t: t,
+                                       midVal: SimulationSettings.defaultMaxTechBoostMonthly,
+                                       minVal: 0.0024129091,
+                                       maxVal: 0.0032645091)
+                case "ScarcityEvents":
+                    return computeBase(t: t,
+                                       midVal: SimulationSettings.defaultMaxScarcityBoostMonthly,
+                                       minVal: 0.0027989405475521085,
+                                       maxVal: 0.0037868005475521085)
+                case "GlobalMacroHedge":
+                    return computeBase(t: t,
+                                       midVal: SimulationSettings.defaultMaxMacroBoostMonthly,
+                                       minVal: 0.0027576037,
+                                       maxVal: 0.0037308757)
+                case "StablecoinShift":
+                    return computeBase(t: t,
+                                       midVal: SimulationSettings.defaultMaxStablecoinBoostMonthly,
+                                       minVal: 0.0019585255,
+                                       maxVal: 0.0026497695)
+                case "DemographicAdoption":
+                    return computeBase(t: t,
+                                       midVal: SimulationSettings.defaultMaxDemoBoostMonthly,
+                                       minVal: 0.006197455714649915,
+                                       maxVal: 0.008384793714649915)
+                case "AltcoinFlight":
+                    return computeBase(t: t,
+                                       midVal: SimulationSettings.defaultMaxAltcoinBoostMonthly,
+                                       minVal: 0.0018331797,
+                                       maxVal: 0.0024801837)
+                case "AdoptionFactor":
+                    return computeBase(t: t,
+                                       midVal: SimulationSettings.defaultAdoptionBaseFactorMonthly,
+                                       minVal: 0.012461815934071304,
+                                       maxVal: 0.016860103934071304)
+
+                // -----------------
+                // BEARISH (MONTHLY)
+                // -----------------
+                case "RegClampdown":
+                    return computeBase(t: t,
+                                       midVal: SimulationSettings.defaultMaxClampDownMonthly,
+                                       minVal: -0.023,
+                                       maxVal: -0.017)
+                case "CompetitorCoin":
+                    return computeBase(t: t,
+                                       midVal: SimulationSettings.defaultMaxCompetitorBoostMonthly,
+                                       minVal: -0.0092,
+                                       maxVal: -0.0068)
+                case "SecurityBreach":
+                    return computeBase(t: t,
+                                       midVal: SimulationSettings.defaultBreachImpactMonthly,
+                                       minVal: -0.00805,
+                                       maxVal: -0.00595)
+                case "BubblePop":
+                    return computeBase(t: t,
+                                       midVal: SimulationSettings.defaultMaxPopDropMonthly,
+                                       minVal: -0.0115,
+                                       maxVal: -0.0085)
+                case "StablecoinMeltdown":
+                    return computeBase(t: t,
+                                       midVal: SimulationSettings.defaultMaxMeltdownDropMonthly,
+                                       minVal: -0.013,
+                                       maxVal: -0.007)
+                case "BlackSwan":
+                    return computeBase(t: t,
+                                       midVal: SimulationSettings.defaultBlackSwanDropMonthly,
+                                       minVal: -0.48,
+                                       maxVal: -0.32)
+                case "BearMarket":
+                    return computeBase(t: t,
+                                       midVal: SimulationSettings.defaultBearWeeklyDriftMonthly,
+                                       minVal: -0.013,
+                                       maxVal: -0.007)
+                case "MaturingMarket":
+                    return computeBase(t: t,
+                                       midVal: SimulationSettings.defaultMaxMaturingDropMonthly,
+                                       minVal: -0.013,
+                                       maxVal: -0.007)
+                case "Recession":
+                    return computeBase(t: t,
+                                       midVal: SimulationSettings.defaultMaxRecessionDropMonthly,
+                                       minVal: -0.0015958890,
+                                       maxVal: -0.0013057270)
+                
+                default:
+                    return nil
+                }
+            }
+        }
+        
+        private func computeBase(t: Double, midVal: Double, minVal: Double, maxVal: Double) -> Double {
+            if t < 0.5 {
+                // Range from midVal down to minVal
+                let ratio = t / 0.5
+                return midVal - (midVal - minVal) * (1.0 - ratio)
+            } else {
+                // Range from midVal up to maxVal
+                let ratio = (t - 0.5) / 0.5
+                return midVal + (maxVal - midVal) * ratio
+            }
+        }
 }
