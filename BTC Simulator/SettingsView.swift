@@ -199,13 +199,11 @@ struct SettingsView: View {
                     simSettings.tiltBarValue = displayedTilt
                 }
             }
-            // When the global intensity slider changes…
             .onChange(of: factorIntensity) { newValue in
                 guard hasAppeared else { return }
                 simSettings.syncAllFactorsToIntensity(newValue)
                 simSettings.tiltBarValue = displayedTilt
             }
-            // When the factor toggles change…
             .onChange(of: simSettings.factorEnableFrac) { newVal in
                 disableAnimationNow = false
 
@@ -223,22 +221,17 @@ struct SettingsView: View {
                 let wasAllOffBefore = oldFactorEnableFrac.values.allSatisfy { $0 == 0.0 }
                 let isAllOffNow = newVal.values.allSatisfy { $0 == 0.0 }
 
-                // Store/restore custom values on toggle
                 for factorName in newVal.keys {
                     let oldFrac = oldFactorEnableFrac[factorName] ?? 0.0
                     let newFrac = newVal[factorName] ?? 0.0
 
-                    // When turned OFF, store the current numeric value.
                     if oldFrac > 0.0, newFrac == 0.0 {
                         if let accessor = factorAccessors[factorName] {
                             lastFactorValue[factorName] = accessor.get()
                         }
-                    }
-                    // When turned ON, restore the stored value.
-                    else if oldFrac == 0.0, newFrac > 0.0 {
+                    } else if oldFrac == 0.0, newFrac > 0.0 {
                         if let storedVal = lastFactorValue[factorName] {
                             let t = factorIntensity
-                            // Note: using baseValForFactor (or your equivalent baseValue method)
                             simSettings.manualOffsets[factorName] = storedVal - simSettings.baseValForFactor(factorName, intensity: t)
                             withTransaction(Transaction(animation: nil)) {
                                 factorAccessors[factorName]?.set(storedVal)
@@ -251,12 +244,10 @@ struct SettingsView: View {
                     }
                 }
 
-                // NEW: When toggling from all OFF to ON, update the baseline to the current tilt.
                 if wasAllOffBefore && !isAllOffNow {
                     simSettings.defaultTilt = computeActiveNetTilt()
                 }
                 
-                // When toggling from ON to OFF, reset the baseline.
                 if !wasAllOffBefore && isAllOffNow {
                     simSettings.defaultTilt = 0.0
                     simSettings.hasCapturedDefault = true
@@ -267,7 +258,6 @@ struct SettingsView: View {
 
                 simSettings.tiltBarValue = displayedTilt
 
-                // Force a re-sync of all factors so that restored manual offsets take effect.
                 simSettings.syncAllFactorsToIntensity(factorIntensity)
             }
             .animation(hasAppeared ? .easeInOut(duration: 0.3) : nil, value: factorIntensity)
@@ -347,12 +337,13 @@ struct SettingsView: View {
         let allOff = simSettings.factorEnableFrac.values.allSatisfy { $0 == 0.0 }
         if allOff { return 0.0 }
         guard simSettings.hasCapturedDefault else { return 0.0 }
-        
+
         let activeTilt = computeActiveNetTilt()
         let diff = activeTilt - simSettings.defaultTilt
-        let fraction = diff / max(simSettings.maxSwing, 1e-9)
-        let scaled = fraction * 1.7
-        let finalTilt = tanh(50.0 * scaled)
+        // Assume an expected maximum difference of ~0.001.
+        let fraction = diff / 0.001
+        // Using arctan gives a less steep beginning and keeps moving at the end.
+        let finalTilt = (2.6 / .pi) * atan(2.0 * fraction)
         return finalTilt
     }
     
