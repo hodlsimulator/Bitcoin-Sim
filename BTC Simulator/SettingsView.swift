@@ -16,6 +16,8 @@ struct SettingsView: View {
     // Global slider
     // @AppStorage("factorIntensity") var factorIntensity: Double = 0.5
     @State var oldFactorIntensity: Double = 0.5
+    // New state variable to store the previous default tilt
+    @State var storedDefaultTilt: Double? = nil
     
     @State var showResetCriteriaConfirmation = false
     @State var activeFactor: String? = nil
@@ -245,15 +247,25 @@ struct SettingsView: View {
                         }
                     }
                 }
-
-                if wasAllOffBefore && !isAllOffNow {
-                    simSettings.defaultTilt = computeActiveNetTilt()
-                }
                 
+                // When toggling all off, store the current default tilt and set it to 0
                 if !wasAllOffBefore && isAllOffNow {
+                    storedDefaultTilt = simSettings.defaultTilt
                     simSettings.defaultTilt = 0.0
                     simSettings.hasCapturedDefault = true
                     simSettings.maxSwing = 1.0
+                }
+                
+                // When toggling back on, restore the stored default tilt with an animation
+                if wasAllOffBefore && !isAllOffNow {
+                    if let storedTilt = storedDefaultTilt {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            simSettings.defaultTilt = storedTilt
+                        }
+                        storedDefaultTilt = nil
+                    } else {
+                        simSettings.defaultTilt = computeActiveNetTilt()
+                    }
                 }
 
                 oldFactorEnableFrac = newVal
