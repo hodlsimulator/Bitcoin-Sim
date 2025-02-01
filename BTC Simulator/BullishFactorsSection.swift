@@ -19,7 +19,7 @@ struct BullishFactorsSection: View {
     // Fraction dict for tilt weighting
     @Binding var factorEnableFrac: [String: Double]
     
-    // Called when a toggle changes (if you still want an animation/log)
+    // Called when a toggle changes
     let animateFactor: (String, Bool) -> Void
     
     var body: some View {
@@ -32,33 +32,35 @@ struct BullishFactorsSection: View {
                 isOn: Binding<Bool>(
                     get: { simSettings.useHalvingWeekly },
                     set: { newValue in
-                        simSettings.useHalvingWeekly = newValue
-                        simSettings.useHalvingMonthly = newValue
+                        let s = simSettings
+                        s.useHalvingWeekly = newValue
+                        s.useHalvingMonthly = newValue
                         
                         if newValue {
-                            // Calculate fraction from current numeric
-                            let fraction = simSettings.fractionFromValue(
+                            let fraction = s.fractionFromValue(
                                 "Halving",
-                                value: simSettings.halvingBumpUnified,
-                                isWeekly: simSettings.periodUnit == .weeks
+                                value: s.halvingBumpUnified,
+                                isWeekly: s.periodUnit == .weeks
                             )
                             factorEnableFrac["Halving"] = fraction
                         } else {
                             factorEnableFrac["Halving"] = 0.0
                         }
-                        
                         animateFactor("Halving", newValue)
                     }
                 ),
                 sliderValue: Binding<Double>(
                     get: { simSettings.halvingBumpUnified },
                     set: { newVal in
-                        simSettings.halvingBumpUnified = newVal
-                        if simSettings.useHalvingWeekly {
-                            let fraction = simSettings.fractionFromValue(
+                        let s = simSettings
+                        s.setNumericValue(for: "Halving", to: newVal)
+                        s.updateManualOffset(factorName: "Halving", actualValue: newVal)
+                        
+                        if s.useHalvingWeekly {
+                            let fraction = s.fractionFromValue(
                                 "Halving",
                                 value: newVal,
-                                isWeekly: simSettings.periodUnit == .weeks
+                                isWeekly: s.periodUnit == .weeks
                             )
                             factorEnableFrac["Halving"] = fraction
                         } else {
@@ -87,32 +89,35 @@ struct BullishFactorsSection: View {
                 isOn: Binding<Bool>(
                     get: { simSettings.useInstitutionalDemandWeekly },
                     set: { newValue in
-                        simSettings.useInstitutionalDemandWeekly = newValue
-                        simSettings.useInstitutionalDemandMonthly = newValue
+                        let s = simSettings
+                        s.useInstitutionalDemandWeekly = newValue
+                        s.useInstitutionalDemandMonthly = newValue
                         
                         if newValue {
-                            let fraction = simSettings.fractionFromValue(
+                            let fraction = s.fractionFromValue(
                                 "InstitutionalDemand",
-                                value: simSettings.maxDemandBoostUnified,
-                                isWeekly: simSettings.periodUnit == .weeks
+                                value: s.maxDemandBoostUnified,
+                                isWeekly: s.periodUnit == .weeks
                             )
                             factorEnableFrac["InstitutionalDemand"] = fraction
                         } else {
                             factorEnableFrac["InstitutionalDemand"] = 0.0
                         }
-                        
                         animateFactor("InstitutionalDemand", newValue)
                     }
                 ),
                 sliderValue: Binding<Double>(
                     get: { simSettings.maxDemandBoostUnified },
                     set: { newVal in
-                        simSettings.maxDemandBoostUnified = newVal
-                        if simSettings.useInstitutionalDemandWeekly {
-                            let fraction = simSettings.fractionFromValue(
+                        let s = simSettings
+                        s.setNumericValue(for: "InstitutionalDemand", to: newVal)
+                        s.updateManualOffset(factorName: "InstitutionalDemand", actualValue: newVal)
+                        
+                        if s.useInstitutionalDemandWeekly {
+                            let fraction = s.fractionFromValue(
                                 "InstitutionalDemand",
                                 value: newVal,
-                                isWeekly: (simSettings.periodUnit == .weeks)
+                                isWeekly: s.periodUnit == .weeks
                             )
                             factorEnableFrac["InstitutionalDemand"] = fraction
                         } else {
@@ -140,32 +145,35 @@ struct BullishFactorsSection: View {
                 isOn: Binding<Bool>(
                     get: { simSettings.useCountryAdoptionWeekly },
                     set: { newValue in
-                        simSettings.useCountryAdoptionWeekly = newValue
-                        simSettings.useCountryAdoptionMonthly = newValue
+                        let s = simSettings
+                        s.useCountryAdoptionWeekly = newValue
+                        s.useCountryAdoptionMonthly = newValue
                         
                         if newValue {
-                            let fraction = simSettings.fractionFromValue(
+                            let fraction = s.fractionFromValue(
                                 "CountryAdoption",
-                                value: simSettings.maxCountryAdBoostUnified,
-                                isWeekly: simSettings.periodUnit == .weeks
+                                value: s.maxCountryAdBoostUnified,
+                                isWeekly: s.periodUnit == .weeks
                             )
                             factorEnableFrac["CountryAdoption"] = fraction
                         } else {
                             factorEnableFrac["CountryAdoption"] = 0.0
                         }
-                        
                         animateFactor("CountryAdoption", newValue)
                     }
                 ),
                 sliderValue: Binding<Double>(
                     get: { simSettings.maxCountryAdBoostUnified },
                     set: { newVal in
-                        simSettings.maxCountryAdBoostUnified = newVal
-                        if simSettings.useCountryAdoptionWeekly {
-                            let fraction = simSettings.fractionFromValue(
+                        let s = simSettings
+                        s.setNumericValue(for: "CountryAdoption", to: newVal)
+                        s.updateManualOffset(factorName: "CountryAdoption", actualValue: newVal)
+                        
+                        if s.useCountryAdoptionWeekly {
+                            let fraction = s.fractionFromValue(
                                 "CountryAdoption",
                                 value: newVal,
-                                isWeekly: (simSettings.periodUnit == .weeks)
+                                isWeekly: s.periodUnit == .weeks
                             )
                             factorEnableFrac["CountryAdoption"] = fraction
                         } else {
@@ -194,32 +202,35 @@ struct BullishFactorsSection: View {
                 isOn: Binding<Bool>(
                     get: { simSettings.useRegulatoryClarityWeekly },
                     set: { newValue in
-                        simSettings.useRegulatoryClarityWeekly = newValue
-                        simSettings.useRegulatoryClarityMonthly = newValue
+                        let s = simSettings
+                        s.useRegulatoryClarityWeekly = newValue
+                        s.useRegulatoryClarityMonthly = newValue
                         
                         if newValue {
-                            let fraction = simSettings.fractionFromValue(
+                            let fraction = s.fractionFromValue(
                                 "RegulatoryClarity",
-                                value: simSettings.maxClarityBoostUnified,
-                                isWeekly: (simSettings.periodUnit == .weeks)
+                                value: s.maxClarityBoostUnified,
+                                isWeekly: s.periodUnit == .weeks
                             )
                             factorEnableFrac["RegulatoryClarity"] = fraction
                         } else {
                             factorEnableFrac["RegulatoryClarity"] = 0.0
                         }
-                        
                         animateFactor("RegulatoryClarity", newValue)
                     }
                 ),
                 sliderValue: Binding<Double>(
                     get: { simSettings.maxClarityBoostUnified },
                     set: { newVal in
-                        simSettings.maxClarityBoostUnified = newVal
-                        if simSettings.useRegulatoryClarityWeekly {
-                            let fraction = simSettings.fractionFromValue(
+                        let s = simSettings
+                        s.setNumericValue(for: "RegulatoryClarity", to: newVal)
+                        s.updateManualOffset(factorName: "RegulatoryClarity", actualValue: newVal)
+                        
+                        if s.useRegulatoryClarityWeekly {
+                            let fraction = s.fractionFromValue(
                                 "RegulatoryClarity",
                                 value: newVal,
-                                isWeekly: (simSettings.periodUnit == .weeks)
+                                isWeekly: s.periodUnit == .weeks
                             )
                             factorEnableFrac["RegulatoryClarity"] = fraction
                         } else {
@@ -248,32 +259,35 @@ struct BullishFactorsSection: View {
                 isOn: Binding<Bool>(
                     get: { simSettings.useEtfApprovalWeekly },
                     set: { newValue in
-                        simSettings.useEtfApprovalWeekly = newValue
-                        simSettings.useEtfApprovalMonthly = newValue
+                        let s = simSettings
+                        s.useEtfApprovalWeekly = newValue
+                        s.useEtfApprovalMonthly = newValue
                         
                         if newValue {
-                            let fraction = simSettings.fractionFromValue(
+                            let fraction = s.fractionFromValue(
                                 "EtfApproval",
-                                value: simSettings.maxEtfBoostUnified,
-                                isWeekly: (simSettings.periodUnit == .weeks)
+                                value: s.maxEtfBoostUnified,
+                                isWeekly: s.periodUnit == .weeks
                             )
                             factorEnableFrac["EtfApproval"] = fraction
                         } else {
                             factorEnableFrac["EtfApproval"] = 0.0
                         }
-                        
                         animateFactor("EtfApproval", newValue)
                     }
                 ),
                 sliderValue: Binding<Double>(
                     get: { simSettings.maxEtfBoostUnified },
                     set: { newVal in
-                        simSettings.maxEtfBoostUnified = newVal
-                        if simSettings.useEtfApprovalWeekly {
-                            let fraction = simSettings.fractionFromValue(
+                        let s = simSettings
+                        s.setNumericValue(for: "EtfApproval", to: newVal)
+                        s.updateManualOffset(factorName: "EtfApproval", actualValue: newVal)
+                        
+                        if s.useEtfApprovalWeekly {
+                            let fraction = s.fractionFromValue(
                                 "EtfApproval",
                                 value: newVal,
-                                isWeekly: (simSettings.periodUnit == .weeks)
+                                isWeekly: s.periodUnit == .weeks
                             )
                             factorEnableFrac["EtfApproval"] = fraction
                         } else {
@@ -302,32 +316,35 @@ struct BullishFactorsSection: View {
                 isOn: Binding<Bool>(
                     get: { simSettings.useTechBreakthroughWeekly },
                     set: { newValue in
-                        simSettings.useTechBreakthroughWeekly = newValue
-                        simSettings.useTechBreakthroughMonthly = newValue
+                        let s = simSettings
+                        s.useTechBreakthroughWeekly = newValue
+                        s.useTechBreakthroughMonthly = newValue
                         
                         if newValue {
-                            let fraction = simSettings.fractionFromValue(
+                            let fraction = s.fractionFromValue(
                                 "TechBreakthrough",
-                                value: simSettings.maxTechBoostUnified,
-                                isWeekly: (simSettings.periodUnit == .weeks)
+                                value: s.maxTechBoostUnified,
+                                isWeekly: s.periodUnit == .weeks
                             )
                             factorEnableFrac["TechBreakthrough"] = fraction
                         } else {
                             factorEnableFrac["TechBreakthrough"] = 0.0
                         }
-                        
                         animateFactor("TechBreakthrough", newValue)
                     }
                 ),
                 sliderValue: Binding<Double>(
                     get: { simSettings.maxTechBoostUnified },
                     set: { newVal in
-                        simSettings.maxTechBoostUnified = newVal
-                        if simSettings.useTechBreakthroughWeekly {
-                            let fraction = simSettings.fractionFromValue(
+                        let s = simSettings
+                        s.setNumericValue(for: "TechBreakthrough", to: newVal)
+                        s.updateManualOffset(factorName: "TechBreakthrough", actualValue: newVal)
+                        
+                        if s.useTechBreakthroughWeekly {
+                            let fraction = s.fractionFromValue(
                                 "TechBreakthrough",
                                 value: newVal,
-                                isWeekly: (simSettings.periodUnit == .weeks)
+                                isWeekly: s.periodUnit == .weeks
                             )
                             factorEnableFrac["TechBreakthrough"] = fraction
                         } else {
@@ -356,32 +373,35 @@ struct BullishFactorsSection: View {
                 isOn: Binding<Bool>(
                     get: { simSettings.useScarcityEventsWeekly },
                     set: { newValue in
-                        simSettings.useScarcityEventsWeekly = newValue
-                        simSettings.useScarcityEventsMonthly = newValue
+                        let s = simSettings
+                        s.useScarcityEventsWeekly = newValue
+                        s.useScarcityEventsMonthly = newValue
                         
                         if newValue {
-                            let fraction = simSettings.fractionFromValue(
+                            let fraction = s.fractionFromValue(
                                 "ScarcityEvents",
-                                value: simSettings.maxScarcityBoostUnified,
-                                isWeekly: (simSettings.periodUnit == .weeks)
+                                value: s.maxScarcityBoostUnified,
+                                isWeekly: s.periodUnit == .weeks
                             )
                             factorEnableFrac["ScarcityEvents"] = fraction
                         } else {
                             factorEnableFrac["ScarcityEvents"] = 0.0
                         }
-                        
                         animateFactor("ScarcityEvents", newValue)
                     }
                 ),
                 sliderValue: Binding<Double>(
                     get: { simSettings.maxScarcityBoostUnified },
                     set: { newVal in
-                        simSettings.maxScarcityBoostUnified = newVal
-                        if simSettings.useScarcityEventsWeekly {
-                            let fraction = simSettings.fractionFromValue(
+                        let s = simSettings
+                        s.setNumericValue(for: "ScarcityEvents", to: newVal)
+                        s.updateManualOffset(factorName: "ScarcityEvents", actualValue: newVal)
+                        
+                        if s.useScarcityEventsWeekly {
+                            let fraction = s.fractionFromValue(
                                 "ScarcityEvents",
                                 value: newVal,
-                                isWeekly: (simSettings.periodUnit == .weeks)
+                                isWeekly: s.periodUnit == .weeks
                             )
                             factorEnableFrac["ScarcityEvents"] = fraction
                         } else {
@@ -410,32 +430,35 @@ struct BullishFactorsSection: View {
                 isOn: Binding<Bool>(
                     get: { simSettings.useGlobalMacroHedgeWeekly },
                     set: { newValue in
-                        simSettings.useGlobalMacroHedgeWeekly = newValue
-                        simSettings.useGlobalMacroHedgeMonthly = newValue
+                        let s = simSettings
+                        s.useGlobalMacroHedgeWeekly = newValue
+                        s.useGlobalMacroHedgeMonthly = newValue
                         
                         if newValue {
-                            let fraction = simSettings.fractionFromValue(
+                            let fraction = s.fractionFromValue(
                                 "GlobalMacroHedge",
-                                value: simSettings.maxMacroBoostUnified,
-                                isWeekly: (simSettings.periodUnit == .weeks)
+                                value: s.maxMacroBoostUnified,
+                                isWeekly: s.periodUnit == .weeks
                             )
                             factorEnableFrac["GlobalMacroHedge"] = fraction
                         } else {
                             factorEnableFrac["GlobalMacroHedge"] = 0.0
                         }
-                        
                         animateFactor("GlobalMacroHedge", newValue)
                     }
                 ),
                 sliderValue: Binding<Double>(
                     get: { simSettings.maxMacroBoostUnified },
                     set: { newVal in
-                        simSettings.maxMacroBoostUnified = newVal
-                        if simSettings.useGlobalMacroHedgeWeekly {
-                            let fraction = simSettings.fractionFromValue(
+                        let s = simSettings
+                        s.setNumericValue(for: "GlobalMacroHedge", to: newVal)
+                        s.updateManualOffset(factorName: "GlobalMacroHedge", actualValue: newVal)
+                        
+                        if s.useGlobalMacroHedgeWeekly {
+                            let fraction = s.fractionFromValue(
                                 "GlobalMacroHedge",
                                 value: newVal,
-                                isWeekly: (simSettings.periodUnit == .weeks)
+                                isWeekly: s.periodUnit == .weeks
                             )
                             factorEnableFrac["GlobalMacroHedge"] = fraction
                         } else {
@@ -464,32 +487,35 @@ struct BullishFactorsSection: View {
                 isOn: Binding<Bool>(
                     get: { simSettings.useStablecoinShiftWeekly },
                     set: { newValue in
-                        simSettings.useStablecoinShiftWeekly = newValue
-                        simSettings.useStablecoinShiftMonthly = newValue
+                        let s = simSettings
+                        s.useStablecoinShiftWeekly = newValue
+                        s.useStablecoinShiftMonthly = newValue
                         
                         if newValue {
-                            let fraction = simSettings.fractionFromValue(
+                            let fraction = s.fractionFromValue(
                                 "StablecoinShift",
-                                value: simSettings.maxStablecoinBoostUnified,
-                                isWeekly: (simSettings.periodUnit == .weeks)
+                                value: s.maxStablecoinBoostUnified,
+                                isWeekly: s.periodUnit == .weeks
                             )
                             factorEnableFrac["StablecoinShift"] = fraction
                         } else {
                             factorEnableFrac["StablecoinShift"] = 0.0
                         }
-                        
                         animateFactor("StablecoinShift", newValue)
                     }
                 ),
                 sliderValue: Binding<Double>(
                     get: { simSettings.maxStablecoinBoostUnified },
                     set: { newVal in
-                        simSettings.maxStablecoinBoostUnified = newVal
-                        if simSettings.useStablecoinShiftWeekly {
-                            let fraction = simSettings.fractionFromValue(
+                        let s = simSettings
+                        s.setNumericValue(for: "StablecoinShift", to: newVal)
+                        s.updateManualOffset(factorName: "StablecoinShift", actualValue: newVal)
+                        
+                        if s.useStablecoinShiftWeekly {
+                            let fraction = s.fractionFromValue(
                                 "StablecoinShift",
                                 value: newVal,
-                                isWeekly: (simSettings.periodUnit == .weeks)
+                                isWeekly: s.periodUnit == .weeks
                             )
                             factorEnableFrac["StablecoinShift"] = fraction
                         } else {
@@ -517,32 +543,35 @@ struct BullishFactorsSection: View {
                 isOn: Binding<Bool>(
                     get: { simSettings.useDemographicAdoptionWeekly },
                     set: { newValue in
-                        simSettings.useDemographicAdoptionWeekly = newValue
-                        simSettings.useDemographicAdoptionMonthly = newValue
+                        let s = simSettings
+                        s.useDemographicAdoptionWeekly = newValue
+                        s.useDemographicAdoptionMonthly = newValue
                         
                         if newValue {
-                            let fraction = simSettings.fractionFromValue(
+                            let fraction = s.fractionFromValue(
                                 "DemographicAdoption",
-                                value: simSettings.maxDemoBoostUnified,
-                                isWeekly: (simSettings.periodUnit == .weeks)
+                                value: s.maxDemoBoostUnified,
+                                isWeekly: s.periodUnit == .weeks
                             )
                             factorEnableFrac["DemographicAdoption"] = fraction
                         } else {
                             factorEnableFrac["DemographicAdoption"] = 0.0
                         }
-                        
                         animateFactor("DemographicAdoption", newValue)
                     }
                 ),
                 sliderValue: Binding<Double>(
                     get: { simSettings.maxDemoBoostUnified },
                     set: { newVal in
-                        simSettings.maxDemoBoostUnified = newVal
-                        if simSettings.useDemographicAdoptionWeekly {
-                            let fraction = simSettings.fractionFromValue(
+                        let s = simSettings
+                        s.setNumericValue(for: "DemographicAdoption", to: newVal)
+                        s.updateManualOffset(factorName: "DemographicAdoption", actualValue: newVal)
+                        
+                        if s.useDemographicAdoptionWeekly {
+                            let fraction = s.fractionFromValue(
                                 "DemographicAdoption",
                                 value: newVal,
-                                isWeekly: (simSettings.periodUnit == .weeks)
+                                isWeekly: s.periodUnit == .weeks
                             )
                             factorEnableFrac["DemographicAdoption"] = fraction
                         } else {
@@ -570,32 +599,35 @@ struct BullishFactorsSection: View {
                 isOn: Binding<Bool>(
                     get: { simSettings.useAltcoinFlightWeekly },
                     set: { newValue in
-                        simSettings.useAltcoinFlightWeekly = newValue
-                        simSettings.useAltcoinFlightMonthly = newValue
+                        let s = simSettings
+                        s.useAltcoinFlightWeekly = newValue
+                        s.useAltcoinFlightMonthly = newValue
                         
                         if newValue {
-                            let fraction = simSettings.fractionFromValue(
+                            let fraction = s.fractionFromValue(
                                 "AltcoinFlight",
-                                value: simSettings.maxAltcoinBoostUnified,
-                                isWeekly: (simSettings.periodUnit == .weeks)
+                                value: s.maxAltcoinBoostUnified,
+                                isWeekly: s.periodUnit == .weeks
                             )
                             factorEnableFrac["AltcoinFlight"] = fraction
                         } else {
                             factorEnableFrac["AltcoinFlight"] = 0.0
                         }
-                        
                         animateFactor("AltcoinFlight", newValue)
                     }
                 ),
                 sliderValue: Binding<Double>(
                     get: { simSettings.maxAltcoinBoostUnified },
                     set: { newVal in
-                        simSettings.maxAltcoinBoostUnified = newVal
-                        if simSettings.useAltcoinFlightWeekly {
-                            let fraction = simSettings.fractionFromValue(
+                        let s = simSettings
+                        s.setNumericValue(for: "AltcoinFlight", to: newVal)
+                        s.updateManualOffset(factorName: "AltcoinFlight", actualValue: newVal)
+                        
+                        if s.useAltcoinFlightWeekly {
+                            let fraction = s.fractionFromValue(
                                 "AltcoinFlight",
                                 value: newVal,
-                                isWeekly: (simSettings.periodUnit == .weeks)
+                                isWeekly: s.periodUnit == .weeks
                             )
                             factorEnableFrac["AltcoinFlight"] = fraction
                         } else {
@@ -623,32 +655,35 @@ struct BullishFactorsSection: View {
                 isOn: Binding<Bool>(
                     get: { simSettings.useAdoptionFactorWeekly },
                     set: { newValue in
-                        simSettings.useAdoptionFactorWeekly = newValue
-                        simSettings.useAdoptionFactorMonthly = newValue
+                        let s = simSettings
+                        s.useAdoptionFactorWeekly = newValue
+                        s.useAdoptionFactorMonthly = newValue
                         
                         if newValue {
-                            let fraction = simSettings.fractionFromValue(
+                            let fraction = s.fractionFromValue(
                                 "AdoptionFactor",
-                                value: simSettings.adoptionBaseFactorUnified,
-                                isWeekly: (simSettings.periodUnit == .weeks)
+                                value: s.adoptionBaseFactorUnified,
+                                isWeekly: s.periodUnit == .weeks
                             )
                             factorEnableFrac["AdoptionFactor"] = fraction
                         } else {
                             factorEnableFrac["AdoptionFactor"] = 0.0
                         }
-                        
                         animateFactor("AdoptionFactor", newValue)
                     }
                 ),
                 sliderValue: Binding<Double>(
                     get: { simSettings.adoptionBaseFactorUnified },
                     set: { newVal in
-                        simSettings.adoptionBaseFactorUnified = newVal
-                        if simSettings.useAdoptionFactorWeekly {
-                            let fraction = simSettings.fractionFromValue(
+                        let s = simSettings
+                        s.setNumericValue(for: "AdoptionFactor", to: newVal)
+                        s.updateManualOffset(factorName: "AdoptionFactor", actualValue: newVal)
+                        
+                        if s.useAdoptionFactorWeekly {
+                            let fraction = s.fractionFromValue(
                                 "AdoptionFactor",
                                 value: newVal,
-                                isWeekly: (simSettings.periodUnit == .weeks)
+                                isWeekly: s.periodUnit == .weeks
                             )
                             factorEnableFrac["AdoptionFactor"] = fraction
                         } else {

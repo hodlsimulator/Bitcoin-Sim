@@ -16,6 +16,9 @@ extension SimulationSettings {
         UserDefaults.standard.removeObject(forKey: "factorIntensity")
         // Then set it to 0.5
         factorIntensity = 0.5
+        
+        // Clear all manual offsets so that no custom adjustments remain.
+        manualOffsets = [:]
 
         // Keep any general toggles you want to preserve:
         defaults.set(useHistoricalSampling, forKey: "useHistoricalSampling")

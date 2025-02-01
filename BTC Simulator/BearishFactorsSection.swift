@@ -36,11 +36,11 @@ struct BearishFactorsSection: View {
                         simSettings.useRegClampdownMonthly = newValue
                         
                         if newValue {
-                            // Recalculate fraction from the current numeric
-                            let frac = simSettings.fractionFromValue(
+                            let s = simSettings // local var
+                            let frac = s.fractionFromValue(
                                 "RegClampdown",
-                                value: simSettings.maxClampDownUnified,
-                                isWeekly: simSettings.periodUnit == .weeks
+                                value: s.maxClampDownUnified,
+                                isWeekly: (s.periodUnit == .weeks)
                             )
                             factorEnableFrac["RegClampdown"] = frac
                         } else {
@@ -52,12 +52,15 @@ struct BearishFactorsSection: View {
                 sliderValue: Binding<Double>(
                     get: { simSettings.maxClampDownUnified },
                     set: { newVal in
-                        simSettings.maxClampDownUnified = newVal
-                        if simSettings.useRegClampdownWeekly {
-                            let frac = simSettings.fractionFromValue(
+                        let s = simSettings
+                        s.setNumericValue(for: "RegClampdown", to: newVal)
+                        s.updateManualOffset(factorName: "RegClampdown", actualValue: newVal)
+                        
+                        if s.useRegClampdownWeekly {
+                            let frac = s.fractionFromValue(
                                 "RegClampdown",
                                 value: newVal,
-                                isWeekly: (simSettings.periodUnit == .weeks)
+                                isWeekly: (s.periodUnit == .weeks)
                             )
                             factorEnableFrac["RegClampdown"] = frac
                         } else {
@@ -89,10 +92,11 @@ struct BearishFactorsSection: View {
                         simSettings.useCompetitorCoinMonthly = newValue
                         
                         if newValue {
-                            let frac = simSettings.fractionFromValue(
+                            let s = simSettings
+                            let frac = s.fractionFromValue(
                                 "CompetitorCoin",
-                                value: simSettings.maxCompetitorBoostUnified,
-                                isWeekly: simSettings.periodUnit == .weeks
+                                value: s.maxCompetitorBoostUnified,
+                                isWeekly: (s.periodUnit == .weeks)
                             )
                             factorEnableFrac["CompetitorCoin"] = frac
                         } else {
@@ -104,12 +108,15 @@ struct BearishFactorsSection: View {
                 sliderValue: Binding<Double>(
                     get: { simSettings.maxCompetitorBoostUnified },
                     set: { newVal in
-                        simSettings.maxCompetitorBoostUnified = newVal
-                        if simSettings.useCompetitorCoinWeekly {
-                            let frac = simSettings.fractionFromValue(
+                        let s = simSettings
+                        s.setNumericValue(for: "CompetitorCoin", to: newVal)
+                        s.updateManualOffset(factorName: "CompetitorCoin", actualValue: newVal)
+                        
+                        if s.useCompetitorCoinWeekly {
+                            let frac = s.fractionFromValue(
                                 "CompetitorCoin",
                                 value: newVal,
-                                isWeekly: (simSettings.periodUnit == .weeks)
+                                isWeekly: (s.periodUnit == .weeks)
                             )
                             factorEnableFrac["CompetitorCoin"] = frac
                         } else {
@@ -141,10 +148,11 @@ struct BearishFactorsSection: View {
                         simSettings.useSecurityBreachMonthly = newValue
                         
                         if newValue {
-                            let frac = simSettings.fractionFromValue(
+                            let s = simSettings
+                            let frac = s.fractionFromValue(
                                 "SecurityBreach",
-                                value: simSettings.breachImpactUnified,
-                                isWeekly: (simSettings.periodUnit == .weeks)
+                                value: s.breachImpactUnified,
+                                isWeekly: (s.periodUnit == .weeks)
                             )
                             factorEnableFrac["SecurityBreach"] = frac
                         } else {
@@ -156,12 +164,15 @@ struct BearishFactorsSection: View {
                 sliderValue: Binding<Double>(
                     get: { simSettings.breachImpactUnified },
                     set: { newVal in
-                        simSettings.breachImpactUnified = newVal
-                        if simSettings.useSecurityBreachWeekly {
-                            let frac = simSettings.fractionFromValue(
+                        let s = simSettings
+                        s.setNumericValue(for: "SecurityBreach", to: newVal)
+                        s.updateManualOffset(factorName: "SecurityBreach", actualValue: newVal)
+                        
+                        if s.useSecurityBreachWeekly {
+                            let frac = s.fractionFromValue(
                                 "SecurityBreach",
                                 value: newVal,
-                                isWeekly: (simSettings.periodUnit == .weeks)
+                                isWeekly: (s.periodUnit == .weeks)
                             )
                             factorEnableFrac["SecurityBreach"] = frac
                         } else {
@@ -193,10 +204,11 @@ struct BearishFactorsSection: View {
                         simSettings.useBubblePopMonthly = newValue
                         
                         if newValue {
-                            let frac = simSettings.fractionFromValue(
+                            let s = simSettings
+                            let frac = s.fractionFromValue(
                                 "BubblePop",
-                                value: simSettings.maxPopDropUnified,
-                                isWeekly: (simSettings.periodUnit == .weeks)
+                                value: s.maxPopDropUnified,
+                                isWeekly: (s.periodUnit == .weeks)
                             )
                             factorEnableFrac["BubblePop"] = frac
                         } else {
@@ -208,12 +220,15 @@ struct BearishFactorsSection: View {
                 sliderValue: Binding<Double>(
                     get: { simSettings.maxPopDropUnified },
                     set: { newVal in
-                        simSettings.maxPopDropUnified = newVal
-                        if simSettings.useBubblePopWeekly {
-                            let frac = simSettings.fractionFromValue(
+                        let s = simSettings
+                        s.setNumericValue(for: "BubblePop", to: newVal)
+                        s.updateManualOffset(factorName: "BubblePop", actualValue: newVal)
+                        
+                        if s.useBubblePopWeekly {
+                            let frac = s.fractionFromValue(
                                 "BubblePop",
                                 value: newVal,
-                                isWeekly: (simSettings.periodUnit == .weeks)
+                                isWeekly: (s.periodUnit == .weeks)
                             )
                             factorEnableFrac["BubblePop"] = frac
                         } else {
@@ -245,10 +260,11 @@ struct BearishFactorsSection: View {
                         simSettings.useStablecoinMeltdownMonthly = newValue
                         
                         if newValue {
-                            let frac = simSettings.fractionFromValue(
+                            let s = simSettings
+                            let frac = s.fractionFromValue(
                                 "StablecoinMeltdown",
-                                value: simSettings.maxMeltdownDropUnified,
-                                isWeekly: (simSettings.periodUnit == .weeks)
+                                value: s.maxMeltdownDropUnified,
+                                isWeekly: (s.periodUnit == .weeks)
                             )
                             factorEnableFrac["StablecoinMeltdown"] = frac
                         } else {
@@ -260,12 +276,15 @@ struct BearishFactorsSection: View {
                 sliderValue: Binding<Double>(
                     get: { simSettings.maxMeltdownDropUnified },
                     set: { newVal in
-                        simSettings.maxMeltdownDropUnified = newVal
-                        if simSettings.useStablecoinMeltdownWeekly {
-                            let frac = simSettings.fractionFromValue(
+                        let s = simSettings
+                        s.setNumericValue(for: "StablecoinMeltdown", to: newVal)
+                        s.updateManualOffset(factorName: "StablecoinMeltdown", actualValue: newVal)
+                        
+                        if s.useStablecoinMeltdownWeekly {
+                            let frac = s.fractionFromValue(
                                 "StablecoinMeltdown",
                                 value: newVal,
-                                isWeekly: (simSettings.periodUnit == .weeks)
+                                isWeekly: (s.periodUnit == .weeks)
                             )
                             factorEnableFrac["StablecoinMeltdown"] = frac
                         } else {
@@ -297,10 +316,11 @@ struct BearishFactorsSection: View {
                         simSettings.useBlackSwanMonthly = newValue
                         
                         if newValue {
-                            let frac = simSettings.fractionFromValue(
+                            let s = simSettings
+                            let frac = s.fractionFromValue(
                                 "BlackSwan",
-                                value: simSettings.blackSwanDropUnified,
-                                isWeekly: (simSettings.periodUnit == .weeks)
+                                value: s.blackSwanDropUnified,
+                                isWeekly: (s.periodUnit == .weeks)
                             )
                             factorEnableFrac["BlackSwan"] = frac
                         } else {
@@ -312,12 +332,15 @@ struct BearishFactorsSection: View {
                 sliderValue: Binding<Double>(
                     get: { simSettings.blackSwanDropUnified },
                     set: { newVal in
-                        simSettings.blackSwanDropUnified = newVal
-                        if simSettings.useBlackSwanWeekly {
-                            let frac = simSettings.fractionFromValue(
+                        let s = simSettings
+                        s.setNumericValue(for: "BlackSwan", to: newVal)
+                        s.updateManualOffset(factorName: "BlackSwan", actualValue: newVal)
+                        
+                        if s.useBlackSwanWeekly {
+                            let frac = s.fractionFromValue(
                                 "BlackSwan",
                                 value: newVal,
-                                isWeekly: (simSettings.periodUnit == .weeks)
+                                isWeekly: (s.periodUnit == .weeks)
                             )
                             factorEnableFrac["BlackSwan"] = frac
                         } else {
@@ -349,10 +372,11 @@ struct BearishFactorsSection: View {
                         simSettings.useBearMarketMonthly = newValue
                         
                         if newValue {
-                            let frac = simSettings.fractionFromValue(
+                            let s = simSettings
+                            let frac = s.fractionFromValue(
                                 "BearMarket",
-                                value: simSettings.bearWeeklyDriftUnified,
-                                isWeekly: (simSettings.periodUnit == .weeks)
+                                value: s.bearWeeklyDriftUnified,
+                                isWeekly: (s.periodUnit == .weeks)
                             )
                             factorEnableFrac["BearMarket"] = frac
                         } else {
@@ -364,12 +388,15 @@ struct BearishFactorsSection: View {
                 sliderValue: Binding<Double>(
                     get: { simSettings.bearWeeklyDriftUnified },
                     set: { newVal in
-                        simSettings.bearWeeklyDriftUnified = newVal
-                        if simSettings.useBearMarketWeekly {
-                            let frac = simSettings.fractionFromValue(
+                        let s = simSettings
+                        s.setNumericValue(for: "BearMarket", to: newVal)
+                        s.updateManualOffset(factorName: "BearMarket", actualValue: newVal)
+                        
+                        if s.useBearMarketWeekly {
+                            let frac = s.fractionFromValue(
                                 "BearMarket",
                                 value: newVal,
-                                isWeekly: (simSettings.periodUnit == .weeks)
+                                isWeekly: (s.periodUnit == .weeks)
                             )
                             factorEnableFrac["BearMarket"] = frac
                         } else {
@@ -401,10 +428,11 @@ struct BearishFactorsSection: View {
                         simSettings.useMaturingMarketMonthly = newValue
                         
                         if newValue {
-                            let frac = simSettings.fractionFromValue(
+                            let s = simSettings
+                            let frac = s.fractionFromValue(
                                 "MaturingMarket",
-                                value: simSettings.maxMaturingDropUnified,
-                                isWeekly: (simSettings.periodUnit == .weeks)
+                                value: s.maxMaturingDropUnified,
+                                isWeekly: (s.periodUnit == .weeks)
                             )
                             factorEnableFrac["MaturingMarket"] = frac
                         } else {
@@ -416,12 +444,15 @@ struct BearishFactorsSection: View {
                 sliderValue: Binding<Double>(
                     get: { simSettings.maxMaturingDropUnified },
                     set: { newVal in
-                        simSettings.maxMaturingDropUnified = newVal
-                        if simSettings.useMaturingMarketWeekly {
-                            let frac = simSettings.fractionFromValue(
+                        let s = simSettings
+                        s.setNumericValue(for: "MaturingMarket", to: newVal)
+                        s.updateManualOffset(factorName: "MaturingMarket", actualValue: newVal)
+                        
+                        if s.useMaturingMarketWeekly {
+                            let frac = s.fractionFromValue(
                                 "MaturingMarket",
                                 value: newVal,
-                                isWeekly: (simSettings.periodUnit == .weeks)
+                                isWeekly: (s.periodUnit == .weeks)
                             )
                             factorEnableFrac["MaturingMarket"] = frac
                         } else {
@@ -453,10 +484,11 @@ struct BearishFactorsSection: View {
                         simSettings.useRecessionMonthly = newValue
                         
                         if newValue {
-                            let frac = simSettings.fractionFromValue(
+                            let s = simSettings
+                            let frac = s.fractionFromValue(
                                 "Recession",
-                                value: simSettings.maxRecessionDropUnified,
-                                isWeekly: (simSettings.periodUnit == .weeks)
+                                value: s.maxRecessionDropUnified,
+                                isWeekly: (s.periodUnit == .weeks)
                             )
                             factorEnableFrac["Recession"] = frac
                         } else {
@@ -468,12 +500,15 @@ struct BearishFactorsSection: View {
                 sliderValue: Binding<Double>(
                     get: { simSettings.maxRecessionDropUnified },
                     set: { newVal in
-                        simSettings.maxRecessionDropUnified = newVal
-                        if simSettings.useRecessionWeekly {
-                            let frac = simSettings.fractionFromValue(
+                        let s = simSettings
+                        s.setNumericValue(for: "Recession", to: newVal)
+                        s.updateManualOffset(factorName: "Recession", actualValue: newVal)
+                        
+                        if s.useRecessionWeekly {
+                            let frac = s.fractionFromValue(
                                 "Recession",
                                 value: newVal,
-                                isWeekly: (simSettings.periodUnit == .weeks)
+                                isWeekly: (s.periodUnit == .weeks)
                             )
                             factorEnableFrac["Recession"] = frac
                         } else {

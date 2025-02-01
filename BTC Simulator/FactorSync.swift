@@ -518,20 +518,34 @@ extension SimulationSettings {
         maxVal: Double,
         assign: (Double) -> Void
     ) {
-        // If factorEnableFrac is zero, that means factor is "off", so skip it
+        // If factor is off (fraction == 0), skip syncing.
         if let frac = factorEnableFrac[factorName], frac == 0.0 {
             return
         }
         
-        // Otherwise, compute new value based on t
+        // Compute the base value from t.
+        var baseVal: Double = 0.0
         if t < 0.5 {
-            let ratio = t / 0.5 // ratio in [0..1]
-            let newVal = midVal - (midVal - minVal) * (1.0 - ratio)
-            assign(newVal)
+            let ratio = t / 0.5
+            baseVal = midVal - (midVal - minVal) * (1.0 - ratio)
         } else {
-            let ratio = (t - 0.5) / 0.5 // ratio in [0..1]
-            let newVal = midVal + (maxVal - midVal) * ratio
-            assign(newVal)
+            let ratio = (t - 0.5) / 0.5
+            baseVal = midVal + (maxVal - midVal) * ratio
         }
+        
+        // Retrieve the manual offset.
+        let currentOffset = manualOffsets[factorName] ?? 0.0
+        var computedVal = baseVal + currentOffset
+        
+        // If computed value goes outside the allowed range, clamp it and update the offset.
+        if computedVal > maxVal {
+            computedVal = maxVal
+            manualOffsets[factorName] = computedVal - baseVal  // update offset to new difference
+        } else if computedVal < minVal {
+            computedVal = minVal
+            manualOffsets[factorName] = computedVal - baseVal
+        }
+        
+        assign(computedVal)
     }
 }

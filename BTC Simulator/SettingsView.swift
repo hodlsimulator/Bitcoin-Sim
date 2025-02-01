@@ -199,9 +199,10 @@ struct SettingsView: View {
                     simSettings.tiltBarValue = displayedTilt
                 }
             }
-            .onChange(of: factorIntensity) { _ in
+            // Sync all factors to the new global slider value (so offsets are preserved)
+            .onChange(of: factorIntensity) { newValue in
                 guard hasAppeared else { return }
-                simSettings.syncAllFactorsToIntensity(factorIntensity)
+                simSettings.syncAllFactorsToIntensity(newValue)
                 simSettings.tiltBarValue = displayedTilt
             }
             .onChange(of: simSettings.factorEnableFrac) { newVal in
@@ -261,8 +262,9 @@ struct SettingsView: View {
                 // Finally, recalc tiltBarValue
                 simSettings.tiltBarValue = displayedTilt
             }
+            // If you want to re-enable factorEnableFrac animation, uncomment here
             // .animation(hasAppeared ? (disableAnimationNow ? nil : .easeInOut(duration: 0.3)) : nil,
-            //           value: simSettings.factorEnableFrac)
+            //            value: simSettings.factorEnableFrac)
             .animation(hasAppeared ? .easeInOut(duration: 0.3) : nil, value: factorIntensity)
             .animation(hasAppeared ? .easeInOut(duration: 0.3) : nil, value: displayedTilt)
     }
