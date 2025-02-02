@@ -420,7 +420,7 @@ struct ContentView: View {
             }
         }
     }
-    
+
     // MARK: - Parameter Screen
     private var parametersScreen: some View {
         ZStack {
@@ -444,7 +444,6 @@ struct ContentView: View {
                     .foregroundColor(.gray)
                 
                 VStack(spacing: 20) {
-                    
                     // Row 1: Iterations & CAGR
                     HStack(spacing: 24) {
                         // Iterations
@@ -459,7 +458,7 @@ struct ContentView: View {
                                 .cornerRadius(6)
                                 .foregroundColor(.black)
                                 .focused($activeField, equals: .iterations)
-                                .onChange(of: inputManager.iterations) { newVal in
+                                .onChange(of: inputManager.iterations, initial: false) { _, newVal in
                                     if newVal != oldIterationsValue {
                                         oldIterationsValue = newVal
                                         invalidateChartIfInputChanged()
@@ -479,7 +478,7 @@ struct ContentView: View {
                                 .cornerRadius(6)
                                 .foregroundColor(.black)
                                 .focused($activeField, equals: .annualCAGR)
-                                .onChange(of: inputManager.annualCAGR) { newVal in
+                                .onChange(of: inputManager.annualCAGR, initial: false) { _, newVal in
                                     if newVal != oldAnnualCAGRValue {
                                         oldAnnualCAGRValue = newVal
                                         invalidateChartIfInputChanged()
@@ -502,7 +501,7 @@ struct ContentView: View {
                                 .cornerRadius(6)
                                 .foregroundColor(.black)
                                 .focused($activeField, equals: .annualVolatility)
-                                .onChange(of: inputManager.annualVolatility) { newVal in
+                                .onChange(of: inputManager.annualVolatility, initial: false) { _, newVal in
                                     if newVal != oldAnnualVolatilityValue {
                                         oldAnnualVolatilityValue = newVal
                                         invalidateChartIfInputChanged()
@@ -522,7 +521,7 @@ struct ContentView: View {
                                 .cornerRadius(6)
                                 .foregroundColor(.black)
                                 .focused($activeField, equals: .standardDeviation)
-                                .onChange(of: inputManager.standardDeviation) { newVal in
+                                .onChange(of: inputManager.standardDeviation, initial: false) { _, newVal in
                                     if newVal != oldStandardDevValue {
                                         oldStandardDevValue = newVal
                                         invalidateChartIfInputChanged()
@@ -540,7 +539,7 @@ struct ContentView: View {
                         Toggle("Lock Seed", isOn: $simSettings.lockedRandomSeed)
                             .toggleStyle(CheckboxToggleStyle())
                             .foregroundColor(.white)
-                            .onChange(of: simSettings.lockedRandomSeed) { locked in
+                            .onChange(of: simSettings.lockedRandomSeed, initial: false) { _, locked in
                                 if locked {
                                     let newSeed = UInt64.random(in: 0..<UInt64.max)
                                     simSettings.seedValue = newSeed
@@ -820,7 +819,7 @@ struct ContentView: View {
                                 lastViewedWeek = closestWeek
                             }
                         }
-                        .onChange(of: scrollToBottom) { value in
+                        .onChange(of: scrollToBottom, initial: false) { _, value in
                             if value, let lastResult = coordinator.monteCarloResults.last {
                                 withAnimation {
                                     scrollProxy.scrollTo("week-\(lastResult.week)", anchor: .bottom)

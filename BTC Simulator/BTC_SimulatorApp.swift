@@ -73,7 +73,7 @@ struct BTCMonteCarloApp: App {
                         .onAppear {
                             appViewModel.windowSize = geo.size
                         }
-                        .onChange(of: geo.size) { newSize in
+                        .onChange(of: geo.size, initial: false) { _, newSize in
                             appViewModel.windowSize = newSize
                         }
                 }
@@ -104,7 +104,6 @@ struct BTCMonteCarloApp: App {
             }
             .onAppear {
                 // Load user defaults
-                // simSettings.loadFromUserDefaults()
                 simSettings.isOnboarding = !didFinishOnboarding
 
                 // 1. Load weekly data
@@ -123,8 +122,7 @@ struct BTCMonteCarloApp: App {
                 extendedMonthlyReturns = historicalBTCMonthlyReturns
                 print("extendedMonthlyReturns count = \(extendedMonthlyReturns.count)")
             }
-            // Save to UserDefaults when the app goes inactive or background
-            .onChange(of: scenePhase) { newPhase in
+            .onChange(of: scenePhase, initial: false) { _, newPhase in
                 switch newPhase {
                 case .inactive, .background:
                     simSettings.saveToUserDefaults()

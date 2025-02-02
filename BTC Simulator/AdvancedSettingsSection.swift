@@ -41,8 +41,8 @@ struct AdvancedSettingsSection: View {
                         Toggle("Lock Random Seed", isOn: $simSettings.lockedRandomSeed)
                             .tint(.orange)
                             .foregroundColor(.white)
-                            .onChange(of: simSettings.lockedRandomSeed) { locked in
-                                if locked {
+                            .onChange(of: simSettings.lockedRandomSeed) {
+                                if simSettings.lockedRandomSeed {
                                     let newSeed = UInt64.random(in: 0..<UInt64.max)
                                     simSettings.seedValue = newSeed
                                     simSettings.useRandomSeed = false
@@ -84,8 +84,8 @@ struct AdvancedSettingsSection: View {
                     Toggle("Use Lognormal Growth", isOn: $simSettings.useLognormalGrowth)
                         .tint(.orange)
                         .foregroundColor(.white)
-                        .onChange(of: simSettings.useLognormalGrowth) { newVal in
-                            simSettings.useAnnualStep = !newVal
+                        .onChange(of: simSettings.useLognormalGrowth) {
+                            simSettings.useAnnualStep = !simSettings.useLognormalGrowth
                         }
                     
                     Text("Uses a lognormal model for Bitcoin’s price distribution. Uncheck to use an alternative approach (annual step).")

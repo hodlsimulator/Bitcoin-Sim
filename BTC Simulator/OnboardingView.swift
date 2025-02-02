@@ -184,7 +184,7 @@ struct OnboardingView: View {
             alignment: .bottom
         )
         .ignoresSafeArea(.keyboard, edges: .bottom)
-        .onChange(of: chosenPeriodUnit) { newVal in
+        .onChange(of: chosenPeriodUnit, initial: false) { _, newVal in
             if newVal == .months {
                 totalPeriods = 240
             } else {
@@ -196,7 +196,7 @@ struct OnboardingView: View {
             updateAverageCostBasisIfNeeded()
         }
     }
-    
+
     // MARK: - Step 0
     private func step0_PeriodFrequency() -> some View {
         VStack(spacing: 20) {
@@ -211,7 +211,7 @@ struct OnboardingView: View {
             .frame(width: 200)
         }
     }
-    
+
     // MARK: - Step 1
     private func step1_TotalPeriods() -> some View {
         VStack(spacing: 16) {
@@ -230,7 +230,7 @@ struct OnboardingView: View {
                 .multilineTextAlignment(.center)
         }
     }
-    
+
     // MARK: - Step 2
     private func step2_PickCurrency() -> some View {
         VStack(spacing: 20) {
@@ -246,7 +246,7 @@ struct OnboardingView: View {
             .frame(width: 300)
         }
     }
-    
+
     // MARK: - Step 3
     private func step3_StartingBalance() -> some View {
         VStack(spacing: 20) {
@@ -279,7 +279,7 @@ struct OnboardingView: View {
                 .foregroundColor(.white)
                 .frame(width: 200)
                 .multilineTextAlignment(.center)
-                .onChange(of: startingBalanceText) { newValue in
+                .onChange(of: startingBalanceText, initial: false) { _, newValue in
                     // Strip out non-digit characters except the decimal
                     let digitsOnly = newValue.replacingOccurrences(
                         of: "[^0-9.]",

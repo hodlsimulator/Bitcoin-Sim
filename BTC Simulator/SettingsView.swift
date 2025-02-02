@@ -203,12 +203,12 @@ struct SettingsView: View {
                     simSettings.tiltBarValue = displayedTilt
                 }
             }
-            .onChange(of: simSettings.factorIntensity) { newValue in
+            .onChange(of: simSettings.factorIntensity, initial: false) { _, newValue in
                 guard hasAppeared else { return }
                 simSettings.syncAllFactorsToIntensity(newValue)
                 simSettings.tiltBarValue = displayedTilt
             }
-            .onChange(of: simSettings.factorEnableFrac) { newVal in
+            .onChange(of: simSettings.factorEnableFrac, initial: false) { _, newVal in
                 guard !simSettings.isRestoringDefaults else { return }
                 
                 disableAnimationNow = false

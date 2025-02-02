@@ -338,23 +338,15 @@ struct MonteCarloResultsView: View {
                 Button {
                     withAnimation {
                         // Flip between .btcPrice and .cumulativePortfolio
-                        simChartSelection.selectedChart = (
-                            simChartSelection.selectedChart == .cumulativePortfolio
-                            ? .btcPrice
-                            : .cumulativePortfolio
-                        )
+                        simChartSelection.selectedChart = (simChartSelection.selectedChart == .cumulativePortfolio ? .btcPrice : .cumulativePortfolio)
                         showChartMenu = false
                     }
                 } label: {
-                    Text(
-                        simChartSelection.selectedChart == .cumulativePortfolio
-                            ? "BTC Price Chart"
-                            : "Cumulative Portfolio"
-                    )
-                    .foregroundColor(.white)
-                    .font(.headline)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity, minHeight: 50)
+                    Text(simChartSelection.selectedChart == .cumulativePortfolio ? "BTC Price Chart" : "Cumulative Portfolio")
+                        .foregroundColor(.white)
+                        .font(.headline)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity, minHeight: 50)
                 }
                 .buttonStyle(.plain)
                 .background(Color.black)
@@ -407,14 +399,15 @@ struct MonteCarloResultsView: View {
                 }
             }
         }
-        .onChange(of: isLandscape) { newVal in
+        .onChange(of: isLandscape, initial: false) { _, newVal in
             if newVal {
-                // portrait -> landscape
+                // Rotating to landscape: show squished portrait immediately
                 if let portrait = portraitSnapshot {
                     DispatchQueue.main.async {
                         squishedLandscape = squishPortraitImage(portrait)
                     }
                 }
+                // Then after a delay, build the true landscape snapshot
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     isGeneratingLandscape = true
                     buildTrueLandscapeSnapshot { newSnapshot in
@@ -429,7 +422,7 @@ struct MonteCarloResultsView: View {
                     }
                 }
             } else {
-                // landscape -> portrait
+                // Rotating back to portrait: clear landscape snapshots
                 squishedLandscape = nil
                 brandNewLandscapeSnapshot = nil
                 isGeneratingLandscape = false

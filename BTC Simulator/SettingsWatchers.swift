@@ -28,7 +28,7 @@ struct UnifiedValueWatchersA: View {
     
     private var watchersA1: some View {
         EmptyView()
-            .onChange(of: simSettings.halvingBumpUnified) { newVal in
+            .onChange(of: simSettings.halvingBumpUnified, initial: false) { _, newVal in
                 // Halving range: 0.2773386887 .. 0.3823386887
                 simSettings.factorEnableFrac["Halving"] = normalise(
                     newVal,
@@ -36,7 +36,7 @@ struct UnifiedValueWatchersA: View {
                     maxVal: 0.3823386887
                 )
             }
-            .onChange(of: simSettings.maxDemandBoostUnified) { newVal in
+            .onChange(of: simSettings.maxDemandBoostUnified, initial: false) { _, newVal in
                 // InstitutionalDemand range: 0.00105315 .. 0.00142485
                 simSettings.factorEnableFrac["InstitutionalDemand"] = normalise(
                     newVal,
@@ -44,7 +44,7 @@ struct UnifiedValueWatchersA: View {
                     maxVal: 0.00142485
                 )
             }
-            .onChange(of: simSettings.maxCountryAdBoostUnified) { newVal in
+            .onChange(of: simSettings.maxCountryAdBoostUnified, initial: false) { _, newVal in
                 // CountryAdoption range: 0.0009882799977 .. 0.0012868959977
                 simSettings.factorEnableFrac["CountryAdoption"] = normalise(
                     newVal,
@@ -56,7 +56,7 @@ struct UnifiedValueWatchersA: View {
     
     private var watchersA2: some View {
         EmptyView()
-            .onChange(of: simSettings.maxClarityBoostUnified) { newVal in
+            .onChange(of: simSettings.maxClarityBoostUnified, initial: false) { _, newVal in
                 // RegulatoryClarity range: 0.0005979474861605167 .. 0.0008361034861605167
                 simSettings.factorEnableFrac["RegulatoryClarity"] = normalise(
                     newVal,
@@ -64,7 +64,7 @@ struct UnifiedValueWatchersA: View {
                     maxVal: 0.0008361034861605167
                 )
             }
-            .onChange(of: simSettings.maxEtfBoostUnified) { newVal in
+            .onChange(of: simSettings.maxEtfBoostUnified, initial: false) { _, newVal in
                 // EtfApproval range: 0.0014880183160305023 .. 0.0020880183160305023
                 simSettings.factorEnableFrac["EtfApproval"] = normalise(
                     newVal,
@@ -72,7 +72,7 @@ struct UnifiedValueWatchersA: View {
                     maxVal: 0.0020880183160305023
                 )
             }
-            .onChange(of: simSettings.maxTechBoostUnified) { newVal in
+            .onChange(of: simSettings.maxTechBoostUnified, initial: false) { _, newVal in
                 // TechBreakthrough range: 0.0005015753579173088 .. 0.0007150633579173088
                 simSettings.factorEnableFrac["TechBreakthrough"] = normalise(
                     newVal,
@@ -80,7 +80,7 @@ struct UnifiedValueWatchersA: View {
                     maxVal: 0.0007150633579173088
                 )
             }
-            .onChange(of: simSettings.maxScarcityBoostUnified) { newVal in
+            .onChange(of: simSettings.maxScarcityBoostUnified, initial: false) { _, newVal in
                 // ScarcityEvents range: 0.00035112353681182863 .. 0.00047505153681182863
                 simSettings.factorEnableFrac["ScarcityEvents"] = normalise(
                     newVal,
@@ -110,7 +110,7 @@ struct UnifiedValueWatchersB: View {
     
     private var watchersB1a: some View {
         EmptyView()
-            .onChange(of: simSettings.maxMacroBoostUnified) { newVal in
+            .onChange(of: simSettings.maxMacroBoostUnified, initial: false) { _, newVal in
                 // GlobalMacroHedge range: 0.0002868789724932909 .. 0.0004126829724932909
                 simSettings.factorEnableFrac["GlobalMacroHedge"] = normalise(
                     newVal,
@@ -118,7 +118,7 @@ struct UnifiedValueWatchersB: View {
                     maxVal: 0.0004126829724932909
                 )
             }
-            .onChange(of: simSettings.maxStablecoinBoostUnified) { newVal in
+            .onChange(of: simSettings.maxStablecoinBoostUnified, initial: false) { _, newVal in
                 // StablecoinShift range: 0.0002704809116327763 .. 0.0003919609116327763
                 simSettings.factorEnableFrac["StablecoinShift"] = normalise(
                     newVal,
@@ -130,7 +130,7 @@ struct UnifiedValueWatchersB: View {
     
     private var watchersB1b: some View {
         EmptyView()
-            .onChange(of: simSettings.maxDemoBoostUnified) { newVal in
+            .onChange(of: simSettings.maxDemoBoostUnified, initial: false) { _, newVal in
                 // DemographicAdoption range: 0.0008661432036626339 .. 0.0012578432036626339
                 simSettings.factorEnableFrac["DemographicAdoption"] = normalise(
                     newVal,
@@ -138,7 +138,7 @@ struct UnifiedValueWatchersB: View {
                     maxVal: 0.0012578432036626339
                 )
             }
-            .onChange(of: simSettings.maxAltcoinBoostUnified) { newVal in
+            .onChange(of: simSettings.maxAltcoinBoostUnified, initial: false) { _, newVal in
                 // AltcoinFlight range: 0.0002381864461803342 .. 0.0003222524461803342
                 simSettings.factorEnableFrac["AltcoinFlight"] = normalise(
                     newVal,
@@ -150,7 +150,7 @@ struct UnifiedValueWatchersB: View {
     
     private var watchersB2: some View {
         EmptyView()
-            .onChange(of: simSettings.adoptionBaseFactorUnified) { newVal in
+            .onChange(of: simSettings.adoptionBaseFactorUnified, initial: false) { _, newVal in
                 // AdoptionFactor range: 0.0013638349088897705 .. 0.0018451869088897705
                 simSettings.factorEnableFrac["AdoptionFactor"] = normalise(
                     newVal,
@@ -158,7 +158,7 @@ struct UnifiedValueWatchersB: View {
                     maxVal: 0.0018451869088897705
                 )
             }
-            .onChange(of: simSettings.maxClampDownUnified) { newVal in
+            .onChange(of: simSettings.maxClampDownUnified, initial: false) { _, newVal in
                 // RegClampdown range: -0.0014273392243542672 .. -0.0008449512243542672
                 simSettings.factorEnableFrac["RegClampdown"] = normalise(
                     newVal,
@@ -166,7 +166,7 @@ struct UnifiedValueWatchersB: View {
                     maxVal: -0.0008449512243542672
                 )
             }
-            .onChange(of: simSettings.maxCompetitorBoostUnified) { newVal in
+            .onChange(of: simSettings.maxCompetitorBoostUnified, initial: false) { _, newVal in
                 // CompetitorCoin range: -0.0011842141746411323 .. -0.0008454221746411323
                 simSettings.factorEnableFrac["CompetitorCoin"] = normalise(
                     newVal,
@@ -196,7 +196,7 @@ struct UnifiedValueWatchersC: View {
     
     private var watchersC1a: some View {
         EmptyView()
-            .onChange(of: simSettings.breachImpactUnified) { newVal in
+            .onChange(of: simSettings.breachImpactUnified, initial: false) { _, newVal in
                 // SecurityBreach range: -0.0012819675168380737 .. -0.0009009755168380737
                 simSettings.factorEnableFrac["SecurityBreach"] = normalise(
                     newVal,
@@ -204,7 +204,7 @@ struct UnifiedValueWatchersC: View {
                     maxVal: -0.0009009755168380737
                 )
             }
-            .onChange(of: simSettings.maxPopDropUnified) { newVal in
+            .onChange(of: simSettings.maxPopDropUnified, initial: false) { _, newVal in
                 // BubblePop range: -0.002244817890762329 .. -0.001280529890762329
                 simSettings.factorEnableFrac["BubblePop"] = normalise(
                     newVal,
@@ -216,7 +216,7 @@ struct UnifiedValueWatchersC: View {
     
     private var watchersC1b: some View {
         EmptyView()
-            .onChange(of: simSettings.maxMeltdownDropUnified) { newVal in
+            .onChange(of: simSettings.maxMeltdownDropUnified, initial: false) { _, newVal in
                 // StablecoinMeltdown range: -0.0009681346159477233 .. -0.0004600706159477233
                 simSettings.factorEnableFrac["StablecoinMeltdown"] = normalise(
                     newVal,
@@ -224,7 +224,7 @@ struct UnifiedValueWatchersC: View {
                     maxVal: -0.0004600706159477233
                 )
             }
-            .onChange(of: simSettings.blackSwanDropUnified) { newVal in
+            .onChange(of: simSettings.blackSwanDropUnified, initial: false) { _, newVal in
                 // BlackSwan range: -0.478662 .. -0.319108
                 simSettings.factorEnableFrac["BlackSwan"] = normalise(
                     newVal,
@@ -236,7 +236,7 @@ struct UnifiedValueWatchersC: View {
     
     private var watchersC2: some View {
         EmptyView()
-            .onChange(of: simSettings.bearWeeklyDriftUnified) { newVal in
+            .onChange(of: simSettings.bearWeeklyDriftUnified, initial: false) { _, newVal in
                 // BearMarket range: -0.0010278802752494812 .. -0.0007278802752494812
                 simSettings.factorEnableFrac["BearMarket"] = normalise(
                     newVal,
@@ -244,7 +244,7 @@ struct UnifiedValueWatchersC: View {
                     maxVal: -0.0007278802752494812
                 )
             }
-            .onChange(of: simSettings.maxMaturingDropUnified) { newVal in
+            .onChange(of: simSettings.maxMaturingDropUnified, initial: false) { _, newVal in
                 // MaturingMarket range: -0.0020343461055486196 .. -0.0010537001055486196
                 simSettings.factorEnableFrac["MaturingMarket"] = normalise(
                     newVal,
@@ -252,7 +252,7 @@ struct UnifiedValueWatchersC: View {
                     maxVal: -0.0010537001055486196
                 )
             }
-            .onChange(of: simSettings.maxRecessionDropUnified) { newVal in
+            .onChange(of: simSettings.maxRecessionDropUnified, initial: false) { _, newVal in
                 // Recession range: -0.0010516462467487811 .. -0.0007494520467487811
                 simSettings.factorEnableFrac["Recession"] = normalise(
                     newVal,
@@ -284,4 +284,3 @@ fileprivate func normalise(_ value: Double,
 // Instead, the fraction is strictly for intensity. The toggle is
 // controlled only by something like `simSettings.useHalvingWeekly`.
 // ----------------------------------------------------------------
-

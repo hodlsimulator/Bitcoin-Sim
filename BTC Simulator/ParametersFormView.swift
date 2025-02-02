@@ -34,7 +34,7 @@ struct ParametersFormView: View {
                             .foregroundColor(.white)
                         TextField("30", text: $inputManager.annualCAGR)
                             .keyboardType(.decimalPad)
-                            .onChange(of: inputManager.annualCAGR) { newVal in
+                            .onChange(of: inputManager.annualCAGR, initial: false) { _, newVal in
                                 print("User typed new CAGR value: \(newVal)")
                             }
                             .foregroundColor(.white)
