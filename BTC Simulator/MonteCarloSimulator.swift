@@ -59,7 +59,6 @@ fileprivate func pickMultiChunkBlock(
         return []
     }
     var stitched = [Double]()
-
     while stitched.count < totalNeeded {
         if chunkSize > source.count {
             stitched.append(contentsOf: source)
@@ -142,22 +141,17 @@ private func runWeeklySimulation(
         }
     }
 
-    // Instead of a single lumpsum at year-end, we'll do "smooth" weekly growth
-    // so that the total growth over 52 weeks approximates the annualCAGR.
-    // For example, if cagrDecimal=0.30 => about +0.52% each week => (1.0052^52) ~1.30
+    // "Smooth" weekly growth so that 52 increments yield ~annual CAGR
     let weeklyGrowth = pow(1.0 + cagrDecimal, 1.0 / 52.0) - 1.0
     
     for currentWeek in 1...totalWeeklySteps {
         
-        // If RegimeSwitching is on, adjust base CAGR & Vol each iteration
+        // Regime switching
         if settings.useRegimeSwitching {
             regimeModel.updateRegime(rng: rng)
         }
         
-        // Start fresh each loop
         var totalReturn = 0.0
-        
-        // Possibly scale your base volatility if regime switching is on
         var currentVol = baseWeeklyVol
         if settings.useRegimeSwitching {
             currentVol *= regimeModel.currentRegime.volMultiplier
@@ -166,7 +160,7 @@ private func runWeeklySimulation(
             currentVol = garchModelToUse.currentStdDev()
         }
         
-        // Historical sampling approach
+        // Historical sampling
         if settings.useExtendedHistoricalSampling, !extendedBlock.isEmpty {
             var sample = extendedBlock[currentWeek - 1]
             sample = dampenArctanWeekly(sample)
@@ -178,19 +172,15 @@ private func runWeeklySimulation(
             totalReturn += sample
         }
         
-        // If the user wants a "smooth" (non-lognormal) approach that still yields ~30% a year,
-        // then each week we do a small fraction so that after 52 it compounds to 30%.
+        // Smooth or lognormal growth adjustments
         if settings.useAnnualStep {
-            // Instead of lumpsum, let's do partial increments:
             totalReturn += weeklyGrowth
         }
         else if settings.useLognormalGrowth {
-            // The old approach: each week just add 30%/52 => ~0.5769%,
-            // but gets exponentiated => actual >30% year
             totalReturn += (cagrDecimal / 52.0)
         }
         
-        // Optional volatility shocks
+        // Volatility shocks
         if settings.useVolShocks && annualVolatility > 0 {
             let shockVol = randomNormalWithRNG(mean: 0, standardDeviation: currentVol, rng: rng)
             totalReturn += shockVol
@@ -209,7 +199,7 @@ private func runWeeklySimulation(
             totalReturn = (1 - phi) * totalReturn + phi * lastAutoReturn
         }
         
-        // Factor toggles
+        // Apply additional factor toggles
         let toggled = applyFactorToggles(
             baseReturn: totalReturn,
             stepIndex: currentWeek,
@@ -218,14 +208,12 @@ private func runWeeklySimulation(
             rng: rng
         )
         
-        // Apply final step: multiply price by exp(toggled)
+        // Update BTC price
         prevBTCPriceUSD *= exp(toggled)
         
-        // Keep track for next loop
         lastStepLogReturn = toggled
         lastAutoReturn    = toggled
         
-        // Floor
         if prevBTCPriceUSD < 1.0 {
             prevBTCPriceUSD = 1.0
         }
@@ -251,7 +239,7 @@ private func runWeeklySimulation(
         )
         let holdingsAfterDeposit = prevBTCHoldings + depositBTC
         
-        // Withdraw thresholds
+        // Withdrawal thresholds
         let hypotheticalValueEUR = holdingsAfterDeposit * newPriceEUR
         var withdrawalEUR = 0.0
         if hypotheticalValueEUR > (settings.inputManager?.threshold2 ?? 0) {
@@ -265,7 +253,7 @@ private func runWeeklySimulation(
         let portfolioValueEUR = finalHoldings * newPriceEUR
         let portfolioValueUSD = finalHoldings * newPriceUSD
         
-        // Update GARCH
+        // Update GARCH variance
         if settings.useGarchVolatility {
             garchModelToUse.updateVariance(lastReturn: lastStepLogReturn)
         }
@@ -358,7 +346,7 @@ private func runMonthlySimulation(
         }
     }
 
-    // Instead of lumpsum once/year, do monthly increments so 12 increments => ~30% total
+    // Monthly growth so that 12 increments yield ~annual CAGR
     let monthlyGrowth = pow(1.0 + cagrDecimal, 1.0 / 12.0) - 1.0
 
     for currentMonth in 1...totalMonths {
@@ -377,7 +365,7 @@ private func runMonthlySimulation(
             currentVol = garchModelToUse.currentStdDev()
         }
 
-        // Historical sample
+        // Historical sampling
         if settings.useExtendedHistoricalSampling, !extendedBlock.isEmpty {
             var sample = extendedBlock[currentMonth - 1]
             sample = dampenArctanMonthly(sample)
@@ -389,13 +377,10 @@ private func runMonthlySimulation(
             totalReturn += sample
         }
 
-        // If userAnnualStep => we do smaller monthly increments
-        // so that after 12 months total is ~30%:
         if settings.useAnnualStep {
             totalReturn += monthlyGrowth
         }
         else if settings.useLognormalGrowth {
-            // old monthly approach => cagr/12 each month (slightly different compounding)
             totalReturn += (cagrDecimal / 12.0)
         }
         
@@ -422,7 +407,7 @@ private func runMonthlySimulation(
             rng: rng
         )
         
-        // update price
+        // Update price
         prevBTCPriceUSD *= exp(toggled)
         
         lastStepLogReturn = toggled
@@ -540,35 +525,6 @@ func runOneFullSimulation(
     }
 }
 
-// MARK: - Compute median BTC
-fileprivate func computeMedianBTCPriceByStep(allRuns: [[SimulationData]]) -> [Decimal] {
-    guard let steps = allRuns.first?.count, steps > 0 else { return [] }
-    var medians = [Decimal](repeating: 0, count: steps)
-    
-    for stepIndex in 0..<steps {
-        let pricesAtStep = allRuns.compactMap { run -> Decimal? in
-            guard run.indices.contains(stepIndex) else { return nil }
-            return run[stepIndex].btcPriceUSD
-        }
-        
-        guard !pricesAtStep.isEmpty else {
-            medians[stepIndex] = 0
-            continue
-        }
-        
-        let sortedPrices = pricesAtStep.sorted()
-        let mid = sortedPrices.count / 2
-        if sortedPrices.count % 2 == 0 {
-            let p1 = sortedPrices[mid - 1]
-            let p2 = sortedPrices[mid]
-            medians[stepIndex] = (p1 + p2) / 2
-        } else {
-            medians[stepIndex] = sortedPrices[mid]
-        }
-    }
-    return medians
-}
-
 // MARK: - runMonteCarloSimulationsWithProgress
 func runMonteCarloSimulationsWithProgress(
     settings: SimulationSettings,
@@ -613,7 +569,7 @@ func runMonteCarloSimulationsWithProgress(
             initialBTCPriceUSD: initialBTCPriceUSD,
             iterationIndex: i + 1,
             rng: rng,
-            mempoolDataManager: mempoolDataManager,
+            mempoolDataManager: mempoolDataManager ?? MempoolDataManager(mempoolData: []),
             garchModel: fittedGarchModel
         )
         allRuns.append(simRun)
@@ -626,7 +582,7 @@ func runMonteCarloSimulationsWithProgress(
         return ([], [], [])
     }
     
-    // Sort runs by final EUR value, pick median
+    // Sort runs by final EUR portfolio value and pick median
     let finalValues = allRuns.map { ($0.last?.portfolioValueEUR ?? Decimal.zero, $0) }
     let sorted = finalValues.sorted { $0.0 < $1.0 }
     let medianRun = sorted[sorted.count / 2].1
@@ -657,3 +613,49 @@ func alignMonthlyData() {
         (btc, sp)
     }
 }
+
+// MARK: - Integration with Caching and Parallel Simulation Runner
+// (Assuming HistoricalDataCache.swift and ParallelSimulationRunner.swift have been added to your project.)
+func integrateSimulation() {
+    // Pre-cache dampened historical data.
+    HistoricalDataCache.shared.cacheWeeklyData(original: historicalBTCWeeklyReturns)
+    HistoricalDataCache.shared.cacheMonthlyData(original: historicalBTCMonthlyReturns)
+    
+    // Define simulation parameters.
+    let simulationSettings = SimulationSettings()
+    let annualCAGR = 30.0
+    let annualVolatility = 20.0
+    let correlationWithSP500 = 0.0
+    let exchangeRateEURUSD = 1.2
+    let userWeeks = 52
+    let initialBTCPriceUSD = 50000.0
+    let iterations = 1000
+    let seed: UInt64 = 12345
+    let mempoolDataManager = MempoolDataManager(mempoolData: [])
+    
+    // Run simulations concurrently.
+    ParallelSimulationRunner.runSimulationsConcurrently(
+        settings: simulationSettings,
+        annualCAGR: annualCAGR,
+        annualVolatility: annualVolatility,
+        correlationWithSP500: correlationWithSP500,
+        exchangeRateEURUSD: exchangeRateEURUSD,
+        userWeeks: userWeeks,
+        iterations: iterations,
+        initialBTCPriceUSD: initialBTCPriceUSD,
+        seed: seed,
+        mempoolDataManager: mempoolDataManager,
+        fittedGarchModel: nil,
+        progressCallback: { progress in
+            print("Completed \(progress) iterations")
+        },
+        completion: { medianRun, allRuns, stepMedians in
+            print("Simulation completed.")
+            print("Median run has \(medianRun.count) steps.")
+            // You can now update your UI or process the results.
+        }
+    )
+}
+
+// Uncomment the line below to run the integrated simulation when appropriate
+// integrateSimulation()

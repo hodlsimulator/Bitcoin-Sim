@@ -66,40 +66,40 @@ class CalibrationManager {
     // MARK: - Bearish Factors Multipliers
     
     // Regulatory Clampdown
-    var regClampdownMultiplierWeekly: Double = 1.0
-    var regClampdownMultiplierMonthly: Double = 1.0
+    var regClampdownMultiplierWeekly: Double = 1.5
+    var regClampdownMultiplierMonthly: Double = 1.5
     
     // Competitor Coin
-    var competitorCoinMultiplierWeekly: Double = 1.0
-    var competitorCoinMultiplierMonthly: Double = 1.0
+    var competitorCoinMultiplierWeekly: Double = 1.5
+    var competitorCoinMultiplierMonthly: Double = 1.5
     
     // Security Breach
-    var securityBreachMultiplierWeekly: Double = 1.0
-    var securityBreachMultiplierMonthly: Double = 1.0
+    var securityBreachMultiplierWeekly: Double = 1.5
+    var securityBreachMultiplierMonthly: Double = 1.5
     
     // Bubble Pop
-    var bubblePopMultiplierWeekly: Double = 1.0
-    var bubblePopMultiplierMonthly: Double = 1.0
+    var bubblePopMultiplierWeekly: Double = 2.0
+    var bubblePopMultiplierMonthly: Double = 2.0
     
     // Stablecoin Meltdown
-    var stablecoinMeltdownMultiplierWeekly: Double = 1.0
-    var stablecoinMeltdownMultiplierMonthly: Double = 1.0
+    var stablecoinMeltdownMultiplierWeekly: Double = 1.5
+    var stablecoinMeltdownMultiplierMonthly: Double = 1.5
     
     // Black Swan
-    var blackSwanMultiplierWeekly: Double = 0.5
-    var blackSwanMultiplierMonthly: Double = 0.5
+    var blackSwanMultiplierWeekly: Double = 0.85
+    var blackSwanMultiplierMonthly: Double = 0.85
     
     // Bear Market
-    var bearMarketMultiplierWeekly: Double = 1.0
-    var bearMarketMultiplierMonthly: Double = 1.0
+    var bearMarketMultiplierWeekly: Double = 2.0
+    var bearMarketMultiplierMonthly: Double = 2.0
     
     // Maturing Market
-    var maturingMarketMultiplierWeekly: Double = 1.0
-    var maturingMarketMultiplierMonthly: Double = 1.0
+    var maturingMarketMultiplierWeekly: Double = 2.0
+    var maturingMarketMultiplierMonthly: Double = 2.0
     
     // Recession
-    var recessionMultiplierWeekly: Double = 1.0
-    var recessionMultiplierMonthly: Double = 1.0
+    var recessionMultiplierWeekly: Double = 2.0
+    var recessionMultiplierMonthly: Double = 2.0
 
     // MARK: - Initialisation
     private init() {

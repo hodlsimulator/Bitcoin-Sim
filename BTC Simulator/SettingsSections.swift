@@ -18,57 +18,54 @@ extension SettingsView {
         Section {
             HStack {
                 GeometryReader { geo in
-                    // Define your factor keys:
-                    let bullishKeysLocal = ["Halving", "InstitutionalDemand", "CountryAdoption", "RegulatoryClarity",
-                                              "EtfApproval", "TechBreakthrough", "ScarcityEvents", "GlobalMacroHedge",
-                                              "StablecoinShift", "DemographicAdoption", "AltcoinFlight", "AdoptionFactor"]
-                    let bearishKeysLocal = ["RegClampdown", "CompetitorCoin", "SecurityBreach", "BubblePop",
-                                            "StablecoinMeltdown", "BlackSwan", "BearMarket", "MaturingMarket", "Recession"]
-                    
-                    // Average activation (0 to 1) on each side:
-                    let normalizedBullish = bullishKeysLocal.reduce(0.0) { accum, key in
-                        accum + (simSettings.factorEnableFrac[key] ?? 0)
-                    } / Double(bullishKeysLocal.count)
-                    let normalizedBearish = bearishKeysLocal.reduce(0.0) { accum, key in
-                        accum + (simSettings.factorEnableFrac[key] ?? 0)
-                    } / Double(bearishKeysLocal.count)
-                    
-                    // Compute a linear net tilt in the range roughly -1 to +1.
-                    // (If all bullish are fully on, normalizedBullish=1; if none are on then 0. Same for bearish.)
-                    let linearTilt = normalizedBullish - normalizedBearish
-                    
-                    // Now, apply a smooth arctan transform.
-                    // Multiply the linear tilt by a scaling factor (here 5.0) to control sensitivity,
-                    // then use (2.6/π)*atan(…) so that the tilt saturates around ±1.
-                    let tilt = (2.6 / .pi) * atan(5.0 * linearTilt)
-                    
-                    // Draw the tilt bar:
-                    let absTilt = abs(tilt)
-                    let computedWidth = geo.size.width * absTilt
-                    // Clamp if nearly full:
-                    let fillWidth = (geo.size.width - computedWidth) < 1 ? geo.size.width : computedWidth
+                    // Use the drag override if active, else the computed displayedTilt.
+                    let effectiveTilt = dragTiltOverride ?? displayedTilt
+                    let absTilt = abs(effectiveTilt)
+                    let barWidth = geo.size.width
+                    let computedWidth = barWidth * absTilt
+                    let fillWidth = (barWidth - computedWidth) < 1 ? barWidth : computedWidth
 
                     ZStack(alignment: .leading) {
-                        // Background bar:
+                        // Background bar.
                         Rectangle()
                             .fill(Color.gray.opacity(0.3))
                             .frame(height: 8)
                         
-                        if tilt >= 0 {
-                            // Green fill (bullish): anchored to the left.
+                        if effectiveTilt >= 0 {
+                            // Green fill: anchored to the left.
                             Rectangle()
                                 .fill(Color.green)
                                 .frame(width: computedWidth, height: 8)
                                 .animation(.easeInOut(duration: 0.3), value: computedWidth)
                         } else {
-                            // Red fill (bearish): anchored to the right.
+                            // Red fill: anchored to the right.
                             Rectangle()
                                 .fill(Color.red)
                                 .frame(width: fillWidth, height: 8)
-                                .offset(x: geo.size.width - fillWidth)
+                                .offset(x: barWidth - fillWidth)
                                 .animation(.easeInOut(duration: 0.3), value: fillWidth)
                         }
                     }
+                    .contentShape(Rectangle())
+                    .gesture(
+                        DragGesture()
+                            .onChanged { value in
+                                let locationX = value.location.x
+                                let halfWidth = barWidth / 2
+                                // Map so that center = 0, right edge = +1, left edge = –1.
+                                var newTilt = ((locationX - halfWidth) / halfWidth)
+                                newTilt = min(max(newTilt, -1), 1)
+                                dragTiltOverride = newTilt
+                            }
+                            .onEnded { _ in
+                                if let newTilt = dragTiltOverride {
+                                    simSettings.tiltBarValue = newTilt
+                                    // Update the global slider by mapping [-1, 1] to [0, 1].
+                                    simSettings.factorIntensity = (newTilt + 1) / 2
+                                }
+                                dragTiltOverride = nil
+                            }
+                    )
                 }
                 .frame(height: 8)
             }

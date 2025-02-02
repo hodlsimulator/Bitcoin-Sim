@@ -23,6 +23,8 @@ struct SettingsView: View {
     // Stores the actual numeric value of each factor before toggling off
     @State var lastFactorValue: [String: Double] = [:]
     
+    @State var dragTiltOverride: Double? = nil
+    
     // Factor keys
     let bullishKeys: [String] = [
         "Halving", "InstitutionalDemand", "CountryAdoption", "RegulatoryClarity",
@@ -279,17 +281,30 @@ struct SettingsView: View {
     // ----- Tilt Calculation & Helpers -----
     
     var displayedTilt: Double {
-        let allOff = simSettings.factorEnableFrac.values.allSatisfy { $0 == 0.0 }
-        if allOff { return 0.0 }
-        guard simSettings.hasCapturedDefault else { return 0.0 }
-        
-        let activeTilt = computeActiveNetTilt()
-        let diff = activeTilt - simSettings.defaultTilt
-        // Assume an expected maximum difference of ~0.001.
-        let fraction = diff / 0.001
-        // Using arctan gives a less steep start and smooth finish.
-        let finalTilt = (2.6 / .pi) * atan(2.0 * fraction)
-        return finalTilt
+        // Map the slider (factorIntensity, 0…1) to a tilt from –1 to 1.
+        let sliderTilt = simSettings.factorIntensity * 2 - 1
+
+        // Check if any toggle fractions are active.
+        let togglesActive = !simSettings.factorEnableFrac.values.allSatisfy { $0 == 0.0 }
+        if togglesActive {
+            // Define the factor keys.
+            let bullishKeys = ["Halving", "InstitutionalDemand", "CountryAdoption", "RegulatoryClarity",
+                                 "EtfApproval", "TechBreakthrough", "ScarcityEvents", "GlobalMacroHedge",
+                                 "StablecoinShift", "DemographicAdoption", "AltcoinFlight", "AdoptionFactor"]
+            let bearishKeys = ["RegClampdown", "CompetitorCoin", "SecurityBreach", "BubblePop",
+                               "StablecoinMeltdown", "BlackSwan", "BearMarket", "MaturingMarket", "Recession"]
+
+            // Compute average activations.
+            let normalizedBullish = bullishKeys.reduce(0.0) { $0 + (simSettings.factorEnableFrac[$1] ?? 0) } / Double(bullishKeys.count)
+            let normalizedBearish = bearishKeys.reduce(0.0) { $0 + (simSettings.factorEnableFrac[$1] ?? 0) } / Double(bearishKeys.count)
+            let net = normalizedBullish - normalizedBearish
+            // Use an arctan transform for a smooth s‑curve on the toggle component.
+            let toggleTilt = (2.6 / .pi) * atan(5.0 * net)
+            // Combine the slider and toggles (and clamp the result).
+            return min(max(sliderTilt + toggleTilt, -1), 1)
+        } else {
+            return sliderTilt
+        }
     }
     
     func computeActiveNetTilt() -> Double {

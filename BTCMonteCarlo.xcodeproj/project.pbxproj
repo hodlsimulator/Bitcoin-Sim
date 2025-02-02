@@ -84,6 +84,9 @@
 		E1F1CB5E2D4EDC58003DB24F /* TiltBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F1CB5D2D4EDC56003DB24F /* TiltBarView.swift */; };
 		E1F1CB602D4EF179003DB24F /* CalibrationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F1CB5F2D4EF177003DB24F /* CalibrationManager.swift */; };
 		E1F1CB622D4F081D003DB24F /* HalvingHistoricalManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F1CB612D4F081B003DB24F /* HalvingHistoricalManager.swift */; };
+		E1F1CB642D4F2F0E003DB24F /* HistoricalDataCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F1CB632D4F2F0C003DB24F /* HistoricalDataCache.swift */; };
+		E1F1CB662D4F31BA003DB24F /* ParallelSimulationRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F1CB652D4F31B9003DB24F /* ParallelSimulationRunner.swift */; };
+		E1F1CB682D4F3369003DB24F /* SimulationUtilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F1CB672D4F3366003DB24F /* SimulationUtilities.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -166,6 +169,9 @@
 		E1F1CB5D2D4EDC56003DB24F /* TiltBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TiltBarView.swift; sourceTree = "<group>"; };
 		E1F1CB5F2D4EF177003DB24F /* CalibrationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalibrationManager.swift; sourceTree = "<group>"; };
 		E1F1CB612D4F081B003DB24F /* HalvingHistoricalManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HalvingHistoricalManager.swift; sourceTree = "<group>"; };
+		E1F1CB632D4F2F0C003DB24F /* HistoricalDataCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoricalDataCache.swift; sourceTree = "<group>"; };
+		E1F1CB652D4F31B9003DB24F /* ParallelSimulationRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParallelSimulationRunner.swift; sourceTree = "<group>"; };
+		E1F1CB672D4F3366003DB24F /* SimulationUtilities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulationUtilities.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -237,6 +243,7 @@
 				E1E31C502D438DD700ED22E6 /* GarchCalibrator.swift */,
 				E19D10E62D3ED96000E3A55E /* GARCHHelper.swift */,
 				E1F1CB612D4F081B003DB24F /* HalvingHistoricalManager.swift */,
+				E1F1CB632D4F2F0C003DB24F /* HistoricalDataCache.swift */,
 				E19D10F82D40E66100E3A55E /* InMemorySettings.swift */,
 				E1883F3F2D1E0DC8007AA90B /* InputManager.swift */,
 				E1A1E52A2D2E3967008F7658 /* InteractiveBitcoinSymbol3DSpinner.swift */,
@@ -249,6 +256,7 @@
 				E19D11412D42F9E500E3A55E /* NetDeposit.swift */,
 				E1883F4F2D1FCEB9007AA90B /* OnboardingView.swift */,
 				E17B2F7F2D2800D100ECE087 /* OrientationObserver.swift */,
+				E1F1CB652D4F31B9003DB24F /* ParallelSimulationRunner.swift */,
 				E1883F3B2D1DDC75007AA90B /* ParametersFormView.swift */,
 				E1A1E51E2D2A7362008F7658 /* PortfolioChartView.swift */,
 				E19D11432D42FA6600E3A55E /* RNGHelpers.swift */,
@@ -270,6 +278,7 @@
 				E19D10F02D402BD800E3A55E /* SimulationSettings+ToggleAll.swift */,
 				E14D24102D3A9524007CC11A /* SimulationSettings+UnifiedFactors.swift */,
 				E14D23F42D374258007CC11A /* SimulationSummaryCardView.swift */,
+				E1F1CB672D4F3366003DB24F /* SimulationUtilities.swift */,
 				E1A1E52C2D2E39E3008F7658 /* SnapshotExtensions.swift */,
 				E1F1CB5D2D4EDC56003DB24F /* TiltBarView.swift */,
 				E1A1E5262D2E371B008F7658 /* TipsData.swift */,
@@ -419,6 +428,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				E14D23F52D37425D007CC11A /* SimulationSummaryCardView.swift in Sources */,
+				E1F1CB662D4F31BA003DB24F /* ParallelSimulationRunner.swift in Sources */,
 				E19D113E2D42F91100E3A55E /* AnnualStepAdjustFactor.swift in Sources */,
 				E19D11462D42FCAE00E3A55E /* FactorToggles.swift in Sources */,
 				E1B7B09F2D44E44A00B60EC6 /* BearishFactorsSection.swift in Sources */,
@@ -454,6 +464,7 @@
 				E191AD652D1B0D5700020DBE /* CSVParsingUtilities.swift in Sources */,
 				E19D10F72D40D8E100E3A55E /* SimulationSettings+BearishFactors.swift in Sources */,
 				E1B7B0AB2D4759D800B60EC6 /* SettingsWatchers.swift in Sources */,
+				E1F1CB642D4F2F0E003DB24F /* HistoricalDataCache.swift in Sources */,
 				E19D10E72D3ED96200E3A55E /* GARCHHelper.swift in Sources */,
 				E1B7B09D2D44E0D000B60EC6 /* BullishFactorsSection.swift in Sources */,
 				E19D10EF2D40290A00E3A55E /* SimulationSettings+RestoreDefaults.swift in Sources */,
@@ -461,6 +472,7 @@
 				E18C2BE12D259248006E7438 /* ChartSnapshotView.swift in Sources */,
 				E1A1E52D2D2E39E4008F7658 /* SnapshotExtensions.swift in Sources */,
 				E1A1E51F2D2A7364008F7658 /* PortfolioChartView.swift in Sources */,
+				E1F1CB682D4F3369003DB24F /* SimulationUtilities.swift in Sources */,
 				E1883F442D1E69B9007AA90B /* FactorToggleRow.swift in Sources */,
 				E17B2F222D26A9F300ECE087 /* SimulationCoordinator.swift in Sources */,
 				E1E31C4B2D43352300ED22E6 /* ExtendedBootstrapSimulator.swift in Sources */,
