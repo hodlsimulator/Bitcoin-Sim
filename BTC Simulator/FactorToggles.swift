@@ -30,7 +30,7 @@ func applyFactorToggles(
         let dynamicProb = (stressLevel > 80.0) ? baseProb * 1.5 : baseProb
         let roll = Double(rng.nextUniform())
         if roll < dynamicProb {
-            r += settings.halvingBumpWeekly
+            r += settings.halvingBumpWeekly * CalibrationManager.shared.halvingMultiplier
         }
     } else if !isWeekly && settings.useHalvingMonthly {
         let stressLevel = mempoolDataManager.stressLevel(at: stepIndex)
@@ -38,7 +38,7 @@ func applyFactorToggles(
         let dynamicProb = (stressLevel > 80.0) ? baseProb * 1.5 : baseProb
         let roll = Double(rng.nextUniform())
         if roll < dynamicProb {
-            r += settings.halvingBumpMonthly
+            r += settings.halvingBumpMonthly * CalibrationManager.shared.halvingMultiplier
         }
     }
     

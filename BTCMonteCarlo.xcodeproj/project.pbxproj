@@ -82,6 +82,7 @@
 		E1E31C4F2D4349E000ED22E6 /* DataLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1E31C4E2D4349DE00ED22E6 /* DataLoader.swift */; };
 		E1E31C512D438DD900ED22E6 /* GarchCalibrator.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1E31C502D438DD700ED22E6 /* GarchCalibrator.swift */; };
 		E1F1CB5E2D4EDC58003DB24F /* TiltBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F1CB5D2D4EDC56003DB24F /* TiltBarView.swift */; };
+		E1F1CB602D4EF179003DB24F /* CalibrationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F1CB5F2D4EF177003DB24F /* CalibrationManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -162,6 +163,7 @@
 		E1E31C4E2D4349DE00ED22E6 /* DataLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataLoader.swift; sourceTree = "<group>"; };
 		E1E31C502D438DD700ED22E6 /* GarchCalibrator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GarchCalibrator.swift; sourceTree = "<group>"; };
 		E1F1CB5D2D4EDC56003DB24F /* TiltBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TiltBarView.swift; sourceTree = "<group>"; };
+		E1F1CB5F2D4EF177003DB24F /* CalibrationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalibrationManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -214,6 +216,7 @@
 				E1E31C4C2D433DB600ED22E6 /* BlockBootstrapSimulator.swift */,
 				E12CCD8A2CF8235F0059931D /* BTC_SimulatorApp.swift */,
 				E1B7B09C2D44E0CE00B60EC6 /* BullishFactorsSection.swift */,
+				E1F1CB5F2D4EF177003DB24F /* CalibrationManager.swift */,
 				E1CFF0262D30D07800D9D044 /* ChartBuilders.swift */,
 				E18C2BE02D259245006E7438 /* ChartSnapshotView.swift */,
 				E1A1E5282D2E38F9008F7658 /* CheckboxToggleStyle.swift */,
@@ -458,6 +461,7 @@
 				E1883F442D1E69B9007AA90B /* FactorToggleRow.swift in Sources */,
 				E17B2F222D26A9F300ECE087 /* SimulationCoordinator.swift in Sources */,
 				E1E31C4B2D43352300ED22E6 /* ExtendedBootstrapSimulator.swift in Sources */,
+				E1F1CB602D4EF179003DB24F /* CalibrationManager.swift in Sources */,
 				E19D11402D42F97700E3A55E /* DampenOutliers.swift in Sources */,
 				E12CCD8B2CF8235F0059931D /* BTC_SimulatorApp.swift in Sources */,
 				E1A1E5272D2E371D008F7658 /* TipsData.swift in Sources */,
