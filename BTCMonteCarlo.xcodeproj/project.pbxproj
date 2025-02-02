@@ -83,6 +83,7 @@
 		E1E31C512D438DD900ED22E6 /* GarchCalibrator.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1E31C502D438DD700ED22E6 /* GarchCalibrator.swift */; };
 		E1F1CB5E2D4EDC58003DB24F /* TiltBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F1CB5D2D4EDC56003DB24F /* TiltBarView.swift */; };
 		E1F1CB602D4EF179003DB24F /* CalibrationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F1CB5F2D4EF177003DB24F /* CalibrationManager.swift */; };
+		E1F1CB622D4F081D003DB24F /* HalvingHistoricalManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F1CB612D4F081B003DB24F /* HalvingHistoricalManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -164,6 +165,7 @@
 		E1E31C502D438DD700ED22E6 /* GarchCalibrator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GarchCalibrator.swift; sourceTree = "<group>"; };
 		E1F1CB5D2D4EDC56003DB24F /* TiltBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TiltBarView.swift; sourceTree = "<group>"; };
 		E1F1CB5F2D4EF177003DB24F /* CalibrationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalibrationManager.swift; sourceTree = "<group>"; };
+		E1F1CB612D4F081B003DB24F /* HalvingHistoricalManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HalvingHistoricalManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -234,6 +236,7 @@
 				E1883F432D1E69B5007AA90B /* FactorToggleRow.swift */,
 				E1E31C502D438DD700ED22E6 /* GarchCalibrator.swift */,
 				E19D10E62D3ED96000E3A55E /* GARCHHelper.swift */,
+				E1F1CB612D4F081B003DB24F /* HalvingHistoricalManager.swift */,
 				E19D10F82D40E66100E3A55E /* InMemorySettings.swift */,
 				E1883F3F2D1E0DC8007AA90B /* InputManager.swift */,
 				E1A1E52A2D2E3967008F7658 /* InteractiveBitcoinSymbol3DSpinner.swift */,
@@ -469,6 +472,7 @@
 				E1B7B0A72D4753CF00B60EC6 /* ShiftFactors.swift in Sources */,
 				E14D240B2D3A698A007CC11A /* SimulationSettingsInit.swift in Sources */,
 				E1E31C512D438DD900ED22E6 /* GarchCalibrator.swift in Sources */,
+				E1F1CB622D4F081D003DB24F /* HalvingHistoricalManager.swift in Sources */,
 				E1883F3E2D1E0D7A007AA90B /* ActiveField.swift in Sources */,
 				E19D10F52D40D10E00E3A55E /* SimulationSettings+BullishFactors.swift in Sources */,
 				E1A1E52B2D2E3975008F7658 /* InteractiveBitcoinSymbol3DSpinner.swift in Sources */,

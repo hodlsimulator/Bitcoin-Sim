@@ -30,7 +30,15 @@ func applyFactorToggles(
         let dynamicProb = (stressLevel > 80.0) ? baseProb * 1.5 : baseProb
         let roll = Double(rng.nextUniform())
         if roll < dynamicProb {
-            r += settings.halvingBumpWeekly * CalibrationManager.shared.halvingMultiplier
+            // Get the fixed historical bump (cached for performance)
+            let historicalBump = HalvingHistoricalManager.shared.cachedAverageHalvingBump
+            // User-adjustable bump from the slider (only this part is controlled by the tilt bar)
+            let userBump = settings.halvingBumpUnified  // or use your monthly setting if applicable
+            // Combine them and apply the weekly calibration multiplier
+            let rawBump = (userBump + historicalBump) * CalibrationManager.shared.halvingMultiplierWeekly
+            // Apply dampening for finer control
+            let dampenedBump = rawBump * (atan(rawBump) / (Double.pi / 2))
+            r += dampenedBump
         }
     } else if !isWeekly && settings.useHalvingMonthly {
         let stressLevel = mempoolDataManager.stressLevel(at: stepIndex)
@@ -38,7 +46,11 @@ func applyFactorToggles(
         let dynamicProb = (stressLevel > 80.0) ? baseProb * 1.5 : baseProb
         let roll = Double(rng.nextUniform())
         if roll < dynamicProb {
-            r += settings.halvingBumpMonthly * CalibrationManager.shared.halvingMultiplier
+            let historicalBump = HalvingHistoricalManager.shared.cachedAverageHalvingBump
+            let userBump = settings.halvingBumpMonthly
+            let rawBump = (userBump + historicalBump) * CalibrationManager.shared.halvingMultiplierMonthly
+            let dampenedBump = rawBump * (atan(rawBump) / (Double.pi / 2))
+            r += dampenedBump
         }
     }
     
