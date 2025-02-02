@@ -4,7 +4,7 @@
 //
 //  Created by . . on 01/02/2025.
 //
-
+/*
 import SwiftUI
 
 struct TiltBarView: View {
@@ -13,40 +13,45 @@ struct TiltBarView: View {
     
     var body: some View {
         GeometryReader { geometry in
-            let totalWidth = geometry.size.width
-            // Calculate widths for each side:
-            let redWidth = tiltValue > 0 ? totalWidth * CGFloat(tiltValue) : 0
-            let blueWidth = tiltValue < 0 ? totalWidth * CGFloat(abs(tiltValue)) : 0
+            let width = geometry.size.width
             
             ZStack {
-                // Background bar
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(Color.gray.opacity(0.3))
+                    // Gradient background: blue at left, grey in centre, red at right
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(LinearGradient(
+                        gradient: Gradient(stops: [
+                            .init(color: Color.blue, location: 0),
+                            .init(color: Color.gray.opacity(0.3), location: 0.5),
+                            .init(color: Color.red, location: 1)
+                        ]),
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    ))
                 
-                // Blue bar (left side) for negative tilt
-                HStack {
-                    if blueWidth > 0 {
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(Color.blue)
-                            .frame(width: blueWidth)
-                            .animation(.easeInOut(duration: 0.3), value: blueWidth)
-                    }
-                    Spacer()
-                }
+                // A centre line for reference
+                Rectangle()
+                    .fill(Color.white.opacity(0.6))
+                    .frame(width: 2)
+                    .offset(x: 0)
                 
-                // Red bar (right side) for positive tilt
-                HStack {
-                    Spacer()
-                    if redWidth > 0 {
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(Color.red)
-                            .frame(width: redWidth)
-                            .animation(.easeInOut(duration: 0.3), value: redWidth)
-                    }
-                }
+                // Indicator that moves with tiltValue
+                Circle()
+                    .fill(Color.white)
+                    .frame(width: 24, height: 24)
+                    .shadow(radius: 2)
+                    .offset(x: indicatorOffset(width: width))
+                    .animation(.easeInOut(duration: 0.3), value: tiltValue)
             }
         }
-        .frame(height: 20)
+        .frame(height: 30)
+    }
+    
+    // Calculate the x offset for the indicator.
+    func indicatorOffset(width: CGFloat) -> CGFloat {
+        // Convert tiltValue (-1...1) to a normalized value (0...1)
+        let normalized = (tiltValue + 1) / 2
+        // Place the indicator so its centre aligns correctly.
+        return (width * CGFloat(normalized)) - (width / 2)
     }
 }
 
@@ -61,3 +66,4 @@ struct TiltBarView_Previews: PreviewProvider {
         .previewLayout(.sizeThatFits)
     }
 }
+*/

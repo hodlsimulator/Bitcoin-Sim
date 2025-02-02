@@ -49,6 +49,8 @@ struct SettingsView: View {
     @State private var disableAnimationNow = false
     @State var oldFactorEnableFrac: [String: Double] = [:]
     
+    @State var updatingFromFactorEnable: Bool = false
+    
     // A helper dictionary to get/set each factor’s numeric property.
     private var factorAccessors: [String: (get: () -> Double, set: (Double) -> Void)] {
         [
@@ -203,14 +205,17 @@ struct SettingsView: View {
                     simSettings.tiltBarValue = displayedTilt
                 }
             }
-            .onChange(of: simSettings.factorIntensity, initial: false) { _, newValue in
-                guard hasAppeared else { return }
-                simSettings.syncAllFactorsToIntensity(newValue)
-                simSettings.tiltBarValue = displayedTilt
+            .onChange(of: simSettings.factorIntensity) { newValue in
+                // guard hasAppeared else { return }
+                // Only update the individual factors if the global slider is moved directly.
+                // if !updatingFromFactorEnable {
+                //    simSettings.syncAllFactorsToIntensity(newValue)
+                // }
+                // simSettings.tiltBarValue = displayedTilt
             }
-            .onChange(of: simSettings.factorEnableFrac, initial: false) { _, newVal in
+            .onChange(of: simSettings.factorEnableFrac) { newVal in
                 guard !simSettings.isRestoringDefaults else { return }
-                
+
                 disableAnimationNow = false
 
                 if firstToggleOff {
@@ -271,15 +276,15 @@ struct SettingsView: View {
                 oldFactorEnableFrac = newVal
 
                 simSettings.tiltBarValue = displayedTilt
-                
-                // New: update global slider based on average of individual factors.
+
+                // Update factorIntensity from the average, no syncAllFactorsToIntensity call here.
+                updatingFromFactorEnable = true
                 let total = newVal.values.reduce(0.0, +)
                 let count = Double(newVal.count)
                 if count > 0 {
                     simSettings.factorIntensity = total / count
                 }
-                
-                simSettings.syncAllFactorsToIntensity(simSettings.factorIntensity)
+                updatingFromFactorEnable = false
             }
             .animation(hasAppeared ? .easeInOut(duration: 0.3) : nil, value: simSettings.factorIntensity)
             .animation(hasAppeared ? .easeInOut(duration: 0.3) : nil, value: displayedTilt)

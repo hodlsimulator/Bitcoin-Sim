@@ -81,18 +81,32 @@ extension SettingsView {
         Section {
             HStack {
                 Button {
+                    // Set global slider to 0 and unify all factors at minimum.
                     simSettings.factorIntensity = 0.0
+                    simSettings.syncAllFactorsToIntensity(0.0)
                 } label: {
                     Image(systemName: "chart.line.downtrend.xyaxis")
                         .foregroundColor(.red)
                 }
                 .buttonStyle(.plain)
 
-                Slider(value: $simSettings.factorIntensity, in: 0...1, step: 0.01)
-                    .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
+                Slider(
+                    value: $simSettings.factorIntensity,
+                    in: 0...1,
+                    step: 0.01,
+                    onEditingChanged: { editing in
+                        // Only unify factors when the user finishes dragging.
+                        if !editing {
+                            simSettings.syncAllFactorsToIntensity(simSettings.factorIntensity)
+                        }
+                    }
+                )
+                .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
 
                 Button {
+                    // Set global slider to 1 and unify all factors at maximum.
                     simSettings.factorIntensity = 1.0
+                    simSettings.syncAllFactorsToIntensity(1.0)
                 } label: {
                     Image(systemName: "chart.line.uptrend.xyaxis")
                         .foregroundColor(.green)
