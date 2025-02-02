@@ -9,31 +9,59 @@ import SwiftUI
 
 extension SettingsView {
 
+    func logistic(_ x: Double, steepness: Double, midpoint: Double) -> Double {
+        1.0 / (1.0 + exp(-steepness * (x - midpoint)))
+    }
+
     // MARK: - Tilt Bar
     var overallTiltSection: some View {
         Section {
             HStack {
                 GeometryReader { geo in
-                    let tilt = simSettings.tiltBarValue
+                    // Define your factor keys:
+                    let bullishKeysLocal = ["Halving", "InstitutionalDemand", "CountryAdoption", "RegulatoryClarity",
+                                              "EtfApproval", "TechBreakthrough", "ScarcityEvents", "GlobalMacroHedge",
+                                              "StablecoinShift", "DemographicAdoption", "AltcoinFlight", "AdoptionFactor"]
+                    let bearishKeysLocal = ["RegClampdown", "CompetitorCoin", "SecurityBreach", "BubblePop",
+                                            "StablecoinMeltdown", "BlackSwan", "BearMarket", "MaturingMarket", "Recession"]
+                    
+                    // Average activation (0 to 1) on each side:
+                    let normalizedBullish = bullishKeysLocal.reduce(0.0) { accum, key in
+                        accum + (simSettings.factorEnableFrac[key] ?? 0)
+                    } / Double(bullishKeysLocal.count)
+                    let normalizedBearish = bearishKeysLocal.reduce(0.0) { accum, key in
+                        accum + (simSettings.factorEnableFrac[key] ?? 0)
+                    } / Double(bearishKeysLocal.count)
+                    
+                    // Compute a linear net tilt in the range roughly -1 to +1.
+                    // (If all bullish are fully on, normalizedBullish=1; if none are on then 0. Same for bearish.)
+                    let linearTilt = normalizedBullish - normalizedBearish
+                    
+                    // Now, apply a smooth arctan transform.
+                    // Multiply the linear tilt by a scaling factor (here 5.0) to control sensitivity,
+                    // then use (2.6/π)*atan(…) so that the tilt saturates around ±1.
+                    let tilt = (2.6 / .pi) * atan(5.0 * linearTilt)
+                    
+                    // Draw the tilt bar:
                     let absTilt = abs(tilt)
                     let computedWidth = geo.size.width * absTilt
-                    // If computedWidth is within 1 point of geo.size.width, clamp it
+                    // Clamp if nearly full:
                     let fillWidth = (geo.size.width - computedWidth) < 1 ? geo.size.width : computedWidth
 
                     ZStack(alignment: .leading) {
-                        // Background bar
+                        // Background bar:
                         Rectangle()
                             .fill(Color.gray.opacity(0.3))
                             .frame(height: 8)
                         
                         if tilt >= 0 {
-                            // Green fill for bullish tilt, anchored to the left.
+                            // Green fill (bullish): anchored to the left.
                             Rectangle()
                                 .fill(Color.green)
                                 .frame(width: computedWidth, height: 8)
                                 .animation(.easeInOut(duration: 0.3), value: computedWidth)
                         } else {
-                            // Red fill for bearish tilt, offset so its right edge is fixed.
+                            // Red fill (bearish): anchored to the right.
                             Rectangle()
                                 .fill(Color.red)
                                 .frame(width: fillWidth, height: 8)
