@@ -16,8 +16,8 @@ class CalibrationManager {
     // MARK: - Bullish Factors Multipliers
     
     // Halving
-    var halvingMultiplierWeekly: Double = 1.0
-    var halvingMultiplierMonthly: Double = 1.0
+    var halvingMultiplierWeekly: Double = 0.5
+    var halvingMultiplierMonthly: Double = 0.5
     
     // Institutional Demand
     var institutionalDemandMultiplierWeekly: Double = 1.0
@@ -86,8 +86,8 @@ class CalibrationManager {
     var stablecoinMeltdownMultiplierMonthly: Double = 1.0
     
     // Black Swan
-    var blackSwanMultiplierWeekly: Double = 1.0
-    var blackSwanMultiplierMonthly: Double = 1.0
+    var blackSwanMultiplierWeekly: Double = 0.5
+    var blackSwanMultiplierMonthly: Double = 0.5
     
     // Bear Market
     var bearMarketMultiplierWeekly: Double = 1.0

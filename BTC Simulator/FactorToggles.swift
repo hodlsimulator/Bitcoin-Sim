@@ -177,7 +177,10 @@ func applyFactorToggles(
         let dynamicProb = (stressLevel > 80.0) ? baseProb * 2.0 : baseProb
         let roll = Double(rng.nextUniform())
         if roll < dynamicProb {
-            r += settings.blackSwanDropWeekly
+            let rawDrop = settings.blackSwanDropWeekly * CalibrationManager.shared.blackSwanMultiplierWeekly
+            // Use abs(rawDrop) inside atan to preserve the negative sign.
+            let dampenedDrop = rawDrop * (atan(abs(rawDrop)) / (Double.pi / 2))
+            r += dampenedDrop
         }
     } else if !isWeekly && settings.useBlackSwanMonthly {
         let stressLevel = mempoolDataManager.stressLevel(at: stepIndex)
@@ -185,7 +188,9 @@ func applyFactorToggles(
         let dynamicProb = (stressLevel > 80.0) ? baseProb * 2.0 : baseProb
         let roll = Double(rng.nextUniform())
         if roll < dynamicProb {
-            r += settings.blackSwanDropMonthly
+            let rawDrop = settings.blackSwanDropMonthly * CalibrationManager.shared.blackSwanMultiplierMonthly
+            let dampenedDrop = rawDrop * (atan(abs(rawDrop)) / (Double.pi / 2))
+            r += dampenedDrop
         }
     }
 
