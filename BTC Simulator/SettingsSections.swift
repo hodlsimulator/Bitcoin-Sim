@@ -81,7 +81,7 @@ extension SettingsView {
         Section {
             HStack {
                 Button {
-                    // Set global slider to 0 and unify all factors at minimum.
+                    // Set global slider to 0 and unify all factors at minimum immediately.
                     simSettings.factorIntensity = 0.0
                     simSettings.syncAllFactorsToIntensity(0.0)
                 } label: {
@@ -90,21 +90,24 @@ extension SettingsView {
                 }
                 .buttonStyle(.plain)
 
+                // Use a custom Binding so every change in the slider value calls syncAllFactorsToIntensity
                 Slider(
-                    value: $simSettings.factorIntensity,
-                    in: 0...1,
-                    step: 0.01,
-                    onEditingChanged: { editing in
-                        // Only unify factors when the user finishes dragging.
-                        if !editing {
-                            simSettings.syncAllFactorsToIntensity(simSettings.factorIntensity)
+                    value: Binding(
+                        get: { simSettings.factorIntensity },
+                        set: { newVal in
+                            // 1) Update the slider value
+                            simSettings.factorIntensity = newVal
+                            // 2) Immediately sync all factors to this new global slider value
+                            simSettings.syncAllFactorsToIntensity(newVal)
                         }
-                    }
+                    ),
+                    in: 0...1,
+                    step: 0.01
                 )
                 .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
 
                 Button {
-                    // Set global slider to 1 and unify all factors at maximum.
+                    // Set global slider to 1 and unify all factors at maximum immediately.
                     simSettings.factorIntensity = 1.0
                     simSettings.syncAllFactorsToIntensity(1.0)
                 } label: {

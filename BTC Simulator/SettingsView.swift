@@ -215,7 +215,7 @@ struct SettingsView: View {
             }
             .onChange(of: simSettings.factorEnableFrac) { newVal in
                 guard !simSettings.isRestoringDefaults else { return }
-
+                
                 disableAnimationNow = false
 
                 if firstToggleOff {
@@ -277,14 +277,22 @@ struct SettingsView: View {
 
                 simSettings.tiltBarValue = displayedTilt
 
-                // Update factorIntensity from the average, no syncAllFactorsToIntensity call here.
-                updatingFromFactorEnable = true
-                let total = newVal.values.reduce(0.0, +)
-                let count = Double(newVal.count)
-                if count > 0 {
-                    simSettings.factorIntensity = total / count
-                }
-                updatingFromFactorEnable = false
+                // --- NEW CODE: Compute global slider using separate bullish and bearish averages ---
+                let bullishKeysLocal = ["Halving", "InstitutionalDemand", "CountryAdoption", "RegulatoryClarity",
+                                          "EtfApproval", "TechBreakthrough", "ScarcityEvents", "GlobalMacroHedge",
+                                          "StablecoinShift", "DemographicAdoption", "AltcoinFlight", "AdoptionFactor"]
+                let bearishKeysLocal = ["RegClampdown", "CompetitorCoin", "SecurityBreach", "BubblePop",
+                                          "StablecoinMeltdown", "BlackSwan", "BearMarket", "MaturingMarket", "Recession"]
+                
+                let totalBullish = bullishKeysLocal.reduce(0.0) { $0 + (newVal[$1] ?? 0) }
+                let avgBullish = totalBullish / Double(bullishKeysLocal.count)
+                
+                let totalBearish = bearishKeysLocal.reduce(0.0) { $0 + (newVal[$1] ?? 0) }
+                let avgBearish = totalBearish / Double(bearishKeysLocal.count)
+                
+                let net = avgBullish - avgBearish  // net is in the range [-1, 1]
+                simSettings.factorIntensity = (net + 1) / 2
+                // --- End of new code ---
             }
             .animation(hasAppeared ? .easeInOut(duration: 0.3) : nil, value: simSettings.factorIntensity)
             .animation(hasAppeared ? .easeInOut(duration: 0.3) : nil, value: displayedTilt)
