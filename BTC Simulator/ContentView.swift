@@ -286,6 +286,8 @@ struct ContentView: View {
     
     @State private var hideScrollIndicators = true
     
+    @AppStorage("advancedSettingsUnlocked") private var advancedSettingsUnlocked: Bool = false
+    
     private var loadingTips: [String] { TipsData.filteredLoadingTips(for: simSettings) }
     private var usageTips: [String] { TipsData.filteredUsageTips(for: simSettings) }
     
@@ -539,6 +541,8 @@ struct ContentView: View {
                         Toggle("Lock Seed", isOn: $simSettings.lockedRandomSeed)
                             .toggleStyle(CheckboxToggleStyle())
                             .foregroundColor(.white)
+                            .disabled(!advancedSettingsUnlocked)
+                            .opacity(advancedSettingsUnlocked ? 1.0 : 0.5)
                             .onChange(of: simSettings.lockedRandomSeed, initial: false) { _, locked in
                                 if locked {
                                     let newSeed = UInt64.random(in: 0..<UInt64.max)

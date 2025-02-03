@@ -206,12 +206,10 @@ struct SettingsView: View {
                 }
             }
             .onChange(of: simSettings.factorIntensity) { newValue in
-                // guard hasAppeared else { return }
-                // Only update the individual factors if the global slider is moved directly.
-                // if !updatingFromFactorEnable {
-                //    simSettings.syncAllFactorsToIntensity(newValue)
-                // }
-                // simSettings.tiltBarValue = displayedTilt
+                // We leave this empty so that moving the global slider doesn't
+                // override individual factor values during an update.
+                // (If you want to sync all factors when the slider is moved,
+                // consider using the slider’s onEditingChanged closure.)
             }
             .onChange(of: simSettings.factorEnableFrac) { newVal in
                 guard !simSettings.isRestoringDefaults else { return }
@@ -277,7 +275,7 @@ struct SettingsView: View {
 
                 simSettings.tiltBarValue = displayedTilt
 
-                // --- NEW CODE: Compute global slider using separate bullish and bearish averages ---
+                // --- NEW CODE: Compute the global slider value using the 12×9 logic ---
                 let bullishKeysLocal = ["Halving", "InstitutionalDemand", "CountryAdoption", "RegulatoryClarity",
                                           "EtfApproval", "TechBreakthrough", "ScarcityEvents", "GlobalMacroHedge",
                                           "StablecoinShift", "DemographicAdoption", "AltcoinFlight", "AdoptionFactor"]
@@ -285,14 +283,16 @@ struct SettingsView: View {
                                           "StablecoinMeltdown", "BlackSwan", "BearMarket", "MaturingMarket", "Recession"]
                 
                 let totalBullish = bullishKeysLocal.reduce(0.0) { $0 + (newVal[$1] ?? 0) }
-                let avgBullish = totalBullish / Double(bullishKeysLocal.count)
-                
                 let totalBearish = bearishKeysLocal.reduce(0.0) { $0 + (newVal[$1] ?? 0) }
+                
+                // Calculate the proportion on each side:
+                let avgBullish = totalBullish / Double(bullishKeysLocal.count)
                 let avgBearish = totalBearish / Double(bearishKeysLocal.count)
                 
-                let net = avgBullish - avgBearish  // net is in the range [-1, 1]
+                // Net tilt in the range [-1, 1]. (When all are on, avgBullish and avgBearish are 1, so net = 0.)
+                let net = avgBullish - avgBearish
                 simSettings.factorIntensity = (net + 1) / 2
-                // --- End of new code ---
+                // --- End new code ---
             }
             .animation(hasAppeared ? .easeInOut(duration: 0.3) : nil, value: simSettings.factorIntensity)
             .animation(hasAppeared ? .easeInOut(duration: 0.3) : nil, value: displayedTilt)

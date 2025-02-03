@@ -1,46 +1,43 @@
-//
-//  AboutView.swift
-//  BTCMonteCarlo
-//
-//  Created by Conor on ...
-//
-
 import SwiftUI
 
 struct AboutView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-
                 // Title
                 Text("About HODL Simulator")
                     .font(.largeTitle)
                     .bold()
                     .padding(.bottom, 8)
-
+                
                 // Short Overview
                 Text("""
-HODL Simulator is a forward-looking modelling tool for exploring Bitcoin’s potential price paths over about 20 years. It draws on historical BTC returns, applies various factors (both bullish and bearish), and uses a log-scale approach to model realistic price changes.
+HODL Simulator is a forward-looking modelling tool for exploring Bitcoin’s potential price paths over about 20 years. It draws on historical BTC returns, applies a range of bullish and bearish factors, and uses a unique tilt bar to visually summarise the net market sentiment.
 """)
-
+                
+                // Tilt Bar Explanation
+                Text("""
+The tilt bar is a key feature of the simulator. It displays a green hue when bullish factors dominate and red when bearish factors take over. This real-time indicator helps you quickly gauge the overall market bias based on your selected settings.
+""")
+                
                 // Brief Explanation
                 Text("""
-In each run, the simulator randomly samples past BTC performance, adjusts for your configured volatility, and factors in optional events (like institutional demand or macro downturns). Instead of a single outcome, it generates multiple trials to show a range of possibilities.
+In each run, the simulator randomly samples past BTC performance, adjusts for your configured volatility, and factors in optional events—like institutional demand or macro downturns. Rather than a single outcome, it produces multiple trials to show a range of possibilities.
 """)
-
+                
                 // Best-Fit Highlight
                 Text("""
-To help you see an “average” trajectory, HODL Simulator highlights a best-fit run in orange. This line grows thicker and darker as you increase the total number of simulations, so it stands out even when the chart is crowded.
+A best-fit run is highlighted in orange to indicate the ‘average’ trajectory. This line thickens and darkens as the number of simulations increases, ensuring it stands out even on a busy chart.
 """)
-
+                
                 // Personalised Portfolio
                 Text("""
-You can also track a hypothetical portfolio by adding an initial balance and periodic contributions. Each simulation shows how your holdings might grow (or shrink) under the randomised price paths.
+You can also track a hypothetical portfolio by setting an initial balance and periodic contributions. Each simulation demonstrates how your holdings might grow or contract under different scenarios.
 """)
-
+                
                 // Wrap Up
                 Text("""
-With its straightforward interface and flexible settings, HODL Simulator offers an intuitive way to explore how Bitcoin’s future might unfold, letting you test different scenarios in a controlled, data-driven environment.
+With its simple interface, flexible settings, and the intuitive tilt bar, HODL Simulator offers a data-driven way to explore how Bitcoin’s future might unfold.
 """)
             }
             .foregroundColor(.white)
