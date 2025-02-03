@@ -76,28 +76,66 @@ extension SettingsView {
         .listRowBackground(Color(white: 0.15))
     }
 
-    // MARK: - Universal Factor Intensity (Slider)
+    // MARK: - Universal Factor Intensity (Slider + Extreme Icons)
     var factorIntensitySection: some View {
         Section {
             HStack {
+                // =========== EXTREME BEARISH BUTTON (LEFT / RED) ===========
                 Button {
-                    // Set global slider to 0 and unify all factors at minimum immediately.
+                    isManualOverride = true
+                    // 1) Turn OFF all bullish factors (set fraction=0) & force them to the “bearish side” (t=0).
+                    for key in bullishKeys {
+                        setFactorEnabled(factorName: key, enabled: false)
+                        // Let’s forcibly store 0.0 so the UI sees them as “off.”
+                        simSettings.factorEnableFrac[key] = 0.0
+                        
+                        // Then forcibly set the numeric to t=0.0
+                        let forcedVal = simSettings.baseValForFactor(key, intensity: 0.0)
+                        factorAccessors[key]?.set(forcedVal)
+                        
+                        // Even though it’s off, some rows show the slider. So re‑derive fraction:
+                        let isWeekly = (simSettings.periodUnit == .weeks)
+                        let frac = simSettings.fractionFromValue(key, value: forcedVal, isWeekly: isWeekly)
+                        simSettings.factorEnableFrac[key] = frac
+                    }
+                    
+                    // 2) Turn ON all bearish factors & also force them to t=0.0
+                    for key in bearishKeys {
+                        setFactorEnabled(factorName: key, enabled: true)
+                        // Typically we do 1.0 for “on,” but we’ll finalize it after forcing numeric:
+                        simSettings.factorEnableFrac[key] = 1.0
+                        
+                        let forcedVal = simSettings.baseValForFactor(key, intensity: 0.0)
+                        factorAccessors[key]?.set(forcedVal)
+                        
+                        // Recompute fraction from forcedVal:
+                        let isWeekly = (simSettings.periodUnit == .weeks)
+                        let frac = simSettings.fractionFromValue(key, value: forcedVal, isWeekly: isWeekly)
+                        simSettings.factorEnableFrac[key] = frac
+                    }
+                    
+                    // 3) Now set the global slider & tilt bar to extreme bearish
                     simSettings.factorIntensity = 0.0
+                    simSettings.tiltBarValue = -1.0
+
+                    // 4) Finally, sync so “on” factors are properly set
                     simSettings.syncAllFactorsToIntensity(0.0)
+                    
+                    DispatchQueue.main.async {
+                           isManualOverride = false
+                       }
                 } label: {
                     Image(systemName: "chart.line.downtrend.xyaxis")
                         .foregroundColor(.red)
                 }
                 .buttonStyle(.plain)
-
-                // Use a custom Binding so every change in the slider value calls syncAllFactorsToIntensity
+                
+                // --- GLOBAL INTENSITY SLIDER ---
                 Slider(
                     value: Binding(
                         get: { simSettings.factorIntensity },
                         set: { newVal in
-                            // 1) Update the slider value
                             simSettings.factorIntensity = newVal
-                            // 2) Immediately sync all factors to this new global slider value
                             simSettings.syncAllFactorsToIntensity(newVal)
                         }
                     ),
@@ -106,10 +144,52 @@ extension SettingsView {
                 )
                 .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
 
+                // =========== EXTREME BULLISH BUTTON (RIGHT / GREEN) ===========
                 Button {
-                    // Set global slider to 1 and unify all factors at maximum immediately.
+                    // Step 1: Disable .onChange overrides
+                    isManualOverride = true
+                    
+                    // Turn OFF all bearish factors and force them numerically to 0.0
+                    for key in bearishKeys {
+                        setFactorEnabled(factorName: key, enabled: false)
+                        factorAccessors[key]?.set(0.0)
+                        
+                        // Recompute fraction so the UI slider is far left
+                        let isWeekly = (simSettings.periodUnit == .weeks)
+                        let frac = simSettings.fractionFromValue(key, value: 0.0, isWeekly: isWeekly)
+                        simSettings.factorEnableFrac[key] = frac
+                        
+                        // If you’re using manualOffsets, zero it out
+                        simSettings.manualOffsets[key] = 0.0
+                    }
+                    
+                    // Turn ON all bullish factors and force them numerically to 1.0
+                    for key in bullishKeys {
+                        setFactorEnabled(factorName: key, enabled: true)
+                        factorAccessors[key]?.set(1.0)
+                        
+                        // Recompute fraction so the UI slider is far right
+                        let isWeekly = (simSettings.periodUnit == .weeks)
+                        let frac = simSettings.fractionFromValue(key, value: 1.0, isWeekly: isWeekly)
+                        simSettings.factorEnableFrac[key] = frac
+                        
+                        simSettings.manualOffsets[key] = 0.0
+                    }
+                    
+                    // Force global slider & tilt bar full bullish
                     simSettings.factorIntensity = 1.0
-                    simSettings.syncAllFactorsToIntensity(1.0)
+                    simSettings.tiltBarValue = 1.0
+                    
+                    // Step 3: “Hide” this big jump from onChange
+                    oldFactorEnableFrac = simSettings.factorEnableFrac
+                    
+                    // Step 4: Clear out old “stored values” if your code tries to restore them
+                    lastFactorValue.removeAll()
+                    
+                    // Step 5: Re-allow normal onChange logic after a quick delay
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        isManualOverride = false
+                    }
                 } label: {
                     Image(systemName: "chart.line.uptrend.xyaxis")
                         .foregroundColor(.green)
@@ -117,10 +197,117 @@ extension SettingsView {
                 .buttonStyle(.plain)
             }
         } footer: {
-            Text("Scales all bullish & bearish factors. Left (red) => minimum, right (green) => maximum.")
+            Text("Scales all bullish & bearish factors. Left (red) ⇒ minimum (bearish), right (green) ⇒ maximum (bullish).")
                 .foregroundColor(.white)
         }
         .listRowBackground(Color(white: 0.15))
+    }
+    
+    func forceFactorNumeric(_ factorName: String, toIntensity t: Double) {
+        // If you skip factors that are “off,” they stay at old midpoints. So we do it directly:
+        let val = simSettings.baseValForFactor(factorName, intensity: t)
+        
+        // If your baseValForFactor returns a plain Double, just do:
+        factorAccessors[factorName]?.set(val)
+        
+        // If your baseValForFactor returns an optional, do:
+        // factorAccessors[factorName]?.set(val ?? 0.5)
+        
+        // And also reset the manual offset to 0 so the new forced value “sticks”
+        simSettings.manualOffsets[factorName] = 0.0
+    }
+
+    // A helper function to set the “weekly/monthly” booleans that the UI toggles use
+    func setFactorEnabled(factorName: String, enabled: Bool) {
+        switch factorName {
+        case "RegClampdown":
+            simSettings.useRegClampdownWeekly = enabled
+            simSettings.useRegClampdownMonthly = enabled
+            
+        case "CompetitorCoin":
+            simSettings.useCompetitorCoinWeekly = enabled
+            simSettings.useCompetitorCoinMonthly = enabled
+            
+        case "SecurityBreach":
+            simSettings.useSecurityBreachWeekly = enabled
+            simSettings.useSecurityBreachMonthly = enabled
+            
+        case "BubblePop":
+            simSettings.useBubblePopWeekly = enabled
+            simSettings.useBubblePopMonthly = enabled
+            
+        case "StablecoinMeltdown":
+            simSettings.useStablecoinMeltdownWeekly = enabled
+            simSettings.useStablecoinMeltdownMonthly = enabled
+            
+        case "BlackSwan":
+            simSettings.useBlackSwanWeekly = enabled
+            simSettings.useBlackSwanMonthly = enabled
+            
+        case "BearMarket":
+            simSettings.useBearMarketWeekly = enabled
+            simSettings.useBearMarketMonthly = enabled
+            
+        case "MaturingMarket":
+            simSettings.useMaturingMarketWeekly = enabled
+            simSettings.useMaturingMarketMonthly = enabled
+            
+        case "Recession":
+            simSettings.useRecessionWeekly = enabled
+            simSettings.useRecessionMonthly = enabled
+
+            // BULLISH
+            case "Halving":
+                simSettings.useHalvingWeekly = enabled
+                simSettings.useHalvingMonthly = enabled
+
+            case "InstitutionalDemand":
+                simSettings.useInstitutionalDemandWeekly = enabled
+                simSettings.useInstitutionalDemandMonthly = enabled
+
+            case "CountryAdoption":
+                simSettings.useCountryAdoptionWeekly = enabled
+                simSettings.useCountryAdoptionMonthly = enabled
+
+            case "RegulatoryClarity":
+                simSettings.useRegulatoryClarityWeekly = enabled
+                simSettings.useRegulatoryClarityMonthly = enabled
+
+            case "EtfApproval":
+                simSettings.useEtfApprovalWeekly = enabled
+                simSettings.useEtfApprovalMonthly = enabled
+
+            case "TechBreakthrough":
+                simSettings.useTechBreakthroughWeekly = enabled
+                simSettings.useTechBreakthroughMonthly = enabled
+
+            case "ScarcityEvents":
+                simSettings.useScarcityEventsWeekly = enabled
+                simSettings.useScarcityEventsMonthly = enabled
+
+            case "GlobalMacroHedge":
+                simSettings.useGlobalMacroHedgeWeekly = enabled
+                simSettings.useGlobalMacroHedgeMonthly = enabled
+
+            case "StablecoinShift":
+                simSettings.useStablecoinShiftWeekly = enabled
+                simSettings.useStablecoinShiftMonthly = enabled
+
+            case "DemographicAdoption":
+                simSettings.useDemographicAdoptionWeekly = enabled
+                simSettings.useDemographicAdoptionMonthly = enabled
+
+            case "AltcoinFlight":
+                simSettings.useAltcoinFlightWeekly = enabled
+                simSettings.useAltcoinFlightMonthly = enabled
+
+            case "AdoptionFactor":
+                simSettings.useAdoptionFactorWeekly = enabled
+                simSettings.useAdoptionFactorMonthly = enabled
+            
+        default:
+            break
+        }
     }
 
     // MARK: - Toggle All Factors

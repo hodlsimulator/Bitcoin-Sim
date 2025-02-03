@@ -356,6 +356,159 @@ class SimulationSettings: ObservableObject {
             tiltBarValue = 0.0
         }
         
+        // ----------------------------
+        // BULLISH toggles (Load booleans)
+        // ----------------------------
+        if defaults.object(forKey: "useHalvingWeekly") != nil {
+            useHalvingWeekly = defaults.bool(forKey: "useHalvingWeekly")
+        }
+        if defaults.object(forKey: "useHalvingMonthly") != nil {
+            useHalvingMonthly = defaults.bool(forKey: "useHalvingMonthly")
+        }
+        
+        if defaults.object(forKey: "useInstitutionalDemandWeekly") != nil {
+            useInstitutionalDemandWeekly = defaults.bool(forKey: "useInstitutionalDemandWeekly")
+        }
+        if defaults.object(forKey: "useInstitutionalDemandMonthly") != nil {
+            useInstitutionalDemandMonthly = defaults.bool(forKey: "useInstitutionalDemandMonthly")
+        }
+        
+        if defaults.object(forKey: "useCountryAdoptionWeekly") != nil {
+            useCountryAdoptionWeekly = defaults.bool(forKey: "useCountryAdoptionWeekly")
+        }
+        if defaults.object(forKey: "useCountryAdoptionMonthly") != nil {
+            useCountryAdoptionMonthly = defaults.bool(forKey: "useCountryAdoptionMonthly")
+        }
+        
+        if defaults.object(forKey: "useRegulatoryClarityWeekly") != nil {
+            useRegulatoryClarityWeekly = defaults.bool(forKey: "useRegulatoryClarityWeekly")
+        }
+        if defaults.object(forKey: "useRegulatoryClarityMonthly") != nil {
+            useRegulatoryClarityMonthly = defaults.bool(forKey: "useRegulatoryClarityMonthly")
+        }
+        
+        if defaults.object(forKey: "useEtfApprovalWeekly") != nil {
+            useEtfApprovalWeekly = defaults.bool(forKey: "useEtfApprovalWeekly")
+        }
+        if defaults.object(forKey: "useEtfApprovalMonthly") != nil {
+            useEtfApprovalMonthly = defaults.bool(forKey: "useEtfApprovalMonthly")
+        }
+        
+        if defaults.object(forKey: "useTechBreakthroughWeekly") != nil {
+            useTechBreakthroughWeekly = defaults.bool(forKey: "useTechBreakthroughWeekly")
+        }
+        if defaults.object(forKey: "useTechBreakthroughMonthly") != nil {
+            useTechBreakthroughMonthly = defaults.bool(forKey: "useTechBreakthroughMonthly")
+        }
+        
+        if defaults.object(forKey: "useScarcityEventsWeekly") != nil {
+            useScarcityEventsWeekly = defaults.bool(forKey: "useScarcityEventsWeekly")
+        }
+        if defaults.object(forKey: "useScarcityEventsMonthly") != nil {
+            useScarcityEventsMonthly = defaults.bool(forKey: "useScarcityEventsMonthly")
+        }
+        
+        if defaults.object(forKey: "useGlobalMacroHedgeWeekly") != nil {
+            useGlobalMacroHedgeWeekly = defaults.bool(forKey: "useGlobalMacroHedgeWeekly")
+        }
+        if defaults.object(forKey: "useGlobalMacroHedgeMonthly") != nil {
+            useGlobalMacroHedgeMonthly = defaults.bool(forKey: "useGlobalMacroHedgeMonthly")
+        }
+        
+        if defaults.object(forKey: "useStablecoinShiftWeekly") != nil {
+            useStablecoinShiftWeekly = defaults.bool(forKey: "useStablecoinShiftWeekly")
+        }
+        if defaults.object(forKey: "useStablecoinShiftMonthly") != nil {
+            useStablecoinShiftMonthly = defaults.bool(forKey: "useStablecoinShiftMonthly")
+        }
+        
+        if defaults.object(forKey: "useDemographicAdoptionWeekly") != nil {
+            useDemographicAdoptionWeekly = defaults.bool(forKey: "useDemographicAdoptionWeekly")
+        }
+        if defaults.object(forKey: "useDemographicAdoptionMonthly") != nil {
+            useDemographicAdoptionMonthly = defaults.bool(forKey: "useDemographicAdoptionMonthly")
+        }
+        
+        if defaults.object(forKey: "useAltcoinFlightWeekly") != nil {
+            useAltcoinFlightWeekly = defaults.bool(forKey: "useAltcoinFlightWeekly")
+        }
+        if defaults.object(forKey: "useAltcoinFlightMonthly") != nil {
+            useAltcoinFlightMonthly = defaults.bool(forKey: "useAltcoinFlightMonthly")
+        }
+        
+        if defaults.object(forKey: "useAdoptionFactorWeekly") != nil {
+            useAdoptionFactorWeekly = defaults.bool(forKey: "useAdoptionFactorWeekly")
+        }
+        if defaults.object(forKey: "useAdoptionFactorMonthly") != nil {
+            useAdoptionFactorMonthly = defaults.bool(forKey: "useAdoptionFactorMonthly")
+        }
+        
+        // ----------------------------
+        // BEARISH toggles (Load booleans)
+        // ----------------------------
+        if defaults.object(forKey: "useRegClampdownWeekly") != nil {
+            useRegClampdownWeekly = defaults.bool(forKey: "useRegClampdownWeekly")
+        }
+        if defaults.object(forKey: "useRegClampdownMonthly") != nil {
+            useRegClampdownMonthly = defaults.bool(forKey: "useRegClampdownMonthly")
+        }
+        
+        if defaults.object(forKey: "useCompetitorCoinWeekly") != nil {
+            useCompetitorCoinWeekly = defaults.bool(forKey: "useCompetitorCoinWeekly")
+        }
+        if defaults.object(forKey: "useCompetitorCoinMonthly") != nil {
+            useCompetitorCoinMonthly = defaults.bool(forKey: "useCompetitorCoinMonthly")
+        }
+        
+        if defaults.object(forKey: "useSecurityBreachWeekly") != nil {
+            useSecurityBreachWeekly = defaults.bool(forKey: "useSecurityBreachWeekly")
+        }
+        if defaults.object(forKey: "useSecurityBreachMonthly") != nil {
+            useSecurityBreachMonthly = defaults.bool(forKey: "useSecurityBreachMonthly")
+        }
+        
+        if defaults.object(forKey: "useBubblePopWeekly") != nil {
+            useBubblePopWeekly = defaults.bool(forKey: "useBubblePopWeekly")
+        }
+        if defaults.object(forKey: "useBubblePopMonthly") != nil {
+            useBubblePopMonthly = defaults.bool(forKey: "useBubblePopMonthly")
+        }
+        
+        if defaults.object(forKey: "useStablecoinMeltdownWeekly") != nil {
+            useStablecoinMeltdownWeekly = defaults.bool(forKey: "useStablecoinMeltdownWeekly")
+        }
+        if defaults.object(forKey: "useStablecoinMeltdownMonthly") != nil {
+            useStablecoinMeltdownMonthly = defaults.bool(forKey: "useStablecoinMeltdownMonthly")
+        }
+        
+        if defaults.object(forKey: "useBlackSwanWeekly") != nil {
+            useBlackSwanWeekly = defaults.bool(forKey: "useBlackSwanWeekly")
+        }
+        if defaults.object(forKey: "useBlackSwanMonthly") != nil {
+            useBlackSwanMonthly = defaults.bool(forKey: "useBlackSwanMonthly")
+        }
+        
+        if defaults.object(forKey: "useBearMarketWeekly") != nil {
+            useBearMarketWeekly = defaults.bool(forKey: "useBearMarketWeekly")
+        }
+        if defaults.object(forKey: "useBearMarketMonthly") != nil {
+            useBearMarketMonthly = defaults.bool(forKey: "useBearMarketMonthly")
+        }
+        
+        if defaults.object(forKey: "useMaturingMarketWeekly") != nil {
+            useMaturingMarketWeekly = defaults.bool(forKey: "useMaturingMarketWeekly")
+        }
+        if defaults.object(forKey: "useMaturingMarketMonthly") != nil {
+            useMaturingMarketMonthly = defaults.bool(forKey: "useMaturingMarketMonthly")
+        }
+        
+        if defaults.object(forKey: "useRecessionWeekly") != nil {
+            useRecessionWeekly = defaults.bool(forKey: "useRecessionWeekly")
+        }
+        if defaults.object(forKey: "useRecessionMonthly") != nil {
+            useRecessionMonthly = defaults.bool(forKey: "useRecessionMonthly")
+        }
+        
         isInitialized = true
     }
     

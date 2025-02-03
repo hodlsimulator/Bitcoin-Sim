@@ -25,6 +25,9 @@ struct SettingsView: View {
     
     @State var dragTiltOverride: Double? = nil
     
+    @State var isExtremeToggle: Bool = false
+    @State var extremeToggleApplied: Bool = false
+    
     // Factor keys
     let bullishKeys: [String] = [
         "Halving", "InstitutionalDemand", "CountryAdoption", "RegulatoryClarity",
@@ -51,8 +54,10 @@ struct SettingsView: View {
     
     @State var updatingFromFactorEnable: Bool = false
     
+    @State var isManualOverride: Bool = false
+    
     // A helper dictionary to get/set each factor’s numeric property.
-    private var factorAccessors: [String: (get: () -> Double, set: (Double) -> Void)] {
+    var factorAccessors: [String: (get: () -> Double, set: (Double) -> Void)] {
         [
             // ---------- BULLISH ----------
             "Halving": (
@@ -213,7 +218,7 @@ struct SettingsView: View {
             }
             .onChange(of: simSettings.factorEnableFrac) { newVal in
                 guard !simSettings.isRestoringDefaults else { return }
-                
+
                 disableAnimationNow = false
 
                 if firstToggleOff {
@@ -252,7 +257,7 @@ struct SettingsView: View {
                         }
                     }
                 }
-                
+
                 if !wasAllOffBefore && isAllOffNow {
                     storedDefaultTilt = simSettings.defaultTilt
                     simSettings.defaultTilt = 0.0
@@ -272,27 +277,46 @@ struct SettingsView: View {
                 }
 
                 oldFactorEnableFrac = newVal
-
                 simSettings.tiltBarValue = displayedTilt
 
-                // --- NEW CODE: Compute the global slider value using the 12×9 logic ---
-                let bullishKeysLocal = ["Halving", "InstitutionalDemand", "CountryAdoption", "RegulatoryClarity",
-                                          "EtfApproval", "TechBreakthrough", "ScarcityEvents", "GlobalMacroHedge",
-                                          "StablecoinShift", "DemographicAdoption", "AltcoinFlight", "AdoptionFactor"]
-                let bearishKeysLocal = ["RegClampdown", "CompetitorCoin", "SecurityBreach", "BubblePop",
-                                          "StablecoinMeltdown", "BlackSwan", "BearMarket", "MaturingMarket", "Recession"]
-                
+                // --- Part A: Skip if manual override is in effect ---
+                guard !isManualOverride else {
+                    return
+                }
+
+                // --- Part B: “Skip if pure” check ---
+                let bullishKeysLocal = [
+                    "Halving", "InstitutionalDemand", "CountryAdoption", "RegulatoryClarity",
+                    "EtfApproval", "TechBreakthrough", "ScarcityEvents", "GlobalMacroHedge",
+                    "StablecoinShift", "DemographicAdoption", "AltcoinFlight", "AdoptionFactor"
+                ]
+                let bearishKeysLocal = [
+                    "RegClampdown", "CompetitorCoin", "SecurityBreach", "BubblePop",
+                    "StablecoinMeltdown", "BlackSwan", "BearMarket", "MaturingMarket", "Recession"
+                ]
+
+                let allBullishOn  = bullishKeysLocal.allSatisfy  { (newVal[$0] ?? 0.0) >= 0.9999 }
+                let allBearishOff = bearishKeysLocal.allSatisfy { (newVal[$0] ?? 1.0) <= 0.0001 }
+                let pureBullish = (allBullishOn && allBearishOff)
+
+                let allBearishOn  = bearishKeysLocal.allSatisfy  { (newVal[$0] ?? 0.0) >= 0.9999 }
+                let allBullishOff = bullishKeysLocal.allSatisfy { (newVal[$0] ?? 1.0) <= 0.0001 }
+                let pureBearish = (allBearishOn && allBullishOff)
+
+                // If the toggles are in a pure scenario, skip net tilt logic
+                if pureBullish || pureBearish {
+                    return
+                }
+
+                // --- Part C: If not skipping, do the normal net-tilt logic ---
                 let totalBullish = bullishKeysLocal.reduce(0.0) { $0 + (newVal[$1] ?? 0) }
                 let totalBearish = bearishKeysLocal.reduce(0.0) { $0 + (newVal[$1] ?? 0) }
-                
-                // Calculate the proportion on each side:
+
                 let avgBullish = totalBullish / Double(bullishKeysLocal.count)
                 let avgBearish = totalBearish / Double(bearishKeysLocal.count)
-                
-                // Net tilt in the range [-1, 1]. (When all are on, avgBullish and avgBearish are 1, so net = 0.)
+
                 let net = avgBullish - avgBearish
                 simSettings.factorIntensity = (net + 1) / 2
-                // --- End new code ---
             }
             .animation(hasAppeared ? .easeInOut(duration: 0.3) : nil, value: simSettings.factorIntensity)
             .animation(hasAppeared ? .easeInOut(duration: 0.3) : nil, value: displayedTilt)
@@ -324,6 +348,46 @@ struct SettingsView: View {
             return min(max(sliderTilt + toggleTilt, -1), 1)
         } else {
             return sliderTilt
+        }
+    }
+    
+    // Helper functions to apply an extreme state:
+    func applyExtremeBullish() {
+        withAnimation(.easeInOut(duration: 0.3)) {
+            // Set global slider and tilt bar to extreme bullish.
+            simSettings.factorIntensity = 1.0
+            simSettings.tiltBarValue = 1.0
+            
+            // Force all bullish factors ON and bearish factors OFF.
+            for key in bullishKeys {
+                simSettings.factorEnableFrac[key] = 1.0
+                // Use your factor accessor to update the numeric property.
+                factorAccessors[key]?.set(1.0)
+            }
+            for key in bearishKeys {
+                simSettings.factorEnableFrac[key] = 0.0
+                factorAccessors[key]?.set(0.0)
+            }
+            extremeToggleApplied = true
+        }
+    }
+
+    func applyExtremeBearish() {
+        withAnimation(.easeInOut(duration: 0.3)) {
+            // Set global slider and tilt bar to extreme bearish.
+            simSettings.factorIntensity = 0.0
+            simSettings.tiltBarValue = -1.0
+            
+            // Force all bearish factors ON and bullish factors OFF.
+            for key in bearishKeys {
+                simSettings.factorEnableFrac[key] = 1.0
+                factorAccessors[key]?.set(1.0)
+            }
+            for key in bullishKeys {
+                simSettings.factorEnableFrac[key] = 0.0
+                factorAccessors[key]?.set(0.0)
+            }
+            extremeToggleApplied = true
         }
     }
     

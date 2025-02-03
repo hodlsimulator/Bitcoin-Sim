@@ -58,21 +58,29 @@ struct FactorToggleRow: View {
     let iconName: String?
     let title: String
 
+    /// The toggle’s on/off binding (passed from parent).
     @Binding var isOn: Bool
+    
+    /// The factor’s numeric value, passed from parent as a binding.
+    /// No local @State: the parent is the single source of truth.
     @Binding var sliderValue: Double
+    
+    /// The valid range for this factor’s numeric value.
     let sliderRange: ClosedRange<Double>
+    
+    /// The "default" numeric value for a reset (e.g., tapping the icon).
     let defaultValue: Double
 
-    /// A descriptive text for the tooltip
+    /// An optional tooltip/description for this factor.
     let parameterDescription: String?
 
-    /// The parent's active factor. If it matches `title`, we publish an anchor.
+    /// The parent's active factor (for showing tooltips).
     let activeFactor: String?
 
     /// Called when user taps the row’s title
     let onTitleTap: (String) -> Void
 
-    /// Decide whether to display sliderValue as a percentage or raw number
+    /// Whether to display sliderValue as a percentage or raw number
     let displayAsPercent: Bool
 
     init(
@@ -101,11 +109,14 @@ struct FactorToggleRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            // Title row
+            
+            // ─────────────────────────────────────────────────
+            // MARK: Title row: icon + label + toggle
+            // ─────────────────────────────────────────────────
             HStack(spacing: 8) {
                 if let icon = iconName, !icon.isEmpty {
                     Button {
-                        // Reset slider to default on icon tap
+                        // Reset the factor to its default numeric value if desired
                         sliderValue = defaultValue
                     } label: {
                         Image(systemName: icon)
@@ -122,6 +133,7 @@ struct FactorToggleRow: View {
                     .onTapGesture {
                         onTitleTap(title)
                     }
+                    // Tooltip anchor
                     .anchorPreference(key: TooltipAnchorKey.self, value: .center) { pt in
                         guard activeFactor == title,
                               let desc = parameterDescription,
@@ -139,15 +151,20 @@ struct FactorToggleRow: View {
                     .tint(.orange)
             }
 
-            // Slider row
+            // ─────────────────────────────────────────────────
+            // MARK: Slider row
+            // ─────────────────────────────────────────────────
             HStack {
-                // Normalise the slider value from sliderRange to 0...1.
+                // We'll normalize the slider so it goes 0...1 in the UI,
+                // but the actual numeric is in sliderRange.
                 let range = sliderRange.upperBound - sliderRange.lowerBound
                 let normalizedBinding = Binding<Double>(
                     get: {
+                        // Convert the real numeric into [0...1]
                         (sliderValue - sliderRange.lowerBound) / range
                     },
                     set: { newNormalized in
+                        // Convert the normalized value back to the real numeric
                         sliderValue = sliderRange.lowerBound + newNormalized * range
                     }
                 )
@@ -156,7 +173,9 @@ struct FactorToggleRow: View {
                     .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
                     .disabled(!isOn)
 
+                // Decide how to display the numeric
                 if title == "Halving" {
+                    // Example special case
                     Text(String(format: "%.4f%%", sliderValue))
                         .font(.caption)
                         .foregroundColor(.secondary)
