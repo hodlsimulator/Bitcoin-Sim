@@ -28,9 +28,6 @@ struct SettingsView: View {
     @State var isExtremeToggle: Bool = false
     @State var extremeToggleApplied: Bool = false
     
-    @State var isChartExtremeBearish = false
-    @State var isChartExtremeBullish = false
-    
     @State var disableFactorSync = false
 
     // Factor keys

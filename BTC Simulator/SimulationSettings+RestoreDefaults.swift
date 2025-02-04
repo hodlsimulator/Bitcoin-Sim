@@ -15,9 +15,13 @@ extension SimulationSettings {
         
         let defaults = UserDefaults.standard
         
-        // If you want to remove old factorIntensity from user defaults
+        // Remove old factorIntensity and set it to default
         UserDefaults.standard.removeObject(forKey: "factorIntensity")
         factorIntensity = 0.5
+        
+        // Reset chart icon flags (make sure these properties are defined in SimulationSettings)
+        chartExtremeBearish = false
+        chartExtremeBullish = false
         
         // Clear all manual offsets and leftover stored values
         manualOffsets = [:]
@@ -82,11 +86,6 @@ extension SimulationSettings {
         defaults.removeObject(forKey: "useAutoCorrelation")
         defaults.removeObject(forKey: "autoCorrelationStrength")
         defaults.removeObject(forKey: "meanReversionTarget")
-
-        // Reset them to your desired defaults
-        useAutoCorrelation = true
-        autoCorrelationStrength = 0.05
-        meanReversionTarget = 0.03
 
         // Remove new weekly/monthly keys
         defaults.removeObject(forKey: "useHalvingWeekly")

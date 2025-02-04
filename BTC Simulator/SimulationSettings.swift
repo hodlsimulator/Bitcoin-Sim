@@ -14,6 +14,9 @@ protocol FactorAccessor {
 
 class SimulationSettings: ObservableObject {
     
+    @Published var chartExtremeBearish: Bool = false
+    @Published var chartExtremeBullish: Bool = false
+
     @Published var isRestoringDefaults: Bool = false
     
     @Published var factorAccessors: [String: FactorAccessor] = [:]

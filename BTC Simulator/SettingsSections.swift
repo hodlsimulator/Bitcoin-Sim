@@ -113,8 +113,8 @@ extension SettingsView {
                     }
 
                     // Set the chart button flag for extreme bearish
-                    isChartExtremeBearish = true
-                    isChartExtremeBullish = false
+                    simSettings.chartExtremeBearish = true
+                    simSettings.chartExtremeBullish = false
 
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                         isManualOverride = false
@@ -124,8 +124,9 @@ extension SettingsView {
                         .foregroundColor(.red)
                 }
                 .buttonStyle(.plain)
-                .disabled(isChartExtremeBearish)
-                .opacity(isChartExtremeBearish ? 0.3 : 1.0)
+                .disabled(simSettings.chartExtremeBearish)
+                // FIX: Use chartExtremeBearish instead of chartExtremeBullish here
+                .opacity(simSettings.chartExtremeBearish ? 0.3 : 1.0)
 
                 // GLOBAL INTENSITY SLIDER
                 Slider(
@@ -135,8 +136,8 @@ extension SettingsView {
                             simSettings.factorIntensity = newVal
                             simSettings.syncAllFactorsToIntensity(newVal)
                             // Clear the chart extreme flags when moving the slider manually
-                            isChartExtremeBearish = false
-                            isChartExtremeBullish = false
+                            simSettings.chartExtremeBearish = false
+                            simSettings.chartExtremeBullish = false
                         }
                     ),
                     in: 0...1,
@@ -182,8 +183,8 @@ extension SettingsView {
                     lastFactorValue.removeAll()
 
                     // Set the chart button flag for extreme bullish
-                    isChartExtremeBullish = true
-                    isChartExtremeBearish = false
+                    simSettings.chartExtremeBullish = true
+                    simSettings.chartExtremeBearish = false
 
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                         isManualOverride = false
@@ -193,8 +194,8 @@ extension SettingsView {
                         .foregroundColor(.green)
                 }
                 .buttonStyle(.plain)
-                .disabled(isChartExtremeBullish)
-                .opacity(isChartExtremeBullish ? 0.3 : 1.0)
+                .disabled(simSettings.chartExtremeBullish)
+                .opacity(simSettings.chartExtremeBullish ? 0.3 : 1.0)
             }
         } footer: {
             Text("Press a chart icon to force the extreme factor settings. The icon will grey out only when pressed.")
