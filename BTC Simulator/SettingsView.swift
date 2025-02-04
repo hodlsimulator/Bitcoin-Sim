@@ -28,6 +28,11 @@ struct SettingsView: View {
     @State var isExtremeToggle: Bool = false
     @State var extremeToggleApplied: Bool = false
     
+    @State var isChartExtremeBearish = false
+    @State var isChartExtremeBullish = false
+    
+    @State var disableFactorSync = false
+
     // Factor keys
     let bullishKeys: [String] = [
         "Halving", "InstitutionalDemand", "CountryAdoption", "RegulatoryClarity",
@@ -56,8 +61,11 @@ struct SettingsView: View {
     
     @State var isManualOverride: Bool = false
     
+    // ---- NEW: Store the old net tilt so we can compute deltas. ----
+    @State private var oldNetValue: Double = 1.0  // or 0.0 if you start more neutral
+    
     // A helper dictionary to get/set each factor’s numeric property.
-    var factorAccessors: [String: (get: () -> Double, set: (Double) -> Void)] {
+    var computedFactorAccessors: [String: (get: () -> Double, set: (Double) -> Void)] {
         [
             // ---------- BULLISH ----------
             "Halving": (
@@ -153,9 +161,11 @@ struct SettingsView: View {
         setupNavBarAppearance()
     }
     
+    // ------------------------------
+    // MARK: - View Body
+    // ------------------------------
     var body: some View {
         let mainForm = Form {
-            // Updated overall tilt bar section:
             overallTiltSection
             
             factorIntensitySection
@@ -206,19 +216,31 @@ struct SettingsView: View {
             .onAppear {
                 oldFactorEnableFrac = simSettings.factorEnableFrac
                 hasAppeared = true
+                
+                // If we start near tilt=0, set factorIntensity to displayedTilt if needed
                 if abs(simSettings.tiltBarValue) < 0.0000001 {
                     simSettings.tiltBarValue = displayedTilt
                 }
+                
+                // If you want, detect pureBullish or pureBearish on appear:
+                if isCurrentlyExtremeBearish {
+                    oldNetValue = -1.0
+                } else if isCurrentlyExtremeBullish {
+                    oldNetValue = 1.0
+                } else {
+                    // Otherwise compute net now:
+                    let net = computeCurrentNetTilt(bullishKeys, bearishKeys, simSettings.factorEnableFrac)
+                    oldNetValue = net
+                }
             }
-            .onChange(of: simSettings.factorIntensity) { newValue in
-                // We leave this empty so that moving the global slider doesn't
-                // override individual factor values during an update.
-                // (If you want to sync all factors when the slider is moved,
-                // consider using the slider’s onEditingChanged closure.)
+            .onChange(of: simSettings.factorIntensity) { _ in
+                // We leave this empty so that moving the global slider
+                // doesn't override single factors.
             }
             .onChange(of: simSettings.factorEnableFrac) { newVal in
+                if disableFactorSync { return }
                 guard !simSettings.isRestoringDefaults else { return }
-
+                
                 disableAnimationNow = false
 
                 if firstToggleOff {
@@ -240,7 +262,7 @@ struct SettingsView: View {
                     let newFrac = newVal[factorName] ?? 0.0
 
                     if oldFrac > 0.0, newFrac == 0.0 {
-                        if let accessor = factorAccessors[factorName] {
+                        if let accessor = simSettings.factorAccessors[factorName] {
                             lastFactorValue[factorName] = accessor.get()
                         }
                     } else if oldFrac == 0.0, newFrac > 0.0 {
@@ -248,11 +270,11 @@ struct SettingsView: View {
                             let t = simSettings.factorIntensity
                             simSettings.manualOffsets[factorName] = storedVal - simSettings.baseValForFactor(factorName, intensity: t)
                             withTransaction(Transaction(animation: nil)) {
-                                factorAccessors[factorName]?.set(storedVal)
+                                simSettings.factorAccessors[factorName]?.set(storedVal)
                             }
                         } else {
                             withTransaction(Transaction(animation: nil)) {
-                                factorAccessors[factorName]?.set(0.5)
+                                simSettings.factorAccessors[factorName]?.set(0.5)
                             }
                         }
                     }
@@ -285,15 +307,8 @@ struct SettingsView: View {
                 }
 
                 // --- Part B: “Skip if pure” check ---
-                let bullishKeysLocal = [
-                    "Halving", "InstitutionalDemand", "CountryAdoption", "RegulatoryClarity",
-                    "EtfApproval", "TechBreakthrough", "ScarcityEvents", "GlobalMacroHedge",
-                    "StablecoinShift", "DemographicAdoption", "AltcoinFlight", "AdoptionFactor"
-                ]
-                let bearishKeysLocal = [
-                    "RegClampdown", "CompetitorCoin", "SecurityBreach", "BubblePop",
-                    "StablecoinMeltdown", "BlackSwan", "BearMarket", "MaturingMarket", "Recession"
-                ]
+                let bullishKeysLocal = bullishKeys
+                let bearishKeysLocal = bearishKeys
 
                 let allBullishOn  = bullishKeysLocal.allSatisfy  { (newVal[$0] ?? 0.0) >= 0.9999 }
                 let allBearishOff = bearishKeysLocal.allSatisfy { (newVal[$0] ?? 1.0) <= 0.0001 }
@@ -303,23 +318,57 @@ struct SettingsView: View {
                 let allBullishOff = bullishKeysLocal.allSatisfy { (newVal[$0] ?? 1.0) <= 0.0001 }
                 let pureBearish = (allBearishOn && allBullishOff)
 
-                // If the toggles are in a pure scenario, skip net tilt logic
-                if pureBullish || pureBearish {
+                // If toggles are in a pure scenario, set oldNetValue to ±1 & return
+                if pureBullish {
+                    oldNetValue = 1.0
+                    return
+                }
+                if pureBearish {
+                    oldNetValue = -1.0
                     return
                 }
 
-                // --- Part C: If not skipping, do the normal net-tilt logic ---
-                let totalBullish = bullishKeysLocal.reduce(0.0) { $0 + (newVal[$1] ?? 0) }
-                let totalBearish = bearishKeysLocal.reduce(0.0) { $0 + (newVal[$1] ?? 0) }
+                // --- Part C: difference-based approach so we don't snap. ---
+                // 1) Compute net in –1..+1
+                let net = computeCurrentNetTilt(bullishKeysLocal, bearishKeysLocal, newVal)
 
-                let avgBullish = totalBullish / Double(bullishKeysLocal.count)
-                let avgBearish = totalBearish / Double(bearishKeysLocal.count)
+                // 2) figure out how much net changed since last time
+                let oldN = oldNetValue
+                let delta = net - oldN
 
-                let net = avgBullish - avgBearish
-                simSettings.factorIntensity = (net + 1) / 2
+                // 3) scale that delta => factorIntensity
+                let scale = 0.3  // tweak me
+                let oldIntensity = simSettings.factorIntensity
+
+                // each +1 net => +1 intensity, so if delta=–0.02 => intensity changes by –0.006
+                var newIntensity = oldIntensity + scale * delta * 0.5
+
+                // clamp 0..1
+                if newIntensity > 1.0 { newIntensity = 1.0 }
+                if newIntensity < 0.0 { newIntensity = 0.0 }
+
+                simSettings.factorIntensity = newIntensity
+
+                // 4) update oldNetValue for next time
+                oldNetValue = net
             }
             .animation(hasAppeared ? .easeInOut(duration: 0.3) : nil, value: simSettings.factorIntensity)
             .animation(hasAppeared ? .easeInOut(duration: 0.3) : nil, value: displayedTilt)
+    }
+    
+    // Helper to compute net from factorEnableFrac
+    func computeCurrentNetTilt(
+        _ bullishKeys: [String],
+        _ bearishKeys: [String],
+        _ fractions: [String: Double]
+    ) -> Double {
+        let totalBullish = bullishKeys.reduce(0.0) { $0 + (fractions[$1] ?? 0.0) }
+        let totalBearish = bearishKeys.reduce(0.0) { $0 + (fractions[$1] ?? 0.0) }
+        
+        let avgBullish = totalBullish / Double(bullishKeys.count)
+        let avgBearish = totalBearish / Double(bearishKeys.count)
+        let net = avgBullish - avgBearish  // –1..+1
+        return max(min(net, 1.0), -1.0)    // clamp if needed
     }
     
     var isCurrentlyExtremeBullish: Bool {
@@ -400,11 +449,11 @@ struct SettingsView: View {
             for key in bullishKeys {
                 simSettings.factorEnableFrac[key] = 1.0
                 // Use your factor accessor to update the numeric property.
-                factorAccessors[key]?.set(1.0)
+                computedFactorAccessors[key]?.set(1.0)
             }
             for key in bearishKeys {
                 simSettings.factorEnableFrac[key] = 0.0
-                factorAccessors[key]?.set(0.0)
+                computedFactorAccessors[key]?.set(0.0)
             }
             extremeToggleApplied = true
         }
@@ -419,11 +468,11 @@ struct SettingsView: View {
             // Force all bearish factors ON and bullish factors OFF.
             for key in bearishKeys {
                 simSettings.factorEnableFrac[key] = 1.0
-                factorAccessors[key]?.set(1.0)
+                computedFactorAccessors[key]?.set(1.0)
             }
             for key in bullishKeys {
                 simSettings.factorEnableFrac[key] = 0.0
-                factorAccessors[key]?.set(0.0)
+                computedFactorAccessors[key]?.set(0.0)
             }
             extremeToggleApplied = true
         }

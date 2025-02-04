@@ -7,9 +7,16 @@
 
 import SwiftUI
 
+protocol FactorAccessor {
+    func get() -> Double
+    func set(_ newValue: Double)
+}
+
 class SimulationSettings: ObservableObject {
     
     @Published var isRestoringDefaults: Bool = false
+    
+    @Published var factorAccessors: [String: FactorAccessor] = [:]
 
     // MARK: - Factor Toggling
     @Published var factorEnableFrac: [String: Double] = [
