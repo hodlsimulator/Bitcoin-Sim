@@ -11,6 +11,10 @@ extension SimulationSettings {
     func restoreDefaults() {
         // 1) Signal that we're doing a bulk restore so onChange logic is skipped
         isRestoringDefaults = true
+        
+        // IMPORTANT FIX: clear all locked factors so they can move with the global slider again
+        lockedFactors.removeAll()
+        
         print("RESTORE DEFAULTS CALLED!")
         
         let defaults = UserDefaults.standard
@@ -19,18 +23,18 @@ extension SimulationSettings {
         UserDefaults.standard.removeObject(forKey: "factorIntensity")
         factorIntensity = 0.5
         
-        // Reset chart icon flags (make sure these properties are defined in SimulationSettings)
+        // Reset chart icon flags
         chartExtremeBearish = false
         chartExtremeBullish = false
         
-        // Clear all manual offsets and leftover stored values
+        // Clear all manual offsets
         manualOffsets = [:]
 
-        // Keep any general toggles you want to preserve:
+        // Keep any general toggles you want to preserve
         defaults.set(useHistoricalSampling, forKey: "useHistoricalSampling")
         defaults.set(useVolShocks,         forKey: "useVolShocks")
 
-        // Remove old parent-toggle keys (we no longer use them in code)
+        // Remove old parent-toggle keys you no longer use in code
         defaults.removeObject(forKey: "useHalving")
         defaults.removeObject(forKey: "halvingBump")
         defaults.removeObject(forKey: "useInstitutionalDemand")
@@ -197,7 +201,7 @@ extension SimulationSettings {
         defaults.removeObject(forKey: "useLognormalGrowth")
         useLognormalGrowth = true
 
-        // Reassign to the new defaults for these general toggles
+        // Reassign to new defaults for these toggles
         useHistoricalSampling = true
         useVolShocks = true
         useGarchVolatility = true
@@ -206,83 +210,68 @@ extension SimulationSettings {
         defaults.removeObject(forKey: "useRegimeSwitching")
         useRegimeSwitching = true
         
-        // -------------------
-        // Bullish / Bearish Toggles (old system)
-        // -------------------
-        
-        // Halving
+        // Bullish / Bearish toggles (weekly + monthly) back to defaults
         useHalvingWeekly = true
         halvingBumpWeekly = SimulationSettings.defaultHalvingBumpWeekly
         useHalvingMonthly = true
         halvingBumpMonthly = SimulationSettings.defaultHalvingBumpMonthly
 
-        // Institutional Demand
         useInstitutionalDemandWeekly = true
         maxDemandBoostWeekly = SimulationSettings.defaultMaxDemandBoostWeekly
         useInstitutionalDemandMonthly = true
         maxDemandBoostMonthly = SimulationSettings.defaultMaxDemandBoostMonthly
 
-        // Country Adoption
         useCountryAdoptionWeekly = true
         maxCountryAdBoostWeekly = SimulationSettings.defaultMaxCountryAdBoostWeekly
         useCountryAdoptionMonthly = true
         maxCountryAdBoostMonthly = SimulationSettings.defaultMaxCountryAdBoostMonthly
 
-        // Regulatory Clarity
         useRegulatoryClarityWeekly = true
         maxClarityBoostWeekly = SimulationSettings.defaultMaxClarityBoostWeekly
         useRegulatoryClarityMonthly = true
         maxClarityBoostMonthly = SimulationSettings.defaultMaxClarityBoostMonthly
 
-        // ETF Approval
         useEtfApprovalWeekly = true
         maxEtfBoostWeekly = SimulationSettings.defaultMaxEtfBoostWeekly
         useEtfApprovalMonthly = true
         maxEtfBoostMonthly = SimulationSettings.defaultMaxEtfBoostMonthly
 
-        // Tech Breakthrough
         useTechBreakthroughWeekly = true
         maxTechBoostWeekly = SimulationSettings.defaultMaxTechBoostWeekly
         useTechBreakthroughMonthly = true
         maxTechBoostMonthly = SimulationSettings.defaultMaxTechBoostMonthly
 
-        // Scarcity Events
         useScarcityEventsWeekly = true
         maxScarcityBoostWeekly = SimulationSettings.defaultMaxScarcityBoostWeekly
         useScarcityEventsMonthly = true
         maxScarcityBoostMonthly = SimulationSettings.defaultMaxScarcityBoostMonthly
 
-        // Global Macro Hedge
         useGlobalMacroHedgeWeekly = true
         maxMacroBoostWeekly = SimulationSettings.defaultMaxMacroBoostWeekly
         useGlobalMacroHedgeMonthly = true
         maxMacroBoostMonthly = SimulationSettings.defaultMaxMacroBoostMonthly
 
-        // Stablecoin Shift
         useStablecoinShiftWeekly = true
         maxStablecoinBoostWeekly = SimulationSettings.defaultMaxStablecoinBoostWeekly
         useStablecoinShiftMonthly = true
         maxStablecoinBoostMonthly = SimulationSettings.defaultMaxStablecoinBoostMonthly
 
-        // Demographic Adoption
         useDemographicAdoptionWeekly = true
         maxDemoBoostWeekly = SimulationSettings.defaultMaxDemoBoostWeekly
         useDemographicAdoptionMonthly = true
         maxDemoBoostMonthly = SimulationSettings.defaultMaxDemoBoostMonthly
 
-        // Altcoin Flight
         useAltcoinFlightWeekly = true
         maxAltcoinBoostWeekly = SimulationSettings.defaultMaxAltcoinBoostWeekly
         useAltcoinFlightMonthly = true
         maxAltcoinBoostMonthly = SimulationSettings.defaultMaxAltcoinBoostMonthly
 
-        // Adoption Factor
         useAdoptionFactorWeekly = true
         adoptionBaseFactorWeekly = SimulationSettings.defaultAdoptionBaseFactorWeekly
         useAdoptionFactorMonthly = true
         adoptionBaseFactorMonthly = SimulationSettings.defaultAdoptionBaseFactorMonthly
 
-        // Bearish factors default on for both
+        // Bearish
         useRegClampdownWeekly = true
         maxClampDownWeekly = SimulationSettings.defaultMaxClampDownWeekly
         useRegClampdownMonthly = true
@@ -328,16 +317,12 @@ extension SimulationSettings {
         useRecessionMonthly = true
         maxRecessionDropMonthly = SimulationSettings.defaultMaxRecessionDropMonthly
         
-        // --------------------------------------------------
-        // ALSO set fraction-based toggles to 1.0 and restore
-        // each "unified" factor to a default/midpoint value.
-        // --------------------------------------------------
-        
+        // Also reset fraction-based toggles to 0.5 (midpoint) and set each factor to its default
         factorEnableFrac["Halving"] = 0.5
-        halvingBumpUnified = 0.3298386887 // midpoint of 0.2773386887...0.3823386887
+        halvingBumpUnified = 0.3298386887
 
         factorEnableFrac["InstitutionalDemand"] = 0.5
-        maxDemandBoostUnified = 0.001239 // midpoint of 0.00105315...0.00142485
+        maxDemandBoostUnified = 0.001239
 
         factorEnableFrac["CountryAdoption"] = 0.5
         maxCountryAdBoostUnified = 0.0011375879977
