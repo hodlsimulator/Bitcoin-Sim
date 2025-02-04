@@ -86,7 +86,7 @@ extension SettingsView {
                     simSettings.factorIntensity = 0.0
                     simSettings.tiltBarValue = -1.0
 
-                    // Force bullish factors off (set to domain min)
+                    // Force bullish factors off and lock them (set to domain min)
                     for key in bullishKeys {
                         setFactorEnabled(factorName: key, enabled: false)
                         simSettings.factorEnableFrac[key] = 0.0
@@ -97,9 +97,11 @@ extension SettingsView {
 
                         let frac = simSettings.fractionFromValue(key, value: minVal, isWeekly: isWeekly)
                         simSettings.factorEnableFrac[key] = frac
+
+                        simSettings.lockedFactors.insert(key) // Lock this factor
                     }
 
-                    // Force bearish factors on (set to domain min)
+                    // Force bearish factors on and unlock them (set to domain min)
                     for key in bearishKeys {
                         setFactorEnabled(factorName: key, enabled: true)
                         simSettings.factorEnableFrac[key] = 1.0
@@ -110,6 +112,8 @@ extension SettingsView {
 
                         let frac = simSettings.fractionFromValue(key, value: minVal, isWeekly: isWeekly)
                         simSettings.factorEnableFrac[key] = frac
+
+                        simSettings.lockedFactors.remove(key) // Unlock this factor
                     }
 
                     // Set the chart button flag for extreme bearish
@@ -125,7 +129,6 @@ extension SettingsView {
                 }
                 .buttonStyle(.plain)
                 .disabled(simSettings.chartExtremeBearish)
-                // FIX: Use chartExtremeBearish instead of chartExtremeBullish here
                 .opacity(simSettings.chartExtremeBearish ? 0.3 : 1.0)
 
                 // GLOBAL INTENSITY SLIDER
@@ -134,7 +137,7 @@ extension SettingsView {
                         get: { simSettings.factorIntensity },
                         set: { newVal in
                             simSettings.factorIntensity = newVal
-                            simSettings.syncAllFactorsToIntensity(newVal)
+                            simSettings.syncAllFactorsToIntensity(newVal, simSettings: simSettings)
                             // Clear the chart extreme flags when moving the slider manually
                             simSettings.chartExtremeBearish = false
                             simSettings.chartExtremeBullish = false
@@ -151,7 +154,7 @@ extension SettingsView {
                     simSettings.factorIntensity = 1.0
                     simSettings.tiltBarValue = 1.0
 
-                    // Force bearish factors off (set to domain max)
+                    // Force bearish factors off and lock them (set to domain max)
                     for key in bearishKeys {
                         setFactorEnabled(factorName: key, enabled: false)
                         simSettings.factorEnableFrac[key] = 0.0
@@ -163,9 +166,11 @@ extension SettingsView {
                         let frac = simSettings.fractionFromValue(key, value: maxVal, isWeekly: isWeekly)
                         simSettings.factorEnableFrac[key] = frac
                         simSettings.manualOffsets[key] = 0.0
+
+                        simSettings.lockedFactors.insert(key) // Lock this factor
                     }
 
-                    // Force bullish factors on (set to domain max)
+                    // Force bullish factors on and unlock them (set to domain max)
                     for key in bullishKeys {
                         setFactorEnabled(factorName: key, enabled: true)
                         simSettings.factorEnableFrac[key] = 1.0
@@ -177,6 +182,8 @@ extension SettingsView {
                         let frac = simSettings.fractionFromValue(key, value: maxVal, isWeekly: isWeekly)
                         simSettings.factorEnableFrac[key] = frac
                         simSettings.manualOffsets[key] = 0.0
+
+                        simSettings.lockedFactors.remove(key) // Unlock this factor
                     }
 
                     oldFactorEnableFrac = simSettings.factorEnableFrac
@@ -218,7 +225,6 @@ extension SettingsView {
         simSettings.manualOffsets[factorName] = 0.0
     }
 
-    // A helper function to set the “weekly/monthly” booleans that the UI toggles use
     func setFactorEnabled(factorName: String, enabled: Bool) {
         switch factorName {
         case "RegClampdown":
@@ -257,57 +263,66 @@ extension SettingsView {
             simSettings.useRecessionWeekly = enabled
             simSettings.useRecessionMonthly = enabled
 
-            // BULLISH
-            case "Halving":
-                simSettings.useHalvingWeekly = enabled
-                simSettings.useHalvingMonthly = enabled
+        // BULLISH
+        case "Halving":
+            simSettings.useHalvingWeekly = enabled
+            simSettings.useHalvingMonthly = enabled
 
-            case "InstitutionalDemand":
-                simSettings.useInstitutionalDemandWeekly = enabled
-                simSettings.useInstitutionalDemandMonthly = enabled
+        case "InstitutionalDemand":
+            simSettings.useInstitutionalDemandWeekly = enabled
+            simSettings.useInstitutionalDemandMonthly = enabled
 
-            case "CountryAdoption":
-                simSettings.useCountryAdoptionWeekly = enabled
-                simSettings.useCountryAdoptionMonthly = enabled
+        case "CountryAdoption":
+            simSettings.useCountryAdoptionWeekly = enabled
+            simSettings.useCountryAdoptionMonthly = enabled
 
-            case "RegulatoryClarity":
-                simSettings.useRegulatoryClarityWeekly = enabled
-                simSettings.useRegulatoryClarityMonthly = enabled
+        case "RegulatoryClarity":
+            simSettings.useRegulatoryClarityWeekly = enabled
+            simSettings.useRegulatoryClarityMonthly = enabled
 
-            case "EtfApproval":
-                simSettings.useEtfApprovalWeekly = enabled
-                simSettings.useEtfApprovalMonthly = enabled
+        case "EtfApproval":
+            simSettings.useEtfApprovalWeekly = enabled
+            simSettings.useEtfApprovalMonthly = enabled
 
-            case "TechBreakthrough":
-                simSettings.useTechBreakthroughWeekly = enabled
-                simSettings.useTechBreakthroughMonthly = enabled
+        case "TechBreakthrough":
+            simSettings.useTechBreakthroughWeekly = enabled
+            simSettings.useTechBreakthroughMonthly = enabled
 
-            case "ScarcityEvents":
-                simSettings.useScarcityEventsWeekly = enabled
-                simSettings.useScarcityEventsMonthly = enabled
+        case "ScarcityEvents":
+            simSettings.useScarcityEventsWeekly = enabled
+            simSettings.useScarcityEventsMonthly = enabled
 
-            case "GlobalMacroHedge":
-                simSettings.useGlobalMacroHedgeWeekly = enabled
-                simSettings.useGlobalMacroHedgeMonthly = enabled
+        case "GlobalMacroHedge":
+            simSettings.useGlobalMacroHedgeWeekly = enabled
+            simSettings.useGlobalMacroHedgeMonthly = enabled
 
-            case "StablecoinShift":
-                simSettings.useStablecoinShiftWeekly = enabled
-                simSettings.useStablecoinShiftMonthly = enabled
+        case "StablecoinShift":
+            simSettings.useStablecoinShiftWeekly = enabled
+            simSettings.useStablecoinShiftMonthly = enabled
 
-            case "DemographicAdoption":
-                simSettings.useDemographicAdoptionWeekly = enabled
-                simSettings.useDemographicAdoptionMonthly = enabled
+        case "DemographicAdoption":
+            simSettings.useDemographicAdoptionWeekly = enabled
+            simSettings.useDemographicAdoptionMonthly = enabled
 
-            case "AltcoinFlight":
-                simSettings.useAltcoinFlightWeekly = enabled
-                simSettings.useAltcoinFlightMonthly = enabled
+        case "AltcoinFlight":
+            simSettings.useAltcoinFlightWeekly = enabled
+            simSettings.useAltcoinFlightMonthly = enabled
 
-            case "AdoptionFactor":
-                simSettings.useAdoptionFactorWeekly = enabled
-                simSettings.useAdoptionFactorMonthly = enabled
-            
+        case "AdoptionFactor":
+            simSettings.useAdoptionFactorWeekly = enabled
+            simSettings.useAdoptionFactorMonthly = enabled
+                
         default:
             break
+        }
+        
+        // Lock or unlock the factor:
+        if enabled {
+            // When enabled, ensure the factor is unlocked.
+            simSettings.lockedFactors.remove(factorName)
+        } else {
+            // When disabled, lock the factor so it stays at its forced value.
+            simSettings.lockedFactors.insert(factorName)
         }
     }
 
@@ -344,7 +359,7 @@ extension SettingsView {
                 simSettings.factorIntensity = 0.5
 
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    simSettings.syncAllFactorsToIntensity(0.5)
+                    simSettings.syncAllFactorsToIntensity(0.5, simSettings: simSettings)
                     let tiltNow = computeActiveNetTilt()
                     simSettings.defaultTilt = tiltNow
                     simSettings.hasCapturedDefault = true
