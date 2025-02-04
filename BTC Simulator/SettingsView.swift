@@ -322,6 +322,44 @@ struct SettingsView: View {
             .animation(hasAppeared ? .easeInOut(duration: 0.3) : nil, value: displayedTilt)
     }
     
+    var isCurrentlyExtremeBullish: Bool {
+        let epsilon = 0.0001
+        // Must have factorIntensity right near 1.0...
+        guard abs(simSettings.factorIntensity - 1.0) < epsilon else { return false }
+        // ...all bullish sliders at ~1.0
+        for key in bullishKeys {
+            if (simSettings.factorEnableFrac[key] ?? 0.0) < 1.0 - epsilon {
+                return false
+            }
+        }
+        // ...and all bearish sliders at ~0.0
+        for key in bearishKeys {
+            if (simSettings.factorEnableFrac[key] ?? 1.0) > epsilon {
+                return false
+            }
+        }
+        return true
+    }
+
+    var isCurrentlyExtremeBearish: Bool {
+        let epsilon = 0.0001
+        // Must have factorIntensity near 0...
+        guard abs(simSettings.factorIntensity - 0.0) < epsilon else { return false }
+        // ...all bearish sliders at ~1.0
+        for key in bearishKeys {
+            if (simSettings.factorEnableFrac[key] ?? 0.0) < 1.0 - epsilon {
+                return false
+            }
+        }
+        // ...and all bullish sliders at ~0.0
+        for key in bullishKeys {
+            if (simSettings.factorEnableFrac[key] ?? 1.0) > epsilon {
+                return false
+            }
+        }
+        return true
+    }
+    
     // ----- Tilt Calculation & Helpers -----
     
     var displayedTilt: Double {

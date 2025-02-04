@@ -83,34 +83,38 @@ extension SettingsView {
                 // =========== EXTREME BEARISH BUTTON (LEFT / RED) ===========
                 Button {
                     isManualOverride = true
-                    // 1) Turn OFF all bullish factors (set fraction=0) & force them to the “bearish side” (t=0).
+
+                    // 1) Turn OFF all bullish factors
                     for key in bullishKeys {
                         setFactorEnabled(factorName: key, enabled: false)
-                        // Let’s forcibly store 0.0 so the UI sees them as “off.”
+                        // fraction=0 => "off"
                         simSettings.factorEnableFrac[key] = 0.0
                         
-                        // Then forcibly set the numeric to t=0.0
-                        let forcedVal = simSettings.baseValForFactor(key, intensity: 0.0)
-                        factorAccessors[key]?.set(forcedVal)
-                        
-                        // Even though it’s off, some rows show the slider. So re‑derive fraction:
+                        // Force numeric to domain minVal for a bullish factor => "lowest" positive
                         let isWeekly = (simSettings.periodUnit == .weeks)
-                        let frac = simSettings.fractionFromValue(key, value: forcedVal, isWeekly: isWeekly)
+                        let (minVal, _) = simSettings.factorRange(for: key, isWeekly: isWeekly)
+                        
+                        factorAccessors[key]?.set(minVal)
+                        
+                        // Re-derive fraction from that minVal
+                        let frac = simSettings.fractionFromValue(key, value: minVal, isWeekly: isWeekly)
                         simSettings.factorEnableFrac[key] = frac
                     }
                     
-                    // 2) Turn ON all bearish factors & also force them to t=0.0
+                    // 2) Turn ON all bearish factors
                     for key in bearishKeys {
                         setFactorEnabled(factorName: key, enabled: true)
-                        // Typically we do 1.0 for “on,” but we’ll finalize it after forcing numeric:
+                        // fraction=1 => "on"
                         simSettings.factorEnableFrac[key] = 1.0
                         
-                        let forcedVal = simSettings.baseValForFactor(key, intensity: 0.0)
-                        factorAccessors[key]?.set(forcedVal)
-                        
-                        // Recompute fraction from forcedVal:
+                        // Force numeric to domain minVal for a bearish factor => "most negative"
                         let isWeekly = (simSettings.periodUnit == .weeks)
-                        let frac = simSettings.fractionFromValue(key, value: forcedVal, isWeekly: isWeekly)
+                        let (minVal, _) = simSettings.factorRange(for: key, isWeekly: isWeekly)
+                        
+                        factorAccessors[key]?.set(minVal)
+                        
+                        // Recompute fraction from minVal
+                        let frac = simSettings.fractionFromValue(key, value: minVal, isWeekly: isWeekly)
                         simSettings.factorEnableFrac[key] = frac
                     }
                     
@@ -122,14 +126,16 @@ extension SettingsView {
                     simSettings.syncAllFactorsToIntensity(0.0)
                     
                     DispatchQueue.main.async {
-                           isManualOverride = false
-                       }
+                        isManualOverride = false
+                    }
                 } label: {
                     Image(systemName: "chart.line.downtrend.xyaxis")
                         .foregroundColor(.red)
                 }
                 .buttonStyle(.plain)
-                
+                .disabled(isCurrentlyExtremeBearish)
+                .opacity(isCurrentlyExtremeBearish ? 0.3 : 1.0)
+
                 // --- GLOBAL INTENSITY SLIDER ---
                 Slider(
                     value: Binding(
@@ -146,31 +152,38 @@ extension SettingsView {
 
                 // =========== EXTREME BULLISH BUTTON (RIGHT / GREEN) ===========
                 Button {
-                    // Step 1: Disable .onChange overrides
                     isManualOverride = true
                     
-                    // Turn OFF all bearish factors and force them numerically to 0.0
+                    // Turn OFF all bearish factors => fraction=0, numeric= domain maxVal (least negative)
                     for key in bearishKeys {
                         setFactorEnabled(factorName: key, enabled: false)
-                        factorAccessors[key]?.set(0.0)
+                        simSettings.factorEnableFrac[key] = 0.0
                         
-                        // Recompute fraction so the UI slider is far left
                         let isWeekly = (simSettings.periodUnit == .weeks)
-                        let frac = simSettings.fractionFromValue(key, value: 0.0, isWeekly: isWeekly)
-                        simSettings.factorEnableFrac[key] = frac
+                        let (minVal, maxVal) = simSettings.factorRange(for: key, isWeekly: isWeekly)
                         
-                        // If you’re using manualOffsets, zero it out
+                        // "Off" for a bearish factor => set numeric to maxVal (least negative)
+                        factorAccessors[key]?.set(maxVal)
+                        
+                        // Recompute fraction
+                        let frac = simSettings.fractionFromValue(key, value: maxVal, isWeekly: isWeekly)
+                        simSettings.factorEnableFrac[key] = frac
+
                         simSettings.manualOffsets[key] = 0.0
                     }
                     
-                    // Turn ON all bullish factors and force them numerically to 1.0
+                    // Turn ON all bullish => fraction=1, numeric= domain maxVal
                     for key in bullishKeys {
                         setFactorEnabled(factorName: key, enabled: true)
-                        factorAccessors[key]?.set(1.0)
+                        simSettings.factorEnableFrac[key] = 1.0
                         
-                        // Recompute fraction so the UI slider is far right
                         let isWeekly = (simSettings.periodUnit == .weeks)
-                        let frac = simSettings.fractionFromValue(key, value: 1.0, isWeekly: isWeekly)
+                        let (minVal, maxVal) = simSettings.factorRange(for: key, isWeekly: isWeekly)
+                        
+                        // "On" for bullish => numeric= maxVal
+                        factorAccessors[key]?.set(maxVal)
+                        
+                        let frac = simSettings.fractionFromValue(key, value: maxVal, isWeekly: isWeekly)
                         simSettings.factorEnableFrac[key] = frac
                         
                         simSettings.manualOffsets[key] = 0.0
@@ -180,13 +193,9 @@ extension SettingsView {
                     simSettings.factorIntensity = 1.0
                     simSettings.tiltBarValue = 1.0
                     
-                    // Step 3: “Hide” this big jump from onChange
                     oldFactorEnableFrac = simSettings.factorEnableFrac
-                    
-                    // Step 4: Clear out old “stored values” if your code tries to restore them
                     lastFactorValue.removeAll()
                     
-                    // Step 5: Re-allow normal onChange logic after a quick delay
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                         isManualOverride = false
                     }
@@ -195,9 +204,11 @@ extension SettingsView {
                         .foregroundColor(.green)
                 }
                 .buttonStyle(.plain)
+                .disabled(isCurrentlyExtremeBullish)
+                .opacity(isCurrentlyExtremeBullish ? 0.3 : 1.0)
             }
         } footer: {
-            Text("Scales all bullish & bearish factors. Left (red) ⇒ minimum (bearish), right (green) ⇒ maximum (bullish).")
+            Text("Left: bullish factors → domain min, bearish → domain min (most negative). Right: bearish → domain max (least negative), bullish → domain max. Rest is unchanged.")
                 .foregroundColor(.white)
         }
         .listRowBackground(Color(white: 0.15))
