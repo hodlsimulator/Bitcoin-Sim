@@ -25,7 +25,8 @@ struct BTCMonteCarloApp: App {
     @StateObject private var coordinator: SimulationCoordinator
 
     init() {
-        // Register default values (toggles) for first launch
+        // Register a few general toggles in UserDefaults.
+        // These are *not* per-factor toggles — they are global simulation settings.
         let defaultToggles: [String: Any] = [
             "useLognormalGrowth": true,
             "useHistoricalSampling": true,
@@ -40,10 +41,10 @@ struct BTCMonteCarloApp: App {
         
         print("** Creating SimulationSettings with loadDefaults = true")
         
-        let newAppViewModel    = AppViewModel()
-        let newInputManager    = PersistentInputManager()
-        let newSimSettings     = SimulationSettings(loadDefaults: true)
-        let newChartDataCache  = ChartDataCache()
+        let newAppViewModel      = AppViewModel()
+        let newInputManager      = PersistentInputManager()
+        let newSimSettings       = SimulationSettings(loadDefaults: true) // uses factor dictionary now
+        let newChartDataCache    = ChartDataCache()
         let newSimChartSelection = SimChartSelection()
         
         let newCoordinator = SimulationCoordinator(
@@ -53,8 +54,7 @@ struct BTCMonteCarloApp: App {
             simChartSelection: newSimChartSelection
         )
 
-        newSimSettings.inputManager = newInputManager
-
+        // Wrap in StateObjects
         _appViewModel      = StateObject(wrappedValue: newAppViewModel)
         _inputManager      = StateObject(wrappedValue: newInputManager)
         _simSettings       = StateObject(wrappedValue: newSimSettings)
@@ -82,7 +82,7 @@ struct BTCMonteCarloApp: App {
                     NavigationStack {
                         ContentView()
                             .environmentObject(inputManager)
-                            .environmentObject(simSettings)
+                            .environmentObject(simSettings)        // <-- new dictionary-based settings
                             .environmentObject(chartDataCache)
                             .environmentObject(simChartSelection)
                             .environmentObject(coordinator)
@@ -103,14 +103,14 @@ struct BTCMonteCarloApp: App {
                 }
             }
             .onAppear {
-                // Load user defaults
+                // Sync onboarding state
                 simSettings.isOnboarding = !didFinishOnboarding
 
                 // 1. Load weekly data
                 historicalBTCWeeklyReturns = loadAndAlignWeeklyData()
                 print("Loaded \(historicalBTCWeeklyReturns.count) weekly BTC return entries.")
 
-                // 1a. Also copy to extendedWeeklyReturns if you want the same data used for extended sampling
+                // 1a. If using extended sampling, copy them
                 extendedWeeklyReturns = historicalBTCWeeklyReturns
                 print("extendedWeeklyReturns count = \(extendedWeeklyReturns.count)")
 
@@ -118,13 +118,14 @@ struct BTCMonteCarloApp: App {
                 historicalBTCMonthlyReturns = loadAndAlignMonthlyData()
                 print("Loaded \(historicalBTCMonthlyReturns.count) monthly BTC return entries.")
 
-                // 2a. Also copy to extendedMonthlyReturns
+                // 2a. If using extended sampling, copy them
                 extendedMonthlyReturns = historicalBTCMonthlyReturns
                 print("extendedMonthlyReturns count = \(extendedMonthlyReturns.count)")
             }
             .onChange(of: scenePhase, initial: false) { _, newPhase in
                 switch newPhase {
                 case .inactive, .background:
+                    // Save our new factor states + other toggles
                     simSettings.saveToUserDefaults()
                 default:
                     break

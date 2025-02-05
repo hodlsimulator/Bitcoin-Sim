@@ -9,393 +9,67 @@ import SwiftUI
 
 extension SettingsView {
     
-    private func isFactorEnabled(_ key: String) -> Bool {
-        switch key {
-            
-            // BULLISH
-        case "Halving":               return simSettings.useHalvingWeekly
-        case "InstitutionalDemand":   return simSettings.useInstitutionalDemandWeekly
-        case "CountryAdoption":       return simSettings.useCountryAdoptionWeekly
-        case "RegulatoryClarity":     return simSettings.useRegulatoryClarityWeekly
-        case "EtfApproval":           return simSettings.useEtfApprovalWeekly
-        case "TechBreakthrough":      return simSettings.useTechBreakthroughWeekly
-        case "ScarcityEvents":        return simSettings.useScarcityEventsWeekly
-        case "GlobalMacroHedge":      return simSettings.useGlobalMacroHedgeWeekly
-        case "StablecoinShift":       return simSettings.useStablecoinShiftWeekly
-        case "DemographicAdoption":   return simSettings.useDemographicAdoptionWeekly
-        case "AltcoinFlight":         return simSettings.useAltcoinFlightWeekly
-        case "AdoptionFactor":        return simSettings.useAdoptionFactorWeekly
-            
-            // BEARISH
-        case "RegClampdown":          return simSettings.useRegClampdownWeekly
-        case "CompetitorCoin":        return simSettings.useCompetitorCoinWeekly
-        case "SecurityBreach":        return simSettings.useSecurityBreachWeekly
-        case "BubblePop":             return simSettings.useBubblePopWeekly
-        case "StablecoinMeltdown":    return simSettings.useStablecoinMeltdownWeekly
-        case "BlackSwan":             return simSettings.useBlackSwanWeekly
-        case "BearMarket":            return simSettings.useBearMarketWeekly
-        case "MaturingMarket":        return simSettings.useMaturingMarketWeekly
-        case "Recession":             return simSettings.useRecessionWeekly
-            
-        default:
-            return false
-        }
-    }
-    
-    /// Shift all factors by `delta`, but only if that factor is toggled on
-    /// (via e.g. simSettings.useXYZWeekly). Removing factor scaling by 'frac'
-    /// lets them reach the ends when the global slider goes 0->1 or 1->0.
+    /// Shift all enabled factors’ currentValue by `delta` * (maxVal - minVal).
+    /// We clamp to each factor’s [minValue..maxValue].
     func shiftAllFactors(by delta: Double) {
-        
-        func clamp(_ x: Double, minVal: Double, maxVal: Double) -> Double {
-            let lower = min(minVal, maxVal)
-            let upper = max(minVal, maxVal)
-            return max(lower, min(upper, x))
+        for (factorName, var factor) in simSettings.factors {
+            // Only shift if factor is enabled
+            guard factor.isEnabled else { continue }
+            
+            let range = factor.maxValue - factor.minValue
+            let shifted = factor.currentValue + delta * range
+            
+            // Clamp within [minValue..maxValue]
+            factor.currentValue = max(factor.minValue, min(shifted, factor.maxValue))
+            
+            // Put the factor back into the dictionary
+            simSettings.factors[factorName] = factor
         }
+    }
+    
+    // OPTIONAL: If you had an “updateUniversalFactorIntensity()” function that
+    // computed an “average normalised value” across all factors, you might do:
 
-        func maybeShift(
-            key: String,
-            isOn: Bool,
-            oldValue: inout Double,
-            minVal: Double,
-            maxVal: Double
-        ) {
-            guard isOn else { return }
-            
-            // FIX HERE (removed * frac)
-            let range = maxVal - minVal
-            let scaledDelta = delta * range
-            
-            let newValue = clamp(oldValue + scaledDelta, minVal: minVal, maxVal: maxVal)
-            if abs(newValue - oldValue) > 1e-7 {
-                oldValue = newValue
-            }
-        }
-        
-        // BULLISH fraction range is 0..1
-        for key in bullishKeys {
-            if let oldFrac = simSettings.factorEnableFrac[key] {
-                let toggledOn = isFactorEnabled(key)
-                var mutableFrac = oldFrac
-                // We could remove fraction-based scaling if you want it to hit 0 or 1 fully.
-                // But let's keep it as is for the factorEnableFrac. This doesn't stop the factor's real numeric from hitting extremes.
-                simSettings.factorEnableFrac[key] = mutableFrac
-            }
-        }
-        
-        // BEARISH fraction is also in 0..1
-        for key in bearishKeys {
-            if let oldFrac = simSettings.factorEnableFrac[key] {
-                let toggledOn = isFactorEnabled(key)
-                var mutableFrac = oldFrac
-                simSettings.factorEnableFrac[key] = mutableFrac
-            }
-        }
-        
-        // BULLISH real numeric values
-        maybeShift(key: "Halving",
-                   isOn: simSettings.useHalvingWeekly,
-                   oldValue: &simSettings.halvingBumpUnified,
-                   minVal: 0.2773386887,
-                   maxVal: 0.3823386887)
-        
-        maybeShift(key: "InstitutionalDemand",
-                   isOn: simSettings.useInstitutionalDemandWeekly,
-                   oldValue: &simSettings.maxDemandBoostUnified,
-                   minVal: 0.00105315,
-                   maxVal: 0.00142485)
-        
-        maybeShift(key: "CountryAdoption",
-                   isOn: simSettings.useCountryAdoptionWeekly,
-                   oldValue: &simSettings.maxCountryAdBoostUnified,
-                   minVal: 0.0009882799977,
-                   maxVal: 0.0012868959977)
-        
-        maybeShift(key: "RegulatoryClarity",
-                   isOn: simSettings.useRegulatoryClarityWeekly,
-                   oldValue: &simSettings.maxClarityBoostUnified,
-                   minVal: 0.0005979474861605167,
-                   maxVal: 0.0008361034861605167)
-        
-        maybeShift(key: "EtfApproval",
-                   isOn: simSettings.useEtfApprovalWeekly,
-                   oldValue: &simSettings.maxEtfBoostUnified,
-                   minVal: 0.0014880183160305023,
-                   maxVal: 0.0020880183160305023)
-        
-        maybeShift(key: "TechBreakthrough",
-                   isOn: simSettings.useTechBreakthroughWeekly,
-                   oldValue: &simSettings.maxTechBoostUnified,
-                   minVal: 0.0005015753579173088,
-                   maxVal: 0.0007150633579173088)
-        
-        maybeShift(key: "ScarcityEvents",
-                   isOn: simSettings.useScarcityEventsWeekly,
-                   oldValue: &simSettings.maxScarcityBoostUnified,
-                   minVal: 0.00035112353681182863,
-                   maxVal: 0.00047505153681182863)
-        
-        maybeShift(key: "GlobalMacroHedge",
-                   isOn: simSettings.useGlobalMacroHedgeWeekly,
-                   oldValue: &simSettings.maxMacroBoostUnified,
-                   minVal: 0.0002868789724932909,
-                   maxVal: 0.0004126829724932909)
-        
-        maybeShift(key: "StablecoinShift",
-                   isOn: simSettings.useStablecoinShiftWeekly,
-                   oldValue: &simSettings.maxStablecoinBoostUnified,
-                   minVal: 0.0002704809116327763,
-                   maxVal: 0.0003919609116327763)
-        
-        maybeShift(key: "DemographicAdoption",
-                   isOn: simSettings.useDemographicAdoptionWeekly,
-                   oldValue: &simSettings.maxDemoBoostUnified,
-                   minVal: 0.0008661432036626339,
-                   maxVal: 0.0012578432036626339)
-        
-        maybeShift(key: "AltcoinFlight",
-                   isOn: simSettings.useAltcoinFlightWeekly,
-                   oldValue: &simSettings.maxAltcoinBoostUnified,
-                   minVal: 0.0002381864461803342,
-                   maxVal: 0.0003222524461803342)
-        
-        maybeShift(key: "AdoptionFactor",
-                   isOn: simSettings.useAdoptionFactorWeekly,
-                   oldValue: &simSettings.adoptionBaseFactorUnified,
-                   minVal: 0.0013638349088897705,
-                   maxVal: 0.0018451869088897705)
-        
-        // BEARISH real numeric values
-        maybeShift(key: "RegClampdown",
-                   isOn: simSettings.useRegClampdownWeekly,
-                   oldValue: &simSettings.maxClampDownUnified,
-                   minVal: -0.0014273392243542672,
-                   maxVal: -0.0008449512243542672)
-        
-        maybeShift(key: "CompetitorCoin",
-                   isOn: simSettings.useCompetitorCoinWeekly,
-                   oldValue: &simSettings.maxCompetitorBoostUnified,
-                   minVal: -0.0011842141746411323,
-                   maxVal: -0.0008454221746411323)
-        
-        maybeShift(key: "SecurityBreach",
-                   isOn: simSettings.useSecurityBreachWeekly,
-                   oldValue: &simSettings.breachImpactUnified,
-                   minVal: -0.0012819675168380737,
-                   maxVal: -0.0009009755168380737)
-        
-        maybeShift(key: "BubblePop",
-                   isOn: simSettings.useBubblePopWeekly,
-                   oldValue: &simSettings.maxPopDropUnified,
-                   minVal: -0.002244817890762329,
-                   maxVal: -0.001280529890762329)
-        
-        maybeShift(key: "StablecoinMeltdown",
-                   isOn: simSettings.useStablecoinMeltdownWeekly,
-                   oldValue: &simSettings.maxMeltdownDropUnified,
-                   minVal: -0.0009681346159477233,
-                   maxVal: -0.0004600706159477233)
-        
-        maybeShift(key: "BlackSwan",
-                   isOn: simSettings.useBlackSwanWeekly,
-                   oldValue: &simSettings.blackSwanDropUnified,
-                   minVal: -0.478662,
-                   maxVal: -0.319108)
-        
-        maybeShift(key: "BearMarket",
-                   isOn: simSettings.useBearMarketWeekly,
-                   oldValue: &simSettings.bearWeeklyDriftUnified,
-                   minVal: -0.0010278802752494812,
-                   maxVal: -0.0007278802752494812)
-        
-        maybeShift(key: "MaturingMarket",
-                   isOn: simSettings.useMaturingMarketWeekly,
-                   oldValue: &simSettings.maxMaturingDropUnified,
-                   minVal: -0.0020343461055486196,
-                   maxVal: -0.0010537001055486196)
-        
-        maybeShift(key: "Recession",
-                   isOn: simSettings.useRecessionWeekly,
-                   oldValue: &simSettings.maxRecessionDropUnified,
-                   minVal: -0.0010516462467487811,
-                   maxVal: -0.0007494520467487811)
-    }
-    
     func updateUniversalFactorIntensity() {
+        var totalNorm = 0.0
+        var countEnabled = 0
         
-        var totalWeightedNorm = 0.0
-        var totalFrac = 0.0
+        for (_, factor) in simSettings.factors {
+            if factor.isEnabled {
+                let norm = (factor.currentValue - factor.minValue)
+                           / (factor.maxValue - factor.minValue)
+                totalNorm += norm
+                countEnabled += 1
+            }
+        }
+        guard countEnabled > 0 else { return }
         
-        func accumulateFactor(
-            key: String,
-            isOn: Bool,
-            value: Double,
-            minVal: Double,
-            maxVal: Double
-        ) {
-            guard isOn else { return }
-            let frac = simSettings.factorEnableFrac[key] ?? 0.0
-            guard frac > 0 else { return }
+        // E.g. set the global slider to the average normalised value
+        simSettings.factorIntensity = totalNorm / Double(countEnabled)
+    }
+    
+    // OPTIONAL: If you want an “animateFactor” function to turn a factor on/off with a SwiftUI animation:
+    func animateFactor(_ factorName: String, newEnabled: Bool) {
+        guard var factor = simSettings.factors[factorName] else { return }
+
+        // Example: animate toggling factor.isEnabled
+        withAnimation(.easeInOut(duration: 0.6)) {
+            factor.isEnabled = newEnabled
             
-            let norm = (value - minVal) / (maxVal - minVal)
-            totalWeightedNorm += norm * frac
-            totalFrac += frac
-        }
-        
-        // BULLISH
-        accumulateFactor(key: "Halving",
-                         isOn: simSettings.useHalvingWeekly,
-                         value: simSettings.halvingBumpUnified,
-                         minVal: 0.2773386887,
-                         maxVal: 0.3823386887)
-        
-        accumulateFactor(key: "InstitutionalDemand",
-                         isOn: simSettings.useInstitutionalDemandWeekly,
-                         value: simSettings.maxDemandBoostUnified,
-                         minVal: 0.00105315,
-                         maxVal: 0.00142485)
-        
-        accumulateFactor(key: "CountryAdoption",
-                         isOn: simSettings.useCountryAdoptionWeekly,
-                         value: simSettings.maxCountryAdBoostUnified,
-                         minVal: 0.0009882799977,
-                         maxVal: 0.0012868959977)
-        
-        accumulateFactor(key: "RegulatoryClarity",
-                         isOn: simSettings.useRegulatoryClarityWeekly,
-                         value: simSettings.maxClarityBoostUnified,
-                         minVal: 0.0005979474861605167,
-                         maxVal: 0.0008361034861605167)
-        
-        accumulateFactor(key: "EtfApproval",
-                         isOn: simSettings.useEtfApprovalWeekly,
-                         value: simSettings.maxEtfBoostUnified,
-                         minVal: 0.0014880183160305023,
-                         maxVal: 0.0020880183160305023)
-        
-        accumulateFactor(key: "TechBreakthrough",
-                         isOn: simSettings.useTechBreakthroughWeekly,
-                         value: simSettings.maxTechBoostUnified,
-                         minVal: 0.0005015753579173088,
-                         maxVal: 0.0007150633579173088)
-        
-        accumulateFactor(key: "ScarcityEvents",
-                         isOn: simSettings.useScarcityEventsWeekly,
-                         value: simSettings.maxScarcityBoostUnified,
-                         minVal: 0.00035112353681182863,
-                         maxVal: 0.00047505153681182863)
-        
-        accumulateFactor(key: "GlobalMacroHedge",
-                         isOn: simSettings.useGlobalMacroHedgeWeekly,
-                         value: simSettings.maxMacroBoostUnified,
-                         minVal: 0.0002868789724932909,
-                         maxVal: 0.0004126829724932909)
-        
-        accumulateFactor(key: "StablecoinShift",
-                         isOn: simSettings.useStablecoinShiftWeekly,
-                         value: simSettings.maxStablecoinBoostUnified,
-                         minVal: 0.0002704809116327763,
-                         maxVal: 0.0003919609116327763)
-        
-        accumulateFactor(key: "DemographicAdoption",
-                         isOn: simSettings.useDemographicAdoptionWeekly,
-                         value: simSettings.maxDemoBoostUnified,
-                         minVal: 0.0008661432036626339,
-                         maxVal: 0.0012578432036626339)
-        
-        accumulateFactor(key: "AltcoinFlight",
-                         isOn: simSettings.useAltcoinFlightWeekly,
-                         value: simSettings.maxAltcoinBoostUnified,
-                         minVal: 0.0002381864461803342,
-                         maxVal: 0.0003222524461803342)
-        
-        accumulateFactor(key: "AdoptionFactor",
-                         isOn: simSettings.useAdoptionFactorWeekly,
-                         value: simSettings.adoptionBaseFactorUnified,
-                         minVal: 0.0013638349088897705,
-                         maxVal: 0.0018451869088897705)
-        
-        // BEARISH
-        accumulateFactor(key: "RegClampdown",
-                         isOn: simSettings.useRegClampdownWeekly,
-                         value: simSettings.maxClampDownUnified,
-                         minVal: -0.0014273392243542672,
-                         maxVal: -0.0008449512243542672)
-        
-        accumulateFactor(key: "CompetitorCoin",
-                         isOn: simSettings.useCompetitorCoinWeekly,
-                         value: simSettings.maxCompetitorBoostUnified,
-                         minVal: -0.0011842141746411323,
-                         maxVal: -0.0008454221746411323)
-        
-        accumulateFactor(key: "SecurityBreach",
-                         isOn: simSettings.useSecurityBreachWeekly,
-                         value: simSettings.breachImpactUnified,
-                         minVal: -0.0012819675168380737,
-                         maxVal: -0.0009009755168380737)
-        
-        accumulateFactor(key: "BubblePop",
-                         isOn: simSettings.useBubblePopWeekly,
-                         value: simSettings.maxPopDropUnified,
-                         minVal: -0.002244817890762329,
-                         maxVal: -0.001280529890762329)
-        
-        accumulateFactor(key: "StablecoinMeltdown",
-                         isOn: simSettings.useStablecoinMeltdownWeekly,
-                         value: simSettings.maxMeltdownDropUnified,
-                         minVal: -0.0009681346159477233,
-                         maxVal: -0.0004600706159477233)
-        
-        accumulateFactor(key: "BlackSwan",
-                         isOn: simSettings.useBlackSwanWeekly,
-                         value: simSettings.blackSwanDropUnified,
-                         minVal: -0.478662,
-                         maxVal: -0.319108)
-        
-        accumulateFactor(key: "BearMarket",
-                         isOn: simSettings.useBearMarketWeekly,
-                         value: simSettings.bearWeeklyDriftUnified,
-                         minVal: -0.0010278802752494812,
-                         maxVal: -0.0007278802752494812)
-        
-        accumulateFactor(key: "MaturingMarket",
-                         isOn: simSettings.useMaturingMarketWeekly,
-                         value: simSettings.maxMaturingDropUnified,
-                         minVal: -0.0020343461055486196,
-                         maxVal: -0.0010537001055486196)
-        
-        accumulateFactor(key: "Recession",
-                         isOn: simSettings.useRecessionWeekly,
-                         value: simSettings.maxRecessionDropUnified,
-                         minVal: -0.0010516462467487811,
-                         maxVal: -0.0007494520467487811)
-        
-        guard totalFrac > 0 else { return }
-        
-        let newIntensity = totalWeightedNorm / totalFrac
-        simSettings.factorIntensity = newIntensity
-    }
-    
-    func animateFactor(_ key: String, isOn: Bool) {
-        if isOn {
-            withAnimation(.easeInOut(duration: 0.6)) {
-                simSettings.factorEnableFrac[key] = lastFactorValue[key] ?? 1.0
+            // If turning it on, maybe reset currentValue to defaultValue
+            if newEnabled {
+                factor.currentValue = factor.defaultValue
             }
-        } else {
-            lastFactorValue[key] = simSettings.factorEnableFrac[key] ?? 1.0
-            withAnimation(.easeInOut(duration: 0.6)) {
-                simSettings.factorEnableFrac[key] = 0
-            }
+            simSettings.factors[factorName] = factor
         }
     }
     
-    func syncFactorToSlider(
-        _ currentValue: inout Double,
-        minVal: Double,
-        maxVal: Double,
-        simSettings: SimulationSettings
-    ) {
+    // OPTIONAL: If you want to “sync factor’s currentValue to the global slider”
+    // E.g. factorIntensity in [0..1], then map to [factor.minValue..factor.maxValue].
+    func syncFactorToSlider(_ factorName: String) {
+        guard var factor = simSettings.factors[factorName] else { return }
         let t = simSettings.factorIntensity
-        currentValue = minVal + t * (maxVal - minVal)
+        factor.currentValue = factor.minValue + t * (factor.maxValue - factor.minValue)
+        simSettings.factors[factorName] = factor
     }
 }

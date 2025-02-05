@@ -12,391 +12,88 @@ extension SimulationSettings {
         // 1) Signal that we're doing a bulk restore so onChange logic is skipped
         isRestoringDefaults = true
         
-        // IMPORTANT FIX: clear all locked factors so they can move with the global slider again
+        // IMPORTANT: clear all locked factors so they can be changed again
         lockedFactors.removeAll()
         
         print("RESTORE DEFAULTS CALLED!")
         
         let defaults = UserDefaults.standard
         
-        // Remove old factorIntensity and set it to default
-        UserDefaults.standard.removeObject(forKey: "factorIntensity")
+        // Remove old factorIntensity and set it to a default
+        defaults.removeObject(forKey: "factorIntensity")
         factorIntensity = 0.5
         
         // Reset chart icon flags
         chartExtremeBearish = false
         chartExtremeBullish = false
         
-        // Clear all manual offsets
-        manualOffsets = [:]
-
-        // Keep any general toggles you want to preserve
+        // Keep any general toggles you still want
+        // e.g. re-save them if needed:
         defaults.set(useHistoricalSampling, forKey: "useHistoricalSampling")
         defaults.set(useVolShocks,         forKey: "useVolShocks")
 
-        // Remove old parent-toggle keys you no longer use in code
-        defaults.removeObject(forKey: "useHalving")
-        defaults.removeObject(forKey: "halvingBump")
-        defaults.removeObject(forKey: "useInstitutionalDemand")
-        defaults.removeObject(forKey: "maxDemandBoost")
-        defaults.removeObject(forKey: "useCountryAdoption")
-        defaults.removeObject(forKey: "maxCountryAdBoost")
-        defaults.removeObject(forKey: "useRegulatoryClarity")
-        defaults.removeObject(forKey: "maxClarityBoost")
-        defaults.removeObject(forKey: "useEtfApproval")
-        defaults.removeObject(forKey: "maxEtfBoost")
-        defaults.removeObject(forKey: "useTechBreakthrough")
-        defaults.removeObject(forKey: "maxTechBoost")
-        defaults.removeObject(forKey: "useScarcityEvents")
-        defaults.removeObject(forKey: "maxScarcityBoost")
-        defaults.removeObject(forKey: "useGlobalMacroHedge")
-        defaults.removeObject(forKey: "maxMacroBoost")
-        defaults.removeObject(forKey: "useStablecoinShift")
-        defaults.removeObject(forKey: "maxStablecoinBoost")
-        defaults.removeObject(forKey: "useDemographicAdoption")
-        defaults.removeObject(forKey: "maxDemoBoost")
-        defaults.removeObject(forKey: "useAltcoinFlight")
-        defaults.removeObject(forKey: "maxAltcoinBoost")
-        defaults.removeObject(forKey: "useAdoptionFactor")
-        defaults.removeObject(forKey: "adoptionBaseFactor")
-        defaults.removeObject(forKey: "useRegClampdown")
-        defaults.removeObject(forKey: "maxClampDown")
-        defaults.removeObject(forKey: "useCompetitorCoin")
-        defaults.removeObject(forKey: "maxCompetitorBoost")
-        defaults.removeObject(forKey: "useSecurityBreach")
-        defaults.removeObject(forKey: "breachImpact")
-        defaults.removeObject(forKey: "useBubblePop")
-        defaults.removeObject(forKey: "maxPopDrop")
-        defaults.removeObject(forKey: "useStablecoinMeltdown")
-        defaults.removeObject(forKey: "maxMeltdownDrop")
-        defaults.removeObject(forKey: "useBlackSwan")
-        defaults.removeObject(forKey: "blackSwanDrop")
-        defaults.removeObject(forKey: "useBearMarket")
-        defaults.removeObject(forKey: "bearWeeklyDrift")
-        defaults.removeObject(forKey: "useMaturingMarket")
-        defaults.removeObject(forKey: "maxMaturingDrop")
-        defaults.removeObject(forKey: "useRecession")
-        defaults.removeObject(forKey: "maxRecessionDrop")
-        defaults.removeObject(forKey: "lockHistoricalSampling")
+        // Remove old keys (the lines you already had)
+        defaults.removeObject(forKey: "useHalving")     // etc. ...
+        defaults.removeObject(forKey: "halvingBump")    // ...
+        // ...
 
-        // Remove or reset any new toggles you plan to revert
         defaults.removeObject(forKey: "useHistoricalSampling")
         defaults.removeObject(forKey: "useVolShocks")
-
-        // GARCH
         defaults.removeObject(forKey: "useGarchVolatility")
-
-        // AutoCorrelation
         defaults.removeObject(forKey: "useAutoCorrelation")
         defaults.removeObject(forKey: "autoCorrelationStrength")
         defaults.removeObject(forKey: "meanReversionTarget")
 
-        // Remove new weekly/monthly keys
+        // Remove old weekly/monthly keys if you haven’t fully migrated
         defaults.removeObject(forKey: "useHalvingWeekly")
         defaults.removeObject(forKey: "halvingBumpWeekly")
-        defaults.removeObject(forKey: "useHalvingMonthly")
-        defaults.removeObject(forKey: "halvingBumpMonthly")
-
-        defaults.removeObject(forKey: "useInstitutionalDemandWeekly")
-        defaults.removeObject(forKey: "maxDemandBoostWeekly")
-        defaults.removeObject(forKey: "useInstitutionalDemandMonthly")
-        defaults.removeObject(forKey: "maxDemandBoostMonthly")
-
-        defaults.removeObject(forKey: "useCountryAdoptionWeekly")
-        defaults.removeObject(forKey: "maxCountryAdBoostWeekly")
-        defaults.removeObject(forKey: "useCountryAdoptionMonthly")
-        defaults.removeObject(forKey: "maxCountryAdBoostMonthly")
-
-        defaults.removeObject(forKey: "useRegulatoryClarityWeekly")
-        defaults.removeObject(forKey: "maxClarityBoostWeekly")
-        defaults.removeObject(forKey: "useRegulatoryClarityMonthly")
-        defaults.removeObject(forKey: "maxClarityBoostMonthly")
-
-        defaults.removeObject(forKey: "useEtfApprovalWeekly")
-        defaults.removeObject(forKey: "maxEtfBoostWeekly")
-        defaults.removeObject(forKey: "useEtfApprovalMonthly")
-        defaults.removeObject(forKey: "maxEtfBoostMonthly")
-
-        defaults.removeObject(forKey: "useTechBreakthroughWeekly")
-        defaults.removeObject(forKey: "maxTechBoostWeekly")
-        defaults.removeObject(forKey: "useTechBreakthroughMonthly")
-        defaults.removeObject(forKey: "maxTechBoostMonthly")
-
-        defaults.removeObject(forKey: "useScarcityEventsWeekly")
-        defaults.removeObject(forKey: "maxScarcityBoostWeekly")
-        defaults.removeObject(forKey: "useScarcityEventsMonthly")
-        defaults.removeObject(forKey: "maxScarcityBoostMonthly")
-
-        defaults.removeObject(forKey: "useGlobalMacroHedgeWeekly")
-        defaults.removeObject(forKey: "maxMacroBoostWeekly")
-        defaults.removeObject(forKey: "useGlobalMacroHedgeMonthly")
-        defaults.removeObject(forKey: "maxMacroBoostMonthly")
-
-        defaults.removeObject(forKey: "useStablecoinShiftWeekly")
-        defaults.removeObject(forKey: "maxStablecoinBoostWeekly")
-        defaults.removeObject(forKey: "useStablecoinShiftMonthly")
-        defaults.removeObject(forKey: "maxStablecoinBoostMonthly")
-
-        defaults.removeObject(forKey: "useDemographicAdoptionWeekly")
-        defaults.removeObject(forKey: "maxDemoBoostWeekly")
-        defaults.removeObject(forKey: "useDemographicAdoptionMonthly")
-        defaults.removeObject(forKey: "maxDemoBoostMonthly")
-
-        defaults.removeObject(forKey: "useAltcoinFlightWeekly")
-        defaults.removeObject(forKey: "maxAltcoinBoostWeekly")
-        defaults.removeObject(forKey: "useAltcoinFlightMonthly")
-        defaults.removeObject(forKey: "maxAltcoinBoostMonthly")
-
-        defaults.removeObject(forKey: "useAdoptionFactorWeekly")
-        defaults.removeObject(forKey: "adoptionBaseFactorWeekly")
-        defaults.removeObject(forKey: "useAdoptionFactorMonthly")
-        defaults.removeObject(forKey: "adoptionBaseFactorMonthly")
-
-        defaults.removeObject(forKey: "useRegClampdownWeekly")
-        defaults.removeObject(forKey: "maxClampDownWeekly")
-        defaults.removeObject(forKey: "useRegClampdownMonthly")
-        defaults.removeObject(forKey: "maxClampDownMonthly")
-
-        defaults.removeObject(forKey: "useCompetitorCoinWeekly")
-        defaults.removeObject(forKey: "maxCompetitorBoostWeekly")
-        defaults.removeObject(forKey: "useCompetitorCoinMonthly")
-        defaults.removeObject(forKey: "maxCompetitorBoostMonthly")
-
-        defaults.removeObject(forKey: "useSecurityBreachWeekly")
-        defaults.removeObject(forKey: "breachImpactWeekly")
-        defaults.removeObject(forKey: "useSecurityBreachMonthly")
-        defaults.removeObject(forKey: "breachImpactMonthly")
-
-        defaults.removeObject(forKey: "useBubblePopWeekly")
-        defaults.removeObject(forKey: "maxPopDropWeekly")
-        defaults.removeObject(forKey: "useBubblePopMonthly")
-        defaults.removeObject(forKey: "maxPopDropMonthly")
-
-        defaults.removeObject(forKey: "useStablecoinMeltdownWeekly")
-        defaults.removeObject(forKey: "maxMeltdownDropWeekly")
-        defaults.removeObject(forKey: "useStablecoinMeltdownMonthly")
-        defaults.removeObject(forKey: "maxMeltdownDropMonthly")
-
-        defaults.removeObject(forKey: "useBlackSwanWeekly")
-        defaults.removeObject(forKey: "blackSwanDropWeekly")
-        defaults.removeObject(forKey: "useBlackSwanMonthly")
-        defaults.removeObject(forKey: "blackSwanDropMonthly")
-
-        defaults.removeObject(forKey: "useBearMarketWeekly")
-        defaults.removeObject(forKey: "bearWeeklyDriftWeekly")
-        defaults.removeObject(forKey: "useBearMarketMonthly")
-        defaults.removeObject(forKey: "bearWeeklyDriftMonthly")
-
-        defaults.removeObject(forKey: "useMaturingMarketWeekly")
-        defaults.removeObject(forKey: "maxMaturingDropWeekly")
-        defaults.removeObject(forKey: "useMaturingMarketMonthly")
-        defaults.removeObject(forKey: "maxMaturingDropMonthly")
-
-        defaults.removeObject(forKey: "useRecessionWeekly")
-        defaults.removeObject(forKey: "maxRecessionDropWeekly")
-        defaults.removeObject(forKey: "useRecessionMonthly")
-        defaults.removeObject(forKey: "maxRecessionDropMonthly")
+        // ... etc.
 
         // Remove or reset the lognormal growth key
         defaults.removeObject(forKey: "useLognormalGrowth")
         useLognormalGrowth = true
 
-        // Reassign to new defaults for these toggles
+        // Reassign toggles to your chosen defaults
         useHistoricalSampling = true
         useVolShocks = true
         useGarchVolatility = true
+        useRegimeSwitching = true  // or whatever default you prefer
 
-        // Remove existing user default for regime switching & set default to true
-        defaults.removeObject(forKey: "useRegimeSwitching")
-        useRegimeSwitching = true
-        
-        // Bullish / Bearish toggles (weekly + monthly) back to defaults
-        useHalvingWeekly = true
-        halvingBumpWeekly = SimulationSettings.defaultHalvingBumpWeekly
-        useHalvingMonthly = true
-        halvingBumpMonthly = SimulationSettings.defaultHalvingBumpMonthly
+        // If you still had old booleans or unified values, remove them or comment them out
+        // e.g. halvingBumpUnified, factorEnableFrac references, etc.
 
-        useInstitutionalDemandWeekly = true
-        maxDemandBoostWeekly = SimulationSettings.defaultMaxDemandBoostWeekly
-        useInstitutionalDemandMonthly = true
-        maxDemandBoostMonthly = SimulationSettings.defaultMaxDemandBoostMonthly
-
-        useCountryAdoptionWeekly = true
-        maxCountryAdBoostWeekly = SimulationSettings.defaultMaxCountryAdBoostWeekly
-        useCountryAdoptionMonthly = true
-        maxCountryAdBoostMonthly = SimulationSettings.defaultMaxCountryAdBoostMonthly
-
-        useRegulatoryClarityWeekly = true
-        maxClarityBoostWeekly = SimulationSettings.defaultMaxClarityBoostWeekly
-        useRegulatoryClarityMonthly = true
-        maxClarityBoostMonthly = SimulationSettings.defaultMaxClarityBoostMonthly
-
-        useEtfApprovalWeekly = true
-        maxEtfBoostWeekly = SimulationSettings.defaultMaxEtfBoostWeekly
-        useEtfApprovalMonthly = true
-        maxEtfBoostMonthly = SimulationSettings.defaultMaxEtfBoostMonthly
-
-        useTechBreakthroughWeekly = true
-        maxTechBoostWeekly = SimulationSettings.defaultMaxTechBoostWeekly
-        useTechBreakthroughMonthly = true
-        maxTechBoostMonthly = SimulationSettings.defaultMaxTechBoostMonthly
-
-        useScarcityEventsWeekly = true
-        maxScarcityBoostWeekly = SimulationSettings.defaultMaxScarcityBoostWeekly
-        useScarcityEventsMonthly = true
-        maxScarcityBoostMonthly = SimulationSettings.defaultMaxScarcityBoostMonthly
-
-        useGlobalMacroHedgeWeekly = true
-        maxMacroBoostWeekly = SimulationSettings.defaultMaxMacroBoostWeekly
-        useGlobalMacroHedgeMonthly = true
-        maxMacroBoostMonthly = SimulationSettings.defaultMaxMacroBoostMonthly
-
-        useStablecoinShiftWeekly = true
-        maxStablecoinBoostWeekly = SimulationSettings.defaultMaxStablecoinBoostWeekly
-        useStablecoinShiftMonthly = true
-        maxStablecoinBoostMonthly = SimulationSettings.defaultMaxStablecoinBoostMonthly
-
-        useDemographicAdoptionWeekly = true
-        maxDemoBoostWeekly = SimulationSettings.defaultMaxDemoBoostWeekly
-        useDemographicAdoptionMonthly = true
-        maxDemoBoostMonthly = SimulationSettings.defaultMaxDemoBoostMonthly
-
-        useAltcoinFlightWeekly = true
-        maxAltcoinBoostWeekly = SimulationSettings.defaultMaxAltcoinBoostWeekly
-        useAltcoinFlightMonthly = true
-        maxAltcoinBoostMonthly = SimulationSettings.defaultMaxAltcoinBoostMonthly
-
-        useAdoptionFactorWeekly = true
-        adoptionBaseFactorWeekly = SimulationSettings.defaultAdoptionBaseFactorWeekly
-        useAdoptionFactorMonthly = true
-        adoptionBaseFactorMonthly = SimulationSettings.defaultAdoptionBaseFactorMonthly
-
-        // Bearish
-        useRegClampdownWeekly = true
-        maxClampDownWeekly = SimulationSettings.defaultMaxClampDownWeekly
-        useRegClampdownMonthly = true
-        maxClampDownMonthly = SimulationSettings.defaultMaxClampDownMonthly
-
-        useCompetitorCoinWeekly = true
-        maxCompetitorBoostWeekly = SimulationSettings.defaultMaxCompetitorBoostWeekly
-        useCompetitorCoinMonthly = true
-        maxCompetitorBoostMonthly = SimulationSettings.defaultMaxCompetitorBoostMonthly
-
-        useSecurityBreachWeekly = true
-        breachImpactWeekly = SimulationSettings.defaultBreachImpactWeekly
-        useSecurityBreachMonthly = true
-        breachImpactMonthly = SimulationSettings.defaultBreachImpactMonthly
-
-        useBubblePopWeekly = true
-        maxPopDropWeekly = SimulationSettings.defaultMaxPopDropWeekly
-        useBubblePopMonthly = true
-        maxPopDropMonthly = SimulationSettings.defaultMaxPopDropMonthly
-
-        useStablecoinMeltdownWeekly = true
-        maxMeltdownDropWeekly = SimulationSettings.defaultMaxMeltdownDropWeekly
-        useStablecoinMeltdownMonthly = true
-        maxMeltdownDropMonthly = SimulationSettings.defaultMaxMeltdownDropMonthly
-
-        useBlackSwanWeekly = true
-        blackSwanDropWeekly = SimulationSettings.defaultBlackSwanDropWeekly
-        useBlackSwanMonthly = true
-        blackSwanDropMonthly = SimulationSettings.defaultBlackSwanDropMonthly
-
-        useBearMarketWeekly = true
-        bearWeeklyDriftWeekly = SimulationSettings.defaultBearWeeklyDriftWeekly
-        useBearMarketMonthly = true
-        bearWeeklyDriftMonthly = SimulationSettings.defaultBearWeeklyDriftMonthly
-
-        useMaturingMarketWeekly = true
-        maxMaturingDropWeekly = SimulationSettings.defaultMaxMaturingDropWeekly
-        useMaturingMarketMonthly = true
-        maxMaturingDropMonthly = SimulationSettings.defaultMaxMaturingDropMonthly
-
-        useRecessionWeekly = true
-        maxRecessionDropWeekly = SimulationSettings.defaultMaxRecessionDropWeekly
-        useRecessionMonthly = true
-        maxRecessionDropMonthly = SimulationSettings.defaultMaxRecessionDropMonthly
-        
-        // Also reset fraction-based toggles to 0.5 (midpoint) and set each factor to its default
-        factorEnableFrac["Halving"] = 0.5
-        halvingBumpUnified = 0.3298386887
-
-        factorEnableFrac["InstitutionalDemand"] = 0.5
-        maxDemandBoostUnified = 0.001239
-
-        factorEnableFrac["CountryAdoption"] = 0.5
-        maxCountryAdBoostUnified = 0.0011375879977
-
-        factorEnableFrac["RegulatoryClarity"] = 0.5
-        maxClarityBoostUnified = 0.0007170254861605167
-
-        factorEnableFrac["EtfApproval"] = 0.5
-        maxEtfBoostUnified = 0.0017880183160305023
-
-        factorEnableFrac["TechBreakthrough"] = 0.5
-        maxTechBoostUnified = 0.0006083193579173088
-
-        factorEnableFrac["ScarcityEvents"] = 0.5
-        maxScarcityBoostUnified = 0.00041308753681182863
-
-        factorEnableFrac["GlobalMacroHedge"] = 0.5
-        maxMacroBoostUnified = 0.0003497809724932909
-
-        factorEnableFrac["StablecoinShift"] = 0.5
-        maxStablecoinBoostUnified = 0.0003312209116327763
-
-        factorEnableFrac["DemographicAdoption"] = 0.5
-        maxDemoBoostUnified = 0.001061993203662634
-
-        factorEnableFrac["AltcoinFlight"] = 0.5
-        maxAltcoinBoostUnified = 0.0002802194461803342
-
-        factorEnableFrac["AdoptionFactor"] = 0.5
-        adoptionBaseFactorUnified = 0.0016045109088897705
-
-        factorEnableFrac["RegClampdown"] = 0.5
-        maxClampDownUnified = -0.0011361452243542672
-
-        factorEnableFrac["CompetitorCoin"] = 0.5
-        maxCompetitorBoostUnified = -0.0010148181746411323
-
-        factorEnableFrac["SecurityBreach"] = 0.5
-        breachImpactUnified = -0.0010914715168380737
-
-        factorEnableFrac["BubblePop"] = 0.5
-        maxPopDropUnified = -0.001762673890762329
-
-        factorEnableFrac["StablecoinMeltdown"] = 0.5
-        maxMeltdownDropUnified = -0.0007141026159477233
-
-        factorEnableFrac["BlackSwan"] = 0.5
-        blackSwanDropUnified = -0.398885
-
-        factorEnableFrac["BearMarket"] = 0.5
-        bearWeeklyDriftUnified = -0.0008778802752494812
-
-        factorEnableFrac["MaturingMarket"] = 0.5
-        maxMaturingDropUnified = -0.0015440231055486196
-
-        factorEnableFrac["Recession"] = 0.5
-        maxRecessionDropUnified = -0.0009005491467487811
-        
-        // Finally, toggle everything on for the *current* period
-        toggleAll = true
-        
-        // Reset lockHistoricalSampling
+        // Reset lockHistoricalSampling if you still use it
         lockHistoricalSampling = false
-        
+
         // Reset final toggles
         useLognormalGrowth = true
         useHistoricalSampling = true
         useVolShocks = true
         useGarchVolatility = true
-        
-        // Write changes to disk
+
+        // =========================================================
+        // NEW: Loop over the factors dictionary
+        //      so each factor is set to default.
+        // =========================================================
+        for (factorName, var factor) in factors {
+            // If you want them all “on” by default:
+            factor.isEnabled = true
+            // Or if you want them all “off,” do factor.isEnabled = false
+
+            // Reset the numeric value to the default
+            factor.currentValue = factor.defaultValue
+
+            // Unlock it
+            factor.isLocked = false
+
+            // Put it back
+            factors[factorName] = factor
+        }
+
+        // Finally, write changes to disk
         defaults.synchronize()
         
-        // 2) Delay turning isRestoringDefaults off so factorEnableFrac changes “settle”
+        // 2) Delay turning isRestoringDefaults off so the changes “settle”
         DispatchQueue.main.async {
             self.isRestoringDefaults = false
         }

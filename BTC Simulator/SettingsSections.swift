@@ -18,7 +18,6 @@ extension SettingsView {
         Section {
             HStack {
                 GeometryReader { geo in
-                    // Use the drag override if active, else the computed displayedTilt.
                     let effectiveTilt = dragTiltOverride ?? displayedTilt
                     let absTilt = abs(effectiveTilt)
                     let barWidth = geo.size.width
@@ -26,19 +25,20 @@ extension SettingsView {
                     let fillWidth = (barWidth - computedWidth) < 1 ? barWidth : computedWidth
 
                     ZStack(alignment: .leading) {
-                        // Background bar.
+                        // Background
                         Rectangle()
                             .fill(Color.gray.opacity(0.3))
                             .frame(height: 8)
                         
+                        // Foreground fill
                         if effectiveTilt >= 0 {
-                            // Green fill: anchored to the left.
+                            // Green fill from left
                             Rectangle()
                                 .fill(Color.green)
                                 .frame(width: computedWidth, height: 8)
                                 .animation(.easeInOut(duration: 0.3), value: computedWidth)
                         } else {
-                            // Red fill: anchored to the right.
+                            // Red fill from right
                             Rectangle()
                                 .fill(Color.red)
                                 .frame(width: fillWidth, height: 8)
@@ -52,7 +52,7 @@ extension SettingsView {
                             .onChanged { value in
                                 let locationX = value.location.x
                                 let halfWidth = barWidth / 2
-                                // Map so that center = 0, right edge = +1, left edge = –1.
+                                // Map so center=0, right=+1, left=–1
                                 var newTilt = ((locationX - halfWidth) / halfWidth)
                                 newTilt = min(max(newTilt, -1), 1)
                                 dragTiltOverride = newTilt
@@ -60,7 +60,6 @@ extension SettingsView {
                             .onEnded { _ in
                                 if let newTilt = dragTiltOverride {
                                     simSettings.tiltBarValue = newTilt
-                                    // Update the global slider by mapping [-1, 1] to [0, 1].
                                     simSettings.factorIntensity = (newTilt + 1) / 2
                                 }
                                 dragTiltOverride = nil
@@ -76,47 +75,29 @@ extension SettingsView {
         .listRowBackground(Color(white: 0.15))
     }
 
-    // MARK: - Universal Factor Intensity (Slider + Extreme Icons)
+    // MARK: - Universal Factor Intensity
     var factorIntensitySection: some View {
         Section {
             HStack {
-                // EXTREME BEARISH BUTTON (LEFT / RED)
+                // EXTREME BEARISH BUTTON
                 Button {
                     isManualOverride = true
                     simSettings.factorIntensity = 0.0
                     simSettings.tiltBarValue = -1.0
 
-                    // Force bullish factors off and lock them (set to domain min)
+                    // Turn OFF bullish factors (lock them at minValue)
                     for key in bullishKeys {
                         setFactorEnabled(factorName: key, enabled: false)
-                        simSettings.factorEnableFrac[key] = 0.0
-
-                        let isWeekly = (simSettings.periodUnit == .weeks)
-                        let (minVal, _) = simSettings.factorRange(for: key, isWeekly: isWeekly)
-                        computedFactorAccessors[key]?.set(minVal)
-
-                        let frac = simSettings.fractionFromValue(key, value: minVal, isWeekly: isWeekly)
-                        simSettings.factorEnableFrac[key] = frac
-
-                        simSettings.lockedFactors.insert(key) // Lock this factor
+                        lockFactorAtMin(key)
                     }
 
-                    // Force bearish factors on and unlock them (set to domain min)
+                    // Turn ON bearish factors (unlock them, set to minValue)
                     for key in bearishKeys {
                         setFactorEnabled(factorName: key, enabled: true)
-                        simSettings.factorEnableFrac[key] = 1.0
-
-                        let isWeekly = (simSettings.periodUnit == .weeks)
-                        let (minVal, _) = simSettings.factorRange(for: key, isWeekly: isWeekly)
-                        computedFactorAccessors[key]?.set(minVal)
-
-                        let frac = simSettings.fractionFromValue(key, value: minVal, isWeekly: isWeekly)
-                        simSettings.factorEnableFrac[key] = frac
-
-                        simSettings.lockedFactors.remove(key) // Unlock this factor
+                        unlockFactorAndSetMin(key)
                     }
 
-                    // Set the chart button flag for extreme bearish
+                    // Update chart flags
                     simSettings.chartExtremeBearish = true
                     simSettings.chartExtremeBullish = false
 
@@ -131,13 +112,13 @@ extension SettingsView {
                 .disabled(simSettings.chartExtremeBearish)
                 .opacity(simSettings.chartExtremeBearish ? 0.3 : 1.0)
 
+                // The main intensity slider
                 Slider(
                     value: Binding(
                         get: { simSettings.factorIntensity },
                         set: { newVal in
                             simSettings.factorIntensity = newVal
-                            // Call your new sync method with no arguments.
-                            simSettings.syncFactorsToGlobalIntensity()
+                            simSettings.syncFactorsToGlobalIntensity() // your new function
                         }
                     ),
                     in: 0...1,
@@ -145,48 +126,24 @@ extension SettingsView {
                 )
                 .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
 
-                // EXTREME BULLISH BUTTON (RIGHT / GREEN)
+                // EXTREME BULLISH BUTTON
                 Button {
                     isManualOverride = true
                     simSettings.factorIntensity = 1.0
                     simSettings.tiltBarValue = 1.0
 
-                    // Force bearish factors off and lock them (set to domain max)
+                    // Turn OFF bearish factors (lock them at maxValue)
                     for key in bearishKeys {
                         setFactorEnabled(factorName: key, enabled: false)
-                        simSettings.factorEnableFrac[key] = 0.0
-
-                        let isWeekly = (simSettings.periodUnit == .weeks)
-                        let (minVal, maxVal) = simSettings.factorRange(for: key, isWeekly: isWeekly)
-                        computedFactorAccessors[key]?.set(maxVal)
-
-                        let frac = simSettings.fractionFromValue(key, value: maxVal, isWeekly: isWeekly)
-                        simSettings.factorEnableFrac[key] = frac
-                        simSettings.manualOffsets[key] = 0.0
-
-                        simSettings.lockedFactors.insert(key) // Lock this factor
+                        lockFactorAtMax(key)
                     }
 
-                    // Force bullish factors on and unlock them (set to domain max)
+                    // Turn ON bullish factors (unlock them, set to maxValue)
                     for key in bullishKeys {
                         setFactorEnabled(factorName: key, enabled: true)
-                        simSettings.factorEnableFrac[key] = 1.0
-
-                        let isWeekly = (simSettings.periodUnit == .weeks)
-                        let (minVal, maxVal) = simSettings.factorRange(for: key, isWeekly: isWeekly)
-                        computedFactorAccessors[key]?.set(maxVal)
-
-                        let frac = simSettings.fractionFromValue(key, value: maxVal, isWeekly: isWeekly)
-                        simSettings.factorEnableFrac[key] = frac
-                        simSettings.manualOffsets[key] = 0.0
-
-                        simSettings.lockedFactors.remove(key) // Unlock this factor
+                        unlockFactorAndSetMax(key)
                     }
 
-                    oldFactorEnableFrac = simSettings.factorEnableFrac
-                    lastFactorValue.removeAll()
-
-                    // Set the chart button flag for extreme bullish
                     simSettings.chartExtremeBullish = true
                     simSettings.chartExtremeBearish = false
 
@@ -202,149 +159,98 @@ extension SettingsView {
                 .opacity(simSettings.chartExtremeBullish ? 0.3 : 1.0)
             }
         } footer: {
-            Text("Press a chart icon to force the extreme factor settings. The icon will grey out only when pressed.")
+            Text("Press a chart icon to force extreme factor settings.")
                 .foregroundColor(.white)
         }
         .listRowBackground(Color(white: 0.15))
     }
-    
-    func forceFactorNumeric(_ factorName: String, toIntensity t: Double) {
-        // If you skip factors that are “off,” they stay at old midpoints. So we do it directly:
-        let val = simSettings.baseValForFactor(factorName, intensity: t)
-        
-        // If your baseValForFactor returns a plain Double, just do:
-        computedFactorAccessors[factorName]?.set(val)
-        
-        // If your baseValForFactor returns an optional, do:
-        // factorAccessors[factorName]?.set(val ?? 0.5)
-        
-        // And also reset the manual offset to 0 so the new forced value “sticks”
-        simSettings.manualOffsets[factorName] = 0.0
-    }
 
+    // MARK: - Toggling a Factor On/Off
     func setFactorEnabled(factorName: String, enabled: Bool) {
-        switch factorName {
-        case "RegClampdown":
-            simSettings.useRegClampdownWeekly = enabled
-            simSettings.useRegClampdownMonthly = enabled
-            
-        case "CompetitorCoin":
-            simSettings.useCompetitorCoinWeekly = enabled
-            simSettings.useCompetitorCoinMonthly = enabled
-            
-        case "SecurityBreach":
-            simSettings.useSecurityBreachWeekly = enabled
-            simSettings.useSecurityBreachMonthly = enabled
-            
-        case "BubblePop":
-            simSettings.useBubblePopWeekly = enabled
-            simSettings.useBubblePopMonthly = enabled
-            
-        case "StablecoinMeltdown":
-            simSettings.useStablecoinMeltdownWeekly = enabled
-            simSettings.useStablecoinMeltdownMonthly = enabled
-            
-        case "BlackSwan":
-            simSettings.useBlackSwanWeekly = enabled
-            simSettings.useBlackSwanMonthly = enabled
-            
-        case "BearMarket":
-            simSettings.useBearMarketWeekly = enabled
-            simSettings.useBearMarketMonthly = enabled
-            
-        case "MaturingMarket":
-            simSettings.useMaturingMarketWeekly = enabled
-            simSettings.useMaturingMarketMonthly = enabled
-            
-        case "Recession":
-            simSettings.useRecessionWeekly = enabled
-            simSettings.useRecessionMonthly = enabled
+        guard var f = simSettings.factors[factorName] else { return }
+        f.isEnabled = enabled
+        simSettings.factors[factorName] = f
 
-        // BULLISH
-        case "Halving":
-            simSettings.useHalvingWeekly = enabled
-            simSettings.useHalvingMonthly = enabled
-
-        case "InstitutionalDemand":
-            simSettings.useInstitutionalDemandWeekly = enabled
-            simSettings.useInstitutionalDemandMonthly = enabled
-
-        case "CountryAdoption":
-            simSettings.useCountryAdoptionWeekly = enabled
-            simSettings.useCountryAdoptionMonthly = enabled
-
-        case "RegulatoryClarity":
-            simSettings.useRegulatoryClarityWeekly = enabled
-            simSettings.useRegulatoryClarityMonthly = enabled
-
-        case "EtfApproval":
-            simSettings.useEtfApprovalWeekly = enabled
-            simSettings.useEtfApprovalMonthly = enabled
-
-        case "TechBreakthrough":
-            simSettings.useTechBreakthroughWeekly = enabled
-            simSettings.useTechBreakthroughMonthly = enabled
-
-        case "ScarcityEvents":
-            simSettings.useScarcityEventsWeekly = enabled
-            simSettings.useScarcityEventsMonthly = enabled
-
-        case "GlobalMacroHedge":
-            simSettings.useGlobalMacroHedgeWeekly = enabled
-            simSettings.useGlobalMacroHedgeMonthly = enabled
-
-        case "StablecoinShift":
-            simSettings.useStablecoinShiftWeekly = enabled
-            simSettings.useStablecoinShiftMonthly = enabled
-
-        case "DemographicAdoption":
-            simSettings.useDemographicAdoptionWeekly = enabled
-            simSettings.useDemographicAdoptionMonthly = enabled
-
-        case "AltcoinFlight":
-            simSettings.useAltcoinFlightWeekly = enabled
-            simSettings.useAltcoinFlightMonthly = enabled
-
-        case "AdoptionFactor":
-            simSettings.useAdoptionFactorWeekly = enabled
-            simSettings.useAdoptionFactorMonthly = enabled
-                
-        default:
-            break
-        }
-        
-        // Lock or unlock the factor:
         if enabled {
-            // When enabled, ensure the factor is unlocked.
             simSettings.lockedFactors.remove(factorName)
         } else {
-            // When disabled, lock the factor so it stays at its forced value.
+            // If turning it off, “lock” it so it won't be changed by global slider
             simSettings.lockedFactors.insert(factorName)
         }
     }
 
-    // MARK: - Toggle All Factors
+    // (Helper) Lock factor at its minValue
+    func lockFactorAtMin(_ factorName: String) {
+        guard var f = simSettings.factors[factorName] else { return }
+        f.currentValue = f.minValue
+        f.isEnabled = false      // you might prefer to keep it 'enabled' but locked
+        simSettings.lockedFactors.insert(factorName)
+        simSettings.factors[factorName] = f
+    }
+
+    // (Helper) Lock factor at its maxValue
+    func lockFactorAtMax(_ factorName: String) {
+        guard var f = simSettings.factors[factorName] else { return }
+        f.currentValue = f.maxValue
+        f.isEnabled = false
+        simSettings.lockedFactors.insert(factorName)
+        simSettings.factors[factorName] = f
+    }
+
+    // (Helper) Unlock factor and set it to minValue
+    func unlockFactorAndSetMin(_ factorName: String) {
+        guard var f = simSettings.factors[factorName] else { return }
+        f.currentValue = f.minValue
+        f.isEnabled = true
+        simSettings.lockedFactors.remove(factorName)
+        simSettings.factors[factorName] = f
+    }
+
+    // (Helper) Unlock factor and set it to maxValue
+    func unlockFactorAndSetMax(_ factorName: String) {
+        guard var f = simSettings.factors[factorName] else { return }
+        f.currentValue = f.maxValue
+        f.isEnabled = true
+        simSettings.lockedFactors.remove(factorName)
+        simSettings.factors[factorName] = f
+    }
+
+    // MARK: - Toggle All Section
     var toggleAllSection: some View {
         Section {
-            Toggle("Toggle All Factors",
-                   isOn: Binding<Bool>(
-                    get: { simSettings.toggleAll },
+            Toggle("Toggle All Factors", isOn:
+                Binding<Bool>(
+                    get: {
+                        simSettings.toggleAll // or a computed property that checks if all factors are enabled
+                    },
                     set: { newValue in
                         simSettings.userIsActuallyTogglingAll = true
                         simSettings.toggleAll = newValue
+                        // If toggling all on, unlock & enable all:
                         if newValue {
-                            // Reset extreme flags and unlock all factors
-                            simSettings.chartExtremeBullish = false
                             simSettings.chartExtremeBearish = false
+                            simSettings.chartExtremeBullish = false
                             simSettings.lockedFactors.removeAll()
+                            for (name, var factor) in simSettings.factors {
+                                factor.isEnabled = true
+                                factor.currentValue = factor.defaultValue
+                                simSettings.factors[name] = factor
+                            }
+                        } else {
+                            // Or toggling them all off
+                            for (name, var factor) in simSettings.factors {
+                                factor.isEnabled = false
+                                simSettings.factors[name] = factor
+                                simSettings.lockedFactors.insert(name)
+                            }
                         }
                     }
-                   )
+                )
             )
             .tint(.orange)
             .foregroundColor(.white)
         } footer: {
-            Text("Switches ON or OFF all bullish and bearish factors at once.")
+            Text("Switches ON or OFF all bullish/bearish factors.")
                 .foregroundColor(.white)
         }
         .listRowBackground(Color(white: 0.15))
@@ -355,22 +261,6 @@ extension SettingsView {
         Section {
             Button(action: {
                 simSettings.restoreDefaults()
-                lastFactorValue = [:]  // Clear leftover values
-                // Immediately set oldFactorEnableFrac to match the newly assigned factorEnableFrac
-                // so that onChange doesn't see a difference after isRestoringDefaults = false
-                oldFactorEnableFrac = simSettings.factorEnableFrac
-                simSettings.factorIntensity = 0.5
-
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    simSettings.syncFactorsToGlobalIntensity()
-                    let tiltNow = computeActiveNetTilt()
-                    simSettings.defaultTilt = tiltNow
-                    simSettings.hasCapturedDefault = true
-                    let allBull = computeIfAllBullish() - tiltNow
-                    let allBear = computeIfAllBearish() - tiltNow
-                    simSettings.maxSwing = max(abs(allBull), abs(allBear), 0.00001)
-                    simSettings.tiltBarValue = 0.0
-                }
             }) {
                 HStack {
                     Text("Restore Defaults")
@@ -404,12 +294,9 @@ extension SettingsView {
             .alert("Confirm Reset", isPresented: $showResetCriteriaConfirmation, actions: {
                 Button("Reset", role: .destructive) {
                     simSettings.restoreDefaults()
-                    
-                    // "didFinishOnboarding" is in scope now:
+                    // Also reset onboarding or other states
                     didFinishOnboarding = false
-                    
                     simSettings.factorIntensity = 0.5
-                    oldFactorIntensity = 0.5
                     simSettings.tiltBarValue = 0.0
                 }
                 Button("Cancel", role: .cancel) { }

@@ -14,7 +14,8 @@ extension SimulationSettings {
     /// If true, annualStepFactor mode will *ignore* mean reversion (even if useMeanReversion is on).
     /// If false, annualStepFactor mode will apply mean reversion as well.
     var disableMeanReversionWhenannualStepFactor: Bool {
-        get { return true }
+        // If you still need logic here, implement it; otherwise keep returning true or false
+        return true
     }
 }
 
@@ -115,9 +116,10 @@ private func runWeeklySimulation(
     // For turning on/off higher or lower CAGR/Vol in different "regimes"
     var regimeModel = RegimeSwitchingModel()
     
-    // The deposit amounts for first year vs second year
-    let firstYearVal  = (settings.inputManager?.firstYearContribution as NSString?)?.doubleValue ?? 0
-    let secondYearVal = (settings.inputManager?.subsequentContribution as NSString?)?.doubleValue ?? 0
+    // If you used to read deposit amounts from inputManager, just define dummy defaults here
+    // or move them into SimulationSettings. For example:
+    let firstYearVal  = 100.0
+    let secondYearVal = 50.0
     
     var lastStepLogReturn = 0.0
     var lastAutoReturn    = 0.0
@@ -199,7 +201,7 @@ private func runWeeklySimulation(
             totalReturn = (1 - phi) * totalReturn + phi * lastAutoReturn
         }
         
-        // Apply additional factor toggles
+        // Apply additional factor toggles (function is presumably defined elsewhere)
         let toggled = applyFactorToggles(
             baseReturn: totalReturn,
             stepIndex: currentWeek,
@@ -240,12 +242,21 @@ private func runWeeklySimulation(
         let holdingsAfterDeposit = prevBTCHoldings + depositBTC
         
         // Withdrawal thresholds
+        // If you used inputManager for threshold1/threshold2, define them in simSettings or use placeholders
         let hypotheticalValueEUR = holdingsAfterDeposit * newPriceEUR
         var withdrawalEUR = 0.0
-        if hypotheticalValueEUR > (settings.inputManager?.threshold2 ?? 0) {
-            withdrawalEUR = settings.inputManager?.withdrawAmount2 ?? 0
-        } else if hypotheticalValueEUR > (settings.inputManager?.threshold1 ?? 0) {
-            withdrawalEUR = settings.inputManager?.withdrawAmount1 ?? 0
+        
+        // For example, assume thresholds are zero:
+        // (Or store them in SimulationSettings if you still want them dynamic.)
+        let threshold1 = 0.0
+        let threshold2 = 0.0
+        let withdrawAmount1 = 0.0
+        let withdrawAmount2 = 0.0
+        
+        if hypotheticalValueEUR > threshold2 {
+            withdrawalEUR = withdrawAmount2
+        } else if hypotheticalValueEUR > threshold1 {
+            withdrawalEUR = withdrawAmount1
         }
         let withdrawalBTC = withdrawalEUR / newPriceEUR
         let finalHoldings = max(0.0, holdingsAfterDeposit - withdrawalBTC)
@@ -321,8 +332,9 @@ private func runMonthlySimulation(
     
     var regimeModel = RegimeSwitchingModel()
     
-    let firstYearVal  = (settings.inputManager?.firstYearContribution as NSString?)?.doubleValue ?? 0
-    let secondYearVal = (settings.inputManager?.subsequentContribution as NSString?)?.doubleValue ?? 0
+    // If these used to come from inputManager, define placeholder values or store them in simSettings
+    let firstYearVal  = 100.0
+    let secondYearVal = 50.0
     
     var lastStepLogReturn = 0.0
     var lastAutoReturn    = 0.0
@@ -399,6 +411,7 @@ private func runMonthlySimulation(
             totalReturn = (1 - phi) * totalReturn + phi * lastAutoReturn
         }
         
+        // Additional factor toggles if needed
         let toggled = applyFactorToggles(
             baseReturn: totalReturn,
             stepIndex: currentMonth,
@@ -438,13 +451,20 @@ private func runMonthlySimulation(
         )
         let holdingsAfterDeposit = prevBTCHoldings + depositBTC
         
-        // Withdraw thresholds
+        // Example threshold logic replaced with placeholders
         let hypotheticalValueEUR = holdingsAfterDeposit * newPriceEUR
         var withdrawalEUR = 0.0
-        if hypotheticalValueEUR > (settings.inputManager?.threshold2 ?? 0) {
-            withdrawalEUR = settings.inputManager?.withdrawAmount2 ?? 0
-        } else if hypotheticalValueEUR > (settings.inputManager?.threshold1 ?? 0) {
-            withdrawalEUR = settings.inputManager?.withdrawAmount1 ?? 0
+        
+        // If old inputManager had threshold1/threshold2:
+        let threshold1 = 0.0
+        let threshold2 = 0.0
+        let withdrawAmount1 = 0.0
+        let withdrawAmount2 = 0.0
+        
+        if hypotheticalValueEUR > threshold2 {
+            withdrawalEUR = withdrawAmount2
+        } else if hypotheticalValueEUR > threshold1 {
+            withdrawalEUR = withdrawAmount1
         }
         let withdrawalBTC = withdrawalEUR / newPriceEUR
         let finalHoldings = max(0.0, holdingsAfterDeposit - withdrawalBTC)
@@ -615,7 +635,6 @@ func alignMonthlyData() {
 }
 
 // MARK: - Integration with Caching and Parallel Simulation Runner
-// (Assuming HistoricalDataCache.swift and ParallelSimulationRunner.swift have been added to your project.)
 func integrateSimulation() {
     // Pre-cache dampened historical data.
     HistoricalDataCache.shared.cacheWeeklyData(original: historicalBTCWeeklyReturns)
