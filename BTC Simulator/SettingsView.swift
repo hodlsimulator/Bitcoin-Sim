@@ -173,10 +173,6 @@ struct SettingsView: View {
                 activeFactor: $activeFactor,
                 toggleFactor: { factorName in
                     activeFactor = factorName
-                },
-                factorEnableFrac: $simSettings.factorEnableFrac,
-                animateFactor: { factorName, isOn in
-                    print("Animating Bullish factor: \(factorName), isOn=\(isOn)")
                 }
             )
             .environmentObject(simSettings)
@@ -185,10 +181,6 @@ struct SettingsView: View {
                 activeFactor: $activeFactor,
                 toggleFactor: { factorName in
                     activeFactor = factorName
-                },
-                factorEnableFrac: $simSettings.factorEnableFrac,
-                animateFactor: { factorName, isOn in
-                    print("Animating Bearish factor: \(factorName), isOn=\(isOn)")
                 }
             )
             .environmentObject(simSettings)

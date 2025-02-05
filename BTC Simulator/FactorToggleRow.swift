@@ -7,6 +7,153 @@
 
 import SwiftUI
 
+struct FactorToggleRow: View {
+    @EnvironmentObject var simSettings: SimulationSettings
+    
+    /// The unique name of this factor, matching the dictionary key in simSettings.factors
+    let factorName: String
+    
+    /// Factor display properties
+    let iconName: String?
+    let title: String
+    let parameterDescription: String?
+    let sliderRange: ClosedRange<Double>
+    let defaultValue: Double
+    
+    // For tooltips
+    let activeFactor: String?
+    let onTitleTap: (String) -> Void
+    
+    // Use this if you want to display the slider value as a percent or plain number
+    let displayAsPercent: Bool
+
+    var body: some View {
+        // We retrieve the factor from simSettings.factors:
+        // If it’s missing, we can’t do anything, so we’ll bail out gracefully.
+        guard let factor = simSettings.factors[factorName] else {
+            // Fallback: show a disabled row
+            return AnyView(
+                Text("Factor '\(factorName)' not found!")
+                    .foregroundColor(.red)
+            )
+        }
+        
+        // -------------
+        // Toggle binding
+        // -------------
+        let toggleBinding = Binding<Bool>(
+            get: { factor.isEnabled },
+            set: { newVal in
+                // Update factor.isEnabled in the dictionary
+                var updated = factor
+                updated.isEnabled = newVal
+                simSettings.factors[factorName] = updated
+            }
+        )
+        
+        // -------------
+        // Slider binding
+        // -------------
+        let sliderBinding = Binding<Double>(
+            get: {
+                // If factor is missing, or currentValue is missing, just fallback
+                simSettings.factors[factorName]?.currentValue ?? defaultValue
+            },
+            set: { newVal in
+                // Optionally clamp newVal:
+                let clampedVal = max(min(newVal, factor.maxValue), factor.minValue)
+                
+                // We can automatically lock the factor so the global slider won't override it
+                var updated = factor
+                updated.currentValue = clampedVal
+                updated.isLocked = true  // optional
+
+                simSettings.factors[factorName] = updated
+            }
+        )
+
+        // -------------
+        // Now we build the row UI
+        // -------------
+        return AnyView(
+            VStack(alignment: .leading, spacing: 4) {
+                
+                // Title row
+                HStack(spacing: 8) {
+                    if let icon = iconName, !icon.isEmpty {
+                        Button {
+                            // Reset the factor to its default numeric value
+                            if var f = simSettings.factors[factorName] {
+                                f.currentValue = defaultValue
+                                // optionally unlock it or keep it locked
+                                f.isLocked = false
+                                simSettings.factors[factorName] = f
+                            }
+                        } label: {
+                            Image(systemName: icon)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 24, height: 24)
+                                .foregroundColor(.orange)
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    Text(title)
+                        .font(.headline)
+                        .onTapGesture {
+                            onTitleTap(title)
+                        }
+                        // Tooltip anchor
+                        .anchorPreference(key: TooltipAnchorKey.self, value: .center) { pt in
+                            guard activeFactor == title,
+                                  let desc = parameterDescription,
+                                  !desc.isEmpty
+                            else {
+                                return []
+                            }
+                            return [TooltipItem(title: title, description: desc, anchor: pt)]
+                        }
+
+                    Spacer()
+
+                    Toggle("", isOn: toggleBinding)
+                        .labelsHidden()
+                        .tint(.orange)
+                }
+
+                // Slider row
+                HStack {
+                    Slider(
+                        value: sliderBinding,
+                        in: sliderRange
+                    )
+                    .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
+                    .disabled(!factor.isEnabled)
+                    
+                    // Show numeric text
+                    if displayAsPercent {
+                        Text(String(format: "%.4f%%", sliderBinding.wrappedValue * 100))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .frame(width: 70, alignment: .trailing)
+                            .disabled(!factor.isEnabled)
+                    } else {
+                        Text(String(format: "%.4f", sliderBinding.wrappedValue))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .frame(width: 70, alignment: .trailing)
+                            .disabled(!factor.isEnabled)
+                    }
+                }
+                .opacity(factor.isEnabled ? 1.0 : 0.6)
+            }
+            .padding(.vertical, 4)
+            .opacity(factor.isEnabled ? 1.0 : 0.5)
+        )
+    }
+}
+
 enum ArrowDirection {
     case up
     case down
@@ -51,153 +198,5 @@ struct TooltipBubble: View {
             }
         }
         .shadow(color: .black.opacity(0.25), radius: 4, x: 0, y: 2)
-    }
-}
-
-struct FactorToggleRow: View {
-    let iconName: String?
-    let title: String
-
-    /// The toggle’s on/off binding (passed from parent).
-    @Binding var isOn: Bool
-    
-    /// The factor’s numeric value, passed from parent as a binding.
-    /// No local @State: the parent is the single source of truth.
-    @Binding var sliderValue: Double
-    
-    /// The valid range for this factor’s numeric value.
-    let sliderRange: ClosedRange<Double>
-    
-    /// The "default" numeric value for a reset (e.g., tapping the icon).
-    let defaultValue: Double
-
-    /// An optional tooltip/description for this factor.
-    let parameterDescription: String?
-
-    /// The parent's active factor (for showing tooltips).
-    let activeFactor: String?
-
-    /// Called when user taps the row’s title
-    let onTitleTap: (String) -> Void
-
-    /// Whether to display sliderValue as a percentage or raw number
-    let displayAsPercent: Bool
-
-    init(
-        iconName: String? = nil,
-        title: String,
-        isOn: Binding<Bool>,
-        sliderValue: Binding<Double>,
-        sliderRange: ClosedRange<Double>,
-        defaultValue: Double,
-        parameterDescription: String? = nil,
-        activeFactor: String? = nil,
-        onTitleTap: @escaping (String) -> Void = { _ in },
-        displayAsPercent: Bool = true
-    ) {
-        self.iconName = iconName
-        self.title = title
-        self._isOn = isOn
-        self._sliderValue = sliderValue
-        self.sliderRange = sliderRange
-        self.defaultValue = defaultValue
-        self.parameterDescription = parameterDescription
-        self.activeFactor = activeFactor
-        self.onTitleTap = onTitleTap
-        self.displayAsPercent = displayAsPercent
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            
-            // ─────────────────────────────────────────────────
-            // MARK: Title row: icon + label + toggle
-            // ─────────────────────────────────────────────────
-            HStack(spacing: 8) {
-                if let icon = iconName, !icon.isEmpty {
-                    Button {
-                        // Reset the factor to its default numeric value if desired
-                        sliderValue = defaultValue
-                    } label: {
-                        Image(systemName: icon)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 24, height: 24)
-                            .foregroundColor(.orange)
-                    }
-                    .buttonStyle(.plain)
-                }
-
-                Text(title)
-                    .font(.headline)
-                    .onTapGesture {
-                        onTitleTap(title)
-                    }
-                    // Tooltip anchor
-                    .anchorPreference(key: TooltipAnchorKey.self, value: .center) { pt in
-                        guard activeFactor == title,
-                              let desc = parameterDescription,
-                              !desc.isEmpty
-                        else {
-                            return []
-                        }
-                        return [TooltipItem(title: title, description: desc, anchor: pt)]
-                    }
-
-                Spacer()
-
-                Toggle("", isOn: $isOn)
-                    .labelsHidden()
-                    .tint(.orange)
-            }
-
-            // ─────────────────────────────────────────────────
-            // MARK: Slider row
-            // ─────────────────────────────────────────────────
-            HStack {
-                // We'll normalize the slider so it goes 0...1 in the UI,
-                // but the actual numeric is in sliderRange.
-                let range = sliderRange.upperBound - sliderRange.lowerBound
-                let normalizedBinding = Binding<Double>(
-                    get: {
-                        // Convert the real numeric into [0...1]
-                        (sliderValue - sliderRange.lowerBound) / range
-                    },
-                    set: { newNormalized in
-                        // Convert the normalized value back to the real numeric
-                        sliderValue = sliderRange.lowerBound + newNormalized * range
-                    }
-                )
-
-                Slider(value: normalizedBinding, in: 0...1)
-                    .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
-                    .disabled(!isOn)
-
-                // Decide how to display the numeric
-                if title == "Halving" {
-                    // Example special case
-                    Text(String(format: "%.4f%%", sliderValue))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .frame(width: 70, alignment: .trailing)
-                        .disabled(!isOn)
-                } else if displayAsPercent {
-                    Text(String(format: "%.4f%%", sliderValue * 100))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .frame(width: 70, alignment: .trailing)
-                        .disabled(!isOn)
-                } else {
-                    Text(String(format: "%.4f", sliderValue))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .frame(width: 70, alignment: .trailing)
-                        .disabled(!isOn)
-                }
-            }
-            .opacity(isOn ? 1.0 : 0.6)
-        }
-        .padding(.vertical, 4)
-        .opacity(isOn ? 1.0 : 0.5)
     }
 }

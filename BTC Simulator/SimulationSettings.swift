@@ -23,6 +23,11 @@ class SimulationSettings: ObservableObject {
     
     /// Which factors are 'locked' and must not be re-synced by global slider.
     @Published var lockedFactors: Set<String> = []
+    
+    @Published var factors: [String: FactorState] = [:]
+        
+    // The global slider’s 0..1 value:
+    // @Published var factorIntensity: Double = 0.5
 
     // MARK: - Factor Toggling
     @Published var factorEnableFrac: [String: Double] = [

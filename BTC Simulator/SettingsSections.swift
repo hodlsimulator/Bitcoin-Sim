@@ -131,16 +131,13 @@ extension SettingsView {
                 .disabled(simSettings.chartExtremeBearish)
                 .opacity(simSettings.chartExtremeBearish ? 0.3 : 1.0)
 
-                // GLOBAL INTENSITY SLIDER
                 Slider(
                     value: Binding(
                         get: { simSettings.factorIntensity },
                         set: { newVal in
                             simSettings.factorIntensity = newVal
-                            simSettings.syncAllFactorsToIntensity(newVal, simSettings: simSettings)
-                            // Clear the chart extreme flags when moving the slider manually
-                            simSettings.chartExtremeBearish = false
-                            simSettings.chartExtremeBullish = false
+                            // Call your new sync method with no arguments.
+                            simSettings.syncFactorsToGlobalIntensity()
                         }
                     ),
                     in: 0...1,
@@ -335,6 +332,12 @@ extension SettingsView {
                     set: { newValue in
                         simSettings.userIsActuallyTogglingAll = true
                         simSettings.toggleAll = newValue
+                        if newValue {
+                            // Reset extreme flags and unlock all factors
+                            simSettings.chartExtremeBullish = false
+                            simSettings.chartExtremeBearish = false
+                            simSettings.lockedFactors.removeAll()
+                        }
                     }
                    )
             )
@@ -359,7 +362,7 @@ extension SettingsView {
                 simSettings.factorIntensity = 0.5
 
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    simSettings.syncAllFactorsToIntensity(0.5, simSettings: simSettings)
+                    simSettings.syncFactorsToGlobalIntensity()
                     let tiltNow = computeActiveNetTilt()
                     simSettings.defaultTilt = tiltNow
                     simSettings.hasCapturedDefault = true

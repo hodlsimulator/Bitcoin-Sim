@@ -60,11 +60,9 @@ extension SimulationSettings {
 
         // Random seed
         self.lockedRandomSeed = defaults.bool(forKey: "lockedRandomSeed")
-
         if let storedSeed = defaults.object(forKey: "seedValue") as? UInt64 {
             self.seedValue = storedSeed
         }
-
         self.useRandomSeed = defaults.object(forKey: "useRandomSeed") as? Bool ?? true
 
         // Sampling & Vol
@@ -526,6 +524,98 @@ extension SimulationSettings {
             self.maxRecessionDropMonthly = val
         } else {
             self.maxRecessionDropMonthly = SimulationSettings.defaultMaxRecessionDropMonthly
+        }
+
+        // =========================================================
+        // Create FactorState objects from FactorCatalog
+        // =========================================================
+
+        for (factorName, def) in FactorCatalog.all {
+            // Decide if this factor is enabled from your existing booleans:
+            let isEnabled: Bool = {
+                switch factorName {
+                case "Halving":               return useHalvingWeekly || useHalvingMonthly
+                case "InstitutionalDemand":   return useInstitutionalDemandWeekly || useInstitutionalDemandMonthly
+                case "CountryAdoption":       return useCountryAdoptionWeekly || useCountryAdoptionMonthly
+                case "RegulatoryClarity":     return useRegulatoryClarityWeekly || useRegulatoryClarityMonthly
+                case "EtfApproval":           return useEtfApprovalWeekly || useEtfApprovalMonthly
+                case "TechBreakthrough":      return useTechBreakthroughWeekly || useTechBreakthroughMonthly
+                case "ScarcityEvents":        return useScarcityEventsWeekly || useScarcityEventsMonthly
+                case "GlobalMacroHedge":      return useGlobalMacroHedgeWeekly || useGlobalMacroHedgeMonthly
+                case "StablecoinShift":       return useStablecoinShiftWeekly || useStablecoinShiftMonthly
+                case "DemographicAdoption":   return useDemographicAdoptionWeekly || useDemographicAdoptionMonthly
+                case "AltcoinFlight":         return useAltcoinFlightWeekly || useAltcoinFlightMonthly
+                case "AdoptionFactor":        return useAdoptionFactorWeekly || useAdoptionFactorMonthly
+                    
+                case "RegClampdown":          return useRegClampdownWeekly || useRegClampdownMonthly
+                case "CompetitorCoin":        return useCompetitorCoinWeekly || useCompetitorCoinMonthly
+                case "SecurityBreach":        return useSecurityBreachWeekly || useSecurityBreachMonthly
+                case "BubblePop":             return useBubblePopWeekly || useBubblePopMonthly
+                case "StablecoinMeltdown":    return useStablecoinMeltdownWeekly || useStablecoinMeltdownMonthly
+                case "BlackSwan":             return useBlackSwanWeekly || useBlackSwanMonthly
+                case "BearMarket":            return useBearMarketWeekly || useBearMarketMonthly
+                case "MaturingMarket":        return useMaturingMarketWeekly || useMaturingMarketMonthly
+                case "Recession":             return useRecessionWeekly || useRecessionMonthly
+                default:
+                    return true
+                }
+            }()
+            
+            // Compute the min/mid/max for the current period (weeks or months)
+            let (minVal, midVal, maxVal) = (periodUnit == .weeks)
+                ? (def.minWeekly, def.midWeekly, def.maxWeekly)
+                : (def.minMonthly, def.midMonthly, def.maxMonthly)
+            
+            // Decide which of your old "unified" values to use if they exist, else default to mid
+            // Example: if factorName == "Halving", use halvingBumpUnified, etc.
+            // If you haven't stored a unified value, just use midVal:
+            let savedValue = {
+                switch factorName {
+                case "Halving":             return halvingBumpUnified
+                case "InstitutionalDemand": return maxDemandBoostUnified
+                case "CountryAdoption":     return maxCountryAdBoostUnified
+                case "RegulatoryClarity":   return maxClarityBoostUnified
+                case "EtfApproval":         return maxEtfBoostUnified
+                case "TechBreakthrough":    return maxTechBoostUnified
+                case "ScarcityEvents":      return maxScarcityBoostUnified
+                case "GlobalMacroHedge":    return maxMacroBoostUnified
+                case "StablecoinShift":     return maxStablecoinBoostUnified
+                case "DemographicAdoption": return maxDemoBoostUnified
+                case "AltcoinFlight":       return maxAltcoinBoostUnified
+                case "AdoptionFactor":      return adoptionBaseFactorUnified
+                    
+                case "RegClampdown":        return maxClampDownUnified
+                case "CompetitorCoin":      return maxCompetitorBoostUnified
+                case "SecurityBreach":      return breachImpactUnified
+                case "BubblePop":           return maxPopDropUnified
+                case "StablecoinMeltdown":  return maxMeltdownDropUnified
+                case "BlackSwan":           return blackSwanDropUnified
+                case "BearMarket":          return bearWeeklyDriftUnified
+                case "MaturingMarket":      return maxMaturingDropUnified
+                case "Recession":           return maxRecessionDropUnified
+                default:
+                    // If you don't store a unified value for that factor, just default to midVal:
+                    return midVal
+                }
+            }()
+            
+            // If the savedValue is 0, you might want to ensure it’s in [minVal..maxVal],
+            // or do something to clamp it. For simplicity, let's clamp it:
+            let finalValue = max(min(savedValue, maxVal), minVal)
+            
+            // Create the FactorState
+            let fs = FactorState(
+                name: factorName,
+                isEnabled: isEnabled,
+                isLocked: false,
+                currentValue: finalValue,
+                minValue: minVal,
+                maxValue: maxVal,
+                defaultValue: midVal
+            )
+            
+            // Put it in the dictionary
+            factors[factorName] = fs
         }
 
         // =========================================================
