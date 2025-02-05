@@ -7,8 +7,8 @@
 
 import Foundation
 import SwiftUI
-
-struct FactorState {
+    
+struct FactorState: Codable {
     var name: String
     var isEnabled: Bool
     var isLocked: Bool
@@ -18,6 +18,5 @@ struct FactorState {
     var defaultValue: Double
     var internalOffset: Double = 0.0
     var savedGlobalIntensity: Double? = nil
-    // New: store the value when the factor is toggled off
     var frozenValue: Double? = nil
 }

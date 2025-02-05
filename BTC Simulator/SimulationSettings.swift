@@ -1,3 +1,10 @@
+//
+//  SimulationSettings.swift
+//  BTCMonteCarlo
+//
+//  Created by . . on 26/12/2024.
+//
+
 import SwiftUI
 
 class SimulationSettings: ObservableObject {
@@ -24,7 +31,6 @@ class SimulationSettings: ObservableObject {
     // Toggling everything on/off in one go
     @Published var userIsActuallyTogglingAll = false {
         didSet {
-            // When toggling finishes, reset the tilt bar
             if !userIsActuallyTogglingAll {
                 resetTiltBar()
             }
@@ -63,7 +69,6 @@ class SimulationSettings: ObservableObject {
             if isInitialized {
                 print("didSet: useLognormalGrowth changed to \(useLognormalGrowth)")
                 UserDefaults.standard.set(useLognormalGrowth, forKey: "useLognormalGrowth")
-                // If not using lognormal, force annual step
                 if !useLognormalGrowth { useAnnualStep = true }
             }
         }
@@ -146,7 +151,6 @@ class SimulationSettings: ObservableObject {
             if isInitialized {
                 print("didSet: useAutoCorrelation changed to \(useAutoCorrelation)")
                 UserDefaults.standard.set(useAutoCorrelation, forKey: "useAutoCorrelation")
-                // If autocorrelation is turned off, also turn off mean reversion
                 if !useAutoCorrelation { useMeanReversion = false }
             }
         }
@@ -287,7 +291,7 @@ class SimulationSettings: ObservableObject {
             tiltBarValue = 0.0
         }
         
-        // Load any saved userPeriods, initialBTCPrice, etc.
+        // Load other saved values
         if let savedPeriods = defaults.object(forKey: "savedUserPeriods") as? Int {
             userPeriods = savedPeriods
         }
@@ -311,30 +315,30 @@ class SimulationSettings: ObservableObject {
             currencyPreference = .eur
         }
         
-        // Finally, build the factors dictionary from FactorCatalog
-        factors.removeAll()
-        for (factorName, def) in FactorCatalog.all {
-            // We can decide whether to enable each factor by default.
-            // For simplicity, let’s set isEnabled = false until user toggles.
-            // Or we can store an "isEnabled" boolean in UserDefaults keyed by factorName if you want.
-            let isEnabled = false
-            
-            // Choose period-based range
-            let (minVal, midVal, maxVal) = (periodUnit == .weeks)
-                ? (def.minWeekly, def.midWeekly, def.maxWeekly)
-                : (def.minMonthly, def.midMonthly, def.maxMonthly)
-            
-            // Just use midVal as the starting currentValue
-            let fs = FactorState(
-                name: factorName,
-                isEnabled: isEnabled,
-                isLocked: false,
-                currentValue: midVal,
-                minValue: minVal,
-                maxValue: maxVal,
-                defaultValue: midVal
-            )
-            factors[factorName] = fs
+        // Load factor states from UserDefaults if available
+        if let savedFactorStatesData = defaults.data(forKey: "factorStates"),
+           let savedFactors = try? JSONDecoder().decode([String: FactorState].self, from: savedFactorStatesData) {
+            factors = savedFactors
+        } else {
+            // Build factors from FactorCatalog if no saved state exists
+            factors.removeAll()
+            for (factorName, def) in FactorCatalog.all {
+                // Default each factor as disabled initially
+                let isEnabled = false
+                let (minVal, midVal, maxVal) = (periodUnit == .weeks)
+                    ? (def.minWeekly, def.midWeekly, def.maxWeekly)
+                    : (def.minMonthly, def.midMonthly, def.maxMonthly)
+                let fs = FactorState(
+                    name: factorName,
+                    isEnabled: isEnabled,
+                    isLocked: false,
+                    currentValue: midVal,
+                    minValue: minVal,
+                    maxValue: maxVal,
+                    defaultValue: midVal
+                )
+                factors[factorName] = fs
+            }
         }
         
         isInitialized = true
@@ -355,17 +359,10 @@ class SimulationSettings: ObservableObject {
         defaults.set(lockHistoricalSampling, forKey: "lockHistoricalSampling")
         defaults.set(useRegimeSwitching, forKey: "useRegimeSwitching")
         
-        // If you want to persist factor isEnabled/currentValue, do so here.
-        // e.g. using a dictionary keyed by factorName. Example:
-        /*
-        var storedStates: [String: (Bool, Double)] = [:]
-        for (name, factor) in factors {
-            storedStates[name] = (factor.isEnabled, factor.currentValue)
+        // Save factor states by encoding them into JSON
+        if let encodedFactors = try? JSONEncoder().encode(factors) {
+            defaults.set(encodedFactors, forKey: "factorStates")
         }
-        if let encoded = try? JSONEncoder().encode(storedStates) {
-            defaults.set(encoded, forKey: "factorStates")
-        }
-        */
         
         defaults.synchronize()
     }
@@ -386,7 +383,7 @@ class SimulationSettings: ObservableObject {
         for (name, var factor) in factors {
             factor.isEnabled = on
             if on {
-                // If turning on, reset to defaultValue
+                // Reset to default value if turning on
                 factor.currentValue = factor.defaultValue
                 factor.isLocked = false
             }
