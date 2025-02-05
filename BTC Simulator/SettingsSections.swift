@@ -87,13 +87,13 @@ extension SettingsView {
 
                     // Turn OFF bullish factors (lock them at minValue)
                     for key in bullishKeys {
-                        setFactorEnabled(factorName: key, enabled: false)
+                        simSettings.setFactorEnabled(factorName: key, enabled: false)
                         lockFactorAtMin(key)
                     }
 
                     // Turn ON bearish factors (unlock them, set to minValue)
                     for key in bearishKeys {
-                        setFactorEnabled(factorName: key, enabled: true)
+                        simSettings.setFactorEnabled(factorName: key, enabled: true)
                         unlockFactorAndSetMin(key)
                     }
 
@@ -134,13 +134,13 @@ extension SettingsView {
 
                     // Turn OFF bearish factors (lock them at maxValue)
                     for key in bearishKeys {
-                        setFactorEnabled(factorName: key, enabled: false)
+                        simSettings.setFactorEnabled(factorName: key, enabled: false)
                         lockFactorAtMax(key)
                     }
 
                     // Turn ON bullish factors (unlock them, set to maxValue)
                     for key in bullishKeys {
-                        setFactorEnabled(factorName: key, enabled: true)
+                        simSettings.setFactorEnabled(factorName: key, enabled: true)
                         unlockFactorAndSetMax(key)
                     }
 
@@ -163,20 +163,6 @@ extension SettingsView {
                 .foregroundColor(.white)
         }
         .listRowBackground(Color(white: 0.15))
-    }
-
-    // MARK: - Toggling a Factor On/Off
-    func setFactorEnabled(factorName: String, enabled: Bool) {
-        guard var f = simSettings.factors[factorName] else { return }
-        f.isEnabled = enabled
-        simSettings.factors[factorName] = f
-
-        if enabled {
-            simSettings.lockedFactors.remove(factorName)
-        } else {
-            // If turning it off, “lock” it so it won't be changed by global slider
-            simSettings.lockedFactors.insert(factorName)
-        }
     }
 
     // (Helper) Lock factor at its minValue

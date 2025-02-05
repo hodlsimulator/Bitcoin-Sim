@@ -44,10 +44,7 @@ struct FactorToggleRow: View {
         let toggleBinding = Binding<Bool>(
             get: { factor.isEnabled },
             set: { newVal in
-                // Update factor.isEnabled in the dictionary
-                var updated = factor
-                updated.isEnabled = newVal
-                simSettings.factors[factorName] = updated
+                simSettings.setFactorEnabled(factorName: factorName, enabled: newVal)
             }
         )
         
@@ -56,19 +53,27 @@ struct FactorToggleRow: View {
         // -------------
         let sliderBinding = Binding<Double>(
             get: {
-                // If factor is missing, or currentValue is missing, just fallback
                 simSettings.factors[factorName]?.currentValue ?? defaultValue
             },
             set: { newVal in
-                // Optionally clamp newVal:
+                // Clamp newVal within the allowed range.
                 let clampedVal = max(min(newVal, factor.maxValue), factor.minValue)
                 
-                // We can automatically lock the factor so the global slider won't override it
-                var updated = factor
-                updated.currentValue = clampedVal
-                updated.isLocked = true  // optional
-
-                simSettings.factors[factorName] = updated
+                // Get the current factor.
+                if var currentFactor = simSettings.factors[factorName] {
+                    // Compute the baseline from the current global slider value.
+                    let baseline = simSettings.globalBaselineFor(currentFactor)
+                    let range = currentFactor.maxValue - currentFactor.minValue
+                    
+                    // Update currentValue and internalOffset.
+                    currentFactor.currentValue = clampedVal
+                    currentFactor.internalOffset = (clampedVal - baseline) / range
+                    
+                    // Do not lock the factor so that global changes continue to update it.
+                    currentFactor.isLocked = false
+                    
+                    simSettings.factors[factorName] = currentFactor
+                }
             }
         )
 

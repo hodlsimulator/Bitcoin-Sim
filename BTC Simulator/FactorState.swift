@@ -9,18 +9,15 @@ import Foundation
 import SwiftUI
 
 struct FactorState {
-    let name: String
+    var name: String
     var isEnabled: Bool
     var isLocked: Bool
-    
-    /// The factor’s *actual* current value (e.g. 0.003, or -0.0012, etc.)
-    /// always stays within [minValue .. maxValue].
     var currentValue: Double
-    
-    /// Hard-coded or user-defined range.
-    let minValue: Double
-    let maxValue: Double
-    
-    /// The factor’s ‘default’ or ‘mid’ value (where t=0.5 would map).
-    let defaultValue: Double
+    var minValue: Double
+    var maxValue: Double
+    var defaultValue: Double
+    var internalOffset: Double = 0.0
+    var savedGlobalIntensity: Double? = nil
+    // New: store the value when the factor is toggled off
+    var frozenValue: Double? = nil
 }

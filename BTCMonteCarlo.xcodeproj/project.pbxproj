@@ -12,6 +12,7 @@
 		E12CCD922CF823610059931D /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E12CCD912CF823610059931D /* Preview Assets.xcassets */; };
 		E14344D62D52D85600225A49 /* FactorState.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14344D52D52D85400225A49 /* FactorState.swift */; };
 		E14344D82D52DE5500225A49 /* FactorCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14344D72D52DE5300225A49 /* FactorCatalog.swift */; };
+		E14344DA2D53553D00225A49 /* SimulationSettings+FactorSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14344D92D53553800225A49 /* SimulationSettings+FactorSync.swift */; };
 		E14D23F52D37425D007CC11A /* SimulationSummaryCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14D23F42D374258007CC11A /* SimulationSummaryCardView.swift */; };
 		E14D23FA2D3A2260007CC11A /* S&P 500 Historical Data Monthly.csv in Resources */ = {isa = PBXBuildFile; fileRef = E14D23F82D3A2260007CC11A /* S&P 500 Historical Data Monthly.csv */; };
 		E14D23FC2D3A2260007CC11A /* Bitcoin Historical Data Weekly.csv in Resources */ = {isa = PBXBuildFile; fileRef = E14D23F72D3A2260007CC11A /* Bitcoin Historical Data Weekly.csv */; };
@@ -75,7 +76,6 @@
 		E1B7B0A72D4753CF00B60EC6 /* ShiftFactors.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B7B0A62D4753CC00B60EC6 /* ShiftFactors.swift */; };
 		E1B7B0A92D47575400B60EC6 /* SettingsSections.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B7B0A82D47575200B60EC6 /* SettingsSections.swift */; };
 		E1B7B0AB2D4759D800B60EC6 /* SettingsWatchers.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B7B0AA2D4759D300B60EC6 /* SettingsWatchers.swift */; };
-		E1B7B0AF2D4CB28E00B60EC6 /* SimulationSettings+FactorSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B7B0AE2D4CB28D00B60EC6 /* SimulationSettings+FactorSync.swift */; };
 		E1C543B82D224D23005E416D /* MonteCarloResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1C543B72D224D21005E416D /* MonteCarloResultsView.swift */; };
 		E1C543BA2D2283A2005E416D /* YearlyPercentileData.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1C543B92D22839F005E416D /* YearlyPercentileData.swift */; };
 		E1CFF0272D30D07A00D9D044 /* ChartBuilders.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1CFF0262D30D07800D9D044 /* ChartBuilders.swift */; };
@@ -99,6 +99,7 @@
 		E12CCD912CF823610059931D /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		E14344D52D52D85400225A49 /* FactorState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FactorState.swift; sourceTree = "<group>"; };
 		E14344D72D52DE5300225A49 /* FactorCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FactorCatalog.swift; sourceTree = "<group>"; };
+		E14344D92D53553800225A49 /* SimulationSettings+FactorSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SimulationSettings+FactorSync.swift"; sourceTree = "<group>"; };
 		E14D23F42D374258007CC11A /* SimulationSummaryCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulationSummaryCardView.swift; sourceTree = "<group>"; };
 		E14D23F72D3A2260007CC11A /* Bitcoin Historical Data Weekly.csv */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Bitcoin Historical Data Weekly.csv"; sourceTree = "<group>"; };
 		E14D23F82D3A2260007CC11A /* S&P 500 Historical Data Monthly.csv */ = {isa = PBXFileReference; lastKnownFileType = text; path = "S&P 500 Historical Data Monthly.csv"; sourceTree = "<group>"; };
@@ -162,7 +163,6 @@
 		E1B7B0A62D4753CC00B60EC6 /* ShiftFactors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftFactors.swift; sourceTree = "<group>"; };
 		E1B7B0A82D47575200B60EC6 /* SettingsSections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSections.swift; sourceTree = "<group>"; };
 		E1B7B0AA2D4759D300B60EC6 /* SettingsWatchers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWatchers.swift; sourceTree = "<group>"; };
-		E1B7B0AE2D4CB28D00B60EC6 /* SimulationSettings+FactorSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SimulationSettings+FactorSync.swift"; sourceTree = "<group>"; };
 		E1C543B72D224D21005E416D /* MonteCarloResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonteCarloResultsView.swift; sourceTree = "<group>"; };
 		E1C543B92D22839F005E416D /* YearlyPercentileData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YearlyPercentileData.swift; sourceTree = "<group>"; };
 		E1CFF0262D30D07800D9D044 /* ChartBuilders.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartBuilders.swift; sourceTree = "<group>"; };
@@ -277,7 +277,7 @@
 				E19D10F62D40D8C000E3A55E /* SimulationSettings+BearishFactors.swift */,
 				E19D10F42D40D10C00E3A55E /* SimulationSettings+BullishFactors.swift */,
 				E19D10EC2D40279200E3A55E /* SimulationSettings+Defaults.swift */,
-				E1B7B0AE2D4CB28D00B60EC6 /* SimulationSettings+FactorSync.swift */,
+				E14344D92D53553800225A49 /* SimulationSettings+FactorSync.swift */,
 				E19D10F22D4033D400E3A55E /* SimulationSettings+HashAndRun.swift */,
 				E14D240A2D3A6988007CC11A /* SimulationSettingsInit.swift */,
 				E19D10EE2D40290800E3A55E /* SimulationSettings+RestoreDefaults.swift */,
@@ -443,7 +443,6 @@
 				E19D10ED2D40279600E3A55E /* SimulationSettings+Defaults.swift in Sources */,
 				E191AD5F2D1B07BC00020DBE /* CSVLoaderHistorical.swift in Sources */,
 				E166A8B02CF855C20003F518 /* SimulationData.swift in Sources */,
-				E1B7B0AF2D4CB28E00B60EC6 /* SimulationSettings+FactorSync.swift in Sources */,
 				E19D10F12D402BDC00E3A55E /* SimulationSettings+ToggleAll.swift in Sources */,
 				E1B7B0A92D47575400B60EC6 /* SettingsSections.swift in Sources */,
 				E191AD5D2D1B06E600020DBE /* BitcoinHistoricalData.swift in Sources */,
@@ -455,6 +454,7 @@
 				E1C543BA2D2283A2005E416D /* YearlyPercentileData.swift in Sources */,
 				E1883F502D1FCEBD007AA90B /* OnboardingView.swift in Sources */,
 				E19D11442D42FA6800E3A55E /* RNGHelpers.swift in Sources */,
+				E14344DA2D53553D00225A49 /* SimulationSettings+FactorSync.swift in Sources */,
 				E1A1E52F2D2E3A40008F7658 /* RowOffsetHelpers.swift in Sources */,
 				E17B2F802D2800D400ECE087 /* OrientationObserver.swift in Sources */,
 				E19D113C2D42F81C00E3A55E /* UtilityExtensions.swift in Sources */,
