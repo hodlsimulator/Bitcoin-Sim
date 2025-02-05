@@ -28,10 +28,7 @@ struct FactorToggleRow: View {
     let displayAsPercent: Bool
 
     var body: some View {
-        // We retrieve the factor from simSettings.factors:
-        // If it’s missing, we can’t do anything, so we’ll bail out gracefully.
         guard let factor = simSettings.factors[factorName] else {
-            // Fallback: show a disabled row
             return AnyView(
                 Text("Factor '\(factorName)' not found!")
                     .foregroundColor(.red)
@@ -53,44 +50,34 @@ struct FactorToggleRow: View {
         // -------------
         let sliderBinding = Binding<Double>(
             get: {
+                // Show the factor's currentValue, fallback to defaultValue if missing
                 simSettings.factors[factorName]?.currentValue ?? defaultValue
             },
             set: { newVal in
-                // Clamp newVal within the allowed range.
+                // Clamp the new value to the factor's valid range
                 let clampedVal = max(min(newVal, factor.maxValue), factor.minValue)
                 
-                // Get the current factor.
+                // Call a helper in SimulationSettings to handle offset updates
+                simSettings.userDidDragFactorSlider(factorName, to: clampedVal)
+                
+                // If you want to ensure the factor is not locked after manual drag:
                 if var currentFactor = simSettings.factors[factorName] {
-                    // Compute the baseline from the current global slider value.
-                    let baseline = simSettings.globalBaselineFor(currentFactor)
-                    let range = currentFactor.maxValue - currentFactor.minValue
-                    
-                    // Update currentValue and internalOffset.
-                    currentFactor.currentValue = clampedVal
-                    currentFactor.internalOffset = (clampedVal - baseline) / range
-                    
-                    // Do not lock the factor so that global changes continue to update it.
                     currentFactor.isLocked = false
-                    
                     simSettings.factors[factorName] = currentFactor
                 }
             }
         )
 
-        // -------------
-        // Now we build the row UI
-        // -------------
         return AnyView(
             VStack(alignment: .leading, spacing: 4) {
                 
-                // Title row
+                // Title + Toggle
                 HStack(spacing: 8) {
                     if let icon = iconName, !icon.isEmpty {
                         Button {
-                            // Reset the factor to its default numeric value
+                            // Reset to default on icon tap (optional)
                             if var f = simSettings.factors[factorName] {
                                 f.currentValue = defaultValue
-                                // optionally unlock it or keep it locked
                                 f.isLocked = false
                                 simSettings.factors[factorName] = f
                             }
@@ -136,7 +123,7 @@ struct FactorToggleRow: View {
                     .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
                     .disabled(!factor.isEnabled)
                     
-                    // Show numeric text
+                    // Display numeric text
                     if displayAsPercent {
                         Text(String(format: "%.4f%%", sliderBinding.wrappedValue * 100))
                             .font(.caption)
@@ -159,6 +146,9 @@ struct FactorToggleRow: View {
     }
 }
 
+// ----------------------------
+// Tooltip structs remain the same
+// ----------------------------
 enum ArrowDirection {
     case up
     case down

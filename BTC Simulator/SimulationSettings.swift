@@ -39,7 +39,11 @@ class SimulationSettings: ObservableObject {
     
     @Published var isOnboarding: Bool = false
     @Published var periodUnit: PeriodUnit = .weeks {
-        didSet { if isInitialized { print("didSet: periodUnit changed to \(periodUnit)") } }
+        didSet {
+            if isInitialized {
+                print("didSet: periodUnit changed to \(periodUnit)")
+            }
+        }
     }
     
     @Published var userPeriods: Int = 52
@@ -214,7 +218,7 @@ class SimulationSettings: ObservableObject {
         
         loadFromUserDefaults()
         
-        // If no baseline was captured, set some defaults so the tilt bar can move
+        // If no baseline was captured, set some defaults so tilt bar can move
         if !hasCapturedDefault {
             defaultTilt = 0.0
             maxSwing = 1.0
@@ -378,16 +382,14 @@ class SimulationSettings: ObservableObject {
         UserDefaults.standard.set(tiltBarValue, forKey: tiltBarValueKey)
     }
     
-    // MARK: - Toggling All Example
-    func toggleAllFactors(on: Bool) {
-        for (name, var factor) in factors {
-            factor.isEnabled = on
-            if on {
-                // Reset to default value if turning on
-                factor.currentValue = factor.defaultValue
-                factor.isLocked = false
-            }
-            factors[name] = factor
-        }
+    func userDidDragFactorSlider(_ factorName: String, to newValue: Double) {
+        guard var factor = factors[factorName] else { return }
+        let baseline = globalBaseline(for: factor)
+        let range = factor.maxValue - factor.minValue
+
+        factor.currentValue = newValue
+        factor.internalOffset = (newValue - baseline) / range
+
+        factors[factorName] = factor
     }
 }

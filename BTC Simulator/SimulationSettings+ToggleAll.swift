@@ -8,34 +8,26 @@
 import SwiftUI
 
 extension SimulationSettings {
-    
+
     var toggleAll: Bool {
         get {
-            // Return 'true' if all factors are enabled
+            // 'true' if all factors are enabled
             factors.values.allSatisfy { $0.isEnabled }
         }
         set {
             if newValue {
-                // Turn all factors ON via setFactorEnabled
+                // Turn all factors ON without resetting their slider values
                 for name in factors.keys {
                     setFactorEnabled(factorName: name, enabled: true)
-                    // Optionally, reset each factor's value to its default and clear its offset.
-                    if var factor = factors[name] {
-                        factor.currentValue = factor.defaultValue
-                        factor.internalOffset = 0.0
-                        factor.isLocked = false
-                        factors[name] = factor
-                    }
+                    // Removed lines that forcibly reset currentValue, internalOffset, etc.
                 }
             } else {
-                // Turn all factors OFF via setFactorEnabled
+                // Turn all factors OFF
                 for name in factors.keys {
                     setFactorEnabled(factorName: name, enabled: false)
-                    // Optionally, lock them (and, if desired, set currentValue to minValue)
+                    // Optionally lock them if you want them unadjustable while off
                     if var factor = factors[name] {
                         factor.isLocked = true
-                        // Uncomment the next line if you want to force them to the minimum.
-                        // factor.currentValue = factor.minValue
                         factors[name] = factor
                     }
                 }
