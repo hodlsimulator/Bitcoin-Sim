@@ -73,9 +73,8 @@ extension SimulationSettings {
 
     func toggleAllFactors(on: Bool) {
         for (name, var factor) in factors {
-            factor.isEnabled = on
             if on {
-                // restore if it has frozenValue
+                // restore from frozen if needed
                 if let frozen = factor.frozenValue {
                     let base = globalBaseline(for: factor)
                     let range = factor.maxValue - factor.minValue
@@ -83,9 +82,12 @@ extension SimulationSettings {
                     factor.internalOffset = (frozen - base) / range
                     factor.frozenValue = nil
                 }
+                factor.isEnabled = true
                 factor.isLocked = false
             } else {
+                // freeze current value so we can restore later
                 factor.frozenValue = factor.currentValue
+                factor.isEnabled = false
                 factor.isLocked = true
             }
             factors[name] = factor

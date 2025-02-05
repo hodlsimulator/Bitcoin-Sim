@@ -207,28 +207,20 @@ extension SettingsView {
             Toggle("Toggle All Factors", isOn:
                 Binding<Bool>(
                     get: {
-                        simSettings.toggleAll // or a computed property that checks if all factors are enabled
+                        simSettings.toggleAll
                     },
                     set: { newValue in
                         simSettings.userIsActuallyTogglingAll = true
                         simSettings.toggleAll = newValue
-                        // If toggling all on, unlock & enable all:
+                        
+                        // Just call our model's method to handle enable/disable logic.
+                        simSettings.toggleAllFactors(on: newValue)
+                        
                         if newValue {
+                            // If toggling on, clear these flags if needed
                             simSettings.chartExtremeBearish = false
                             simSettings.chartExtremeBullish = false
                             simSettings.lockedFactors.removeAll()
-                            for (name, var factor) in simSettings.factors {
-                                factor.isEnabled = true
-                                factor.currentValue = factor.defaultValue
-                                simSettings.factors[name] = factor
-                            }
-                        } else {
-                            // Or toggling them all off
-                            for (name, var factor) in simSettings.factors {
-                                factor.isEnabled = false
-                                simSettings.factors[name] = factor
-                                simSettings.lockedFactors.insert(name)
-                            }
                         }
                     }
                 )
