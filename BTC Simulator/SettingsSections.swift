@@ -125,6 +125,17 @@ extension SettingsView {
                     step: 0.01
                 )
                 .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
+                // NEW PART: watch when factorIntensity changes
+                .onChange(of: simSettings.factorIntensity) { newVal in
+                    // If we move above ~0.0, turn off the 'extremeBearish' flag
+                    if newVal > 0.01 && simSettings.chartExtremeBearish {
+                        simSettings.chartExtremeBearish = false
+                    }
+                    // If we move below ~1.0, turn off the 'extremeBullish' flag
+                    if newVal < 0.99 && simSettings.chartExtremeBullish {
+                        simSettings.chartExtremeBullish = false
+                    }
+                }
 
                 // EXTREME BULLISH BUTTON
                 Button {
