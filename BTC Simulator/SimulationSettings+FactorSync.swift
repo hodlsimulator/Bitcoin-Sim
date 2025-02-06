@@ -55,16 +55,25 @@ extension SimulationSettings {
         print("[Factor Debug] setFactorEnabled(\(factorName), \(enabled)): old isEnabled=\(factor.isEnabled), frozenValue=\(String(describing: factor.frozenValue))")
         
         if enabled {
-            // Restore from frozenValue if it exists
+            // If we have a frozenValue, restore it as the absolute position
             if let frozen = factor.frozenValue {
-                let base = globalBaseline(for: factor)
-                let range = factor.maxValue - factor.minValue
                 factor.currentValue = frozen
-                factor.internalOffset = (frozen - base) / range
-                factor.frozenValue = nil
                 
-                print("[Factor Debug] Restored frozenValue=\(frozen). New currentValue=\(factor.currentValue), offset=\(factor.internalOffset)")
+                // If factor was NOT chart-forced, we do the usual offset recalc
+                if !factor.wasChartForced {
+                    let base = globalBaseline(for: factor)
+                    let range = factor.maxValue - factor.minValue
+                    factor.internalOffset = (frozen - base) / range
+                }
+                
+                // Clear the frozenValue and chart-forced flag
+                factor.frozenValue = nil
+                factor.wasChartForced = false
+                
+                print("[Factor Debug] Restored frozenValue=\(frozen). "
+                      + "New currentValue=\(factor.currentValue), offset=\(factor.internalOffset)")
             }
+            
             factor.isEnabled = true
             factor.isLocked = false
             lockedFactors.remove(factorName)
@@ -75,8 +84,8 @@ extension SimulationSettings {
             factor.frozenValue = factor.currentValue
             factor.isEnabled = false
             factor.isLocked = true
-            lockedFactors.insert(factorName)
             
+            lockedFactors.insert(factorName)
             print("[Factor Debug] \(factorName) disabled -> froze currentValue=\(String(describing: factor.frozenValue))")
         }
         

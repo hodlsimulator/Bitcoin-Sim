@@ -97,145 +97,190 @@ extension SettingsView {
     }
 
     // -------------------------------------------------------
-        // MARK: - Universal Factor Intensity
-        // -------------------------------------------------------
-        var factorIntensitySection: some View {
-            Section {
-                HStack {
-                    // EXTREME BEARISH BUTTON
-                    Button {
-                        isManualOverride = true
-                        simSettings.setFactorIntensity(0.0)
-                        simSettings.tiltBarValue = -1.0
+    // MARK: - Universal Factor Intensity
+    // -------------------------------------------------------
+    var factorIntensitySection: some View {
+        Section {
+            HStack {
+                // EXTREME BEARISH BUTTON
+                Button {
+                    isManualOverride = true
+                    simSettings.setFactorIntensity(0.0)
+                    simSettings.tiltBarValue = -1.0
 
-                        // Turn OFF bullish factors (lock them at minValue)
-                        for key in bullishKeys {
-                            simSettings.setFactorEnabled(factorName: key, enabled: false)
-                            lockFactorAtMin(key)
-                        }
-
-                        // Turn ON bearish factors (unlock them, set to minValue)
-                        for key in bearishKeys {
-                            simSettings.setFactorEnabled(factorName: key, enabled: true)
-                            unlockFactorAndSetMin(key)
-                        }
-
-                        // Update chart flags
-                        simSettings.chartExtremeBearish = true
-                        simSettings.chartExtremeBullish = false
-
-                        // Recompute tilt bar so it respects enabled/disabled factors
-                        simSettings.recalcTiltBarValue(bullishKeys: bullishKeys, bearishKeys: bearishKeys)
-
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                            isManualOverride = false
-                        }
-                    } label: {
-                        Image(systemName: "chart.line.downtrend.xyaxis")
-                            .foregroundColor(.red)
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(simSettings.chartExtremeBearish)
-                    .opacity(simSettings.chartExtremeBearish ? 0.3 : 1.0)
-
-                    // The main intensity slider
-                    // -- Instead of binding directly to simSettings.rawFactorIntensity,
-                    //    we use factorIntensityBinding so we can call syncFactorsToGlobalIntensity.
-                    Slider(
-                        value: factorIntensityBinding,
-                        in: 0...1,
-                        step: 0.01
-                    )
-                    .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
-                    .onChange(of: factorIntensityBinding.wrappedValue) { newVal in
-                        // After the user adjusts the slider, recalc tilt so the bar updates
-                        simSettings.recalcTiltBarValue(bullishKeys: bullishKeys, bearishKeys: bearishKeys)
-                        
-                        // If we move above ~0.0, turn off the 'extremeBearish' flag
-                        if newVal > 0.01 && simSettings.chartExtremeBearish {
-                            simSettings.chartExtremeBearish = false
-                        }
-                        // If we move below ~1.0, turn off the 'extremeBullish' flag
-                        if newVal < 0.99 && simSettings.chartExtremeBullish {
-                            simSettings.chartExtremeBullish = false
-                        }
+                    // Turn OFF bullish factors (lock them at minValue)
+                    for key in bullishKeys {
+                        simSettings.setFactorEnabled(factorName: key, enabled: false)
+                        // Inside this helper, we forcibly set currentValue = minValue and do:
+                        // factor.wasChartForced = true
+                        lockFactorAtMin(key)
                     }
 
-                    // EXTREME BULLISH BUTTON
-                    Button {
-                        isManualOverride = true
-                        simSettings.setFactorIntensity(1.0)
-                        simSettings.tiltBarValue = 1.0
-
-                        // Turn OFF bearish factors (lock them at maxValue)
-                        for key in bearishKeys {
-                            simSettings.setFactorEnabled(factorName: key, enabled: false)
-                            lockFactorAtMax(key)
-                        }
-
-                        // Turn ON bullish factors (unlock them, set to maxValue)
-                        for key in bullishKeys {
-                            simSettings.setFactorEnabled(factorName: key, enabled: true)
-                            unlockFactorAndSetMax(key)
-                        }
-
-                        simSettings.chartExtremeBullish = true
-                        simSettings.chartExtremeBearish = false
-
-                        // Recompute tilt bar
-                        simSettings.recalcTiltBarValue(bullishKeys: bullishKeys, bearishKeys: bearishKeys)
-
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                            isManualOverride = false
-                        }
-                    } label: {
-                        Image(systemName: "chart.line.uptrend.xyaxis")
-                            .foregroundColor(.green)
+                    // Turn ON bearish factors (unlock them, set to minValue)
+                    for key in bearishKeys {
+                        simSettings.setFactorEnabled(factorName: key, enabled: true)
+                        // Also set factor.wasChartForced = true
+                        unlockFactorAndSetMin(key)
                     }
-                    .buttonStyle(.plain)
-                    .disabled(simSettings.chartExtremeBullish)
-                    .opacity(simSettings.chartExtremeBullish ? 0.3 : 1.0)
+
+                    // Update chart flags
+                    simSettings.chartExtremeBearish = true
+                    simSettings.chartExtremeBullish = false
+
+                    // Recompute tilt bar
+                    simSettings.recalcTiltBarValue(bullishKeys: bullishKeys, bearishKeys: bearishKeys)
+
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        isManualOverride = false
+                    }
+                } label: {
+                    Image(systemName: "chart.line.downtrend.xyaxis")
+                        .foregroundColor(.red)
                 }
-            } footer: {
-                Text("Press a chart icon to force extreme factor settings.")
-                    .foregroundColor(.white)
+                .buttonStyle(.plain)
+                .disabled(simSettings.chartExtremeBearish)
+                .opacity(simSettings.chartExtremeBearish ? 0.3 : 1.0)
+
+                // MAIN INTENSITY SLIDER
+                Slider(
+                    value: factorIntensityBinding,
+                    in: 0...1,
+                    step: 0.01
+                )
+                .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
+                .onChange(of: factorIntensityBinding.wrappedValue) { newVal in
+                    // After user adjusts the slider, recalc tilt
+                    simSettings.recalcTiltBarValue(bullishKeys: bullishKeys, bearishKeys: bearishKeys)
+                    
+                    // If we move above ~0.0, turn off the 'extremeBearish' flag
+                    if newVal > 0.01 && simSettings.chartExtremeBearish {
+                        simSettings.chartExtremeBearish = false
+                    }
+                    // If we move below ~1.0, turn off the 'extremeBullish' flag
+                    if newVal < 0.99 && simSettings.chartExtremeBullish {
+                        simSettings.chartExtremeBullish = false
+                    }
+                }
+
+                // EXTREME BULLISH BUTTON
+                Button {
+                    isManualOverride = true
+                    simSettings.setFactorIntensity(1.0)
+                    simSettings.tiltBarValue = 1.0
+
+                    // Turn OFF bearish factors (lock them at maxValue)
+                    for key in bearishKeys {
+                        simSettings.setFactorEnabled(factorName: key, enabled: false)
+                        // sets wasChartForced = true
+                        lockFactorAtMax(key)
+                    }
+
+                    // Turn ON bullish factors (unlock them, set to maxValue)
+                    for key in bullishKeys {
+                        simSettings.setFactorEnabled(factorName: key, enabled: true)
+                        // sets wasChartForced = true
+                        unlockFactorAndSetMax(key)
+                    }
+
+                    simSettings.chartExtremeBullish = true
+                    simSettings.chartExtremeBearish = false
+
+                    // Recompute tilt bar
+                    simSettings.recalcTiltBarValue(bullishKeys: bullishKeys, bearishKeys: bearishKeys)
+
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        isManualOverride = false
+                    }
+                } label: {
+                    Image(systemName: "chart.line.uptrend.xyaxis")
+                        .foregroundColor(.green)
+                }
+                .buttonStyle(.plain)
+                .disabled(simSettings.chartExtremeBullish)
+                .opacity(simSettings.chartExtremeBullish ? 0.3 : 1.0)
             }
-            .listRowBackground(Color(white: 0.15))
+        } footer: {
+            Text("Press a chart icon to force extreme factor settings.")
+                .foregroundColor(.white)
         }
+        .listRowBackground(Color(white: 0.15))
+    }
 
     // (Helper) Lock factor at its minValue
     func lockFactorAtMin(_ factorName: String) {
         guard var f = simSettings.factors[factorName] else { return }
+        
+        // Forcibly set currentValue to minValue
         f.currentValue = f.minValue
-        f.isEnabled = false      // you might prefer to keep it 'enabled' but locked
+        
+        // If you want to recalc the offset so it matches this position:
+        let base = simSettings.globalBaseline(for: f)
+        let range = f.maxValue - f.minValue
+        f.internalOffset = (f.minValue - base) / range
+        
+        // Mark that we chart-forced this factor to an extreme
+        f.wasChartForced = true
+        
+        // Optionally lock & disable it
+        f.isEnabled = false
+        f.isLocked = true
         simSettings.lockedFactors.insert(factorName)
+        
         simSettings.factors[factorName] = f
     }
 
     // (Helper) Lock factor at its maxValue
     func lockFactorAtMax(_ factorName: String) {
         guard var f = simSettings.factors[factorName] else { return }
+        
         f.currentValue = f.maxValue
+        let base = simSettings.globalBaseline(for: f)
+        let range = f.maxValue - f.minValue
+        f.internalOffset = (f.maxValue - base) / range
+        
+        f.wasChartForced = true
+        
         f.isEnabled = false
+        f.isLocked = true
         simSettings.lockedFactors.insert(factorName)
+        
         simSettings.factors[factorName] = f
     }
 
     // (Helper) Unlock factor and set it to minValue
     func unlockFactorAndSetMin(_ factorName: String) {
         guard var f = simSettings.factors[factorName] else { return }
+        
         f.currentValue = f.minValue
+        let base = simSettings.globalBaseline(for: f)
+        let range = f.maxValue - f.minValue
+        f.internalOffset = (f.minValue - base) / range
+        
+        // Mark as chart-forced as well, if you want it to remain “in place” when re-enabled
+        f.wasChartForced = true
+        
         f.isEnabled = true
+        f.isLocked = false
         simSettings.lockedFactors.remove(factorName)
+        
         simSettings.factors[factorName] = f
     }
 
     // (Helper) Unlock factor and set it to maxValue
     func unlockFactorAndSetMax(_ factorName: String) {
         guard var f = simSettings.factors[factorName] else { return }
+        
         f.currentValue = f.maxValue
+        let base = simSettings.globalBaseline(for: f)
+        let range = f.maxValue - f.minValue
+        f.internalOffset = (f.maxValue - base) / range
+        
+        f.wasChartForced = true
+        
         f.isEnabled = true
+        f.isLocked = false
         simSettings.lockedFactors.remove(factorName)
+        
         simSettings.factors[factorName] = f
     }
 

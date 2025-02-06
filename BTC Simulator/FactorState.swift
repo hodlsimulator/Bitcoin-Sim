@@ -22,4 +22,7 @@ struct FactorState: Codable {
     
     // Only used when toggling off so we can restore later
     var frozenValue: Double? = nil
+    
+    // NEW: indicates if we forcibly set it to extremes via chart icon
+    var wasChartForced: Bool = false
 }

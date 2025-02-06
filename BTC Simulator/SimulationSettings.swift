@@ -438,35 +438,35 @@ class SimulationSettings: ObservableObject {
     }
     
     // MARK: - recalcTiltBarValue
-    
-    /// Combine the “base tilt” from factorIntensity (mapped 0..1 → –1..+1)
-    /// with the net offsets from bullish vs. bearish factors.
+    /// Combines the base tilt (from factorIntensity, mapped 0..1 → –1..+1)
+    /// with the net offsets from bullish vs. bearish factors, then clamps to [–1..+1].
     func recalcTiltBarValue(bullishKeys: [String], bearishKeys: [String]) {
         
-        // 1) base tilt
-        let baseTilt = (rawFactorIntensity * 2.0) - 1.0  // e.g. 0 -> -1, 1 -> +1
+        // 1) Base tilt in [–1..+1], derived from rawFactorIntensity in [0..1].
+        let baseTilt = (rawFactorIntensity * 2.0) - 1.0
         
-        // 2) sum bullish offsets
+        // 2) Sum offsets for enabled bullish factors.
         let bullishOffsets = bullishKeys.compactMap { key -> Double? in
-            guard let f = factors[key], f.isEnabled else { return nil }
-            return f.internalOffset
+            guard let factor = factors[key], factor.isEnabled else { return nil }
+            return factor.internalOffset
         }
         let sumBullish = bullishOffsets.reduce(0.0, +)
         
-        // 3) sum bearish offsets
+        // 3) Sum offsets for enabled bearish factors.
         let bearishOffsets = bearishKeys.compactMap { key -> Double? in
-            guard let f = factors[key], f.isEnabled else { return nil }
-            return f.internalOffset
+            guard let factor = factors[key], factor.isEnabled else { return nil }
+            return factor.internalOffset
         }
         let sumBearish = bearishOffsets.reduce(0.0, +)
         
-        // 4) net offset from factors
+        // 4) Net offset = (sum of bullish offsets) - (sum of bearish offsets).
         let netOffset = sumBullish - sumBearish
         
-        // 5) final tilt = baseTilt + netOffset, clamped
+        // 5) Final tilt = base tilt + net offset, then clamp to [–1..+1].
         let combined = baseTilt + netOffset
         let finalTilt = max(min(combined, 1.0), -1.0)
         
+        // Update the published tiltBarValue and mark manual override as needed.
         tiltBarValue = finalTilt
         overrodeTiltManually = true
     }
