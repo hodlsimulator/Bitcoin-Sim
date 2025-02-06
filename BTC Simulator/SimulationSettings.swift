@@ -441,36 +441,52 @@ class SimulationSettings: ObservableObject {
     }
     
     // MARK: - recalcTiltBarValue
-    /// Combines the base tilt (from factorIntensity, mapped 0..1 → –1..+1)
-    /// with the net offsets from bullish vs. bearish factors, then clamps to [–1..+1].
+    /// When chartExtremeBearish is true, we ignore normal net offsets
+    /// and linearly interpolate tilt from -1 (slider=0) to -0.3 (slider=1).
+    /// That ensures no green. We do the mirror for chartExtremeBullish.
+    /// Otherwise, we do normal logic.
     func recalcTiltBarValue(bullishKeys: [String], bearishKeys: [String]) {
         
-        // 1) Base tilt in [–1..+1], derived from rawFactorIntensity in [0..1].
-        let baseTilt = (rawFactorIntensity * 2.0) - 1.0
+        // 1) If forced-bearish, ignore net offsets, do a linear scale:
+        if chartExtremeBearish {
+            // e.g. at slider=0 => tilt=-1, slider=1 => tilt=-0.3
+            let slope = 0.7 // the difference between -1.0 and -0.3
+            let forcedTilt = -1.0 + rawFactorIntensity * slope
+            tiltBarValue = min(forcedTilt, 0.0) // never go positive
+            overrodeTiltManually = true
+            return
+        }
         
-        // 2) Sum offsets for enabled bullish factors
+        // 2) If forced-bullish, mirror logic:
+        if chartExtremeBullish {
+            // e.g. at slider=0 => tilt=+0.3, slider=1 => tilt=+1
+            let slope = 0.7
+            let forcedTilt = 1.0 - ((1.0 - rawFactorIntensity) * slope)
+            tiltBarValue = max(forcedTilt, 0.0)
+            overrodeTiltManually = true
+            return
+        }
+        
+        // 3) Normal calculation if not in forced mode:
+        let baseTilt = (rawFactorIntensity * 2.0) - 1.0
+
         let bullishOffsets = bullishKeys.compactMap { key -> Double? in
             guard let factor = factors[key], factor.isEnabled else { return nil }
             return factor.internalOffset
         }
         let sumBullish = bullishOffsets.reduce(0.0, +)
-        
-        // 3) Sum offsets for enabled bearish factors
+
         let bearishOffsets = bearishKeys.compactMap { key -> Double? in
             guard let factor = factors[key], factor.isEnabled else { return nil }
             return factor.internalOffset
         }
         let sumBearish = bearishOffsets.reduce(0.0, +)
-        
-        // 4) Net offset = (sum of bullish offsets) - (sum of bearish offsets)
+
         let netOffset = sumBullish - sumBearish
+        var combined = baseTilt + netOffset
+        combined = max(min(combined, 1.0), -1.0)
         
-        // 5) Final tilt = base tilt + net offset, then clamp to [–1..+1]
-        let combined = baseTilt + netOffset
-        let finalTilt = max(min(combined, 1.0), -1.0)
-        
-        // Update the published tiltBarValue
-        tiltBarValue = finalTilt
+        tiltBarValue = combined
         overrodeTiltManually = true
     }
     

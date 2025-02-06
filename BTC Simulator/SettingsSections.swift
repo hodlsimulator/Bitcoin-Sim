@@ -70,17 +70,14 @@ extension SettingsView {
                         DragGesture()
                             .onChanged { value in
                                 let locationX = value.location.x
-                                let halfWidth = barWidth / 2
-                                // Map so center=0, right=+1, left=–1
+                                let halfWidth = geo.size.width / 2
                                 var newTilt = ((locationX - halfWidth) / halfWidth)
                                 newTilt = min(max(newTilt, -1), 1)
                                 dragTiltOverride = newTilt
                             }
                             .onEnded { _ in
                                 if let newTilt = dragTiltOverride {
-                                    // Update tiltBarValue
                                     simSettings.tiltBarValue = newTilt
-                                    // If you want them in sync, also update factorIntensity
                                     simSettings.setFactorIntensity((newTilt + 1) / 2.0)
                                 }
                                 dragTiltOverride = nil
@@ -104,42 +101,50 @@ extension SettingsView {
             HStack {
                 // EXTREME BEARISH BUTTON
                 Button {
-                    isManualOverride = true
-                    simSettings.setFactorIntensity(0.0)
-                    simSettings.tiltBarValue = -1.0
+                    if simSettings.chartExtremeBearish {
+                        // Cancel forced extreme if tapped again.
+                        simSettings.chartExtremeBearish = false
+                        simSettings.recalcTiltBarValue(bullishKeys: bullishKeys, bearishKeys: bearishKeys)
+                    } else {
+                        // Force Bearish:
+                        isManualOverride = true
+                        simSettings.setFactorIntensity(0.0)
+                        simSettings.tiltBarValue = -1.0
 
-                    // Turn OFF bullish factors (lock them at minValue)
-                    for key in bullishKeys {
-                        simSettings.setFactorEnabled(factorName: key, enabled: false)
-                        // Inside this helper, we forcibly set currentValue = minValue and do:
-                        // factor.wasChartForced = true
-                        lockFactorAtMin(key)
-                    }
+                        // Turn OFF all bullish factors and force them to their minimum.
+                        for key in bullishKeys {
+                            simSettings.setFactorEnabled(factorName: key, enabled: false)
+                            lockFactorAtMin(key)
+                        }
+                        // Turn ON all bearish factors and force them to their minimum.
+                        for key in bearishKeys {
+                            simSettings.setFactorEnabled(factorName: key, enabled: true)
+                            unlockFactorAndSetMin(key)
+                        }
 
-                    // Turn ON bearish factors (unlock them, set to minValue)
-                    for key in bearishKeys {
-                        simSettings.setFactorEnabled(factorName: key, enabled: true)
-                        // Also set factor.wasChartForced = true
-                        unlockFactorAndSetMin(key)
-                    }
+                        simSettings.chartExtremeBearish = true
+                        simSettings.chartExtremeBullish = false
+                        simSettings.recalcTiltBarValue(bullishKeys: bullishKeys, bearishKeys: bearishKeys)
 
-                    // Update chart flags
-                    simSettings.chartExtremeBearish = true
-                    simSettings.chartExtremeBullish = false
-
-                    // Recompute tilt bar
-                    simSettings.recalcTiltBarValue(bullishKeys: bullishKeys, bearishKeys: bearishKeys)
-
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        isManualOverride = false
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            isManualOverride = false
+                        }
                     }
                 } label: {
                     Image(systemName: "chart.line.downtrend.xyaxis")
                         .foregroundColor(.red)
                 }
                 .buttonStyle(.plain)
-                .disabled(simSettings.chartExtremeBearish)
-                .opacity(simSettings.chartExtremeBearish ? 0.3 : 1.0)
+                // If forcedBearish == true AND the slider is still at 0, keep greyed out + disabled.
+                // Once the slider moves away from 0, it becomes active.
+                .disabled(
+                    simSettings.chartExtremeBearish && factorIntensityBinding.wrappedValue <= 0.0001
+                )
+                .opacity(
+                    simSettings.chartExtremeBearish && factorIntensityBinding.wrappedValue <= 0.0001
+                    ? 0.5
+                    : 1.0
+                )
 
                 // MAIN INTENSITY SLIDER
                 Slider(
@@ -148,56 +153,57 @@ extension SettingsView {
                     step: 0.01
                 )
                 .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
-                .onChange(of: factorIntensityBinding.wrappedValue) { newVal in
-                    // After user adjusts the slider, recalc tilt
+                .onChange(of: factorIntensityBinding.wrappedValue) { _ in
+                    // We do NOT auto-disable forced mode.
+                    // Forced-bearish/bullish remains at all slider positions,
+                    // but the button is re-enabled once the slider moves from the extreme.
                     simSettings.recalcTiltBarValue(bullishKeys: bullishKeys, bearishKeys: bearishKeys)
-                    
-                    // If we move above ~0.0, turn off the 'extremeBearish' flag
-                    if newVal > 0.01 && simSettings.chartExtremeBearish {
-                        simSettings.chartExtremeBearish = false
-                    }
-                    // If we move below ~1.0, turn off the 'extremeBullish' flag
-                    if newVal < 0.99 && simSettings.chartExtremeBullish {
-                        simSettings.chartExtremeBullish = false
-                    }
                 }
 
                 // EXTREME BULLISH BUTTON
                 Button {
-                    isManualOverride = true
-                    simSettings.setFactorIntensity(1.0)
-                    simSettings.tiltBarValue = 1.0
+                    if simSettings.chartExtremeBullish {
+                        simSettings.chartExtremeBullish = false
+                        simSettings.recalcTiltBarValue(bullishKeys: bullishKeys, bearishKeys: bearishKeys)
+                    } else {
+                        isManualOverride = true
+                        simSettings.setFactorIntensity(1.0)
+                        simSettings.tiltBarValue = 1.0
 
-                    // Turn OFF bearish factors (lock them at maxValue)
-                    for key in bearishKeys {
-                        simSettings.setFactorEnabled(factorName: key, enabled: false)
-                        // sets wasChartForced = true
-                        lockFactorAtMax(key)
-                    }
+                        // Turn OFF all bearish factors and force them to their maximum.
+                        for key in bearishKeys {
+                            simSettings.setFactorEnabled(factorName: key, enabled: false)
+                            lockFactorAtMax(key)
+                        }
+                        // Turn ON all bullish factors and force them to their maximum.
+                        for key in bullishKeys {
+                            simSettings.setFactorEnabled(factorName: key, enabled: true)
+                            unlockFactorAndSetMax(key)
+                        }
 
-                    // Turn ON bullish factors (unlock them, set to maxValue)
-                    for key in bullishKeys {
-                        simSettings.setFactorEnabled(factorName: key, enabled: true)
-                        // sets wasChartForced = true
-                        unlockFactorAndSetMax(key)
-                    }
+                        simSettings.chartExtremeBullish = true
+                        simSettings.chartExtremeBearish = false
+                        simSettings.recalcTiltBarValue(bullishKeys: bullishKeys, bearishKeys: bearishKeys)
 
-                    simSettings.chartExtremeBullish = true
-                    simSettings.chartExtremeBearish = false
-
-                    // Recompute tilt bar
-                    simSettings.recalcTiltBarValue(bullishKeys: bullishKeys, bearishKeys: bearishKeys)
-
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        isManualOverride = false
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            isManualOverride = false
+                        }
                     }
                 } label: {
                     Image(systemName: "chart.line.uptrend.xyaxis")
                         .foregroundColor(.green)
                 }
                 .buttonStyle(.plain)
-                .disabled(simSettings.chartExtremeBullish)
-                .opacity(simSettings.chartExtremeBullish ? 0.3 : 1.0)
+                // If forcedBullish == true AND the slider is still at 1, keep greyed out + disabled.
+                // Once the slider moves away from 1, it becomes active.
+                .disabled(
+                    simSettings.chartExtremeBullish && factorIntensityBinding.wrappedValue >= 0.9999
+                )
+                .opacity(
+                    simSettings.chartExtremeBullish && factorIntensityBinding.wrappedValue >= 0.9999
+                    ? 0.5
+                    : 1.0
+                )
             }
         } footer: {
             Text("Press a chart icon to force extreme factor settings.")
@@ -206,81 +212,57 @@ extension SettingsView {
         .listRowBackground(Color(white: 0.15))
     }
 
-    // (Helper) Lock factor at its minValue
+    // MARK: - Helper Functions for Locking/Unlocking Factors
+
     func lockFactorAtMin(_ factorName: String) {
         guard var f = simSettings.factors[factorName] else { return }
-        
-        // Forcibly set currentValue to minValue
         f.currentValue = f.minValue
-        
-        // If you want to recalc the offset so it matches this position:
         let base = simSettings.globalBaseline(for: f)
         let range = f.maxValue - f.minValue
         f.internalOffset = (f.minValue - base) / range
-        
-        // Mark that we chart-forced this factor to an extreme
         f.wasChartForced = true
-        
-        // Optionally lock & disable it
         f.isEnabled = false
         f.isLocked = true
         simSettings.lockedFactors.insert(factorName)
-        
         simSettings.factors[factorName] = f
     }
 
-    // (Helper) Lock factor at its maxValue
     func lockFactorAtMax(_ factorName: String) {
         guard var f = simSettings.factors[factorName] else { return }
-        
         f.currentValue = f.maxValue
         let base = simSettings.globalBaseline(for: f)
         let range = f.maxValue - f.minValue
         f.internalOffset = (f.maxValue - base) / range
-        
         f.wasChartForced = true
-        
         f.isEnabled = false
         f.isLocked = true
         simSettings.lockedFactors.insert(factorName)
-        
         simSettings.factors[factorName] = f
     }
 
-    // (Helper) Unlock factor and set it to minValue
     func unlockFactorAndSetMin(_ factorName: String) {
         guard var f = simSettings.factors[factorName] else { return }
-        
         f.currentValue = f.minValue
         let base = simSettings.globalBaseline(for: f)
         let range = f.maxValue - f.minValue
         f.internalOffset = (f.minValue - base) / range
-        
-        // Mark as chart-forced as well, if you want it to remain “in place” when re-enabled
         f.wasChartForced = true
-        
         f.isEnabled = true
         f.isLocked = false
         simSettings.lockedFactors.remove(factorName)
-        
         simSettings.factors[factorName] = f
     }
 
-    // (Helper) Unlock factor and set it to maxValue
     func unlockFactorAndSetMax(_ factorName: String) {
         guard var f = simSettings.factors[factorName] else { return }
-        
         f.currentValue = f.maxValue
         let base = simSettings.globalBaseline(for: f)
         let range = f.maxValue - f.minValue
         f.internalOffset = (f.maxValue - base) / range
-        
         f.wasChartForced = true
-        
         f.isEnabled = true
         f.isLocked = false
         simSettings.lockedFactors.remove(factorName)
-        
         simSettings.factors[factorName] = f
     }
 
@@ -289,18 +271,12 @@ extension SettingsView {
         Section {
             Toggle("Toggle All Factors", isOn:
                 Binding<Bool>(
-                    get: {
-                        simSettings.toggleAll
-                    },
+                    get: { simSettings.toggleAll },
                     set: { newValue in
                         simSettings.userIsActuallyTogglingAll = true
                         simSettings.toggleAll = newValue
-                        
-                        // Just call our model's method to handle enable/disable logic.
                         simSettings.toggleAllFactors(on: newValue)
-                        
                         if newValue {
-                            // If toggling on, clear these flags if needed
                             simSettings.chartExtremeBearish = false
                             simSettings.chartExtremeBullish = false
                             simSettings.lockedFactors.removeAll()
@@ -355,7 +331,6 @@ extension SettingsView {
             .alert("Confirm Reset", isPresented: $showResetCriteriaConfirmation, actions: {
                 Button("Reset", role: .destructive) {
                     simSettings.restoreDefaults()
-                    // Also reset onboarding or other states
                     didFinishOnboarding = false
                     simSettings.setFactorIntensity(0.5)
                     simSettings.tiltBarValue = 0.0
