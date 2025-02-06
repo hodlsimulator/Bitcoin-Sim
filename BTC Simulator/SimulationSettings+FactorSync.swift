@@ -9,109 +9,121 @@ import SwiftUI
 
 extension SimulationSettings {
     
+    // MARK: - Computed Global Slider
+    //
+    // Instead of calling getFactorIntensity() or setFactorIntensity(_:) somewhere else,
+    // you can now just do: simSettings.factorIntensity = 0.7
+    // -> This triggers syncFactorsToGlobalIntensity() automatically.
+    //
+    var factorIntensity: Double {
+        get {
+            rawFactorIntensity
+        }
+        set {
+            rawFactorIntensity = newValue
+            // Replicate the test app logic: whenever factorIntensity changes, sync
+            syncFactorsToGlobalIntensity()
+        }
+    }
+    
     // MARK: - Global Baseline
+    // Same as before, but we read factorIntensity from the new computed property above.
     func globalBaseline(for factor: FactorState) -> Double {
-        // Standard interpolation
-        let t = getFactorIntensity()  // <--- Replace factorIntensity with getFactorIntensity()
+        let t = factorIntensity
         if t < 0.5 {
             let ratio = t / 0.5
-            // go from defaultValue down to minValue
+            // from defaultValue down to minValue
             return factor.defaultValue - (factor.defaultValue - factor.minValue) * (1.0 - ratio)
         } else {
             let ratio = (t - 0.5) / 0.5
-            // go from defaultValue up to maxValue
+            // from defaultValue up to maxValue
             return factor.defaultValue + (factor.maxValue - factor.defaultValue) * ratio
         }
     }
     
+    // MARK: - Sync Factors
     func syncFactorsToGlobalIntensity() {
         for (name, var factor) in factors where factor.isEnabled && !factor.isLocked {
-            print("Post-sync: \(name) -> enabled=\(factor.isEnabled), offset=\(factor.internalOffset)")
             let baseline = globalBaseline(for: factor)
             let range = factor.maxValue - factor.minValue
-
-            // Proposed new value
             let newValue = baseline + factor.internalOffset * range
-
-            // Clamp it
-            let clamped = min(max(newValue, factor.minValue), factor.maxValue)
             
-            // If we had to clamp, adjust offset so it stays consistent
+            // Clamp if out of bounds
+            let clamped = min(max(newValue, factor.minValue), factor.maxValue)
             if clamped != newValue {
                 factor.internalOffset = (clamped - baseline) / range
             }
-
+            
             factor.currentValue = clamped
             factors[name] = factor
+            
         }
     }
-
+    
+    // MARK: - Enable/Disable Individual Factor
     func setFactorEnabled(factorName: String, enabled: Bool) {
         guard var factor = factors[factorName] else {
             print("[Factor Debug] setFactorEnabled(\(factorName), \(enabled)): factor not found!")
             return
         }
         
-        print("[Factor Debug] setFactorEnabled(\(factorName), \(enabled)): old isEnabled=\(factor.isEnabled), frozenValue=\(String(describing: factor.frozenValue))")
-        
         if enabled {
-            // If we have a frozenValue, restore it as the absolute position
             if let frozen = factor.frozenValue {
+                // Restore the absolute numeric position
                 factor.currentValue = frozen
+                // Recalculate offset so baseline + offset*range == frozen
+                let base = globalBaseline(for: factor)
+                let range = factor.maxValue - factor.minValue
+                factor.internalOffset = (frozen - base) / range
                 
-                // If factor was NOT chart-forced, we do the usual offset recalc
-                if !factor.wasChartForced {
-                    let base = globalBaseline(for: factor)
-                    let range = factor.maxValue - factor.minValue
-                    factor.internalOffset = (frozen - base) / range
-                }
-                
-                // Clear the frozenValue and chart-forced flag
                 factor.frozenValue = nil
                 factor.wasChartForced = false
-                
-                print("[Factor Debug] Restored frozenValue=\(frozen). "
-                      + "New currentValue=\(factor.currentValue), offset=\(factor.internalOffset)")
             }
-            
             factor.isEnabled = true
             factor.isLocked = false
             lockedFactors.remove(factorName)
-            
-            print("[Factor Debug] \(factorName) enabled -> currentValue=\(factor.currentValue), offset=\(factor.internalOffset)")
         } else {
-            // Freeze current value so we can restore later
+            // Freeze current value for restoration later
             factor.frozenValue = factor.currentValue
             factor.isEnabled = false
             factor.isLocked = true
-            
             lockedFactors.insert(factorName)
-            print("[Factor Debug] \(factorName) disabled -> froze currentValue=\(String(describing: factor.frozenValue))")
         }
         
         factors[factorName] = factor
     }
 
+    // MARK: - Toggle All Factors
     func toggleAllFactors(on: Bool) {
         for (name, var factor) in factors {
             if on {
-                // restore from frozen if needed
+                // Re-enable
                 if let frozen = factor.frozenValue {
+                    factor.currentValue = frozen
+                    print("[toggleAll] Restoring factor \(name) -> \(frozen)")
+                    
                     let base = globalBaseline(for: factor)
                     let range = factor.maxValue - factor.minValue
-                    factor.currentValue = frozen
                     factor.internalOffset = (frozen - base) / range
+                    print("[toggleAll]   New offset = \(factor.internalOffset) for factor \(name)")
+                    
                     factor.frozenValue = nil
                 }
                 factor.isEnabled = true
                 factor.isLocked = false
+                factor.wasChartForced = false
             } else {
-                // freeze current value so we can restore later
+                // Disable
                 factor.frozenValue = factor.currentValue
+                print("[toggleAll] Freezing factor \(name) at \(factor.currentValue)")
+                
                 factor.isEnabled = false
                 factor.isLocked = true
             }
             factors[name] = factor
         }
+        
+        // If your architecture calls sync immediately here, do it:
+        // syncFactorsToGlobalIntensity()
     }
 }

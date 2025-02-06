@@ -9,67 +9,96 @@ import SwiftUI
 
 extension SettingsView {
     
-    /// Shift all enabled factors’ currentValue by `delta` * (maxVal - minVal).
-    /// We clamp to each factor’s [minValue..maxValue].
+    /// Shift all enabled factors’ currentValue by `delta * (maxVal - minVal)`.
+    /// After shifting, we recalc each factor's offset so it remains consistent
+    /// with the global slider baseline in the future.
     func shiftAllFactors(by delta: Double) {
         for (factorName, var factor) in simSettings.factors {
-            // Only shift if factor is enabled
             guard factor.isEnabled else { continue }
             
             let range = factor.maxValue - factor.minValue
             let shifted = factor.currentValue + delta * range
             
             // Clamp within [minValue..maxValue]
-            factor.currentValue = max(factor.minValue, min(shifted, factor.maxValue))
+            let clamped = max(factor.minValue, min(shifted, factor.maxValue))
+            factor.currentValue = clamped
             
-            // Put the factor back into the dictionary
+            // Recalc offset so future slider changes keep this new position
+            let base = simSettings.globalBaseline(for: factor)
+            factor.internalOffset = (clamped - base) / range
+            
             simSettings.factors[factorName] = factor
         }
     }
     
-    // OPTIONAL: If you had an “updateUniversalFactorIntensity()” function that
-    // computed an “average normalised value” across all factors, you might do:
+    /// (Optional) Recompute a "universal" factorIntensity by averaging all enabled factors.
+    /// Then assign it, which triggers syncFactorsToGlobalIntensity().
     func updateUniversalFactorIntensity() {
         var totalNorm = 0.0
         var countEnabled = 0
         
         for (_, factor) in simSettings.factors {
             if factor.isEnabled {
+                // Normalised 0..1 for each factor
                 let norm = (factor.currentValue - factor.minValue)
-                            / (factor.maxValue - factor.minValue)
+                           / (factor.maxValue - factor.minValue)
                 totalNorm += norm
                 countEnabled += 1
             }
         }
         guard countEnabled > 0 else { return }
         
-        // E.g. set the global slider to the average normalised value
         let average = totalNorm / Double(countEnabled)
-        simSettings.setFactorIntensity(average)  // <<-- we call setFactorIntensity(...) now
+        simSettings.factorIntensity = average
     }
     
-    // OPTIONAL: If you want an “animateFactor” function to turn a factor on/off with a SwiftUI animation:
+    /// Example: animate toggling a factor on/off with SwiftUI.
+    /// If turning on, we restore from .frozenValue if present (so we don’t snap to mid).
+    /// Otherwise, we do factor.defaultValue.
     func animateFactor(_ factorName: String, newEnabled: Bool) {
         guard var factor = simSettings.factors[factorName] else { return }
-
-        // Example: animate toggling factor.isEnabled
+        
         withAnimation(.easeInOut(duration: 0.6)) {
             factor.isEnabled = newEnabled
-            
-            // If turning it on, maybe reset currentValue to defaultValue
             if newEnabled {
-                factor.currentValue = factor.defaultValue
+                // CHANGED HERE: Only reset to default if we have no frozenValue
+                if let frozen = factor.frozenValue {
+                    factor.currentValue = frozen
+                    factor.frozenValue = nil
+                } else {
+                    factor.currentValue = factor.defaultValue
+                }
+                
+                // Recalc offset
+                let base = simSettings.globalBaseline(for: factor)
+                let range = factor.maxValue - factor.minValue
+                factor.internalOffset = (factor.currentValue - base) / range
+                factor.isLocked = false
+            } else {
+                // Freeze currentValue so we can restore it on re-enable
+                factor.frozenValue = factor.currentValue
+                factor.isLocked = true
             }
             simSettings.factors[factorName] = factor
         }
     }
     
-    // OPTIONAL: If you want to “sync factor’s currentValue to the global slider”
-    // E.g. factorIntensity in [0..1], then map to [factor.minValue..factor.maxValue].
+    /// Sync a single factor’s currentValue to the global slider in a simplistic manner:
+    /// factor.currentValue = factor.minValue + factorIntensity*(range).
+    /// Then recalc offset so future changes track that baseline consistently.
     func syncFactorToSlider(_ factorName: String) {
         guard var factor = simSettings.factors[factorName] else { return }
-        let t = simSettings.getFactorIntensity() // <<-- we call getFactorIntensity() now
-        factor.currentValue = factor.minValue + t * (factor.maxValue - factor.minValue)
+        
+        let t = simSettings.factorIntensity
+        let range = factor.maxValue - factor.minValue
+        let newVal = factor.minValue + t * range
+        
+        factor.currentValue = newVal
+        
+        // Recalc offset so next global slider move keeps that newVal
+        let base = simSettings.globalBaseline(for: factor)
+        factor.internalOffset = (newVal - base) / range
+        
         simSettings.factors[factorName] = factor
     }
 }

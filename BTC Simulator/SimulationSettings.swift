@@ -25,8 +25,13 @@ class SimulationSettings: ObservableObject {
     /// A set of factor names that are locked to prevent changes from the global slider
     @Published var lockedFactors: Set<String> = []
     
-    /// The global slider in [0..1]. This defines a “base tilt” from –1..+1.
-    @Published var rawFactorIntensity: Double = 0.5
+    /// The global slider in [0..1]. As soon as it changes, we sync factors so they track the new baseline.
+    @Published var rawFactorIntensity: Double = 0.5 {
+        didSet {
+            // Replicate test-app logic: whenever global slider changes, sync all factors
+            syncFactors()
+        }
+    }
     
     /// If user manually overrides tilt bar (e.g. dragging the bar directly), we note it here
     var overrodeTiltManually = false
@@ -37,8 +42,6 @@ class SimulationSettings: ObservableObject {
     /// Toggling all factors at once
     @Published var userIsActuallyTogglingAll = false {
         didSet {
-            // The original code called resetTiltBar() if togglingAll was turned off,
-            // but you can keep or remove that. We’ll keep it as you had it:
             if !userIsActuallyTogglingAll {
                 resetTiltBar()
             }
@@ -86,7 +89,7 @@ class SimulationSettings: ObservableObject {
     var isInitialized = false
     var isUpdating = false
     
-    // MARK: - Advanced Toggles (Example: useLognormalGrowth, etc.)
+    // MARK: - Advanced Toggles
     
     @Published var useLognormalGrowth: Bool = true {
         didSet {
@@ -361,12 +364,12 @@ class SimulationSettings: ObservableObject {
                 // We set each factor as enabled = true by default
                 let fs = FactorState(
                     name: factorName,
-                    isEnabled: true,
-                    isLocked: false,
                     currentValue: midVal,
+                    defaultValue: midVal,
                     minValue: minVal,
                     maxValue: maxVal,
-                    defaultValue: midVal
+                    isEnabled: true,
+                    isLocked: false
                 )
                 factors[factorName] = fs
             }
@@ -445,29 +448,52 @@ class SimulationSettings: ObservableObject {
         // 1) Base tilt in [–1..+1], derived from rawFactorIntensity in [0..1].
         let baseTilt = (rawFactorIntensity * 2.0) - 1.0
         
-        // 2) Sum offsets for enabled bullish factors.
+        // 2) Sum offsets for enabled bullish factors
         let bullishOffsets = bullishKeys.compactMap { key -> Double? in
             guard let factor = factors[key], factor.isEnabled else { return nil }
             return factor.internalOffset
         }
         let sumBullish = bullishOffsets.reduce(0.0, +)
         
-        // 3) Sum offsets for enabled bearish factors.
+        // 3) Sum offsets for enabled bearish factors
         let bearishOffsets = bearishKeys.compactMap { key -> Double? in
             guard let factor = factors[key], factor.isEnabled else { return nil }
             return factor.internalOffset
         }
         let sumBearish = bearishOffsets.reduce(0.0, +)
         
-        // 4) Net offset = (sum of bullish offsets) - (sum of bearish offsets).
+        // 4) Net offset = (sum of bullish offsets) - (sum of bearish offsets)
         let netOffset = sumBullish - sumBearish
         
-        // 5) Final tilt = base tilt + net offset, then clamp to [–1..+1].
+        // 5) Final tilt = base tilt + net offset, then clamp to [–1..+1]
         let combined = baseTilt + netOffset
         let finalTilt = max(min(combined, 1.0), -1.0)
         
-        // Update the published tiltBarValue and mark manual override as needed.
+        // Update the published tiltBarValue
         tiltBarValue = finalTilt
         overrodeTiltManually = true
+    }
+    
+    // MARK: - syncFactors
+    /// Called automatically whenever rawFactorIntensity changes. This keeps each factor at baseline + offset.
+    func syncFactors() {
+        for (name, var factor) in factors {
+            // Only sync if factor is enabled and not locked
+            guard factor.isEnabled, !factor.isLocked else { continue }
+            
+            let baseline = globalBaseline(for: factor)
+            let range = factor.maxValue - factor.minValue
+            
+            let newValue = baseline + factor.internalOffset * range
+            let clamped = min(max(newValue, factor.minValue), factor.maxValue)
+            
+            // If we had to clamp, update offset to reflect the new position
+            if clamped != newValue {
+                factor.internalOffset = (clamped - baseline) / range
+            }
+            
+            factor.currentValue = clamped
+            factors[name] = factor
+        }
     }
 }

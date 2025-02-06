@@ -52,8 +52,8 @@ struct SettingsView: View {
         setupNavBarAppearance()
     }
     
-    // MARK: - Body
     var body: some View {
+        // Build your main form as before
         let mainForm = Form {
             
             // 1) The tilt bar
@@ -118,25 +118,36 @@ struct SettingsView: View {
             tooltipOverlay(allItems)
         }
         
-        return mainForm
-            .onAppear {
-                hasAppeared = true
-                
-                // If tiltBarValue is near zero, set displayed tilt to 0
-                if abs(simSettings.tiltBarValue) < 0.0000001 {
-                    simSettings.tiltBarValue = displayedTilt
-                }
-                oldNetValue = 0.0
+        // Now place the main form + watchers in a ZStack so watchers are actually rendered
+        return ZStack {
+            
+            // The main form is your principal content
+            mainForm
+            
+            // The watchers are invisible but in the SwiftUI hierarchy, so .onChange will fire
+            UnifiedValueWatchersA(simSettings: simSettings).hidden()
+            UnifiedValueWatchersB(simSettings: simSettings).hidden()
+            UnifiedValueWatchersC(simSettings: simSettings).hidden()
+            
+        }
+        .onAppear {
+            hasAppeared = true
+            
+            // If tiltBarValue is near zero, set displayed tilt to 0
+            if abs(simSettings.tiltBarValue) < 0.0000001 {
+                simSettings.tiltBarValue = displayedTilt
             }
-            // Provide explicit "Animation.easeInOut(...)"
-            .animation(
-                hasAppeared ? Animation.easeInOut(duration: 0.3) : nil,
-                value: simSettings.getFactorIntensity()
-            )
-            .animation(
-                hasAppeared ? Animation.easeInOut(duration: 0.3) : nil,
-                value: displayedTilt
-            )
+            oldNetValue = 0.0
+        }
+        // Provide explicit "Animation.easeInOut(...)"
+        .animation(
+            hasAppeared ? Animation.easeInOut(duration: 0.3) : nil,
+            value: simSettings.getFactorIntensity()
+        )
+        .animation(
+            hasAppeared ? Animation.easeInOut(duration: 0.3) : nil,
+            value: displayedTilt
+        )
     }
 
     // MARK: - Tilt Computation
