@@ -70,6 +70,7 @@ extension SimulationSettings {
             factor.isEnabled = true
             factor.currentValue = factor.defaultValue
             factor.isLocked = false
+            factor.internalOffset = 0.0  // <-- reset any offset
             factors[factorName] = factor
         }
         
