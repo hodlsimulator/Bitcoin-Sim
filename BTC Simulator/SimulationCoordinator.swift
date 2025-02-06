@@ -61,6 +61,7 @@ class SimulationCoordinator: ObservableObject {
     }
     
     func runSimulation(generateGraphs: Bool, lockRandomSeed: Bool) {
+        simSettings.applyDictionaryFactorsToSim()
         // 1) Lock or unlock the random seed
         simSettings.lockedRandomSeed = lockRandomSeed
 

@@ -442,7 +442,6 @@ class SimulationSettings: ObservableObject {
     /// Combine the “base tilt” from factorIntensity (mapped 0..1 → –1..+1)
     /// with the net offsets from bullish vs. bearish factors.
     func recalcTiltBarValue(bullishKeys: [String], bearishKeys: [String]) {
-        print("[Tilt Debug] Recalculating tilt bar value with factorIntensity=\(rawFactorIntensity)...")
         
         // 1) base tilt
         let baseTilt = (rawFactorIntensity * 2.0) - 1.0  // e.g. 0 -> -1, 1 -> +1
@@ -453,7 +452,6 @@ class SimulationSettings: ObservableObject {
             return f.internalOffset
         }
         let sumBullish = bullishOffsets.reduce(0.0, +)
-        print("[Tilt Debug] sumBullish offsets = \(sumBullish) from offsets: \(bullishOffsets)")
         
         // 3) sum bearish offsets
         let bearishOffsets = bearishKeys.compactMap { key -> Double? in
@@ -461,7 +459,6 @@ class SimulationSettings: ObservableObject {
             return f.internalOffset
         }
         let sumBearish = bearishOffsets.reduce(0.0, +)
-        print("[Tilt Debug] sumBearish offsets = \(sumBearish) from offsets: \(bearishOffsets)")
         
         // 4) net offset from factors
         let netOffset = sumBullish - sumBearish
@@ -472,7 +469,5 @@ class SimulationSettings: ObservableObject {
         
         tiltBarValue = finalTilt
         overrodeTiltManually = true
-        
-        print("[Tilt Debug] baseTilt=\(baseTilt), netOffset=\(netOffset) => tiltBarValue=\(tiltBarValue)")
     }
 }
