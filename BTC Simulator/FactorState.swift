@@ -16,7 +16,10 @@ struct FactorState: Codable {
     var minValue: Double
     var maxValue: Double
     var defaultValue: Double
+    
+    // The user’s “manual offset” from the baseline
     var internalOffset: Double = 0.0
-    var savedGlobalIntensity: Double? = nil
+    
+    // Only used when toggling off so we can restore later
     var frozenValue: Double? = nil
 }

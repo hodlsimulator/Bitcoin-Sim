@@ -7,35 +7,49 @@
 
 import SwiftUI
 
+/// The main settings object, holding global slider, factor dictionary, tilt bar value, etc.
 class SimulationSettings: ObservableObject {
     
+    // MARK: - Published Properties
+    
+    /// For the “Chart extremes” UI logic
     @Published var chartExtremeBearish: Bool = false
     @Published var chartExtremeBullish: Bool = false
+    
+    /// Tells the UI if we’re in the process of restoring defaults
     @Published var isRestoringDefaults: Bool = false
     
-    /// Our one dictionary of factors
+    /// Dictionary of all factors, keyed by name
     @Published var factors: [String: FactorState] = [:]
     
-    /// Which factors are 'locked' so they won’t be changed by the global slider
+    /// A set of factor names that are locked to prevent changes from the global slider
     @Published var lockedFactors: Set<String> = []
     
-    /// The global factor intensity slider (0..1)
-    @AppStorage("factorIntensity") var factorIntensity: Double = 0.5
+    /// The global slider in [0..1]. This defines a “base tilt” from –1..+1.
+    @Published var rawFactorIntensity: Double = 0.5
     
-    // Tilt bar stuff
-    @Published var defaultTilt: Double = 0.0
-    @Published var maxSwing: Double = 1.0
-    @Published var hasCapturedDefault: Bool = false
+    /// If user manually overrides tilt bar (e.g. dragging the bar directly), we note it here
+    var overrodeTiltManually = false
+    
+    /// The final –1..+1 tilt bar value displayed in UI
     @Published var tiltBarValue: Double = 0.0
     
-    // Toggling everything on/off in one go
+    /// Toggling all factors at once
     @Published var userIsActuallyTogglingAll = false {
         didSet {
+            // The original code called resetTiltBar() if togglingAll was turned off,
+            // but you can keep or remove that. We’ll keep it as you had it:
             if !userIsActuallyTogglingAll {
                 resetTiltBar()
             }
         }
     }
+    
+    // MARK: - Additional Published Props
+    
+    @Published var defaultTilt: Double = 0.0
+    @Published var maxSwing: Double = 1.0
+    @Published var hasCapturedDefault: Bool = false
     
     @Published var isOnboarding: Bool = false
     @Published var periodUnit: PeriodUnit = .weeks {
@@ -50,6 +64,7 @@ class SimulationSettings: ObservableObject {
     @Published var initialBTCPriceUSD: Double = 58000.0
     @Published var startingBalance: Double = 0.0
     @Published var averageCostBasis: Double = 25000.0
+    
     @Published var currencyPreference: PreferredCurrency = .eur {
         didSet {
             if isInitialized {
@@ -61,13 +76,18 @@ class SimulationSettings: ObservableObject {
     
     @Published var contributionCurrencyWhenBoth: PreferredCurrency = .eur
     @Published var startingBalanceCurrencyWhenBoth: PreferredCurrency = .usd
+    
+    /// The results of the last simulation run
     @Published var lastRunResults: [SimulationData] = []
+    /// All runs
     @Published var allRuns: [[SimulationData]] = []
     
+    /// Internal flags
     var isInitialized = false
     var isUpdating = false
     
-    // MARK: - Settings Toggles
+    // MARK: - Advanced Toggles (Example: useLognormalGrowth, etc.)
+    
     @Published var useLognormalGrowth: Bool = true {
         didSet {
             if isInitialized {
@@ -207,18 +227,23 @@ class SimulationSettings: ObservableObject {
         }
     }
     
+    // MARK: - Keys for tilt bar in UserDefaults
+    
     private let defaultTiltKey = "defaultTilt"
     private let maxSwingKey = "maxSwing"
     private let hasCapturedDefaultKey = "capturedTilt"
     private let tiltBarValueKey = "tiltBarValue"
     
+    // MARK: - Init
+    
     init() {
         isUpdating = false
         isInitialized = false
         
+        // Load everything from user defaults
         loadFromUserDefaults()
         
-        // If no baseline was captured, set some defaults so tilt bar can move
+        // If we never captured tilt state, define some defaults
         if !hasCapturedDefault {
             defaultTilt = 0.0
             maxSwing = 1.0
@@ -230,6 +255,7 @@ class SimulationSettings: ObservableObject {
     }
     
     // MARK: - Tilt Bar Reset
+    
     func resetTiltBar() {
         UserDefaults.standard.removeObject(forKey: tiltBarValueKey)
         tiltBarValue = 0.0
@@ -241,6 +267,7 @@ class SimulationSettings: ObservableObject {
     }
     
     // MARK: - Loading & Saving
+    
     func loadFromUserDefaults() {
         let defaults = UserDefaults.standard
         isInitialized = false
@@ -279,7 +306,7 @@ class SimulationSettings: ObservableObject {
             useMeanReversion = defaults.bool(forKey: "useMeanReversion")
         }
         
-        // Tilt values
+        // Tilt bar values
         if defaults.object(forKey: defaultTiltKey) != nil {
             defaultTilt = defaults.double(forKey: defaultTiltKey)
         }
@@ -319,22 +346,22 @@ class SimulationSettings: ObservableObject {
             currencyPreference = .eur
         }
         
-        // Load factor states from UserDefaults if available
+        // Load factor states if available
         if let savedFactorStatesData = defaults.data(forKey: "factorStates"),
            let savedFactors = try? JSONDecoder().decode([String: FactorState].self, from: savedFactorStatesData) {
             factors = savedFactors
         } else {
-            // Build factors from FactorCatalog if no saved state exists
+            // Build factors from FactorCatalog if none saved
             factors.removeAll()
             for (factorName, def) in FactorCatalog.all {
-                // Default each factor as disabled initially
-                let isEnabled = false
                 let (minVal, midVal, maxVal) = (periodUnit == .weeks)
                     ? (def.minWeekly, def.midWeekly, def.maxWeekly)
                     : (def.minMonthly, def.midMonthly, def.maxMonthly)
+                
+                // We set each factor as enabled = true by default
                 let fs = FactorState(
                     name: factorName,
-                    isEnabled: isEnabled,
+                    isEnabled: true,
                     isLocked: false,
                     currentValue: midVal,
                     minValue: minVal,
@@ -350,6 +377,8 @@ class SimulationSettings: ObservableObject {
     
     func saveToUserDefaults() {
         let defaults = UserDefaults.standard
+        
+        // Example of saving toggles if needed:
         defaults.set(useLognormalGrowth, forKey: "useLognormalGrowth")
         defaults.set(lockedRandomSeed, forKey: "lockedRandomSeed")
         defaults.set(seedValue, forKey: "seedValue")
@@ -363,7 +392,7 @@ class SimulationSettings: ObservableObject {
         defaults.set(lockHistoricalSampling, forKey: "lockHistoricalSampling")
         defaults.set(useRegimeSwitching, forKey: "useRegimeSwitching")
         
-        // Save factor states by encoding them into JSON
+        // Save factor states
         if let encodedFactors = try? JSONEncoder().encode(factors) {
             defaults.set(encodedFactors, forKey: "factorStates")
         }
@@ -382,14 +411,68 @@ class SimulationSettings: ObservableObject {
         UserDefaults.standard.set(tiltBarValue, forKey: tiltBarValueKey)
     }
     
+    // MARK: - Factor Intensity Accessors
+    
+    func getFactorIntensity() -> Double {
+        rawFactorIntensity
+    }
+    
+    func setFactorIntensity(_ val: Double) {
+        rawFactorIntensity = val
+    }
+    
+    // MARK: - userDidDragFactorSlider
+    
+    /// Called whenever the user manually drags a factor’s slider to a new value.
+    /// We compute the offset = how far above/below the baseline it is.
     func userDidDragFactorSlider(_ factorName: String, to newValue: Double) {
         guard var factor = factors[factorName] else { return }
         let baseline = globalBaseline(for: factor)
         let range = factor.maxValue - factor.minValue
-
-        factor.currentValue = newValue
-        factor.internalOffset = (newValue - baseline) / range
-
+        
+        let clampedVal = max(min(newValue, factor.maxValue), factor.minValue)
+        factor.currentValue = clampedVal
+        factor.internalOffset = (clampedVal - baseline) / range
+        
         factors[factorName] = factor
+    }
+    
+    // MARK: - recalcTiltBarValue
+    
+    /// Combine the “base tilt” from factorIntensity (mapped 0..1 → –1..+1)
+    /// with the net offsets from bullish vs. bearish factors.
+    func recalcTiltBarValue(bullishKeys: [String], bearishKeys: [String]) {
+        print("[Tilt Debug] Recalculating tilt bar value with factorIntensity=\(rawFactorIntensity)...")
+        
+        // 1) base tilt
+        let baseTilt = (rawFactorIntensity * 2.0) - 1.0  // e.g. 0 -> -1, 1 -> +1
+        
+        // 2) sum bullish offsets
+        let bullishOffsets = bullishKeys.compactMap { key -> Double? in
+            guard let f = factors[key], f.isEnabled else { return nil }
+            return f.internalOffset
+        }
+        let sumBullish = bullishOffsets.reduce(0.0, +)
+        print("[Tilt Debug] sumBullish offsets = \(sumBullish) from offsets: \(bullishOffsets)")
+        
+        // 3) sum bearish offsets
+        let bearishOffsets = bearishKeys.compactMap { key -> Double? in
+            guard let f = factors[key], f.isEnabled else { return nil }
+            return f.internalOffset
+        }
+        let sumBearish = bearishOffsets.reduce(0.0, +)
+        print("[Tilt Debug] sumBearish offsets = \(sumBearish) from offsets: \(bearishOffsets)")
+        
+        // 4) net offset from factors
+        let netOffset = sumBullish - sumBearish
+        
+        // 5) final tilt = baseTilt + netOffset, clamped
+        let combined = baseTilt + netOffset
+        let finalTilt = max(min(combined, 1.0), -1.0)
+        
+        tiltBarValue = finalTilt
+        overrodeTiltManually = true
+        
+        print("[Tilt Debug] baseTilt=\(baseTilt), netOffset=\(netOffset) => tiltBarValue=\(tiltBarValue)")
     }
 }

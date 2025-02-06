@@ -29,7 +29,6 @@ extension SettingsView {
     
     // OPTIONAL: If you had an “updateUniversalFactorIntensity()” function that
     // computed an “average normalised value” across all factors, you might do:
-
     func updateUniversalFactorIntensity() {
         var totalNorm = 0.0
         var countEnabled = 0
@@ -37,7 +36,7 @@ extension SettingsView {
         for (_, factor) in simSettings.factors {
             if factor.isEnabled {
                 let norm = (factor.currentValue - factor.minValue)
-                           / (factor.maxValue - factor.minValue)
+                            / (factor.maxValue - factor.minValue)
                 totalNorm += norm
                 countEnabled += 1
             }
@@ -45,7 +44,8 @@ extension SettingsView {
         guard countEnabled > 0 else { return }
         
         // E.g. set the global slider to the average normalised value
-        simSettings.factorIntensity = totalNorm / Double(countEnabled)
+        let average = totalNorm / Double(countEnabled)
+        simSettings.setFactorIntensity(average)  // <<-- we call setFactorIntensity(...) now
     }
     
     // OPTIONAL: If you want an “animateFactor” function to turn a factor on/off with a SwiftUI animation:
@@ -68,7 +68,7 @@ extension SettingsView {
     // E.g. factorIntensity in [0..1], then map to [factor.minValue..factor.maxValue].
     func syncFactorToSlider(_ factorName: String) {
         guard var factor = simSettings.factors[factorName] else { return }
-        let t = simSettings.factorIntensity
+        let t = simSettings.getFactorIntensity() // <<-- we call getFactorIntensity() now
         factor.currentValue = factor.minValue + t * (factor.maxValue - factor.minValue)
         simSettings.factors[factorName] = factor
     }

@@ -19,15 +19,17 @@ struct FactorToggleRow: View {
     let parameterDescription: String?
     let sliderRange: ClosedRange<Double>
     let defaultValue: Double
+    let displayAsPercent: Bool
     
-    // For tooltips
+    /// For tooltips
     let activeFactor: String?
     let onTitleTap: (String) -> Void
     
-    // Use this if you want to display the slider value as a percent or plain number
-    let displayAsPercent: Bool
-
+    /// Callback to re-trigger tilt calculation (or anything else) after toggles/sliders change
+    let onFactorChange: () -> Void
+    
     var body: some View {
+        // Safely fetch the factor from simSettings
         guard let factor = simSettings.factors[factorName] else {
             return AnyView(
                 Text("Factor '\(factorName)' not found!")
@@ -35,52 +37,58 @@ struct FactorToggleRow: View {
             )
         }
         
-        // -------------
+        // --------------------
         // Toggle binding
-        // -------------
+        // --------------------
         let toggleBinding = Binding<Bool>(
             get: { factor.isEnabled },
             set: { newVal in
                 simSettings.setFactorEnabled(factorName: factorName, enabled: newVal)
+                onFactorChange() // Call our callback whenever the toggle changes
             }
         )
         
-        // -------------
+        // --------------------
         // Slider binding
-        // -------------
+        // --------------------
         let sliderBinding = Binding<Double>(
             get: {
-                // Show the factor's currentValue, fallback to defaultValue if missing
+                // Show the factor's currentValue, or fall back to defaultValue if missing
                 simSettings.factors[factorName]?.currentValue ?? defaultValue
             },
             set: { newVal in
                 // Clamp the new value to the factor's valid range
                 let clampedVal = max(min(newVal, factor.maxValue), factor.minValue)
                 
-                // Call a helper in SimulationSettings to handle offset updates
+                // Update offset, etc., within SimulationSettings
                 simSettings.userDidDragFactorSlider(factorName, to: clampedVal)
                 
-                // If you want to ensure the factor is not locked after manual drag:
+                // Ensure factor is not locked after a manual drag
                 if var currentFactor = simSettings.factors[factorName] {
                     currentFactor.isLocked = false
                     simSettings.factors[factorName] = currentFactor
                 }
+                
+                onFactorChange() // Call our callback whenever the slider changes
             }
         )
-
+        
         return AnyView(
             VStack(alignment: .leading, spacing: 4) {
                 
-                // Title + Toggle
+                // --------------------
+                // Title + Toggle row
+                // --------------------
                 HStack(spacing: 8) {
                     if let icon = iconName, !icon.isEmpty {
                         Button {
-                            // Reset to default on icon tap (optional)
+                            // Reset to default if user taps the icon (optional behaviour)
                             if var f = simSettings.factors[factorName] {
                                 f.currentValue = defaultValue
                                 f.isLocked = false
                                 simSettings.factors[factorName] = f
                             }
+                            onFactorChange()
                         } label: {
                             Image(systemName: icon)
                                 .resizable()
@@ -113,8 +121,10 @@ struct FactorToggleRow: View {
                         .labelsHidden()
                         .tint(.orange)
                 }
-
+                
+                // --------------------
                 // Slider row
+                // --------------------
                 HStack {
                     Slider(
                         value: sliderBinding,
@@ -123,7 +133,6 @@ struct FactorToggleRow: View {
                     .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
                     .disabled(!factor.isEnabled)
                     
-                    // Display numeric text
                     if displayAsPercent {
                         Text(String(format: "%.4f%%", sliderBinding.wrappedValue * 100))
                             .font(.caption)
@@ -146,9 +155,8 @@ struct FactorToggleRow: View {
     }
 }
 
-// ----------------------------
-// Tooltip structs remain the same
-// ----------------------------
+// MARK: - Tooltip Helpers
+
 enum ArrowDirection {
     case up
     case down

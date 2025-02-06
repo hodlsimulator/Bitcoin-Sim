@@ -29,11 +29,6 @@ struct SettingsView: View {
     // Manual override of tilt
     @State var dragTiltOverride: Double? = nil
     
-    // We used to store fraction-based values, but now removed them
-    // We also removed factorEnableFrac references
-    // We no longer track lastFactorValue or manualOffsets
-    // We removed oldFactorEnableFrac, factorAccessors, etc.
-    
     // For toggling
     @State var disableFactorSync = false
     @State var isManualOverride: Bool = false
@@ -60,31 +55,56 @@ struct SettingsView: View {
     // MARK: - Body
     var body: some View {
         let mainForm = Form {
+            
+            // 1) The tilt bar
             overallTiltSection
             
+            // 2) Factor intensity section (slider + extreme toggles)
             factorIntensitySection
+            
+            // 3) Toggle-all section
             toggleAllSection
+            
+            // 4) Restore defaults
             restoreDefaultsSection
             
+            // 5) Bullish factors
             BullishFactorsSection(
                 activeFactor: $activeFactor,
                 toggleFactor: { factorName in
                     activeFactor = factorName
+                },
+                onFactorChange: {
+                    // Recompute the tilt bar whenever a bullish factor changes
+                    simSettings.recalcTiltBarValue(
+                        bullishKeys: bullishKeys,
+                        bearishKeys: bearishKeys
+                    )
                 }
             )
             .environmentObject(simSettings)
             
+            // 6) Bearish factors
             BearishFactorsSection(
                 activeFactor: $activeFactor,
                 toggleFactor: { factorName in
                     activeFactor = factorName
+                },
+                onFactorChange: {
+                    // Recompute the tilt bar whenever a bearish factor changes
+                    simSettings.recalcTiltBarValue(
+                        bullishKeys: bullishKeys,
+                        bearishKeys: bearishKeys
+                    )
                 }
             )
             .environmentObject(simSettings)
             
+            // 7) Advanced settings
             AdvancedSettingsSection(showAdvancedSettings: $showAdvancedSettings)
                 .environmentObject(simSettings)
             
+            // 8) About + reset
             aboutSection
             resetCriteriaSection
         }
@@ -101,24 +121,27 @@ struct SettingsView: View {
         return mainForm
             .onAppear {
                 hasAppeared = true
-                // If tiltBarValue is near zero, we set a displayed tilt
+                
+                // If tiltBarValue is near zero, set displayed tilt to 0
                 if abs(simSettings.tiltBarValue) < 0.0000001 {
                     simSettings.tiltBarValue = displayedTilt
                 }
-                // Compute an initial net if desired
                 oldNetValue = 0.0
             }
-            // If you had onChange logic for factorEnableFrac, we remove it entirely
-            .animation(hasAppeared ? .easeInOut(duration: 0.3) : nil, value: simSettings.factorIntensity)
-            .animation(hasAppeared ? .easeInOut(duration: 0.3) : nil, value: displayedTilt)
+            // Provide explicit "Animation.easeInOut(...)"
+            .animation(
+                hasAppeared ? Animation.easeInOut(duration: 0.3) : nil,
+                value: simSettings.getFactorIntensity()
+            )
+            .animation(
+                hasAppeared ? Animation.easeInOut(duration: 0.3) : nil,
+                value: displayedTilt
+            )
     }
 
     // MARK: - Tilt Computation
-    // If you want to do something fancy with “displayedTilt” that used to combine fraction-based toggles,
-    // you can remove or simplify:
     var displayedTilt: Double {
-        // Just map factorIntensity in 0..1 to –1..+1
-        simSettings.factorIntensity * 2 - 1
+        simSettings.tiltBarValue
     }
 
     // MARK: - Tooltip Overlay

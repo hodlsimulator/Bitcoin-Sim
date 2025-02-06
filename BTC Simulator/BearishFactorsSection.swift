@@ -16,10 +16,12 @@ struct BearishFactorsSection: View {
     // For tooltips on title tap
     let toggleFactor: (String) -> Void
     
+    // This closure is called by FactorToggleRow so we can recalc tilt bar
+    let onFactorChange: () -> Void
+    
     var body: some View {
         Section("Bearish Factors") {
             
-            // MARK: - REGULATORY CLAMPDOWN
             FactorToggleRow(
                 factorName: "RegClampdown",
                 iconName: "hand.raised.slash",
@@ -33,12 +35,12 @@ struct BearishFactorsSection: View {
                 defaultValue: simSettings.periodUnit == .weeks
                     ? -0.0011361452243542672
                     : -0.02,
+                displayAsPercent: false,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor,
-                displayAsPercent: false
+                onFactorChange: onFactorChange
             )
             
-            // MARK: - COMPETITOR COIN
             FactorToggleRow(
                 factorName: "CompetitorCoin",
                 iconName: "bitcoinsign.circle",
@@ -52,12 +54,12 @@ struct BearishFactorsSection: View {
                 defaultValue: simSettings.periodUnit == .weeks
                     ? -0.0010148181746411323
                     : -0.008,
+                displayAsPercent: false,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor,
-                displayAsPercent: false
+                onFactorChange: onFactorChange
             )
             
-            // MARK: - SECURITY BREACH
             FactorToggleRow(
                 factorName: "SecurityBreach",
                 iconName: "lock.shield",
@@ -71,12 +73,12 @@ struct BearishFactorsSection: View {
                 defaultValue: simSettings.periodUnit == .weeks
                     ? -0.0010914715168380737
                     : -0.007,
+                displayAsPercent: false,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor,
-                displayAsPercent: false
+                onFactorChange: onFactorChange
             )
             
-            // MARK: - BUBBLE POP
             FactorToggleRow(
                 factorName: "BubblePop",
                 iconName: "bubble.left.and.bubble.right.fill",
@@ -90,12 +92,12 @@ struct BearishFactorsSection: View {
                 defaultValue: simSettings.periodUnit == .weeks
                     ? -0.001762673890762329
                     : -0.01,
+                displayAsPercent: false,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor,
-                displayAsPercent: false
+                onFactorChange: onFactorChange
             )
             
-            // MARK: - STABLECOIN MELTDOWN
             FactorToggleRow(
                 factorName: "StablecoinMeltdown",
                 iconName: "exclamationmark.triangle.fill",
@@ -109,12 +111,12 @@ struct BearishFactorsSection: View {
                 defaultValue: simSettings.periodUnit == .weeks
                     ? -0.0007141026159477233
                     : -0.01,
+                displayAsPercent: false,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor,
-                displayAsPercent: false
+                onFactorChange: onFactorChange
             )
             
-            // MARK: - BLACK SWAN
             FactorToggleRow(
                 factorName: "BlackSwan",
                 iconName: "tornado",
@@ -128,12 +130,12 @@ struct BearishFactorsSection: View {
                 defaultValue: simSettings.periodUnit == .weeks
                     ? -0.398885
                     : -0.4,
+                displayAsPercent: false,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor,
-                displayAsPercent: false
+                onFactorChange: onFactorChange
             )
             
-            // MARK: - BEAR MARKET
             FactorToggleRow(
                 factorName: "BearMarket",
                 iconName: "chart.bar.xaxis",
@@ -147,12 +149,12 @@ struct BearishFactorsSection: View {
                 defaultValue: simSettings.periodUnit == .weeks
                     ? -0.0008778802752494812
                     : -0.01,
+                displayAsPercent: false,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor,
-                displayAsPercent: false
+                onFactorChange: onFactorChange
             )
             
-            // MARK: - DECLINING ARR / MATURING MARKET
             FactorToggleRow(
                 factorName: "MaturingMarket",
                 iconName: "chart.line.downtrend.xyaxis",
@@ -166,12 +168,12 @@ struct BearishFactorsSection: View {
                 defaultValue: simSettings.periodUnit == .weeks
                     ? -0.0015440231055486196
                     : -0.01,
+                displayAsPercent: false,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor,
-                displayAsPercent: false
+                onFactorChange: onFactorChange
             )
             
-            // MARK: - RECESSION
             FactorToggleRow(
                 factorName: "Recession",
                 iconName: "chart.line.downtrend.xyaxis.circle.fill",
@@ -185,9 +187,10 @@ struct BearishFactorsSection: View {
                 defaultValue: simSettings.periodUnit == .weeks
                     ? -0.0009005491467487811
                     : -0.0014508080482482913,
+                displayAsPercent: false,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor,
-                displayAsPercent: false
+                onFactorChange: onFactorChange
             )
         }
         .listRowBackground(Color(white: 0.15))

@@ -21,7 +21,7 @@ extension SimulationSettings {
         
         // Reset global factor intensity
         defaults.removeObject(forKey: "factorIntensity")
-        factorIntensity = 0.5
+        setFactorIntensity(0.5) // <-- call the setter, not factorIntensity = 0.5
         
         // Remove saved factor states so they’re rebuilt on next load
         defaults.removeObject(forKey: "factorStates")

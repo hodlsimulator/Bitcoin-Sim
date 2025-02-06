@@ -16,10 +16,12 @@ struct BullishFactorsSection: View {
     // For tooltips on title tap
     let toggleFactor: (String) -> Void
     
+    // This closure is called by FactorToggleRow so we can recalc tilt bar
+    let onFactorChange: () -> Void
+    
     var body: some View {
         Section("Bullish Factors") {
             
-            // MARK: - HALVING
             FactorToggleRow(
                 factorName: "Halving",
                 iconName: "globe.europe.africa",
@@ -28,20 +30,18 @@ struct BullishFactorsSection: View {
                     Occurs roughly every four years, reducing the block reward in half.
                     Historically associated with strong BTC price increases.
                     """,
-                // Provide the slider range for the current period
                 sliderRange: (simSettings.periodUnit == .weeks)
                     ? 0.2773386887 ... 0.3823386887
                     : 0.2975 ... 0.4025,
-                // Provide the default (mid) for the current period
                 defaultValue: (simSettings.periodUnit == .weeks)
                     ? 0.3298386887
                     : 0.35,
+                displayAsPercent: false,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor,
-                displayAsPercent: false
+                onFactorChange: onFactorChange
             )
             
-            // MARK: - INSTITUTIONAL DEMAND
             FactorToggleRow(
                 factorName: "InstitutionalDemand",
                 iconName: "bitcoinsign.bank.building",
@@ -55,12 +55,12 @@ struct BullishFactorsSection: View {
                 defaultValue: (simSettings.periodUnit == .weeks)
                     ? 0.001239
                     : 0.0056589855,
+                displayAsPercent: false,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor,
-                displayAsPercent: false
+                onFactorChange: onFactorChange
             )
             
-            // MARK: - COUNTRY ADOPTION
             FactorToggleRow(
                 factorName: "CountryAdoption",
                 iconName: "flag.fill",
@@ -75,12 +75,12 @@ struct BullishFactorsSection: View {
                 defaultValue: (simSettings.periodUnit == .weeks)
                     ? 0.0011375879977
                     : 0.005515515952320099,
+                displayAsPercent: false,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor,
-                displayAsPercent: false
+                onFactorChange: onFactorChange
             )
             
-            // MARK: - REGULATORY CLARITY
             FactorToggleRow(
                 factorName: "RegulatoryClarity",
                 iconName: "checkmark.shield",
@@ -95,12 +95,12 @@ struct BullishFactorsSection: View {
                 defaultValue: (simSettings.periodUnit == .weeks)
                     ? 0.0007170254861605167
                     : 0.0040737327,
+                displayAsPercent: false,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor,
-                displayAsPercent: false
+                onFactorChange: onFactorChange
             )
             
-            // MARK: - ETF APPROVAL
             FactorToggleRow(
                 factorName: "EtfApproval",
                 iconName: "building.2.crop.circle",
@@ -115,12 +115,12 @@ struct BullishFactorsSection: View {
                 defaultValue: (simSettings.periodUnit == .weeks)
                     ? 0.0017880183160305023
                     : 0.0057142851,
+                displayAsPercent: false,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor,
-                displayAsPercent: false
+                onFactorChange: onFactorChange
             )
             
-            // MARK: - TECH BREAKTHROUGH
             FactorToggleRow(
                 factorName: "TechBreakthrough",
                 iconName: "sparkles",
@@ -135,12 +135,12 @@ struct BullishFactorsSection: View {
                 defaultValue: (simSettings.periodUnit == .weeks)
                     ? 0.0006083193579173088
                     : 0.0028387091,
+                displayAsPercent: false,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor,
-                displayAsPercent: false
+                onFactorChange: onFactorChange
             )
             
-            // MARK: - SCARCITY EVENTS
             FactorToggleRow(
                 factorName: "ScarcityEvents",
                 iconName: "scalemass",
@@ -155,12 +155,12 @@ struct BullishFactorsSection: View {
                 defaultValue: (simSettings.periodUnit == .weeks)
                     ? 0.00041308753681182863
                     : 0.0032928705475521085,
+                displayAsPercent: false,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor,
-                displayAsPercent: false
+                onFactorChange: onFactorChange
             )
             
-            // MARK: - GLOBAL MACRO HEDGE
             FactorToggleRow(
                 factorName: "GlobalMacroHedge",
                 iconName: "globe.americas.fill",
@@ -175,12 +175,12 @@ struct BullishFactorsSection: View {
                 defaultValue: (simSettings.periodUnit == .weeks)
                     ? 0.0003497809724932909
                     : 0.0032442397,
+                displayAsPercent: false,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor,
-                displayAsPercent: false
+                onFactorChange: onFactorChange
             )
             
-            // MARK: - STABLECOIN SHIFT
             FactorToggleRow(
                 factorName: "StablecoinShift",
                 iconName: "dollarsign.arrow.circlepath",
@@ -194,12 +194,12 @@ struct BullishFactorsSection: View {
                 defaultValue: (simSettings.periodUnit == .weeks)
                     ? 0.0003312209116327763
                     : 0.0023041475,
+                displayAsPercent: false,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor,
-                displayAsPercent: false
+                onFactorChange: onFactorChange
             )
             
-            // MARK: - DEMOGRAPHIC ADOPTION
             FactorToggleRow(
                 factorName: "DemographicAdoption",
                 iconName: "person.3.fill",
@@ -213,12 +213,12 @@ struct BullishFactorsSection: View {
                 defaultValue: (simSettings.periodUnit == .weeks)
                     ? 0.0010619932036626339
                     : 0.007291124714649915,
+                displayAsPercent: false,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor,
-                displayAsPercent: false
+                onFactorChange: onFactorChange
             )
             
-            // MARK: - ALTCOIN FLIGHT
             FactorToggleRow(
                 factorName: "AltcoinFlight",
                 iconName: "bitcoinsign.circle.fill",
@@ -232,12 +232,12 @@ struct BullishFactorsSection: View {
                 defaultValue: (simSettings.periodUnit == .weeks)
                     ? 0.0002802194461803342
                     : 0.0021566817,
+                displayAsPercent: false,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor,
-                displayAsPercent: false
+                onFactorChange: onFactorChange
             )
             
-            // MARK: - ADOPTION FACTOR
             FactorToggleRow(
                 factorName: "AdoptionFactor",
                 iconName: "arrow.up.right.circle.fill",
@@ -251,9 +251,10 @@ struct BullishFactorsSection: View {
                 defaultValue: (simSettings.periodUnit == .weeks)
                     ? 0.0016045109088897705
                     : 0.014660959934071304,
+                displayAsPercent: false,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor,
-                displayAsPercent: false
+                onFactorChange: onFactorChange
             )
         }
         .listRowBackground(Color(white: 0.15))

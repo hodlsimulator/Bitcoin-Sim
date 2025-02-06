@@ -12,7 +12,7 @@ extension SimulationSettings {
     // MARK: - Global Baseline
     func globalBaseline(for factor: FactorState) -> Double {
         // Standard interpolation
-        let t = factorIntensity
+        let t = getFactorIntensity()  // <--- Replace factorIntensity with getFactorIntensity()
         if t < 0.5 {
             let ratio = t / 0.5
             // go from defaultValue down to minValue
@@ -26,6 +26,7 @@ extension SimulationSettings {
     
     func syncFactorsToGlobalIntensity() {
         for (name, var factor) in factors where factor.isEnabled && !factor.isLocked {
+            print("Post-sync: \(name) -> enabled=\(factor.isEnabled), offset=\(factor.internalOffset)")
             let baseline = globalBaseline(for: factor)
             let range = factor.maxValue - factor.minValue
 
@@ -46,8 +47,13 @@ extension SimulationSettings {
     }
 
     func setFactorEnabled(factorName: String, enabled: Bool) {
-        guard var factor = factors[factorName] else { return }
-
+        guard var factor = factors[factorName] else {
+            print("[Factor Debug] setFactorEnabled(\(factorName), \(enabled)): factor not found!")
+            return
+        }
+        
+        print("[Factor Debug] setFactorEnabled(\(factorName), \(enabled)): old isEnabled=\(factor.isEnabled), frozenValue=\(String(describing: factor.frozenValue))")
+        
         if enabled {
             // Restore from frozenValue if it exists
             if let frozen = factor.frozenValue {
@@ -56,18 +62,24 @@ extension SimulationSettings {
                 factor.currentValue = frozen
                 factor.internalOffset = (frozen - base) / range
                 factor.frozenValue = nil
+                
+                print("[Factor Debug] Restored frozenValue=\(frozen). New currentValue=\(factor.currentValue), offset=\(factor.internalOffset)")
             }
             factor.isEnabled = true
             factor.isLocked = false
             lockedFactors.remove(factorName)
+            
+            print("[Factor Debug] \(factorName) enabled -> currentValue=\(factor.currentValue), offset=\(factor.internalOffset)")
         } else {
             // Freeze current value so we can restore later
             factor.frozenValue = factor.currentValue
             factor.isEnabled = false
             factor.isLocked = true
             lockedFactors.insert(factorName)
+            
+            print("[Factor Debug] \(factorName) disabled -> froze currentValue=\(String(describing: factor.frozenValue))")
         }
-
+        
         factors[factorName] = factor
     }
 
