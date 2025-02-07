@@ -73,7 +73,7 @@ extension SimulationSettings {
             factor.internalOffset = 0.0  // <-- reset any offset
             factors[factorName] = factor
         }
-        
+        resetTiltBar()
         defaults.synchronize()
         
         // Turn off the bulk restore flag after changes settle

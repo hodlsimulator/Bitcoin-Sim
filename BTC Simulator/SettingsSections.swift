@@ -49,21 +49,18 @@ extension SettingsView {
                             .fill(Color.gray.opacity(0.3))
                             .frame(height: 8)
                         
-                        // Foreground fill
-                        if effectiveTilt >= 0 {
-                            // Green fill from left
-                            Rectangle()
-                                .fill(Color.green)
-                                .frame(width: computedWidth, height: 8)
-                                .animation(.easeInOut(duration: 0.3), value: computedWidth)
-                        } else {
-                            // Red fill from right
-                            Rectangle()
-                                .fill(Color.red)
-                                .frame(width: fillWidth, height: 8)
-                                .offset(x: barWidth - fillWidth)
-                                .animation(.easeInOut(duration: 0.3), value: fillWidth)
-                        }
+                        // Green bar for positive tilt, anchored on the left
+                        Rectangle()
+                            .fill(Color.green)
+                            .frame(width: effectiveTilt > 0 ? computedWidth : 0, height: 8)
+                            .animation(.easeInOut(duration: 0.3), value: effectiveTilt)
+                        
+                        // Red bar for negative tilt, anchored on the right
+                        Rectangle()
+                            .fill(Color.red)
+                            .frame(width: effectiveTilt < 0 ? computedWidth : 0, height: 8)
+                            .offset(x: effectiveTilt < 0 ? (barWidth - computedWidth) : barWidth)
+                            .animation(.easeInOut(duration: 0.3), value: effectiveTilt)
                     }
                     .contentShape(Rectangle())
                     .gesture(
