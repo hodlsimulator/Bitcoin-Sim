@@ -150,10 +150,8 @@ extension SettingsView {
                     step: 0.01
                 )
                 .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
+                .disabled(simSettings.isGlobalSliderDisabled)
                 .onChange(of: factorIntensityBinding.wrappedValue) { _ in
-                    // We do NOT auto-disable forced mode.
-                    // Forced-bearish/bullish remains at all slider positions,
-                    // but the button is re-enabled once the slider moves from the extreme.
                     simSettings.recalcTiltBarValue(bullishKeys: bullishKeys, bearishKeys: bearishKeys)
                 }
 

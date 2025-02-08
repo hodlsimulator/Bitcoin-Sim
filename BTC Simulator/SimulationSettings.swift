@@ -17,6 +17,10 @@ class SimulationSettings: ObservableObject {
         "BearMarket", "MaturingMarket", "Recession"
     ]
     
+    var isGlobalSliderDisabled: Bool {
+            return factors.values.allSatisfy { !$0.isEnabled }
+        }
+    
     // MARK: - Published Properties
     
     /// For the “Chart extremes” UI logic
