@@ -452,18 +452,15 @@ class SimulationSettings: ObservableObject {
     }
     
     // MARK: - recalcTiltBarValue
+    /// Revised recalcTiltBarValue using computed weights (two decimals)
     func recalcTiltBarValue(bullishKeys: [String], bearishKeys: [String]) {
-        print("\n--- recalcTiltBarValue called ---")
-        print("Bullish keys: \(bullishKeys)")
-        print("Bearish keys: \(bearishKeys)")
         
-        // 1) Check "forced extremes" logic (unchanged)
+        // 1) Forced extremes (unchanged)
         if chartExtremeBearish {
             let slope = 0.7
             let forcedTilt = -1.0 + (rawFactorIntensity * slope)
             tiltBarValue = min(forcedTilt, 0.0)
             overrodeTiltManually = true
-            print("chartExtremeBearish. forcedTilt = \(forcedTilt). tiltBarValue = \(tiltBarValue)")
             return
         }
         if chartExtremeBullish {
@@ -471,26 +468,16 @@ class SimulationSettings: ObservableObject {
             let forcedTilt = 1.0 - ((1.0 - rawFactorIntensity) * slope)
             tiltBarValue = max(forcedTilt, 0.0)
             overrodeTiltManually = true
-            print("chartExtremeBullish. forcedTilt = \(forcedTilt). tiltBarValue = \(tiltBarValue)")
             return
         }
         
         // -------------------------------------------------------------------------
-        // --- S-CURVE FUNCTIONS WITH EXTRA CONTROL ---
-        //
-        // We’ll use a logistic-style curve here for more control over:
-        //   alpha  -> overall steepness
-        //   beta   -> horizontal shift (i.e., which point is considered mid-slope)
-        //   offset -> vertical shift if needed
-        //   scale  -> amplitude (how tall the curve is)
-        //
-        // The default shape: y = offset + (scale / (1 + exp(-alpha * (x - beta))))
-        // -------------------------------------------------------------------------
+        // S‑CURVE functions (unchanged)
         func applyGlobalSCurve(_ x: Double,
-                               alpha: Double = 10.0,  // Controls the steepness.
-                               beta:  Double = 0.5,   // With beta=0.5, rawFactorIntensity=0.5 yields 0.5.
-                               offset: Double = 0.0,  // Vertical shift.
-                               scale:  Double = 1.0) -> Double {  // Scale factor.
+                               alpha: Double = 10.0,
+                               beta:  Double = 0.5,
+                               offset: Double = 0.0,
+                               scale:  Double = 1.0) -> Double {
             let exponent = -alpha * (x - beta)
             let rawLogistic = offset + (scale / (1.0 + exp(exponent)))
             
@@ -502,10 +489,10 @@ class SimulationSettings: ObservableObject {
         }
         
         func applyFactorSCurve(_ x: Double,
-                               alpha: Double = 10.0,   // Controls the steepness of the factor curve.
-                               beta:  Double = 0.3,    // Original midpoint (not used now).
-                               offset: Double = 0.0,   // Vertical shift.
-                               scale:  Double = 1.0) -> Double {  // Scale factor.
+                               alpha: Double = 10.0,
+                               beta:  Double = 0.7,
+                               offset: Double = 0.0,
+                               scale:  Double = 1.0) -> Double {
             let exponent = -alpha * (x - beta)
             let rawLogistic = offset + (scale / (1.0 + exp(exponent)))
             
@@ -520,17 +507,42 @@ class SimulationSettings: ObservableObject {
             
             return max(0.0, min(1.0, normalized))
         }
-        
         // -------------------------------------------------------------------------
         
-        // 2) Global slider: pass rawFactorIntensity through the global s‑curve.
+        // 2) Global slider: apply global s‑curve
         let globalCurveValue = applyGlobalSCurve(rawFactorIntensity)
         let baseTilt = (globalCurveValue * 2.0) - 1.0
         let baseTiltScaled = baseTilt * 108.0
-        print("globalCurveValue = \(globalCurveValue), baseTilt = \(baseTilt) => scaled to \(baseTiltScaled)")
         
-        // 3) Summation for bullish factors => total ±108 if all on/off.
-        // Each factor’s slider (normalized then s‑curved) is scaled by 9.
+        // 3) Define computed weights (to two decimals) based on defaults
+        let bullishWeights: [String: Double] = [
+             "halving": 25.41,
+             "institutionaldemand": 8.30,
+             "countryadoption": 8.19,
+             "regulatoryclarity": 7.46,
+             "etfapproval": 8.94,
+             "techbreakthrough": 7.20,
+             "scarcityevents": 6.66,
+             "globalmacrohedge": 6.43,
+             "stablecoinshift": 6.37,
+             "demographicadoption": 8.06,
+             "altcoinflight": 6.19,
+             "adoptionfactor": 8.75
+        ]
+        
+        let bearishWeights: [String: Double] = [
+             "regclampdown": 9.66,
+             "competitorcoin": 9.46,
+             "securitybreach": 9.60,
+             "bubblepop": 10.57,
+             "stablecoinmeltdown": 8.79,
+             "blackswan": 31.21,
+             "bearmarket": 9.18,
+             "maturingmarket": 10.29,
+             "recession": 9.22
+        ]
+        
+        // 4) Sum up bullish contributions
         var sumBullish = 0.0
         for key in bullishKeys {
             guard let factor = factors[key] else { continue }
@@ -538,23 +550,21 @@ class SimulationSettings: ObservableObject {
             let maxVal = factor.maxValue
             let val = factor.currentValue
             let rawNorm = (val - minVal) / (maxVal - minVal)
-            // When a bullish factor is disabled, override its effective value to 1.0 for maximum negative impact.
+            // When disabled, assume maximum negative impact (rawNorm = 1)
             let effectiveRawNorm = factor.isEnabled ? rawNorm : 1.0
-            // Use tweaked s‑curve parameters (beta now set to 0.7) to increase the movement.
             let scNorm = applyFactorSCurve(effectiveRawNorm, alpha: 10.0, beta: 0.7, offset: 0.0, scale: 1.0)
-            let factorMagnitude = 9.0 * scNorm
+            // Use the computed weight (or default to 9.0 if not found)
+            let baseline = bullishWeights[key.lowercased()] ?? 9.0
+            let factorMagnitude = baseline * scNorm
             
             if factor.isEnabled {
                 sumBullish += factorMagnitude
-                print("  Bullish '\(key)' ENABLED => +\(factorMagnitude) (rawNorm=\(rawNorm), scNorm=\(scNorm))")
             } else {
                 sumBullish -= factorMagnitude
-                print("  Bullish '\(key)' DISABLED => -\(factorMagnitude) (rawNorm=\(rawNorm), scNorm=\(scNorm))")
             }
         }
         
-        // 4) Summation for bearish factors => total ±108 if all on/off.
-        // Invert the normalized value, pass through the s‑curve, and scale by 12.
+        // 5) Sum up bearish contributions
         var sumBearish = 0.0
         for key in bearishKeys {
             guard let factor = factors[key] else { continue }
@@ -562,40 +572,32 @@ class SimulationSettings: ObservableObject {
             let maxVal = factor.maxValue
             let val = factor.currentValue
             let rawNorm = (val - minVal) / (maxVal - minVal)
-            // For bearish factors, when enabled the value is used normally;
-            // if disabled, override to 0.0 for maximum negative impact.
+            // For bearish, disabled factors assume maximum negative impact (rawNorm = 0)
             let effectiveRawNorm = factor.isEnabled ? rawNorm : 0.0
             let invertedNorm = 1.0 - effectiveRawNorm
-            // Use tweaked s‑curve parameters (beta = 0.7) for increased movement.
             let scNorm = applyFactorSCurve(invertedNorm, alpha: 10.0, beta: 0.7, offset: 0.0, scale: 1.0)
-            let factorMagnitude = 12.0 * scNorm
-            
+            let baseline = bearishWeights[key.lowercased()] ?? 12.0
+            let factorMagnitude = baseline * scNorm
+    
             if factor.isEnabled {
                 sumBearish += factorMagnitude
-                print("  Bearish '\(key)' ENABLED => +\(factorMagnitude) (rawNorm=\(rawNorm), scNorm=\(scNorm))")
             } else {
                 sumBearish -= factorMagnitude
-                print("  Bearish '\(key)' DISABLED => -\(factorMagnitude) (rawNorm=\(rawNorm), scNorm=\(scNorm))")
             }
         }
         
-        print("sumBullish = \(sumBullish), sumBearish = \(sumBearish)")
-        
         let netOffset = sumBullish - sumBearish
-        print("netOffset = \(netOffset)")
         
         var combinedRaw = baseTiltScaled + netOffset
         combinedRaw = max(min(combinedRaw, 216.0), -216.0)
         
         tiltBarValue = combinedRaw / 216.0
         overrodeTiltManually = true
-        print("Final tiltBarValue = \(tiltBarValue)")
         
-        // --- Force neutral if *all* factors are off ---
+        // --- Force neutral if all factors are off ---
         if !factors.values.contains(where: { $0.isEnabled }) {
             tiltBarValue = 0.0
             overrodeTiltManually = true
-            print("All factors disabled => tilt forced to neutral.")
         }
     }
 

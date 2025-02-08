@@ -13,13 +13,13 @@ extension SimulationSettings {
             let isEnabled = factorState.isEnabled
             let value = factorState.currentValue
             
-            switch factorName {
+            switch factorName.lowercased() {
                 
             // =======================
             // MARK: - BULLISH FACTORS
             // =======================
                 
-            case "Halving":
+            case "halving":
                 if periodUnit == .weeks {
                     useHalvingWeekly = isEnabled
                     halvingBumpWeekly = value
@@ -28,7 +28,7 @@ extension SimulationSettings {
                     halvingBumpMonthly = value
                 }
                 
-            case "InstitutionalDemand":
+            case "institutionaldemand":
                 if periodUnit == .weeks {
                     useInstitutionalDemandWeekly = isEnabled
                     maxDemandBoostWeekly = value
@@ -37,7 +37,7 @@ extension SimulationSettings {
                     maxDemandBoostMonthly = value
                 }
                 
-            case "CountryAdoption":
+            case "countryadoption":
                 if periodUnit == .weeks {
                     useCountryAdoptionWeekly = isEnabled
                     maxCountryAdBoostWeekly = value
@@ -46,7 +46,7 @@ extension SimulationSettings {
                     maxCountryAdBoostMonthly = value
                 }
                 
-            case "RegulatoryClarity":
+            case "regulatoryclarity":
                 if periodUnit == .weeks {
                     useRegulatoryClarityWeekly = isEnabled
                     maxClarityBoostWeekly = value
@@ -55,7 +55,7 @@ extension SimulationSettings {
                     maxClarityBoostMonthly = value
                 }
                 
-            case "EtfApproval":
+            case "etfapproval":
                 if periodUnit == .weeks {
                     useEtfApprovalWeekly = isEnabled
                     maxEtfBoostWeekly = value
@@ -64,7 +64,7 @@ extension SimulationSettings {
                     maxEtfBoostMonthly = value
                 }
                 
-            case "TechBreakthrough":
+            case "techbreakthrough":
                 if periodUnit == .weeks {
                     useTechBreakthroughWeekly = isEnabled
                     maxTechBoostWeekly = value
@@ -73,7 +73,7 @@ extension SimulationSettings {
                     maxTechBoostMonthly = value
                 }
                 
-            case "ScarcityEvents":
+            case "scarcityevents":
                 if periodUnit == .weeks {
                     useScarcityEventsWeekly = isEnabled
                     maxScarcityBoostWeekly = value
@@ -82,7 +82,7 @@ extension SimulationSettings {
                     maxScarcityBoostMonthly = value
                 }
                 
-            case "GlobalMacroHedge":
+            case "globalmacrohedge":
                 if periodUnit == .weeks {
                     useGlobalMacroHedgeWeekly = isEnabled
                     maxMacroBoostWeekly = value
@@ -91,7 +91,7 @@ extension SimulationSettings {
                     maxMacroBoostMonthly = value
                 }
                 
-            case "StablecoinShift":
+            case "stablecoinshift":
                 if periodUnit == .weeks {
                     useStablecoinShiftWeekly = isEnabled
                     maxStablecoinBoostWeekly = value
@@ -100,7 +100,7 @@ extension SimulationSettings {
                     maxStablecoinBoostMonthly = value
                 }
                 
-            case "DemographicAdoption":
+            case "demographicadoption":
                 if periodUnit == .weeks {
                     useDemographicAdoptionWeekly = isEnabled
                     maxDemoBoostWeekly = value
@@ -109,7 +109,7 @@ extension SimulationSettings {
                     maxDemoBoostMonthly = value
                 }
                 
-            case "AltcoinFlight":
+            case "altcoinflight":
                 if periodUnit == .weeks {
                     useAltcoinFlightWeekly = isEnabled
                     maxAltcoinBoostWeekly = value
@@ -118,7 +118,7 @@ extension SimulationSettings {
                     maxAltcoinBoostMonthly = value
                 }
                 
-            case "AdoptionFactor":
+            case "adoptionfactor":
                 if periodUnit == .weeks {
                     useAdoptionFactorWeekly = isEnabled
                     adoptionBaseFactorWeekly = value
@@ -131,7 +131,7 @@ extension SimulationSettings {
             // MARK: - BEARISH FACTORS
             // =======================
                 
-            case "RegClampdown":
+            case "regclampdown":
                 if periodUnit == .weeks {
                     useRegClampdownWeekly = isEnabled
                     maxClampDownWeekly = value
@@ -140,7 +140,7 @@ extension SimulationSettings {
                     maxClampDownMonthly = value
                 }
                 
-            case "CompetitorCoin":
+            case "competitorcoin":
                 if periodUnit == .weeks {
                     useCompetitorCoinWeekly = isEnabled
                     maxCompetitorBoostWeekly = value
@@ -149,7 +149,7 @@ extension SimulationSettings {
                     maxCompetitorBoostMonthly = value
                 }
                 
-            case "SecurityBreach":
+            case "securitybreach":
                 if periodUnit == .weeks {
                     useSecurityBreachWeekly = isEnabled
                     breachImpactWeekly = value
@@ -158,7 +158,7 @@ extension SimulationSettings {
                     breachImpactMonthly = value
                 }
                 
-            case "BubblePop":
+            case "bubblepop":
                 if periodUnit == .weeks {
                     useBubblePopWeekly = isEnabled
                     maxPopDropWeekly = value
@@ -167,7 +167,7 @@ extension SimulationSettings {
                     maxPopDropMonthly = value
                 }
                 
-            case "StablecoinMeltdown":
+            case "stablecoinmeltdown":
                 if periodUnit == .weeks {
                     useStablecoinMeltdownWeekly = isEnabled
                     maxMeltdownDropWeekly = value
@@ -176,7 +176,7 @@ extension SimulationSettings {
                     maxMeltdownDropMonthly = value
                 }
                 
-            case "BlackSwan":
+            case "blackswan":
                 if periodUnit == .weeks {
                     useBlackSwanWeekly = isEnabled
                     blackSwanDropWeekly = value
@@ -185,7 +185,7 @@ extension SimulationSettings {
                     blackSwanDropMonthly = value
                 }
                 
-            case "BearMarket":
+            case "bearmarket":
                 if periodUnit == .weeks {
                     useBearMarketWeekly = isEnabled
                     bearWeeklyDriftWeekly = value
@@ -194,7 +194,7 @@ extension SimulationSettings {
                     bearWeeklyDriftMonthly = value
                 }
                 
-            case "MaturingMarket":
+            case "maturingmarket":
                 if periodUnit == .weeks {
                     useMaturingMarketWeekly = isEnabled
                     maxMaturingDropWeekly = value
@@ -203,7 +203,7 @@ extension SimulationSettings {
                     maxMaturingDropMonthly = value
                 }
                 
-            case "Recession":
+            case "recession":
                 if periodUnit == .weeks {
                     useRecessionWeekly = isEnabled
                     maxRecessionDropWeekly = value
@@ -213,7 +213,7 @@ extension SimulationSettings {
                 }
                 
             default:
-                // If a new factor is added but not yet handled, do nothing here.
+                // If a new factor is added but not yet handled, do nothing.
                 break
             }
         }
