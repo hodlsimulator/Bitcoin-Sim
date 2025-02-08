@@ -481,72 +481,64 @@ class SimulationSettings: ObservableObject {
         //   scale  -> amplitude (how tall the curve is)
         //
         // The default shape: y = offset + (scale / (1 + exp(-alpha * (x - beta))))
-        //
-        // This is typical for smooth “S” shaped transitions. You can tweak alpha
-        // (steepness) and beta (midpoint) to taste.
-        // Then we clamp or re-map the result as needed to ensure it stays in [0..1].
         // -------------------------------------------------------------------------
         func applyGlobalSCurve(_ x: Double,
-                               alpha: Double = 10.0,  // Controls the steepness of the curve.
-                               beta:  Double = 0.3,   // Sets the midpoint (where the curve is half its maximum).
+                               alpha: Double = 10.0,  // Controls the steepness.
+                               beta:  Double = 0.5,   // With beta=0.5, rawFactorIntensity=0.5 yields 0.5.
                                offset: Double = 0.0,  // Vertical shift.
-                               scale:  Double = 1.2) -> Double {  // Scale factor for the logistic function.
-            // Step 1: Calculate the raw logistic value for the input x.
+                               scale:  Double = 1.0) -> Double {  // Scale factor.
             let exponent = -alpha * (x - beta)
             let rawLogistic = offset + (scale / (1.0 + exp(exponent)))
             
-            // Step 2: Compute the logistic output at x=0 and x=1.
-            // These values will be used to re-map the curve so that the endpoints match exactly.
             let logisticAt0 = offset + (scale / (1.0 + exp(-alpha * (0 - beta))))
             let logisticAt1 = offset + (scale / (1.0 + exp(-alpha * (1 - beta))))
             
-            // Step 3: Normalise the raw logistic value.
-            // This transforms the value so that at x=0 we get 0, and at x=1 we get 1.
             let normalized = (rawLogistic - logisticAt0) / (logisticAt1 - logisticAt0)
-            
-            // Step 4: Clamp the result strictly between 0 and 1.
             return max(0.0, min(1.0, normalized))
         }
         
         func applyFactorSCurve(_ x: Double,
-                               alpha: Double = 5.0,
-                               beta:  Double = 0.5,
-                               offset: Double = 0.0,
-                               scale:  Double = 1.0) -> Double {
+                               alpha: Double = 10.0,   // Controls the steepness of the factor curve.
+                               beta:  Double = 0.3,    // Sets the midpoint.
+                               offset: Double = 0.0,   // Vertical shift.
+                               scale:  Double = 1.0) -> Double {  // Scale factor.
             let exponent = -alpha * (x - beta)
             let rawLogistic = offset + (scale / (1.0 + exp(exponent)))
-            let clamped = max(0.0, min(1.0, rawLogistic))
-            return clamped
+            
+            let logisticAt0 = offset + (scale / (1.0 + exp(-alpha * (0 - beta))))
+            let logisticAt1 = offset + (scale / (1.0 + exp(-alpha * (1 - beta))))
+            
+            var normalized = (rawLogistic - logisticAt0) / (logisticAt1 - logisticAt0)
+            
+            let epsilon = 1e-6
+            if abs(normalized) < epsilon { normalized = 0.0 }
+            if abs(normalized - 1.0) < epsilon { normalized = 1.0 }
+            
+            return max(0.0, min(1.0, normalized))
         }
+        
         // -------------------------------------------------------------------------
         
-        // 2) Pass the global slider through our logistic curve, map to [-1..+1], scale to ±108
-        let globalCurveValue = applyGlobalSCurve(rawFactorIntensity, alpha: 10.0, beta: 0.5, offset: 0.0, scale: 1.0)
-        // logistic in [0..1] => shift to [-1..+1]
+        // 2) Global slider: pass rawFactorIntensity through the global s‑curve.
+        let globalCurveValue = applyGlobalSCurve(rawFactorIntensity)
         let baseTilt = (globalCurveValue * 2.0) - 1.0
         let baseTiltScaled = baseTilt * 108.0
         print("globalCurveValue = \(globalCurveValue), baseTilt = \(baseTilt) => scaled to \(baseTiltScaled)")
         
-        // 3) Summation for bullish factors => total ±108 if all on/off
-        //    Each factor’s slider in [minValue..maxValue] -> normalised -> factor s-curve -> scale by 9
+        // 3) Summation for bullish factors => total ±108 if all on/off.
+        // Each factor’s slider (normalized then s‑curved) is scaled by 9.
         var sumBullish = 0.0
         for key in bullishKeys {
             guard let factor = factors[key] else { continue }
-            
             let minVal = factor.minValue
             let maxVal = factor.maxValue
-            let val    = factor.currentValue
-            
-            // normalise to 0..1
+            let val = factor.currentValue
             let rawNorm = (val - minVal) / (maxVal - minVal)
-            
-            // apply factor-level logistic curve, with default arguments
-            let scNorm = applyFactorSCurve(rawNorm, alpha: 12.0, beta: 0.5, offset: 0.0, scale: 1.0)
-            
-            // scale to max 9 for bullish
+            // When a bullish factor is disabled, override its effective value to 1.0 for maximum negative impact.
+            let effectiveRawNorm = factor.isEnabled ? rawNorm : 1.0
+            let scNorm = applyFactorSCurve(effectiveRawNorm)
             let factorMagnitude = 9.0 * scNorm
             
-            // If enabled => add that magnitude; if disabled => subtract it
             if factor.isEnabled {
                 sumBullish += factorMagnitude
                 print("  Bullish '\(key)' ENABLED => +\(factorMagnitude) (rawNorm=\(rawNorm), scNorm=\(scNorm))")
@@ -556,27 +548,22 @@ class SimulationSettings: ObservableObject {
             }
         }
         
-        // 4) Summation for bearish factors => total ±108 if all on/off
-        //    Invert the slider (rawNorm => 1 - rawNorm), apply logistic curve, scale by 12
+        // 4) Summation for bearish factors => total ±108 if all on/off.
+        // Invert the normalized value, pass through the s‑curve, and scale by 12.
         var sumBearish = 0.0
         for key in bearishKeys {
             guard let factor = factors[key] else { continue }
-            
             let minVal = factor.minValue
             let maxVal = factor.maxValue
-            let val    = factor.currentValue
-            
-            // normalise
+            let val = factor.currentValue
             let rawNorm = (val - minVal) / (maxVal - minVal)
-            // invert so “slider right => smaller negative portion”
-            let invertedNorm = 1.0 - rawNorm
-            // apply factor-level logistic curve
-            let scNorm = applyFactorSCurve(invertedNorm, alpha: 12.0, beta: 0.5, offset: 0.0, scale: 1.0)
-            
-            // scale to max 12 for bearish
+            // For bearish factors, when enabled the value is used normally;
+            // if disabled, override to 0.0 (so that 1 - effectiveRawNorm = 1) for maximum negative impact.
+            let effectiveRawNorm = factor.isEnabled ? rawNorm : 0.0
+            let invertedNorm = 1.0 - effectiveRawNorm
+            let scNorm = applyFactorSCurve(invertedNorm)
             let factorMagnitude = 12.0 * scNorm
             
-            // If enabled => add; if disabled => subtract
             if factor.isEnabled {
                 sumBearish += factorMagnitude
                 print("  Bearish '\(key)' ENABLED => +\(factorMagnitude) (rawNorm=\(rawNorm), scNorm=\(scNorm))")
@@ -588,18 +575,14 @@ class SimulationSettings: ObservableObject {
         
         print("sumBullish = \(sumBullish), sumBearish = \(sumBearish)")
         
-        // netOffset = sumBullish - sumBearish => can be ±216 total
         let netOffset = sumBullish - sumBearish
         print("netOffset = \(netOffset)")
         
-        // 5) Combine base tilt with net offset => clamp to ±216
         var combinedRaw = baseTiltScaled + netOffset
         combinedRaw = max(min(combinedRaw, 216.0), -216.0)
         
-        // 6) Normalise back to [-1..+1] for the final tilt value
         tiltBarValue = combinedRaw / 216.0
         overrodeTiltManually = true
-        
         print("Final tiltBarValue = \(tiltBarValue)")
     }
 
