@@ -28,18 +28,18 @@ extension SimulationSettings {
     
     // MARK: - Global Baseline
     // Same as before, but we read factorIntensity from the new computed property above.
-    func globalBaseline(for factor: FactorState) -> Double {
-        let t = factorIntensity
-        if t < 0.5 {
-            let ratio = t / 0.5
-            // from defaultValue down to minValue
-            return factor.defaultValue - (factor.defaultValue - factor.minValue) * (1.0 - ratio)
-        } else {
-            let ratio = (t - 0.5) / 0.5
-            // from defaultValue up to maxValue
-            return factor.defaultValue + (factor.maxValue - factor.defaultValue) * ratio
-        }
-    }
+    // func globalBaseline(for factor: FactorState) -> Double {
+    //    let t = factorIntensity
+    //    if t < 0.5 {
+    //        let ratio = t / 0.5
+    //        // from defaultValue down to minValue
+    //        return factor.defaultValue - (factor.defaultValue - factor.minValue) * (1.0 - ratio)
+    //    } else {
+    //        let ratio = (t - 0.5) / 0.5
+    //        // from defaultValue up to maxValue
+    //        return factor.defaultValue + (factor.maxValue - factor.defaultValue) * ratio
+    //    }
+    // }
     
     // MARK: - Sync Factors
     func syncFactorsToGlobalIntensity() {
