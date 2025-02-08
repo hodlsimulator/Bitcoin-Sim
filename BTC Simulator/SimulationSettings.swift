@@ -436,14 +436,42 @@ class SimulationSettings: ObservableObject {
     }
     
     // MARK: - userDidDragFactorSlider
-    
+
     /// Called whenever the user manually drags a factor’s slider to a new value.
-    /// We compute the offset = how far above/below the baseline it is.
+    /// We compute the offset (how far above or below the baseline the value is).
+    /// Additionally, if an extreme mode is active and the slider's value moves away
+    /// from its forced extreme, we cancel that extreme mode to re-enable the greyed-out chart icon.
     func userDidDragFactorSlider(_ factorName: String, to newValue: Double) {
         guard var factor = factors[factorName] else { return }
+        
+        // Factor keys for re-calculating the tilt bar.
+        let bullishKeys: [String] = [
+            "Halving", "InstitutionalDemand", "CountryAdoption", "RegulatoryClarity",
+            "EtfApproval", "TechBreakthrough", "ScarcityEvents", "GlobalMacroHedge",
+            "StablecoinShift", "DemographicAdoption", "AltcoinFlight", "AdoptionFactor"
+        ]
+        let bearishKeys: [String] = [
+            "RegClampdown", "CompetitorCoin", "SecurityBreach", "BubblePop",
+            "StablecoinMeltdown", "BlackSwan", "BearMarket", "MaturingMarket",
+            "Recession"
+        ]
+        
+        // If in extreme bearish mode and the new value is greater than the forced minimum,
+        // cancel extreme bearish mode to re-enable the bearish chart icon.
+        if chartExtremeBearish && newValue > factor.minValue {
+            chartExtremeBearish = false
+            recalcTiltBarValue(bullishKeys: bullishKeys, bearishKeys: bearishKeys)
+        }
+        
+        // If in extreme bullish mode and the new value is less than the forced maximum,
+        // cancel extreme bullish mode to re-enable the bullish chart icon.
+        if chartExtremeBullish && newValue < factor.maxValue {
+            chartExtremeBullish = false
+            recalcTiltBarValue(bullishKeys: bullishKeys, bearishKeys: bearishKeys)
+        }
+        
         let baseline = globalBaseline(for: factor)
         let range = factor.maxValue - factor.minValue
-        
         let clampedVal = max(min(newValue, factor.maxValue), factor.minValue)
         factor.currentValue = clampedVal
         factor.internalOffset = (clampedVal - baseline) / range
@@ -455,108 +483,38 @@ class SimulationSettings: ObservableObject {
     /// Revised recalcTiltBarValue using computed weights (two decimals)
     func recalcTiltBarValue(bullishKeys: [String], bearishKeys: [String]) {
         
-        // 1) Forced extremes (unchanged)
+        // 1) Forced extremes remain unchanged
         if chartExtremeBearish {
             let slope = 0.7
-            let forcedTilt = -1.0 + (rawFactorIntensity * slope)
-            tiltBarValue = min(forcedTilt, 0.0)
+            tiltBarValue = min(-1.0 + (rawFactorIntensity * slope), 0.0)
             overrodeTiltManually = true
             return
         }
         if chartExtremeBullish {
             let slope = 0.7
-            let forcedTilt = 1.0 - ((1.0 - rawFactorIntensity) * slope)
-            tiltBarValue = max(forcedTilt, 0.0)
+            tiltBarValue = max(1.0 - ((1.0 - rawFactorIntensity) * slope), 0.0)
             overrodeTiltManually = true
             return
         }
-        
-        // -------------------------------------------------------------------------
-        // S‑CURVE functions (unchanged)
-        func applyGlobalSCurve(_ x: Double,
-                               alpha: Double = 10.0,
-                               beta:  Double = 0.5,
-                               offset: Double = 0.0,
-                               scale:  Double = 1.0) -> Double {
-            let exponent = -alpha * (x - beta)
-            let rawLogistic = offset + (scale / (1.0 + exp(exponent)))
-            
-            let logisticAt0 = offset + (scale / (1.0 + exp(-alpha * (0 - beta))))
-            let logisticAt1 = offset + (scale / (1.0 + exp(-alpha * (1 - beta))))
-            
-            let normalized = (rawLogistic - logisticAt0) / (logisticAt1 - logisticAt0)
-            return max(0.0, min(1.0, normalized))
-        }
-        
-        func applyFactorSCurve(_ x: Double,
-                               alpha: Double = 10.0,
-                               beta:  Double = 0.7,
-                               offset: Double = 0.0,
-                               scale:  Double = 1.0) -> Double {
-            let exponent = -alpha * (x - beta)
-            let rawLogistic = offset + (scale / (1.0 + exp(exponent)))
-            
-            let logisticAt0 = offset + (scale / (1.0 + exp(-alpha * (0 - beta))))
-            let logisticAt1 = offset + (scale / (1.0 + exp(-alpha * (1 - beta))))
-            
-            var normalized = (rawLogistic - logisticAt0) / (logisticAt1 - logisticAt0)
-            
-            let epsilon = 1e-6
-            if abs(normalized) < epsilon { normalized = 0.0 }
-            if abs(normalized - 1.0) < epsilon { normalized = 1.0 }
-            
-            return max(0.0, min(1.0, normalized))
-        }
-        // -------------------------------------------------------------------------
         
         // 2) Global slider: apply global s‑curve
         let globalCurveValue = applyGlobalSCurve(rawFactorIntensity)
         let baseTilt = (globalCurveValue * 2.0) - 1.0
         let baseTiltScaled = baseTilt * 108.0
         
-        // 3) Define computed weights (to two decimals) based on defaults
-        let bullishWeights: [String: Double] = [
-             "halving": 25.41,
-             "institutionaldemand": 8.30,
-             "countryadoption": 8.19,
-             "regulatoryclarity": 7.46,
-             "etfapproval": 8.94,
-             "techbreakthrough": 7.20,
-             "scarcityevents": 6.66,
-             "globalmacrohedge": 6.43,
-             "stablecoinshift": 6.37,
-             "demographicadoption": 8.06,
-             "altcoinflight": 6.19,
-             "adoptionfactor": 8.75
-        ]
-        
-        let bearishWeights: [String: Double] = [
-             "regclampdown": 9.66,
-             "competitorcoin": 9.46,
-             "securitybreach": 9.60,
-             "bubblepop": 10.57,
-             "stablecoinmeltdown": 8.79,
-             "blackswan": 31.21,
-             "bearmarket": 9.18,
-             "maturingmarket": 10.29,
-             "recession": 9.22
-        ]
-        
-        // 4) Sum up bullish contributions
+        // 3) Sum up bullish contributions
         var sumBullish = 0.0
         for key in bullishKeys {
             guard let factor = factors[key] else { continue }
+            let lowerKey = key.lowercased()  // only call lowercased() once per key
             let minVal = factor.minValue
             let maxVal = factor.maxValue
             let val = factor.currentValue
             let rawNorm = (val - minVal) / (maxVal - minVal)
-            // When disabled, assume maximum negative impact (rawNorm = 1)
             let effectiveRawNorm = factor.isEnabled ? rawNorm : 1.0
-            let scNorm = applyFactorSCurve(effectiveRawNorm, alpha: 10.0, beta: 0.7, offset: 0.0, scale: 1.0)
-            // Use the computed weight (or default to 9.0 if not found)
-            let baseline = bullishWeights[key.lowercased()] ?? 9.0
+            let scNorm = applyFactorSCurve(effectiveRawNorm)
+            let baseline = SimulationSettings.bullishWeights[lowerKey] ?? 9.0
             let factorMagnitude = baseline * scNorm
-            
             if factor.isEnabled {
                 sumBullish += factorMagnitude
             } else {
@@ -564,21 +522,20 @@ class SimulationSettings: ObservableObject {
             }
         }
         
-        // 5) Sum up bearish contributions
+        // 4) Sum up bearish contributions
         var sumBearish = 0.0
         for key in bearishKeys {
             guard let factor = factors[key] else { continue }
+            let lowerKey = key.lowercased()
             let minVal = factor.minValue
             let maxVal = factor.maxValue
             let val = factor.currentValue
             let rawNorm = (val - minVal) / (maxVal - minVal)
-            // For bearish, disabled factors assume maximum negative impact (rawNorm = 0)
             let effectiveRawNorm = factor.isEnabled ? rawNorm : 0.0
             let invertedNorm = 1.0 - effectiveRawNorm
-            let scNorm = applyFactorSCurve(invertedNorm, alpha: 10.0, beta: 0.7, offset: 0.0, scale: 1.0)
-            let baseline = bearishWeights[key.lowercased()] ?? 12.0
+            let scNorm = applyFactorSCurve(invertedNorm)
+            let baseline = SimulationSettings.bearishWeights[lowerKey] ?? 12.0
             let factorMagnitude = baseline * scNorm
-    
             if factor.isEnabled {
                 sumBearish += factorMagnitude
             } else {
@@ -587,14 +544,13 @@ class SimulationSettings: ObservableObject {
         }
         
         let netOffset = sumBullish - sumBearish
-        
         var combinedRaw = baseTiltScaled + netOffset
         combinedRaw = max(min(combinedRaw, 216.0), -216.0)
         
         tiltBarValue = combinedRaw / 216.0
         overrodeTiltManually = true
         
-        // --- Force neutral if all factors are off ---
+        // Force neutral if all factors are off.
         if !factors.values.contains(where: { $0.isEnabled }) {
             tiltBarValue = 0.0
             overrodeTiltManually = true
@@ -622,5 +578,65 @@ class SimulationSettings: ObservableObject {
             factor.currentValue = clamped
             factors[name] = factor
         }
+    }
+}
+
+extension SimulationSettings {
+    // Precompute the weight dictionaries once.
+    static let bullishWeights: [String: Double] = [
+        "halving": 25.41,
+        "institutionaldemand": 8.30,
+        "countryadoption": 8.19,
+        "regulatoryclarity": 7.46,
+        "etfapproval": 8.94,
+        "techbreakthrough": 7.20,
+        "scarcityevents": 6.66,
+        "globalmacrohedge": 6.43,
+        "stablecoinshift": 6.37,
+        "demographicadoption": 8.06,
+        "altcoinflight": 6.19,
+        "adoptionfactor": 8.75
+    ]
+    
+    static let bearishWeights: [String: Double] = [
+        "regclampdown": 9.66,
+        "competitorcoin": 9.46,
+        "securitybreach": 9.60,
+        "bubblepop": 10.57,
+        "stablecoinmeltdown": 8.79,
+        "blackswan": 31.21,
+        "bearmarket": 9.18,
+        "maturingmarket": 10.29,
+        "recession": 9.22
+    ]
+    
+    // Make the s‑curve functions instance methods (or static if you prefer)
+    func applyGlobalSCurve(_ x: Double,
+                           alpha: Double = 10.0,
+                           beta:  Double = 0.5,
+                           offset: Double = 0.0,
+                           scale:  Double = 1.0) -> Double {
+        let exponent = -alpha * (x - beta)
+        let rawLogistic = offset + (scale / (1.0 + exp(exponent)))
+        let logisticAt0 = offset + (scale / (1.0 + exp(-alpha * (0 - beta))))
+        let logisticAt1 = offset + (scale / (1.0 + exp(-alpha * (1 - beta))))
+        let normalized = (rawLogistic - logisticAt0) / (logisticAt1 - logisticAt0)
+        return max(0.0, min(1.0, normalized))
+    }
+    
+    func applyFactorSCurve(_ x: Double,
+                           alpha: Double = 10.0,
+                           beta:  Double = 0.7,
+                           offset: Double = 0.0,
+                           scale:  Double = 1.0) -> Double {
+        let exponent = -alpha * (x - beta)
+        let rawLogistic = offset + (scale / (1.0 + exp(exponent)))
+        let logisticAt0 = offset + (scale / (1.0 + exp(-alpha * (0 - beta))))
+        let logisticAt1 = offset + (scale / (1.0 + exp(-alpha * (1 - beta))))
+        var normalized = (rawLogistic - logisticAt0) / (logisticAt1 - logisticAt0)
+        let epsilon = 1e-6
+        if abs(normalized) < epsilon { normalized = 0.0 }
+        if abs(normalized - 1.0) < epsilon { normalized = 1.0 }
+        return max(0.0, min(1.0, normalized))
     }
 }

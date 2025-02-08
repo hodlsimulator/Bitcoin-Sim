@@ -1,3 +1,10 @@
+//
+//  AboutView.swift
+//  BTCMonteCarloSimulator
+//
+//   Created by . . on 20/11/2024.
+//
+
 import SwiftUI
 
 struct AboutView: View {
