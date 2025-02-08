@@ -18,8 +18,8 @@ class SimulationSettings: ObservableObject {
     ]
     
     var isGlobalSliderDisabled: Bool {
-            return factors.values.allSatisfy { !$0.isEnabled }
-        }
+        return factors.values.allSatisfy { !$0.isEnabled }
+    }
     
     // MARK: - Published Properties
     
@@ -39,10 +39,14 @@ class SimulationSettings: ObservableObject {
     /// The global slider in [0..1]. As soon as it changes, we sync factors so they track the new baseline.
     @Published var rawFactorIntensity: Double = 0.5 {
         didSet {
-            // Replicate test-app logic: whenever global slider changes, sync all factors
-            syncFactors()
+            if !ignoreSync { // Only sync when we're not in the middle of a factor drag update
+                syncFactors()
+            }
         }
     }
+    
+    // This flag prevents sync when updating rawFactorIntensity from a factor drag.
+    var ignoreSync: Bool = false
     
     /// If user manually overrides tilt bar (e.g. dragging the bar directly), we note it here
     var overrodeTiltManually = false
@@ -477,6 +481,12 @@ class SimulationSettings: ObservableObject {
         factor.internalOffset = (clampedVal - baseline) / range
         
         factors[factorName] = factor
+        
+        // Recalculate the global slider based on all factors.
+        recalcGlobalSliderFromFactors()
+        
+        // We also update the tilt bar so it reflects the new factor layout.
+        recalcTiltBarValue(bullishKeys: bullishKeys, bearishKeys: bearishKeys)
     }
     
     // MARK: - recalcTiltBarValue
@@ -506,7 +516,7 @@ class SimulationSettings: ObservableObject {
         var sumBullish = 0.0
         for key in bullishKeys {
             guard let factor = factors[key] else { continue }
-            let lowerKey = key.lowercased()  // only call lowercased() once per key
+            let lowerKey = key.lowercased()
             let minVal = factor.minValue
             let maxVal = factor.maxValue
             let val = factor.currentValue
@@ -610,7 +620,6 @@ extension SimulationSettings {
         "recession": 9.22
     ]
     
-    // Make the s‑curve functions instance methods (or static if you prefer)
     func applyGlobalSCurve(_ x: Double,
                            alpha: Double = 10.0,
                            beta:  Double = 0.5,
@@ -638,5 +647,27 @@ extension SimulationSettings {
         if abs(normalized) < epsilon { normalized = 0.0 }
         if abs(normalized - 1.0) < epsilon { normalized = 1.0 }
         return max(0.0, min(1.0, normalized))
+    }
+    
+    // This function recalculates the global slider from individual factor offsets.
+    // It now temporarily disables syncing to prevent undesired shifts in other sliders.
+    func recalcGlobalSliderFromFactors() {
+        let activeFactors = factors.values.filter { $0.isEnabled && !$0.isLocked }
+        guard !activeFactors.isEmpty else {
+            ignoreSync = true
+            rawFactorIntensity = 0.5
+            ignoreSync = false
+            return
+        }
+        
+        let sumOffsets = activeFactors.reduce(0.0) { $0 + $1.internalOffset }
+        let avgOffset = sumOffsets / Double(activeFactors.count)
+        
+        var newIntensity = 0.5 + avgOffset
+        newIntensity = max(0.0, min(1.0, newIntensity))
+        
+        ignoreSync = true
+        rawFactorIntensity = newIntensity
+        ignoreSync = false
     }
 }
