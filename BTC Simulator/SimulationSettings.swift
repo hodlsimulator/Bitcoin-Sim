@@ -487,21 +487,29 @@ class SimulationSettings: ObservableObject {
         // Then we clamp or re-map the result as needed to ensure it stays in [0..1].
         // -------------------------------------------------------------------------
         func applyGlobalSCurve(_ x: Double,
-                               alpha: Double = 10.0,  // steeper or flatter slope
-                               beta:  Double = 0.5,   // midpoint on x-axis
-                               offset: Double = 0.0,  // vertical shift
-                               scale:  Double = 1.0) -> Double {
-            // Apply the logistic function
+                               alpha: Double = 10.0,  // Controls the steepness of the curve.
+                               beta:  Double = 0.3,   // Sets the midpoint (where the curve is half its maximum).
+                               offset: Double = 0.0,  // Vertical shift.
+                               scale:  Double = 1.2) -> Double {  // Scale factor for the logistic function.
+            // Step 1: Calculate the raw logistic value for the input x.
             let exponent = -alpha * (x - beta)
             let rawLogistic = offset + (scale / (1.0 + exp(exponent)))
             
-            // If you want strict 0..1 range, clamp here
-            let clamped = max(0.0, min(1.0, rawLogistic))
-            return clamped
+            // Step 2: Compute the logistic output at x=0 and x=1.
+            // These values will be used to re-map the curve so that the endpoints match exactly.
+            let logisticAt0 = offset + (scale / (1.0 + exp(-alpha * (0 - beta))))
+            let logisticAt1 = offset + (scale / (1.0 + exp(-alpha * (1 - beta))))
+            
+            // Step 3: Normalise the raw logistic value.
+            // This transforms the value so that at x=0 we get 0, and at x=1 we get 1.
+            let normalized = (rawLogistic - logisticAt0) / (logisticAt1 - logisticAt0)
+            
+            // Step 4: Clamp the result strictly between 0 and 1.
+            return max(0.0, min(1.0, normalized))
         }
         
         func applyFactorSCurve(_ x: Double,
-                               alpha: Double = 12.0,
+                               alpha: Double = 5.0,
                                beta:  Double = 0.5,
                                offset: Double = 0.0,
                                scale:  Double = 1.0) -> Double {
