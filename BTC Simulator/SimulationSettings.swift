@@ -499,7 +499,7 @@ class SimulationSettings: ObservableObject {
         
         func applyFactorSCurve(_ x: Double,
                                alpha: Double = 10.0,   // Controls the steepness of the factor curve.
-                               beta:  Double = 0.3,    // Sets the midpoint.
+                               beta:  Double = 0.3,    // Original midpoint (not used now).
                                offset: Double = 0.0,   // Vertical shift.
                                scale:  Double = 1.0) -> Double {  // Scale factor.
             let exponent = -alpha * (x - beta)
@@ -536,7 +536,8 @@ class SimulationSettings: ObservableObject {
             let rawNorm = (val - minVal) / (maxVal - minVal)
             // When a bullish factor is disabled, override its effective value to 1.0 for maximum negative impact.
             let effectiveRawNorm = factor.isEnabled ? rawNorm : 1.0
-            let scNorm = applyFactorSCurve(effectiveRawNorm)
+            // Use tweaked s‑curve parameters (beta now set to 0.7) to increase the movement.
+            let scNorm = applyFactorSCurve(effectiveRawNorm, alpha: 10.0, beta: 0.7, offset: 0.0, scale: 1.0)
             let factorMagnitude = 9.0 * scNorm
             
             if factor.isEnabled {
@@ -561,7 +562,8 @@ class SimulationSettings: ObservableObject {
             // if disabled, override to 0.0 (so that 1 - effectiveRawNorm = 1) for maximum negative impact.
             let effectiveRawNorm = factor.isEnabled ? rawNorm : 0.0
             let invertedNorm = 1.0 - effectiveRawNorm
-            let scNorm = applyFactorSCurve(invertedNorm)
+            // Use tweaked s‑curve parameters (beta = 0.7) for increased movement.
+            let scNorm = applyFactorSCurve(invertedNorm, alpha: 10.0, beta: 0.7, offset: 0.0, scale: 1.0)
             let factorMagnitude = 12.0 * scNorm
             
             if factor.isEnabled {
