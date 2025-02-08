@@ -559,7 +559,7 @@ class SimulationSettings: ObservableObject {
             let val = factor.currentValue
             let rawNorm = (val - minVal) / (maxVal - minVal)
             // For bearish factors, when enabled the value is used normally;
-            // if disabled, override to 0.0 (so that 1 - effectiveRawNorm = 1) for maximum negative impact.
+            // if disabled, override to 0.0 for maximum negative impact.
             let effectiveRawNorm = factor.isEnabled ? rawNorm : 0.0
             let invertedNorm = 1.0 - effectiveRawNorm
             // Use tweaked s‑curve parameters (beta = 0.7) for increased movement.
@@ -586,6 +586,13 @@ class SimulationSettings: ObservableObject {
         tiltBarValue = combinedRaw / 216.0
         overrodeTiltManually = true
         print("Final tiltBarValue = \(tiltBarValue)")
+        
+        // --- Force neutral if *all* factors are off ---
+        if !factors.values.contains(where: { $0.isEnabled }) {
+            tiltBarValue = 0.0
+            overrodeTiltManually = true
+            print("All factors disabled => tilt forced to neutral.")
+        }
     }
 
     // MARK: - syncFactors
