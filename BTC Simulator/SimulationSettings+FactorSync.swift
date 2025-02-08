@@ -69,9 +69,7 @@ extension SimulationSettings {
         
         if enabled {
             if let frozen = factor.frozenValue {
-                // Restore the absolute numeric position
                 factor.currentValue = frozen
-                // Recalculate offset so baseline + offset*range == frozen
                 let base = globalBaseline(for: factor)
                 let range = factor.maxValue - factor.minValue
                 factor.internalOffset = (frozen - base) / range
@@ -83,7 +81,6 @@ extension SimulationSettings {
             factor.isLocked = false
             lockedFactors.remove(factorName)
         } else {
-            // Freeze current value for restoration later
             factor.frozenValue = factor.currentValue
             factor.isEnabled = false
             factor.isLocked = true
@@ -91,6 +88,20 @@ extension SimulationSettings {
         }
         
         factors[factorName] = factor
+        
+        // Recalculate tilt bar to apply sign-flip logic
+        recalcTiltBarValue(
+            bullishKeys: [
+                "Halving", "InstitutionalDemand", "CountryAdoption", "RegulatoryClarity",
+                "EtfApproval", "TechBreakthrough", "ScarcityEvents", "GlobalMacroHedge",
+                "StablecoinShift", "DemographicAdoption", "AltcoinFlight", "AdoptionFactor"
+            ],
+            bearishKeys: [
+                "RegClampdown", "CompetitorCoin", "SecurityBreach", "BubblePop",
+                "StablecoinMeltdown", "BlackSwan", "BearMarket", "MaturingMarket",
+                "Recession"
+            ]
+        )
     }
 
     // MARK: - Toggle All Factors

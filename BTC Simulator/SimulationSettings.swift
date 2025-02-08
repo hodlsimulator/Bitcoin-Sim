@@ -10,6 +10,13 @@ import SwiftUI
 /// The main settings object, holding global slider, factor dictionary, tilt bar value, etc.
 class SimulationSettings: ObservableObject {
     
+    // Now we define keys so watchers can see them:
+    let bearishKeys: [String] = [
+        "RegClampdown", "CompetitorCoin", "SecurityBreach",
+        "BubblePop", "StablecoinMeltdown", "BlackSwan",
+        "BearMarket", "MaturingMarket", "Recession"
+    ]
+    
     // MARK: - Published Properties
     
     /// For the “Chart extremes” UI logic
@@ -441,53 +448,118 @@ class SimulationSettings: ObservableObject {
     }
     
     // MARK: - recalcTiltBarValue
-    /// When chartExtremeBearish is true, we ignore normal net offsets
-    /// and linearly interpolate tilt from -1 (slider=0) to -0.3 (slider=1).
-    /// That ensures no green. We do the mirror for chartExtremeBullish.
-    /// Otherwise, we do normal logic.
     func recalcTiltBarValue(bullishKeys: [String], bearishKeys: [String]) {
+        print("\n--- recalcTiltBarValue called ---")
+        print("Bullish keys: \(bullishKeys)")
+        print("Bearish keys: \(bearishKeys)")
         
-        // 1) If forced-bearish, ignore net offsets, do a linear scale:
+        // 1) Check "forced extremes" logic (unchanged)
         if chartExtremeBearish {
-            // e.g. at slider=0 => tilt=-1, slider=1 => tilt=-0.3
-            let slope = 0.7 // the difference between -1.0 and -0.3
-            let forcedTilt = -1.0 + rawFactorIntensity * slope
-            tiltBarValue = min(forcedTilt, 0.0) // never go positive
+            let slope = 0.7
+            let forcedTilt = -1.0 + (rawFactorIntensity * slope)
+            tiltBarValue = min(forcedTilt, 0.0)
             overrodeTiltManually = true
+            print("chartExtremeBearish. forcedTilt = \(forcedTilt). tiltBarValue = \(tiltBarValue)")
             return
         }
-        
-        // 2) If forced-bullish, mirror logic:
         if chartExtremeBullish {
-            // e.g. at slider=0 => tilt=+0.3, slider=1 => tilt=+1
             let slope = 0.7
             let forcedTilt = 1.0 - ((1.0 - rawFactorIntensity) * slope)
             tiltBarValue = max(forcedTilt, 0.0)
             overrodeTiltManually = true
+            print("chartExtremeBullish. forcedTilt = \(forcedTilt). tiltBarValue = \(tiltBarValue)")
             return
         }
         
-        // 3) Normal calculation if not in forced mode:
+        // 2) Convert global slider [0..1] => [-1..+1], then scale to ±108
         let baseTilt = (rawFactorIntensity * 2.0) - 1.0
-
-        let bullishOffsets = bullishKeys.compactMap { key -> Double? in
-            guard let factor = factors[key], factor.isEnabled else { return nil }
-            return factor.internalOffset
-        }
-        let sumBullish = bullishOffsets.reduce(0.0, +)
-
-        let bearishOffsets = bearishKeys.compactMap { key -> Double? in
-            guard let factor = factors[key], factor.isEnabled else { return nil }
-            return factor.internalOffset
-        }
-        let sumBearish = bearishOffsets.reduce(0.0, +)
-
-        let netOffset = sumBullish - sumBearish
-        var combined = baseTilt + netOffset
-        combined = max(min(combined, 1.0), -1.0)
+        let baseTiltScaled = baseTilt * 108.0
+        print("baseTilt = \(baseTilt) => scaled to \(baseTiltScaled)")
         
-        tiltBarValue = combined
+        // -- S-curve function for factor sliders --
+        //   This makes it steeper near 0..small offsets, flatter near 1..large offsets.
+        //   Adjust alpha to taste (bigger => steeper near the low end).
+        func applySCurve(_ x: Double, alpha: Double = 6.0) -> Double {
+            // shift to [-0.5..+0.5], scale by alpha, take atan, normalise back to [0..1]
+            let centered = (x - 0.5) * alpha
+            let y = atan(centered) / Double.pi + 0.5
+            return y
+        }
+        
+        // 3) Summation for bullish factors => total ±108 if all on or off
+        //    Each factor’s slider in [minValue..maxValue] -> normalised -> s-curve -> scale by 9.
+        var sumBullish = 0.0
+        for key in bullishKeys {
+            guard let factor = factors[key] else { continue }
+            
+            let minVal = factor.minValue
+            let maxVal = factor.maxValue
+            let val    = factor.currentValue
+            
+            // normalise 0..1
+            let rawNorm = (val - minVal) / (maxVal - minVal)
+            // S-curve so it’s steep early, flatter near max
+            let scNorm = applySCurve(rawNorm)
+            // scale up to max 9
+            let factorMagnitude = 9.0 * scNorm
+            
+            // If enabled => add that magnitude; if disabled => subtract it
+            if factor.isEnabled {
+                sumBullish += factorMagnitude
+                print("  Bullish '\(key)' ENABLED => +\(factorMagnitude) (rawNorm=\(rawNorm), scNorm=\(scNorm))")
+            } else {
+                sumBullish -= factorMagnitude
+                print("  Bullish '\(key)' DISABLED => -\(factorMagnitude) (rawNorm=\(rawNorm), scNorm=\(scNorm))")
+            }
+        }
+        
+        // 4) Summation for bearish factors => total ±108 if all on or off
+        //    We invert the slider so “dragging right” => less negative, i.e. rawNorm => 1 - rawNorm.
+        //    Then scale up to 12, because 9 * 12 = 108.
+        var sumBearish = 0.0
+        for key in bearishKeys {
+            guard let factor = factors[key] else { continue }
+            
+            let minVal = factor.minValue
+            let maxVal = factor.maxValue
+            let val    = factor.currentValue
+            
+            // normalise to [0..1]
+            let rawNorm = (val - minVal) / (maxVal - minVal)
+            // invert so “slider right => smaller negative portion”
+            let invertedNorm = 1.0 - rawNorm
+            // s-curve
+            let scNorm = applySCurve(invertedNorm)
+            // scale up to 12
+            let factorMagnitude = 12.0 * scNorm
+            
+            // If enabled => we add that to sumBearish
+            // If disabled => subtract it
+            if factor.isEnabled {
+                sumBearish += factorMagnitude
+                print("  Bearish '\(key)' ENABLED => +\(factorMagnitude) (rawNorm=\(rawNorm), scNorm=\(scNorm))")
+            } else {
+                sumBearish -= factorMagnitude
+                print("  Bearish '\(key)' DISABLED => -\(factorMagnitude) (rawNorm=\(rawNorm), scNorm=\(scNorm))")
+            }
+        }
+        
+        print("sumBullish = \(sumBullish), sumBearish = \(sumBearish)")
+        
+        // netOffset = sumBullish - sumBearish
+        // range can be ±108 from bullish, ±108 from bearish => ±216 total
+        let netOffset = sumBullish - sumBearish
+        print("netOffset = \(netOffset)")
+        
+        // 5) Combine base tilt with net offset => clamp to ±216
+        var combinedRaw = baseTiltScaled + netOffset
+        combinedRaw = max(min(combinedRaw, 216.0), -216.0)
+        
+        // 6) Normalise back to [-1..+1] for final tiltBarValue
+        tiltBarValue = combinedRaw / 216.0
         overrodeTiltManually = true
+        
+        print("Final tiltBarValue = \(tiltBarValue)")
     }
     
     // MARK: - syncFactors

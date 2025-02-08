@@ -266,18 +266,18 @@ struct UnifiedValueWatchersC: View {
             }
     }
     
+    // Example watchers with no sign flip
     private func updateFactor(_ name: String,
                               _ rawValue: Double,
                               minVal: Double,
                               maxVal: Double) {
         print("[UnifiedValueWatchersC] updateFactor(\(name)) rawValue=\(rawValue), range=[\(minVal), \(maxVal)]")
-        
+
         guard var factor = simSettings.factors[name] else {
             print("  -> Factor '\(name)' not found!")
             return
         }
         
-        // CHANGED HERE
         guard factor.isEnabled, !factor.isLocked else {
             print("  -> Factor '\(name)' is disabled or locked; skipping update.")
             return
@@ -285,13 +285,14 @@ struct UnifiedValueWatchersC: View {
         
         let clamped = max(minVal, min(rawValue, maxVal))
         print("  -> Clamped=\(clamped)")
-        
         factor.currentValue = clamped
         
-        // Recalc offset
         let base = simSettings.globalBaseline(for: factor)
         let range = factor.maxValue - factor.minValue
-        factor.internalOffset = (clamped - base) / range
+        let rawOffset = (clamped - base) / range
+        
+        // No sign flip:
+        factor.internalOffset = rawOffset
         
         print("  -> base=\(base), new offset=\(factor.internalOffset)")
         
