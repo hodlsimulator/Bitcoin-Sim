@@ -37,11 +37,10 @@ extension SettingsView {
         Section {
             HStack {
                 GeometryReader { geo in
-                    let effectiveTilt = dragTiltOverride ?? displayedTilt
+                    let effectiveTilt = displayedTilt
                     let absTilt = abs(effectiveTilt)
                     let barWidth = geo.size.width
                     let computedWidth = barWidth * absTilt
-                    let fillWidth = (barWidth - computedWidth) < 1 ? barWidth : computedWidth
 
                     ZStack(alignment: .leading) {
                         // Background
@@ -63,23 +62,7 @@ extension SettingsView {
                             .animation(.easeInOut(duration: 0.3), value: effectiveTilt)
                     }
                     .contentShape(Rectangle())
-                    .gesture(
-                        DragGesture()
-                            .onChanged { value in
-                                let locationX = value.location.x
-                                let halfWidth = geo.size.width / 2
-                                var newTilt = ((locationX - halfWidth) / halfWidth)
-                                newTilt = min(max(newTilt, -1), 1)
-                                dragTiltOverride = newTilt
-                            }
-                            .onEnded { _ in
-                                if let newTilt = dragTiltOverride {
-                                    simSettings.tiltBarValue = newTilt
-                                    simSettings.setFactorIntensity((newTilt + 1) / 2.0)
-                                }
-                                dragTiltOverride = nil
-                            }
-                    )
+                    // No drag gesture here—tilt bar is display-only.
                 }
                 .frame(height: 8)
             }
@@ -132,8 +115,6 @@ extension SettingsView {
                         .foregroundColor(.red)
                 }
                 .buttonStyle(.plain)
-                // If forcedBearish == true AND the slider is still at 0, keep greyed out + disabled.
-                // Once the slider moves away from 0, it becomes active.
                 .disabled(
                     simSettings.chartExtremeBearish && factorIntensityBinding.wrappedValue <= 0.0001
                 )
@@ -143,7 +124,7 @@ extension SettingsView {
                     : 1.0
                 )
 
-                // MAIN INTENSITY SLIDER
+                // MAIN INTENSITY SLIDER with Haptic Feedback
                 Slider(
                     value: factorIntensityBinding,
                     in: 0...1,
@@ -151,7 +132,14 @@ extension SettingsView {
                 )
                 .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
                 .disabled(simSettings.isGlobalSliderDisabled)
-                .onChange(of: factorIntensityBinding.wrappedValue) { _ in
+                .onChange(of: factorIntensityBinding.wrappedValue) { newValue in
+                    // Trigger haptic feedback when the intensity changes significantly.
+                    if abs(newValue - oldFactorIntensity) > 0.05 {
+                        let feedbackGenerator = UIImpactFeedbackGenerator(style: .medium)
+                        feedbackGenerator.prepare()
+                        feedbackGenerator.impactOccurred()
+                        oldFactorIntensity = newValue
+                    }
                     simSettings.recalcTiltBarValue(bullishKeys: bullishKeys, bearishKeys: bearishKeys)
                 }
 
@@ -189,8 +177,6 @@ extension SettingsView {
                         .foregroundColor(.green)
                 }
                 .buttonStyle(.plain)
-                // If forcedBullish == true AND the slider is still at 1, keep greyed out + disabled.
-                // Once the slider moves away from 1, it becomes active.
                 .disabled(
                     simSettings.chartExtremeBullish && factorIntensityBinding.wrappedValue >= 0.9999
                 )
