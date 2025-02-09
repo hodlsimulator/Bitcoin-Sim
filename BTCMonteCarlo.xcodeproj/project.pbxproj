@@ -11,6 +11,7 @@
 		E112E36C2D58AD1600167E92 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = E112E36B2D58AD1600167E92 /* Sentry */; };
 		E112E3712D58B00F00167E92 /* PocketSVG in Embed Frameworks */ = {isa = PBXBuildFile; productRef = E17DDF9B2D1BD13E008700A8 /* PocketSVG */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		E112E3742D58B2EB00167E92 /* ConsentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E112E3732D58B2E700167E92 /* ConsentView.swift */; };
+		E112E3762D58B73A00167E92 /* MailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E112E3752D58B73800167E92 /* MailView.swift */; };
 		E12CCD8B2CF8235F0059931D /* BTC_SimulatorApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E12CCD8A2CF8235F0059931D /* BTC_SimulatorApp.swift */; };
 		E12CCD8F2CF823610059931D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E12CCD8E2CF823610059931D /* Assets.xcassets */; };
 		E12CCD922CF823610059931D /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E12CCD912CF823610059931D /* Preview Assets.xcassets */; };
@@ -111,6 +112,7 @@
 
 /* Begin PBXFileReference section */
 		E112E3732D58B2E700167E92 /* ConsentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConsentView.swift; sourceTree = "<group>"; };
+		E112E3752D58B73800167E92 /* MailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailView.swift; sourceTree = "<group>"; };
 		E11B459A2CEE8D53006B0594 /* BTCMonteCarlo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BTCMonteCarlo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E12CCD882CF8235F0059931D /* BTC Simulator.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "BTC Simulator.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		E12CCD8A2CF8235F0059931D /* BTC_SimulatorApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BTC_SimulatorApp.swift; sourceTree = "<group>"; };
@@ -277,6 +279,7 @@
 				E1883F3F2D1E0DC8007AA90B /* InputManager.swift */,
 				E1A1E52A2D2E3967008F7658 /* InteractiveBitcoinSymbol3DSpinner.swift */,
 				E17B2F272D27505100ECE087 /* LandscapePlaceholderView.swift */,
+				E112E3752D58B73800167E92 /* MailView.swift */,
 				E19D11392D42F74E00E3A55E /* MarketRegime.swift */,
 				E19D10EA2D3EF69200E3A55E /* MempoolDataManager.swift */,
 				E166A8AD2CF855BF0003F518 /* MonteCarloSimulator.swift */,
@@ -480,6 +483,7 @@
 				E1883F502D1FCEBD007AA90B /* OnboardingView.swift in Sources */,
 				E19D11442D42FA6800E3A55E /* RNGHelpers.swift in Sources */,
 				E14344DA2D53553D00225A49 /* SimulationSettings+FactorSync.swift in Sources */,
+				E112E3762D58B73A00167E92 /* MailView.swift in Sources */,
 				E1A1E52F2D2E3A40008F7658 /* RowOffsetHelpers.swift in Sources */,
 				E17B2F802D2800D400ECE087 /* OrientationObserver.swift in Sources */,
 				E19D113C2D42F81C00E3A55E /* UtilityExtensions.swift in Sources */,

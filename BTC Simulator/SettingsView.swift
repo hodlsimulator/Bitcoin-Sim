@@ -6,6 +6,8 @@
 //
 
 import SwiftUI
+import MessageUI
+import Sentry
 
 struct SettingsView: View {
     @EnvironmentObject var simSettings: SimulationSettings
@@ -48,6 +50,10 @@ struct SettingsView: View {
     // Used to compute net tilt changes
     @State private var oldNetValue: Double = 0.0
     
+    // New state for Feedback section
+    @State private var showMailView: Bool = false
+    @State private var showFeedbackConsent: Bool = false
+
     init() {
         setupNavBarAppearance()
     }
@@ -107,6 +113,23 @@ struct SettingsView: View {
             // 8) About + reset
             aboutSection
             resetCriteriaSection
+            
+            // 9) Feedback & Privacy Section
+            Section("Feedback & Privacy") {
+                Button(action: {
+                    showMailView = true
+                }) {
+                    Text("Send Feedback")
+                        .foregroundColor(.white)
+                }
+                Button(action: {
+                    showFeedbackConsent = true
+                }) {
+                    Text("Change Data Collection Consent")
+                        .foregroundColor(.white)
+                }
+            }
+            .listRowBackground(Color(white: 0.15))
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -118,7 +141,7 @@ struct SettingsView: View {
             tooltipOverlay(allItems)
         }
         
-        // Now place the main form + watchers in a ZStack so watchers are actually rendered
+        // Now place the main form + watchers in a ZStack so watchers are rendered
         return ZStack {
             
             // The main form is your principal content
@@ -128,7 +151,6 @@ struct SettingsView: View {
             UnifiedValueWatchersA(simSettings: simSettings).hidden()
             UnifiedValueWatchersB(simSettings: simSettings).hidden()
             UnifiedValueWatchersC(simSettings: simSettings).hidden()
-            
         }
         .onAppear {
             hasAppeared = true
@@ -139,7 +161,7 @@ struct SettingsView: View {
             }
             oldNetValue = 0.0
         }
-        // Provide explicit "Animation.easeInOut(...)"
+        // Provide explicit "Animation.easeInOut(...)" animations.
         .animation(
             hasAppeared ? Animation.easeInOut(duration: 0.3) : nil,
             value: simSettings.getFactorIntensity()
@@ -148,8 +170,42 @@ struct SettingsView: View {
             hasAppeared ? Animation.easeInOut(duration: 0.3) : nil,
             value: displayedTilt
         )
+        // Present the mail view sheet.
+        .sheet(isPresented: $showMailView) {
+            if MFMailComposeViewController.canSendMail() {
+                MailView(
+                    recipients: ["hodlsimulator@gmail.com"],
+                    subject: "App Feedback",
+                    messageBody: ""
+                )
+            } else {
+                // Fallback if mail services are not available.
+                Text("Mail services are not available.")
+                    .foregroundColor(.white)
+                    .background(Color.black)
+            }
+        }
+        // Present the consent change alert using a standard iOS alert.
+        .alert("Data Collection Consent", isPresented: $showFeedbackConsent) {
+            Button("No", role: .cancel) {
+                UserDefaults.standard.set(false, forKey: "SentryConsentGiven")
+            }
+            Button("Yes") {
+                UserDefaults.standard.set(true, forKey: "SentryConsentGiven")
+                SentrySDK.start { options in
+                    options.dsn = "https://3ca36373246f91c44a0733a5d9489f52@o4508788421623808.ingest.de.sentry.io/4508788424376400"
+                    options.attachViewHierarchy = false
+                    options.enableMetricKit = true
+                    options.enableTimeToFullDisplayTracing = true
+                    options.swiftAsyncStacktraces = true
+                    options.enableAppLaunchProfiling = true
+                }
+            }
+        } message: {
+            Text("We collect error logs and usage data to improve the app. Do you consent to share this data?")
+                .foregroundColor(.white)
+        }
     }
-
     // MARK: - Tilt Computation
     var displayedTilt: Double {
         simSettings.tiltBarValue

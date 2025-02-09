@@ -304,9 +304,19 @@ extension SettingsView {
 
     // MARK: - Reset All Criteria
     var resetCriteriaSection: some View {
-        Section {
-            Button("Reset All Criteria") {
+        Section(footer: Text("Resetting all criteria will revert your custom settings to their default values and restart the onboarding process.")
+                    .foregroundColor(.white)
+                    .font(.footnote)
+        ) {
+            Button(action: {
                 showResetCriteriaConfirmation = true
+            }) {
+                HStack {
+                    Text("Reset All Criteria")
+                        .foregroundColor(.red)  // Or your desired color/style
+                    Spacer()
+                }
+                .contentShape(Rectangle())
             }
             .buttonStyle(PressableDestructiveButtonStyle())
             .alert("Confirm Reset", isPresented: $showResetCriteriaConfirmation, actions: {
@@ -318,7 +328,7 @@ extension SettingsView {
                 }
                 Button("Cancel", role: .cancel) { }
             }, message: {
-                Text("All custom criteria will be restored to default. This cannot be undone.")
+                Text("This will restore default settings and restart onboarding. Do you want to proceed?")
             })
         }
         .listRowBackground(Color(white: 0.15))
