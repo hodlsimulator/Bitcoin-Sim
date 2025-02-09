@@ -10,6 +10,7 @@
 		E112E3662D58ACB900167E92 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = E112E3652D58ACB900167E92 /* Sentry */; };
 		E112E36C2D58AD1600167E92 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = E112E36B2D58AD1600167E92 /* Sentry */; };
 		E112E3712D58B00F00167E92 /* PocketSVG in Embed Frameworks */ = {isa = PBXBuildFile; productRef = E17DDF9B2D1BD13E008700A8 /* PocketSVG */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		E112E3742D58B2EB00167E92 /* ConsentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E112E3732D58B2E700167E92 /* ConsentView.swift */; };
 		E12CCD8B2CF8235F0059931D /* BTC_SimulatorApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E12CCD8A2CF8235F0059931D /* BTC_SimulatorApp.swift */; };
 		E12CCD8F2CF823610059931D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E12CCD8E2CF823610059931D /* Assets.xcassets */; };
 		E12CCD922CF823610059931D /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E12CCD912CF823610059931D /* Preview Assets.xcassets */; };
@@ -109,6 +110,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		E112E3732D58B2E700167E92 /* ConsentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConsentView.swift; sourceTree = "<group>"; };
 		E11B459A2CEE8D53006B0594 /* BTCMonteCarlo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BTCMonteCarlo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E12CCD882CF8235F0059931D /* BTC Simulator.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "BTC Simulator.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		E12CCD8A2CF8235F0059931D /* BTC_SimulatorApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BTC_SimulatorApp.swift; sourceTree = "<group>"; };
@@ -253,6 +255,7 @@
 				E1CFF0262D30D07800D9D044 /* ChartBuilders.swift */,
 				E18C2BE02D259245006E7438 /* ChartSnapshotView.swift */,
 				E1A1E5282D2E38F9008F7658 /* CheckboxToggleStyle.swift */,
+				E112E3732D58B2E700167E92 /* ConsentView.swift */,
 				E166A8B82CF955E80003F518 /* ContentOffsetScrollView.swift */,
 				E166A8B12CF85B2B0003F518 /* ContentView.swift */,
 				E191AD662D1B763E00020DBE /* CSVLoaderBTC.swift */,
@@ -468,6 +471,7 @@
 				E1B7B0A92D47575400B60EC6 /* SettingsSections.swift in Sources */,
 				E191AD5D2D1B06E600020DBE /* BitcoinHistoricalData.swift in Sources */,
 				E1883F482D1E8E21007AA90B /* AboutView.swift in Sources */,
+				E112E3742D58B2EB00167E92 /* ConsentView.swift in Sources */,
 				E17B2F282D27505300ECE087 /* LandscapePlaceholderView.swift in Sources */,
 				E166A8B22CF85B2B0003F518 /* ContentView.swift in Sources */,
 				E19D10EB2D3EF69300E3A55E /* MempoolDataManager.swift in Sources */,

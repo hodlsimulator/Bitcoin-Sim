@@ -18,61 +18,21 @@ struct BTCMonteCarloApp: App {
 
     @AppStorage("hasOnboarded") private var didFinishOnboarding = false
 
-    @StateObject private var appViewModel: AppViewModel
-    @StateObject private var inputManager: PersistentInputManager
-    @StateObject private var simSettings: SimulationSettings
-    @StateObject private var chartDataCache: ChartDataCache
-    @StateObject private var simChartSelection: SimChartSelection
-    @StateObject private var coordinator: SimulationCoordinator
+    // Show the consent alert if no decision has been recorded.
+    @State private var showConsent: Bool = UserDefaults.standard.object(forKey: "SentryConsentGiven") == nil
 
-    init() {
-        // Initialise Sentry SDK
-        SentrySDK.start { options in
-            options.dsn = "https://3ca36373246f91c44a0733a5d9489f52@o4508788421623808.ingest.de.sentry.io/4508788424376400"
-            // Disable view hierarchy debugging to avoid the PocketSVG dependency issue.
-            options.attachViewHierarchy = false
-            options.enableMetricKit = true
-            options.enableTimeToFullDisplayTracing = true
-            options.swiftAsyncStacktraces = true
-            options.enableAppLaunchProfiling = true
-        }
-        
-        // Register a few general toggles in UserDefaults.
-        let defaultToggles: [String: Any] = [
-            "useLognormalGrowth": true,
-            "useHistoricalSampling": true,
-            "useVolShocks": true,
-            "useGarchVolatility": true,
-            "useRegimeSwitching": true,
-            "useAutoCorrelation": true,
-            "autoCorrelationStrength": 0.05,
-            "meanReversionTarget": 0.03
-        ]
-        UserDefaults.standard.register(defaults: defaultToggles)
-        
-        print("** Creating SimulationSettings with loadDefaults = true")
-        
-        let newAppViewModel      = AppViewModel()
-        let newInputManager      = PersistentInputManager()
-        let newSimSettings       = SimulationSettings(loadDefaults: true) // uses factor dictionary now
-        let newChartDataCache    = ChartDataCache()
-        let newSimChartSelection = SimChartSelection()
-        
-        let newCoordinator = SimulationCoordinator(
-            chartDataCache: newChartDataCache,
-            simSettings: newSimSettings,
-            inputManager: newInputManager,
-            simChartSelection: newSimChartSelection
-        )
-
-        // Wrap in StateObjects
-        _appViewModel      = StateObject(wrappedValue: newAppViewModel)
-        _inputManager      = StateObject(wrappedValue: newInputManager)
-        _simSettings       = StateObject(wrappedValue: newSimSettings)
-        _chartDataCache    = StateObject(wrappedValue: newChartDataCache)
-        _simChartSelection = StateObject(wrappedValue: newSimChartSelection)
-        _coordinator       = StateObject(wrappedValue: newCoordinator)
-    }
+    @StateObject private var appViewModel = AppViewModel()
+    @StateObject private var inputManager = PersistentInputManager()
+    @StateObject private var simSettings = SimulationSettings(loadDefaults: true)
+    @StateObject private var chartDataCache = ChartDataCache()
+    @StateObject private var simChartSelection = SimChartSelection()
+    // NOTE: For sharing state, you may need to refactor coordinator creation.
+    @StateObject private var coordinator = SimulationCoordinator(
+        chartDataCache: ChartDataCache(),
+        simSettings: SimulationSettings(loadDefaults: true),
+        inputManager: PersistentInputManager(),
+        simChartSelection: SimChartSelection()
+    )
 
     var body: some Scene {
         WindowGroup {
@@ -81,12 +41,8 @@ struct BTCMonteCarloApp: App {
 
                 GeometryReader { geo in
                     Color.clear
-                        .onAppear {
-                            appViewModel.windowSize = geo.size
-                        }
-                        .onChange(of: geo.size, initial: false) { _, newSize in
-                            appViewModel.windowSize = newSize
-                        }
+                        .onAppear { appViewModel.windowSize = geo.size }
+                        .onChange(of: geo.size) { _, newSize in appViewModel.windowSize = newSize }
                 }
 
                 if didFinishOnboarding {
@@ -113,33 +69,40 @@ struct BTCMonteCarloApp: App {
                     .preferredColorScheme(.dark)
                 }
             }
+            // Attach a standard iOS alert for consent:
+            .alert("Data Collection Consent", isPresented: $showConsent) {
+                Button("No", role: .cancel) {
+                    UserDefaults.standard.set(false, forKey: "SentryConsentGiven")
+                    showConsent = false
+                }
+                Button("Yes") {
+                    UserDefaults.standard.set(true, forKey: "SentryConsentGiven")
+                    SentrySDK.start { options in
+                        options.dsn = "https://3ca36373246f91c44a0733a5d9489f52@o4508788421623808.ingest.de.sentry.io/4508788424376400"
+                        options.attachViewHierarchy = false
+                        options.enableMetricKit = true
+                        options.enableTimeToFullDisplayTracing = true
+                        options.swiftAsyncStacktraces = true
+                        options.enableAppLaunchProfiling = true
+                    }
+                    showConsent = false
+                }
+            } message: {
+                Text("We collect error logs and usage data to improve the app. Do you consent to share this data?")
+            }
             .onAppear {
-                // Sync onboarding state
                 simSettings.isOnboarding = !didFinishOnboarding
 
-                // 1. Load weekly data
+                // Load your data (replace these with your real data-loading functions)
                 historicalBTCWeeklyReturns = loadAndAlignWeeklyData()
-                print("Loaded \(historicalBTCWeeklyReturns.count) weekly BTC return entries.")
-
-                // 1a. If using extended sampling, copy them
                 extendedWeeklyReturns = historicalBTCWeeklyReturns
-                print("extendedWeeklyReturns count = \(extendedWeeklyReturns.count)")
 
-                // 2. Load monthly data
                 historicalBTCMonthlyReturns = loadAndAlignMonthlyData()
-                print("Loaded \(historicalBTCMonthlyReturns.count) monthly BTC return entries.")
-
-                // 2a. If using extended sampling, copy them
                 extendedMonthlyReturns = historicalBTCMonthlyReturns
-                print("extendedMonthlyReturns count = \(extendedMonthlyReturns.count)")
             }
-            .onChange(of: scenePhase, initial: false) { _, newPhase in
-                switch newPhase {
-                case .inactive, .background:
-                    // Save our new factor states + other toggles
+            .onChange(of: scenePhase) { _, newPhase in
+                if newPhase == .inactive || newPhase == .background {
                     simSettings.saveToUserDefaults()
-                default:
-                    break
                 }
             }
         }
