@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Sentry
 
 class SimChartSelection: ObservableObject {
     @Published var selectedChart: ChartType = .btcPrice
@@ -25,8 +26,18 @@ struct BTCMonteCarloApp: App {
     @StateObject private var coordinator: SimulationCoordinator
 
     init() {
+        // Initialise Sentry SDK
+        SentrySDK.start { options in
+            options.dsn = "https://3ca36373246f91c44a0733a5d9489f52@o4508788421623808.ingest.de.sentry.io/4508788424376400"
+            // Disable view hierarchy debugging to avoid the PocketSVG dependency issue.
+            options.attachViewHierarchy = false
+            options.enableMetricKit = true
+            options.enableTimeToFullDisplayTracing = true
+            options.swiftAsyncStacktraces = true
+            options.enableAppLaunchProfiling = true
+        }
+        
         // Register a few general toggles in UserDefaults.
-        // These are *not* per-factor toggles — they are global simulation settings.
         let defaultToggles: [String: Any] = [
             "useLognormalGrowth": true,
             "useHistoricalSampling": true,
@@ -82,7 +93,7 @@ struct BTCMonteCarloApp: App {
                     NavigationStack {
                         ContentView()
                             .environmentObject(inputManager)
-                            .environmentObject(simSettings)        // <-- new dictionary-based settings
+                            .environmentObject(simSettings)
                             .environmentObject(chartDataCache)
                             .environmentObject(simChartSelection)
                             .environmentObject(coordinator)

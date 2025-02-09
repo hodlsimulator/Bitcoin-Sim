@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		E112E3662D58ACB900167E92 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = E112E3652D58ACB900167E92 /* Sentry */; };
+		E112E36C2D58AD1600167E92 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = E112E36B2D58AD1600167E92 /* Sentry */; };
+		E112E3712D58B00F00167E92 /* PocketSVG in Embed Frameworks */ = {isa = PBXBuildFile; productRef = E17DDF9B2D1BD13E008700A8 /* PocketSVG */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		E12CCD8B2CF8235F0059931D /* BTC_SimulatorApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E12CCD8A2CF8235F0059931D /* BTC_SimulatorApp.swift */; };
 		E12CCD8F2CF823610059931D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E12CCD8E2CF823610059931D /* Assets.xcassets */; };
 		E12CCD922CF823610059931D /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E12CCD912CF823610059931D /* Preview Assets.xcassets */; };
@@ -90,6 +93,20 @@
 		E1F1CB662D4F31BA003DB24F /* ParallelSimulationRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F1CB652D4F31B9003DB24F /* ParallelSimulationRunner.swift */; };
 		E1F1CB682D4F3369003DB24F /* SimulationUtilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F1CB672D4F3366003DB24F /* SimulationUtilities.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		E112E3722D58B00F00167E92 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				E112E3712D58B00F00167E92 /* PocketSVG in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		E11B459A2CEE8D53006B0594 /* BTCMonteCarlo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BTCMonteCarlo.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -190,7 +207,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E112E36C2D58AD1600167E92 /* Sentry in Frameworks */,
 				E17DDF9C2D1BD13E008700A8 /* PocketSVG in Frameworks */,
+				E112E3662D58ACB900167E92 /* Sentry in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -346,6 +365,7 @@
 				E12CCD842CF8235F0059931D /* Sources */,
 				E12CCD852CF8235F0059931D /* Frameworks */,
 				E12CCD862CF8235F0059931D /* Resources */,
+				E112E3722D58B00F00167E92 /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
@@ -386,6 +406,7 @@
 			packageReferences = (
 				E17A48022CF17A0300AAC885 /* XCRemoteSwiftPackageReference "swiftplot" */,
 				E17DDF9A2D1BD13E008700A8 /* XCRemoteSwiftPackageReference "PocketSVG" */,
+				E112E3642D58ABC100167E92 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
 			);
 			productRefGroup = E11B459B2CEE8D53006B0594 /* Products */;
 			projectDirPath = "";
@@ -791,6 +812,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		E112E3642D58ABC100167E92 /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/getsentry/sentry-cocoa.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 8.44.0;
+			};
+		};
 		E17A48022CF17A0300AAC885 /* XCRemoteSwiftPackageReference "swiftplot" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/KarthikRIyer/swiftplot";
@@ -810,6 +839,16 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		E112E3652D58ACB900167E92 /* Sentry */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E112E3642D58ABC100167E92 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
+			productName = Sentry;
+		};
+		E112E36B2D58AD1600167E92 /* Sentry */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E112E3642D58ABC100167E92 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
+			productName = Sentry;
+		};
 		E17DDF9B2D1BD13E008700A8 /* PocketSVG */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = E17DDF9A2D1BD13E008700A8 /* XCRemoteSwiftPackageReference "PocketSVG" */;
