@@ -1,3 +1,49 @@
+/*
+-----------------------------------------------------------
+               SIMULATION SETTINGS
+                  BTC MONTE CARLO
+                (HODL SIMULATOR)
+-----------------------------------------------------------
+Description:
+ This file defines the main settings object for HODL Simulator, the core component that manages
+ all global simulation parameters. It holds the global slider value (rawFactorIntensity), a dictionary
+ of factor states (for both bullish and bearish influences), the tilt bar value, and various advanced
+ toggles that control simulation behavior (such as volatility modeling, growth models, regime switching,
+ autocorrelation, and mean reversion). User preferences are persisted via UserDefaults, ensuring that
+ settings remain consistent across app launches.
+
+Key Components:
+ • Published Properties:
+    - Global simulation parameters including initial BTC price, starting balance, user periods, and currency
+      preference.
+    - Advanced toggles (e.g., useLognormalGrowth, useGarchVolatility, useAutoCorrelation, etc.) that modify
+      simulation dynamics.
+    - The rawFactorIntensity property, which drives the global slider and automatically syncs individual
+      factor settings when updated.
+    - The tilt bar value and related properties to visually indicate market sentiment.
+    - A dictionary of FactorState objects representing individual market factors and their current settings.
+ • Persistence:
+    - Methods to load and save settings from/to UserDefaults, ensuring that user configurations persist
+      between sessions.
+ • Factor Synchronization & Interaction:
+    - Functions to recalculate the global baseline for each factor, sync individual factors to the global
+      slider, and adjust the tilt bar based on the weighted contributions of bullish and bearish factors.
+    - Handlers for user interactions, such as dragging factor sliders and adjusting the global slider,
+      which automatically update related settings.
+ • S-Curve & Logistic Functions:
+    - Implements logistic (S-curve) functions to normalize and scale factor impacts, ensuring smooth and
+      controlled adjustments of simulation parameters.
+
+Usage:
+ Instantiate a SimulationSettings object to act as the central configuration hub for all Monte Carlo
+ simulations. This object provides a single source of truth for simulation parameters, synchronizes changes
+ across the UI, and persists user settings to enable a consistent simulation experience.
+
+-----------------------------------------------------------
+Created on 26/12/2024.
+-----------------------------------------------------------
+*/
+
 //
 //  SimulationSettings.swift
 //  BTCMonteCarlo
@@ -92,6 +138,7 @@ class SimulationSettings: ObservableObject {
     var isIndividualChange = false
     
     // MARK: - Advanced Toggles
+    // Set defaults here so that on a fresh install these are enabled
     @Published var useLognormalGrowth: Bool = true {
         didSet {
             if isInitialized {
@@ -165,7 +212,8 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var useAutoCorrelation: Bool = false {
+    // Autocorrelation is now on by default.
+    @Published var useAutoCorrelation: Bool = true {
         didSet {
             if isInitialized {
                 print("[useAutoCorrelation didSet] useAutoCorrelation changed to \(useAutoCorrelation)")
@@ -174,7 +222,8 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var autoCorrelationStrength: Double = 0.2 {
+    // Default strength set to 0.05 on a fresh install.
+    @Published var autoCorrelationStrength: Double = 0.05 {
         didSet {
             if isInitialized {
                 print("[autoCorrelationStrength didSet] autoCorrelationStrength changed to \(autoCorrelationStrength)")
@@ -182,7 +231,8 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var meanReversionTarget: Double = 0.0 {
+    // Default target set to 0.03.
+    @Published var meanReversionTarget: Double = 0.03 {
         didSet {
             if isInitialized {
                 print("[meanReversionTarget didSet] meanReversionTarget changed to \(meanReversionTarget)")
@@ -207,7 +257,8 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var useRegimeSwitching: Bool = false {
+    // Regime switching is now on by default.
+    @Published var useRegimeSwitching: Bool = true {
         didSet {
             if isInitialized {
                 print("[useRegimeSwitching didSet] useRegimeSwitching changed to \(useRegimeSwitching)")
@@ -224,7 +275,7 @@ class SimulationSettings: ObservableObject {
     
     // MARK: - Init
     init() {
-        // Load saved value if it exists; otherwise default to 0.5.
+        // Load saved global slider value if it exists; otherwise default to 0.5.
         if let savedIntensity = UserDefaults.standard.object(forKey: "rawFactorIntensity") as? Double {
             rawFactorIntensity = savedIntensity
         } else {
@@ -270,27 +321,41 @@ class SimulationSettings: ObservableObject {
         useHistoricalSampling = defaults.bool(forKey: "useHistoricalSampling")
         useVolShocks       = defaults.bool(forKey: "useVolShocks")
         useGarchVolatility = defaults.bool(forKey: "useGarchVolatility")
-        useAutoCorrelation = defaults.bool(forKey: "useAutoCorrelation")
-        autoCorrelationStrength = defaults.double(forKey: "autoCorrelationStrength")
-        meanReversionTarget = defaults.double(forKey: "meanReversionTarget")
-        lockHistoricalSampling  = defaults.bool(forKey: "lockHistoricalSampling")
-        useRegimeSwitching = defaults.bool(forKey: "useRegimeSwitching")
+        
+        if defaults.object(forKey: "useAutoCorrelation") == nil {
+            useAutoCorrelation = true
+        } else {
+            useAutoCorrelation = defaults.bool(forKey: "useAutoCorrelation")
+        }
+        
+        if defaults.object(forKey: "autoCorrelationStrength") == nil {
+            autoCorrelationStrength = 0.05
+        } else {
+            autoCorrelationStrength = defaults.double(forKey: "autoCorrelationStrength")
+        }
+        
+        if defaults.object(forKey: "meanReversionTarget") == nil {
+            meanReversionTarget = 0.03
+        } else {
+            meanReversionTarget = defaults.double(forKey: "meanReversionTarget")
+        }
+        
+        if defaults.object(forKey: "useMeanReversion") == nil {
+            useMeanReversion = true
+        } else {
+            useMeanReversion = defaults.bool(forKey: "useMeanReversion")
+        }
+        
+        if defaults.object(forKey: "useRegimeSwitching") == nil {
+            useRegimeSwitching = true
+        } else {
+            useRegimeSwitching = defaults.bool(forKey: "useRegimeSwitching")
+        }
         
         if defaults.object(forKey: "useExtendedHistoricalSampling") == nil {
             useExtendedHistoricalSampling = true
         } else {
             useExtendedHistoricalSampling = defaults.bool(forKey: "useExtendedHistoricalSampling")
-        }
-        if defaults.object(forKey: "autoCorrelationStrength") == nil {
-            autoCorrelationStrength = 0.05
-        }
-        if defaults.object(forKey: "meanReversionTarget") == nil {
-            meanReversionTarget = 0.03
-        }
-        if defaults.object(forKey: "useMeanReversion") == nil {
-            useMeanReversion = true
-        } else {
-            useMeanReversion = defaults.bool(forKey: "useMeanReversion")
         }
         
         if defaults.object(forKey: defaultTiltKey) != nil {
@@ -370,8 +435,11 @@ class SimulationSettings: ObservableObject {
         defaults.set(useAutoCorrelation, forKey: "useAutoCorrelation")
         defaults.set(autoCorrelationStrength, forKey: "autoCorrelationStrength")
         defaults.set(meanReversionTarget, forKey: "meanReversionTarget")
-        defaults.set(lockHistoricalSampling, forKey: "lockHistoricalSampling")
+        defaults.set(useMeanReversion, forKey: "useMeanReversion")
         defaults.set(useRegimeSwitching, forKey: "useRegimeSwitching")
+        defaults.set(useExtendedHistoricalSampling, forKey: "useExtendedHistoricalSampling")
+        defaults.set(lockHistoricalSampling, forKey: "lockHistoricalSampling")
+        defaults.set(currencyPreference.rawValue, forKey: "currencyPreference")
         
         if let encodedFactors = try? JSONEncoder().encode(factors) {
             defaults.set(encodedFactors, forKey: "factorStates")
@@ -400,11 +468,6 @@ class SimulationSettings: ObservableObject {
     }
     
     // MARK: - userDidDragFactorSlider
-    //
-    // The “delta offset” approach lets an individual slider change update only that factor,
-    // and in doing so, it nudges the global slider slightly. However, we do not want this
-    // individual change to re-sync (and thus modify) the values of the other factors.
-    // When the global slider itself is manually moved, then all factors will be updated.
     func userDidDragFactorSlider(_ factorName: String, to newValue: Double) {
         guard var factor = factors[factorName] else { return }
         
@@ -452,28 +515,20 @@ class SimulationSettings: ObservableObject {
             ignoreSync = true
             rawFactorIntensity += shift
             rawFactorIntensity = min(max(rawFactorIntensity, 0), 1)
-            // Reset ignoreSync asynchronously so that subsequent manual updates trigger syncing.
             DispatchQueue.main.async {
                 self.ignoreSync = false
                 print("[userDidDragFactorSlider] ignoreSync reset to false")
             }
         }
         
-        // Recalculate the tilt bar for display:
         recalcTiltBarValue(bullishKeys: bullishKeys, bearishKeys: bearishKeys)
-        
-        // Persist the updated state:
         saveToUserDefaults()
-        
-        // IMPORTANT: For an individual update, update only the changed factor.
-        // Do not call applyDictionaryFactorsToSim(), which would re-sync all factors from rawFactorIntensity.
         applyDictionaryFactorFor(factorName)
     }
     
     // Called when the user manually moves the global slider:
     func globalSliderChanged(to newGlobalValue: Double) {
         print("[globalSliderChanged] Global slider changed to \(newGlobalValue)")
-        // Manual global update: set rawFactorIntensity normally so syncFactors() runs.
         rawFactorIntensity = newGlobalValue
         applyDictionaryFactorsToSim()
         saveToUserDefaults()
@@ -554,11 +609,8 @@ class SimulationSettings: ObservableObject {
     // MARK: - syncFactors
     func syncFactors() {
         print("[syncFactors] Syncing all factors using rawFactorIntensity: \(rawFactorIntensity)")
-        // Update each enabled and unlocked factor so that its currentValue remains
-        // consistent with its stored offset and the new global baseline.
         for (name, var factor) in factors {
             guard factor.isEnabled, !factor.isLocked else { continue }
-            
             let baseline = globalBaseline(for: factor)
             let range = factor.maxValue - factor.minValue
             let newValue = baseline + factor.internalOffset * range
@@ -576,7 +628,6 @@ class SimulationSettings: ObservableObject {
     
     // MARK: - globalBaseline(for:)
     func globalBaseline(for factor: FactorState) -> Double {
-        // Linear interpolation from factor.defaultValue to factor.minValue or maxValue based on rawFactorIntensity.
         let t = rawFactorIntensity
         if t < 0.5 {
             let ratio = t / 0.5
@@ -592,7 +643,6 @@ class SimulationSettings: ObservableObject {
     }
     
     // MARK: - recalcGlobalSliderFromFactors
-    // Not used on every drag (we use incremental shifts), but can be called for a full re-average.
     func recalcGlobalSliderFromFactors() {
         print("[recalcGlobalSliderFromFactors] Recalculating global slider from factor offsets.")
         let activeFactors = factors.values.filter { $0.isEnabled && !$0.isLocked }

@@ -39,6 +39,19 @@ struct BTCMonteCarloApp: App {
             options.enableAppLaunchProfiling = true
         }
         
+        let defaultToggles: [String: Any] = [
+            "useLockRandomSeed": false,
+            "useLognormalGrowth": true,
+            "useHistoricalSampling": true,
+            "useVolShocks": true,
+            "useGarchVolatility": true, 
+            "useRegimeSwitching": true,
+            "useAutoCorrelation": true,
+            "autoCorrelationStrength": 0.05,
+            "meanReversionTarget": 0.03
+        ]
+        UserDefaults.standard.register(defaults: defaultToggles)
+        
         // Create local instances first
         let appViewModelInstance = AppViewModel()
         let inputManagerInstance = PersistentInputManager()
