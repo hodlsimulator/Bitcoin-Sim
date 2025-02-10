@@ -102,6 +102,8 @@ extension SimulationSettings {
                 "Recession"
             ]
         )
+        // Minimal change: re-sync the simulation factor properties:
+        applyDictionaryFactorsToSim()
     }
 
     // MARK: - Toggle All Factors

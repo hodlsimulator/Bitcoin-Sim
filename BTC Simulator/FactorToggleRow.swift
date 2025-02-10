@@ -43,6 +43,7 @@ struct FactorToggleRow: View {
         let toggleBinding = Binding<Bool>(
             get: { factor.isEnabled },
             set: { newVal in
+                print("Toggle set for \(factorName): \(newVal)")
                 simSettings.setFactorEnabled(factorName: factorName, enabled: newVal)
                 onFactorChange() // Call our callback whenever the toggle changes
             }
@@ -59,6 +60,7 @@ struct FactorToggleRow: View {
             set: { newVal in
                 // Clamp the new value to the factor's valid range
                 let clampedVal = max(min(newVal, factor.maxValue), factor.minValue)
+                print("Slider set for \(factorName): \(clampedVal)")
                 
                 // Update offset, etc., within SimulationSettings
                 simSettings.userDidDragFactorSlider(factorName, to: clampedVal)

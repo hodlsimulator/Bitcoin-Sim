@@ -20,7 +20,7 @@ class SimulationSettings: ObservableObject {
         return factors.values.allSatisfy { !$0.isEnabled }
     }
     
-    // MARK: - Published
+    // MARK: - Published Properties
     
     @Published var chartExtremeBearish: Bool = false
     @Published var chartExtremeBullish: Bool = false
@@ -28,17 +28,20 @@ class SimulationSettings: ObservableObject {
     @Published var factors: [String: FactorState] = [:]
     @Published var lockedFactors: Set<String> = []
     
+    /// Global slider controlling the baseline for factors.
+    /// When updated manually, its didSet calls syncFactors().
     @Published var rawFactorIntensity: Double = 0.5 {
         didSet {
-            // Sync factors to new global slider baseline, unless we're temporarily ignoring it.
+            // Debug print to trace changes.
+            print("[rawFactorIntensity didSet] New value: \(rawFactorIntensity), ignoreSync: \(ignoreSync)")
+            // If this change is not coming from an individual update, sync all factors.
             if !ignoreSync {
                 syncFactors()
             }
         }
     }
     
-    // Temporarily set this to true if we’re adjusting rawFactorIntensity ourselves
-    // (e.g. from a factor drag) so we don’t want a full sync that moves other factors.
+    /// When true, changes to rawFactorIntensity do not trigger a full sync.
     var ignoreSync: Bool = false
     
     @Published var overrodeTiltManually = false
@@ -58,7 +61,7 @@ class SimulationSettings: ObservableObject {
     @Published var periodUnit: PeriodUnit = .weeks {
         didSet {
             if isInitialized {
-                print("didSet: periodUnit changed to \(periodUnit)")
+                print("[periodUnit didSet] periodUnit changed to \(periodUnit)")
             }
         }
     }
@@ -71,7 +74,7 @@ class SimulationSettings: ObservableObject {
     @Published var currencyPreference: PreferredCurrency = .eur {
         didSet {
             if isInitialized {
-                print("didSet: currencyPreference changed to \(currencyPreference)")
+                print("[currencyPreference didSet] currencyPreference changed to \(currencyPreference)")
                 UserDefaults.standard.set(currencyPreference.rawValue, forKey: "currencyPreference")
             }
         }
@@ -86,12 +89,14 @@ class SimulationSettings: ObservableObject {
     var isInitialized = false
     var isUpdating = false
     
-    // MARK: - Advanced Toggles
+    // Global flag to indicate the source of change (if needed for further debugging)
+    var isIndividualChange = false
     
+    // MARK: - Advanced Toggles
     @Published var useLognormalGrowth: Bool = true {
         didSet {
             if isInitialized {
-                print("didSet: useLognormalGrowth changed to \(useLognormalGrowth)")
+                print("[useLognormalGrowth didSet] useLognormalGrowth changed to \(useLognormalGrowth)")
                 UserDefaults.standard.set(useLognormalGrowth, forKey: "useLognormalGrowth")
                 if !useLognormalGrowth { useAnnualStep = true }
             }
@@ -100,7 +105,7 @@ class SimulationSettings: ObservableObject {
     @Published var useAnnualStep: Bool = false {
         didSet {
             if isInitialized {
-                print("didSet: useAnnualStep changed to \(useAnnualStep)")
+                print("[useAnnualStep didSet] useAnnualStep changed to \(useAnnualStep)")
                 UserDefaults.standard.set(useAnnualStep, forKey: "useAnnualStep")
             }
         }
@@ -108,7 +113,7 @@ class SimulationSettings: ObservableObject {
     @Published var lockedRandomSeed: Bool = false {
         didSet {
             if isInitialized {
-                print("didSet: lockedRandomSeed changed to \(lockedRandomSeed)")
+                print("[lockedRandomSeed didSet] lockedRandomSeed changed to \(lockedRandomSeed)")
                 UserDefaults.standard.set(lockedRandomSeed, forKey: "lockedRandomSeed")
             }
         }
@@ -116,7 +121,7 @@ class SimulationSettings: ObservableObject {
     @Published var seedValue: UInt64 = 0 {
         didSet {
             if isInitialized {
-                print("didSet: seedValue changed to \(seedValue)")
+                print("[seedValue didSet] seedValue changed to \(seedValue)")
                 UserDefaults.standard.set(seedValue, forKey: "seedValue")
             }
         }
@@ -124,7 +129,7 @@ class SimulationSettings: ObservableObject {
     @Published var useRandomSeed: Bool = true {
         didSet {
             if isInitialized {
-                print("didSet: useRandomSeed changed to \(useRandomSeed)")
+                print("[useRandomSeed didSet] useRandomSeed changed to \(useRandomSeed)")
                 UserDefaults.standard.set(useRandomSeed, forKey: "useRandomSeed")
             }
         }
@@ -132,7 +137,7 @@ class SimulationSettings: ObservableObject {
     @Published var useHistoricalSampling: Bool = true {
         didSet {
             if isInitialized {
-                print("didSet: useHistoricalSampling changed to \(useHistoricalSampling)")
+                print("[useHistoricalSampling didSet] useHistoricalSampling changed to \(useHistoricalSampling)")
                 UserDefaults.standard.set(useHistoricalSampling, forKey: "useHistoricalSampling")
             }
         }
@@ -140,7 +145,7 @@ class SimulationSettings: ObservableObject {
     @Published var useExtendedHistoricalSampling: Bool = true {
         didSet {
             if isInitialized {
-                print("didSet: useExtendedHistoricalSampling changed to \(useExtendedHistoricalSampling)")
+                print("[useExtendedHistoricalSampling didSet] useExtendedHistoricalSampling changed to \(useExtendedHistoricalSampling)")
                 UserDefaults.standard.set(useExtendedHistoricalSampling, forKey: "useExtendedHistoricalSampling")
             }
         }
@@ -148,7 +153,7 @@ class SimulationSettings: ObservableObject {
     @Published var useVolShocks: Bool = true {
         didSet {
             if isInitialized {
-                print("didSet: useVolShocks changed to \(useVolShocks)")
+                print("[useVolShocks didSet] useVolShocks changed to \(useVolShocks)")
                 UserDefaults.standard.set(useVolShocks, forKey: "useVolShocks")
             }
         }
@@ -156,7 +161,7 @@ class SimulationSettings: ObservableObject {
     @Published var useGarchVolatility: Bool = true {
         didSet {
             if isInitialized {
-                print("didSet: useGarchVolatility changed to \(useGarchVolatility)")
+                print("[useGarchVolatility didSet] useGarchVolatility changed to \(useGarchVolatility)")
                 UserDefaults.standard.set(useGarchVolatility, forKey: "useGarchVolatility")
             }
         }
@@ -164,7 +169,7 @@ class SimulationSettings: ObservableObject {
     @Published var useAutoCorrelation: Bool = false {
         didSet {
             if isInitialized {
-                print("didSet: useAutoCorrelation changed to \(useAutoCorrelation)")
+                print("[useAutoCorrelation didSet] useAutoCorrelation changed to \(useAutoCorrelation)")
                 UserDefaults.standard.set(useAutoCorrelation, forKey: "useAutoCorrelation")
                 if !useAutoCorrelation { useMeanReversion = false }
             }
@@ -173,7 +178,7 @@ class SimulationSettings: ObservableObject {
     @Published var autoCorrelationStrength: Double = 0.2 {
         didSet {
             if isInitialized {
-                print("didSet: autoCorrelationStrength changed to \(autoCorrelationStrength)")
+                print("[autoCorrelationStrength didSet] autoCorrelationStrength changed to \(autoCorrelationStrength)")
                 UserDefaults.standard.set(autoCorrelationStrength, forKey: "autoCorrelationStrength")
             }
         }
@@ -181,7 +186,7 @@ class SimulationSettings: ObservableObject {
     @Published var meanReversionTarget: Double = 0.0 {
         didSet {
             if isInitialized {
-                print("didSet: meanReversionTarget changed to \(meanReversionTarget)")
+                print("[meanReversionTarget didSet] meanReversionTarget changed to \(meanReversionTarget)")
                 UserDefaults.standard.set(meanReversionTarget, forKey: "meanReversionTarget")
             }
         }
@@ -189,7 +194,7 @@ class SimulationSettings: ObservableObject {
     @Published var useMeanReversion: Bool = true {
         didSet {
             if isInitialized {
-                print("didSet: useMeanReversion changed to \(useMeanReversion)")
+                print("[useMeanReversion didSet] useMeanReversion changed to \(useMeanReversion)")
                 UserDefaults.standard.set(useMeanReversion, forKey: "useMeanReversion")
             }
         }
@@ -198,7 +203,7 @@ class SimulationSettings: ObservableObject {
     @Published var lockHistoricalSampling: Bool = false {
         didSet {
             if isInitialized {
-                print("didSet: lockHistoricalSampling changed to \(lockHistoricalSampling)")
+                print("[lockHistoricalSampling didSet] lockHistoricalSampling changed to \(lockHistoricalSampling)")
                 UserDefaults.standard.set(lockHistoricalSampling, forKey: "lockHistoricalSampling")
             }
         }
@@ -206,21 +211,19 @@ class SimulationSettings: ObservableObject {
     @Published var useRegimeSwitching: Bool = false {
         didSet {
             if isInitialized {
-                print("didSet: useRegimeSwitching changed to \(useRegimeSwitching)")
+                print("[useRegimeSwitching didSet] useRegimeSwitching changed to \(useRegimeSwitching)")
                 UserDefaults.standard.set(useRegimeSwitching, forKey: "useRegimeSwitching")
             }
         }
     }
     
     // MARK: - Keys
-    
     private let defaultTiltKey = "defaultTilt"
     private let maxSwingKey = "maxSwing"
     private let hasCapturedDefaultKey = "capturedTilt"
     private let tiltBarValueKey = "tiltBarValue"
     
     // MARK: - Init
-    
     init() {
         isUpdating = false
         isInitialized = false
@@ -237,8 +240,8 @@ class SimulationSettings: ObservableObject {
     }
     
     // MARK: - Tilt Bar Reset
-    
     func resetTiltBar() {
+        print("[resetTiltBar] Resetting tilt bar")
         UserDefaults.standard.removeObject(forKey: tiltBarValueKey)
         tiltBarValue = 0.0
         defaultTilt = 0.0
@@ -249,9 +252,9 @@ class SimulationSettings: ObservableObject {
     }
     
     // MARK: - Loading & Saving
-    
     func loadFromUserDefaults() {
         let defaults = UserDefaults.standard
+        print("[loadFromUserDefaults] Loading settings")
         isInitialized = false
         
         useLognormalGrowth = defaults.bool(forKey: "useLognormalGrowth")
@@ -324,7 +327,9 @@ class SimulationSettings: ObservableObject {
         if let savedFactorStatesData = defaults.data(forKey: "factorStates"),
            let savedFactors = try? JSONDecoder().decode([String: FactorState].self, from: savedFactorStatesData) {
             factors = savedFactors
+            print("[loadFromUserDefaults] Loaded \(factors.count) factors from defaults")
         } else {
+            print("[loadFromUserDefaults] No saved factor states; creating defaults")
             factors.removeAll()
             for (factorName, def) in FactorCatalog.all {
                 let (minVal, midVal, maxVal) = (periodUnit == .weeks)
@@ -348,6 +353,7 @@ class SimulationSettings: ObservableObject {
     
     func saveToUserDefaults() {
         let defaults = UserDefaults.standard
+        print("[saveToUserDefaults] Saving settings")
         defaults.set(useLognormalGrowth, forKey: "useLognormalGrowth")
         defaults.set(lockedRandomSeed, forKey: "lockedRandomSeed")
         defaults.set(seedValue, forKey: "seedValue")
@@ -379,7 +385,6 @@ class SimulationSettings: ObservableObject {
     }
     
     // MARK: - Factor Intensity Access
-    
     func getFactorIntensity() -> Double {
         rawFactorIntensity
     }
@@ -389,13 +394,15 @@ class SimulationSettings: ObservableObject {
     }
     
     // MARK: - userDidDragFactorSlider
-    
-    /// The big difference: instead of re-averaging everything,
-    /// we do a “delta offset” approach so only this factor changes
-    /// and the global slider shifts slightly in proportion.
+    //
+    // The “delta offset” approach lets an individual slider change update only that factor,
+    // and in doing so, it nudges the global slider slightly. However, we do not want this
+    // individual change to re-sync (and thus modify) the values of the other factors.
+    // When the global slider itself is manually moved, then all factors will be updated.
     func userDidDragFactorSlider(_ factorName: String, to newValue: Double) {
         guard var factor = factors[factorName] else { return }
         
+        // Define bullish and bearish keys (for tilt calculations)
         let bullishKeys: [String] = [
             "Halving", "InstitutionalDemand", "CountryAdoption", "RegulatoryClarity",
             "EtfApproval", "TechBreakthrough", "ScarcityEvents", "GlobalMacroHedge",
@@ -407,7 +414,7 @@ class SimulationSettings: ObservableObject {
             "Recession"
         ]
         
-        // Cancel forced extremes if user moves factor away from min or max:
+        // Cancel forced extremes if needed
         if chartExtremeBearish && newValue > factor.minValue {
             chartExtremeBearish = false
             recalcTiltBarValue(bullishKeys: bullishKeys, bearishKeys: bearishKeys)
@@ -417,52 +424,71 @@ class SimulationSettings: ObservableObject {
             recalcTiltBarValue(bullishKeys: bullishKeys, bearishKeys: bearishKeys)
         }
         
-        // Baseline + offset logic:
+        // Compute the new value and offset:
         let oldOffset = factor.internalOffset
         let baseline  = globalBaseline(for: factor)
         let range     = factor.maxValue - factor.minValue
-        
         let clampedVal = max(factor.minValue, min(newValue, factor.maxValue))
         factor.currentValue = clampedVal
-        
         let newOffset = (clampedVal - baseline) / range
         factor.internalOffset = newOffset
+        
+        // Write back into the dictionary:
         factors[factorName] = factor
+        print("[userDidDragFactorSlider] Updated \(factorName): currentValue=\(factor.currentValue), internalOffset=\(factor.internalOffset)")
         
-        // 1) Compute how much the factor’s offset changed
+        // Compute the delta offset and adjust the global slider:
         let deltaOffset = newOffset - oldOffset
-        
-        // 2) Shift the global slider by just enough to accommodate that change
-        //    across the total active factor count.
         let activeCount = factors.values.filter { $0.isEnabled && !$0.isLocked }.count
         if activeCount > 0 {
             let shift = deltaOffset / Double(activeCount)
-            
+            print("[userDidDragFactorSlider] Applying global slider shift of \(shift) from deltaOffset \(deltaOffset)")
             ignoreSync = true
             rawFactorIntensity += shift
-            if rawFactorIntensity < 0 { rawFactorIntensity = 0 }
-            if rawFactorIntensity > 1 { rawFactorIntensity = 1 }
-            ignoreSync = false
+            rawFactorIntensity = min(max(rawFactorIntensity, 0), 1)
+            // Reset ignoreSync asynchronously so that subsequent manual updates trigger syncing.
+            DispatchQueue.main.async {
+                self.ignoreSync = false
+                print("[userDidDragFactorSlider] ignoreSync reset to false")
+            }
         }
         
-        // 3) Recalc tilt bar to reflect new factor layout
+        // Recalculate the tilt bar for display:
         recalcTiltBarValue(bullishKeys: bullishKeys, bearishKeys: bearishKeys)
+        
+        // Persist the updated state:
+        saveToUserDefaults()
+        
+        // IMPORTANT: For an individual update, update only the changed factor.
+        // Do not call applyDictionaryFactorsToSim(), which would re-sync all factors from rawFactorIntensity.
+        applyDictionaryFactorFor(factorName)
+    }
+    
+    // Called when the user manually moves the global slider:
+    func globalSliderChanged(to newGlobalValue: Double) {
+        print("[globalSliderChanged] Global slider changed to \(newGlobalValue)")
+        // Manual global update: set rawFactorIntensity normally so syncFactors() runs.
+        rawFactorIntensity = newGlobalValue
+        applyDictionaryFactorsToSim()
+        saveToUserDefaults()
     }
     
     // MARK: - recalcTiltBarValue
-    
     func recalcTiltBarValue(bullishKeys: [String], bearishKeys: [String]) {
+        print("[recalcTiltBarValue] Starting recalculation with rawFactorIntensity: \(rawFactorIntensity)")
         
         if chartExtremeBearish {
             let slope = 0.7
             tiltBarValue = min(-1.0 + (rawFactorIntensity * slope), 0.0)
             overrodeTiltManually = true
+            print("[recalcTiltBarValue] Extreme bearish active. Tilt bar set to \(tiltBarValue)")
             return
         }
         if chartExtremeBullish {
             let slope = 0.7
             tiltBarValue = max(1.0 - ((1.0 - rawFactorIntensity) * slope), 0.0)
             overrodeTiltManually = true
+            print("[recalcTiltBarValue] Extreme bullish active. Tilt bar set to \(tiltBarValue)")
             return
         }
         
@@ -480,7 +506,6 @@ class SimulationSettings: ObservableObject {
             let effectiveRawNorm = factor.isEnabled ? rawNorm : 1.0
             let scNorm = applyFactorSCurve(effectiveRawNorm)
             let weight = SimulationSettings.bullishWeights[key.lowercased()] ?? 9.0
-            
             if factor.isEnabled {
                 sumBullish += weight * scNorm
             } else {
@@ -499,7 +524,6 @@ class SimulationSettings: ObservableObject {
             let invertedNorm = 1.0 - effectiveRawNorm
             let scNorm = applyFactorSCurve(invertedNorm)
             let weight = SimulationSettings.bearishWeights[key.lowercased()] ?? 12.0
-            
             if factor.isEnabled {
                 sumBearish += weight * scNorm
             } else {
@@ -518,75 +542,73 @@ class SimulationSettings: ObservableObject {
             tiltBarValue = 0.0
             overrodeTiltManually = true
         }
+        print("[recalcTiltBarValue] Final tiltBarValue set to \(tiltBarValue)")
     }
-
-    // MARK: - syncFactors
     
+    // MARK: - syncFactors
     func syncFactors() {
-        // If the user explicitly moved the global slider, update each factor
-        // that is enabled & unlocked so it stays the same offset from the new baseline.
+        print("[syncFactors] Syncing all factors using rawFactorIntensity: \(rawFactorIntensity)")
+        // Update each enabled and unlocked factor so that its currentValue remains
+        // consistent with its stored offset and the new global baseline.
         for (name, var factor) in factors {
             guard factor.isEnabled, !factor.isLocked else { continue }
             
             let baseline = globalBaseline(for: factor)
-            let range    = factor.maxValue - factor.minValue
-            
+            let range = factor.maxValue - factor.minValue
             let newValue = baseline + factor.internalOffset * range
-            let clamped  = min(max(newValue, factor.minValue), factor.maxValue)
+            let clamped = min(max(newValue, factor.minValue), factor.maxValue)
             if clamped != newValue {
+                let oldOffset = factor.internalOffset
                 factor.internalOffset = (clamped - baseline) / range
+                print("[syncFactors] \(name): Adjusting offset from \(oldOffset) to \(factor.internalOffset)")
             }
-            
             factor.currentValue = clamped
             factors[name] = factor
+            print("[syncFactors] \(name): currentValue updated to \(factor.currentValue) using baseline \(baseline)")
         }
     }
     
     // MARK: - globalBaseline(for:)
-    
     func globalBaseline(for factor: FactorState) -> Double {
-        // Simple linear interpolation from factor.defaultValue => factor.minValue or maxValue
+        // Linear interpolation from factor.defaultValue to factor.minValue or maxValue based on rawFactorIntensity.
         let t = rawFactorIntensity
-        
         if t < 0.5 {
             let ratio = t / 0.5
-            // from defaultValue down to minValue
-            return factor.defaultValue - (factor.defaultValue - factor.minValue) * (1.0 - ratio)
+            let baseline = factor.defaultValue - (factor.defaultValue - factor.minValue) * (1.0 - ratio)
+            print("[globalBaseline] For \(factor.name): t = \(t), baseline = \(baseline) (min: \(factor.minValue))")
+            return baseline
         } else {
             let ratio = (t - 0.5) / 0.5
-            // from defaultValue up to maxValue
-            return factor.defaultValue + (factor.maxValue - factor.defaultValue) * ratio
+            let baseline = factor.defaultValue + (factor.maxValue - factor.defaultValue) * ratio
+            print("[globalBaseline] For \(factor.name): t = \(t), baseline = \(baseline) (max: \(factor.maxValue))")
+            return baseline
         }
     }
     
     // MARK: - recalcGlobalSliderFromFactors
-    
-    // This is no longer used for each factor drag. We do incremental shifts now.
-    // But you can call this if you want to do a full "average" recalc occasionally.
+    // Not used on every drag (we use incremental shifts), but can be called for a full re-average.
     func recalcGlobalSliderFromFactors() {
-        // Example if you want a full re-average at some point:
+        print("[recalcGlobalSliderFromFactors] Recalculating global slider from factor offsets.")
         let activeFactors = factors.values.filter { $0.isEnabled && !$0.isLocked }
         guard !activeFactors.isEmpty else {
             ignoreSync = true
             rawFactorIntensity = 0.5
             ignoreSync = false
+            print("[recalcGlobalSliderFromFactors] No active factors; global slider reset to 0.5")
             return
         }
-        
         let sumOffsets = activeFactors.reduce(0.0) { $0 + $1.internalOffset }
         let avgOffset = sumOffsets / Double(activeFactors.count)
-        
         var newIntensity = 0.5 + avgOffset
         newIntensity = max(0.0, min(1.0, newIntensity))
-        
         ignoreSync = true
         rawFactorIntensity = newIntensity
         ignoreSync = false
+        print("[recalcGlobalSliderFromFactors] Global slider set to \(rawFactorIntensity) from avgOffset \(avgOffset)")
     }
 }
 
 // MARK: - Weights & S-Curves
-
 extension SimulationSettings {
     static let bullishWeights: [String: Double] = [
         "halving":            25.41,
@@ -638,11 +660,9 @@ extension SimulationSettings {
         let logisticAt0 = offset + (scale / (1.0 + exp(-alpha * (0 - beta))))
         let logisticAt1 = offset + (scale / (1.0 + exp(-alpha * (1 - beta))))
         var normalized = (rawLogistic - logisticAt0) / (logisticAt1 - logisticAt0)
-        
         let epsilon = 1e-6
         if abs(normalized) < epsilon { normalized = 0.0 }
         if abs(normalized - 1.0) < epsilon { normalized = 1.0 }
-        
         return max(0.0, min(1.0, normalized))
     }
 }
