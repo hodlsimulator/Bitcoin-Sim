@@ -8,88 +8,79 @@
 import SwiftUI
 
 struct FactorToggleRow: View {
-    @EnvironmentObject var simSettings: SimulationSettings
-    
-    /// The unique name of this factor, matching the dictionary key in simSettings.factors
+    @EnvironmentObject var weeklySimSettings: SimulationSettings
+    @EnvironmentObject var monthlySimSettings: MonthlySimulationSettings
+
+    // The unique name for this factor
     let factorName: String
-    
-    /// Factor display properties
+
+    // Factor display properties
     let iconName: String?
     let title: String
     let parameterDescription: String?
     let sliderRange: ClosedRange<Double>
     let defaultValue: Double
     let displayAsPercent: Bool
-    
-    /// For tooltips
+
+    // Tooltip
     let activeFactor: String?
     let onTitleTap: (String) -> Void
-    
-    /// Callback to re-trigger tilt calculation (or anything else) after toggles/sliders change
+
+    // Called after toggles/sliders change
     let onFactorChange: () -> Void
-    
+
     var body: some View {
-        // Safely fetch the factor from simSettings
-        guard let factor = simSettings.factors[factorName] else {
+        // Decide which object to pull the factor from
+        let factor = currentFactor()
+
+        guard let factor = factor else {
             return AnyView(
                 Text("Factor '\(factorName)' not found!")
                     .foregroundColor(.red)
             )
         }
-        
-        // --------------------
+
         // Toggle binding
-        // --------------------
         let toggleBinding = Binding<Bool>(
             get: { factor.isEnabled },
             set: { newVal in
                 print("Toggle set for \(factorName): \(newVal)")
-                simSettings.setFactorEnabled(factorName: factorName, enabled: newVal)
-                onFactorChange() // Call our callback whenever the toggle changes
+                setFactorEnabled(newVal)
+                onFactorChange()
             }
         )
-        
-        // --------------------
+
         // Slider binding
-        // --------------------
         let sliderBinding = Binding<Double>(
             get: {
-                // Show the factor's currentValue, or fall back to defaultValue if missing
-                simSettings.factors[factorName]?.currentValue ?? defaultValue
+                factor.currentValue
             },
             set: { newVal in
-                // Clamp the new value to the factor's valid range
                 let clampedVal = max(min(newVal, factor.maxValue), factor.minValue)
-                print("Slider set for \(factorName): \(clampedVal)")
-                
-                // Update offset, etc., within SimulationSettings
-                simSettings.userDidDragFactorSlider(factorName, to: clampedVal)
-                
-                // Ensure factor is not locked after a manual drag
-                if var currentFactor = simSettings.factors[factorName] {
-                    currentFactor.isLocked = false
-                    simSettings.factors[factorName] = currentFactor
+
+                // *** Decide which method to call based on periodUnit
+                if weeklySimSettings.periodUnit == .months {
+                    monthlySimSettings.userDidDragFactorSliderMonthly(factorName, to: clampedVal)
+                } else {
+                    weeklySimSettings.userDidDragFactorSlider(factorName, to: clampedVal)
                 }
+
+                // Unlock factor after a manual drag
+                unlockFactor()
                 
-                onFactorChange() // Call our callback whenever the slider changes
+                onFactorChange()
             }
         )
-        
+
+        // Build the row UI
         return AnyView(
             VStack(alignment: .leading, spacing: 4) {
-                
-                // --------------------
                 // Title + Toggle row
-                // --------------------
                 HStack(spacing: 8) {
                     if let icon = iconName, !icon.isEmpty {
                         Button {
-                            // Reset to default if user taps the icon (optional behaviour)
-                            if var f = simSettings.factors[factorName] {
-                                f.currentValue = defaultValue
-                                f.isLocked = false
-                                simSettings.factors[factorName] = f
-                            }
+                            // Reset to default if user taps icon
+                            resetFactorToDefault()
                             onFactorChange()
                         } label: {
                             Image(systemName: icon)
@@ -123,10 +114,8 @@ struct FactorToggleRow: View {
                         .labelsHidden()
                         .tint(.orange)
                 }
-                
-                // --------------------
+
                 // Slider row
-                // --------------------
                 HStack {
                     Slider(
                         value: sliderBinding,
@@ -134,7 +123,7 @@ struct FactorToggleRow: View {
                     )
                     .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
                     .disabled(!factor.isEnabled)
-                    
+
                     if displayAsPercent {
                         Text(String(format: "%.4f%%", sliderBinding.wrappedValue * 100))
                             .font(.caption)
@@ -154,6 +143,55 @@ struct FactorToggleRow: View {
             .padding(.vertical, 4)
             .opacity(factor.isEnabled ? 1.0 : 0.5)
         )
+    }
+
+    // -------------------------------------------
+    // Helpers to pick factor from weekly or monthly
+    // -------------------------------------------
+    private func currentFactor() -> FactorState? {
+        if weeklySimSettings.periodUnit == .months {
+            return monthlySimSettings.factorsMonthly[factorName]
+        } else {
+            return weeklySimSettings.factors[factorName]
+        }
+    }
+
+    private func setFactorEnabled(_ enabled: Bool) {
+        if weeklySimSettings.periodUnit == .months {
+            monthlySimSettings.setFactorEnabled(factorName: factorName, enabled: enabled)
+        } else {
+            weeklySimSettings.setFactorEnabled(factorName: factorName, enabled: enabled)
+        }
+    }
+
+    private func resetFactorToDefault() {
+        if weeklySimSettings.periodUnit == .months {
+            if var f = monthlySimSettings.factorsMonthly[factorName] {
+                f.currentValue = defaultValue
+                f.isLocked = false
+                monthlySimSettings.factorsMonthly[factorName] = f
+            }
+        } else {
+            if var f = weeklySimSettings.factors[factorName] {
+                f.currentValue = defaultValue
+                f.isLocked = false
+                weeklySimSettings.factors[factorName] = f
+            }
+        }
+    }
+
+    private func unlockFactor() {
+        if weeklySimSettings.periodUnit == .months {
+            if var f = monthlySimSettings.factorsMonthly[factorName] {
+                f.isLocked = false
+                monthlySimSettings.factorsMonthly[factorName] = f
+            }
+        } else {
+            if var f = weeklySimSettings.factors[factorName] {
+                f.isLocked = false
+                weeklySimSettings.factors[factorName] = f
+            }
+        }
     }
 }
 

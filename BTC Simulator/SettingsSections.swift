@@ -158,7 +158,13 @@ extension SettingsView {
                 .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
                 .disabled(simSettings.isGlobalSliderDisabled)
                 .onChange(of: factorIntensityBinding.wrappedValue) { newValue in
-                    // Removed custom haptic feedback code.
+                    // Trigger haptic feedback when the intensity changes significantly.
+                    if abs(newValue - oldFactorIntensity) > 0.05 {
+                        let feedbackGenerator = UIImpactFeedbackGenerator(style: .medium)
+                        feedbackGenerator.prepare()
+                        feedbackGenerator.impactOccurred()
+                        oldFactorIntensity = newValue
+                    }
                     simSettings.recalcTiltBarValue(bullishKeys: bullishKeys, bearishKeys: bearishKeys)
                 }
 

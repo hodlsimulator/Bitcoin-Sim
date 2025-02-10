@@ -632,12 +632,10 @@ class SimulationSettings: ObservableObject {
         if t < 0.5 {
             let ratio = t / 0.5
             let baseline = factor.defaultValue - (factor.defaultValue - factor.minValue) * (1.0 - ratio)
-            print("[globalBaseline] For \(factor.name): t = \(t), baseline = \(baseline) (min: \(factor.minValue))")
             return baseline
         } else {
             let ratio = (t - 0.5) / 0.5
             let baseline = factor.defaultValue + (factor.maxValue - factor.defaultValue) * ratio
-            print("[globalBaseline] For \(factor.name): t = \(t), baseline = \(baseline) (max: \(factor.maxValue))")
             return baseline
         }
     }
@@ -661,6 +659,21 @@ class SimulationSettings: ObservableObject {
         rawFactorIntensity = newIntensity
         ignoreSync = false
         print("[recalcGlobalSliderFromFactors] Global slider set to \(rawFactorIntensity) from avgOffset \(avgOffset)")
+    }
+    
+    // In SimulationSettings.swift
+    func syncFactorsToGlobalIntensityMonthly(for forcedValue: Double) {
+        // Only override in monthly mode; weekly mode uses the default logic.
+        if periodUnit == .weeks {
+            rawFactorIntensity = forcedValue
+            syncFactors()
+        } else {
+            // Temporarily ignore syncing so we force the raw value.
+            ignoreSync = true
+            rawFactorIntensity = forcedValue
+            ignoreSync = false
+            syncFactors()
+        }
     }
 }
 

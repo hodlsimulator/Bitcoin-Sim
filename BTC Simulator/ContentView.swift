@@ -390,6 +390,7 @@ struct ContentView: View {
     @State private var showSnapshotsDebug = false
     
     @EnvironmentObject var simSettings: SimulationSettings
+    @EnvironmentObject var monthlySimSettings: MonthlySimulationSettings
     @EnvironmentObject var inputManager: PersistentInputManager
     @EnvironmentObject var chartDataCache: ChartDataCache
     @EnvironmentObject var coordinator: SimulationCoordinator
@@ -419,6 +420,7 @@ struct ContentView: View {
             .navigationDestination(isPresented: $showSettings) {
                 SettingsView()
                     .environmentObject(simSettings)
+                    .environmentObject(monthlySimSettings) // <-- Add this
             }
             .navigationDestination(isPresented: $showAbout) {
                 AboutView()

@@ -103,33 +103,33 @@
       <BreakpointProxy
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
-            uuid = "6ADA536F-E719-4598-BB42-BD776D9A146F"
-            shouldBeEnabled = "No"
+            uuid = "5304398B-8D10-4EDF-A855-253E6F288AE9"
+            shouldBeEnabled = "Yes"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
-            filePath = "BTC Simulator/FactorToggleRow.swift"
+            filePath = "BTC Simulator/MonthlySimulationSettings.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "43"
-            endingLineNumber = "43"
-            landmarkName = "body"
-            landmarkType = "24">
+            startingLineNumber = "413"
+            endingLineNumber = "413"
+            landmarkName = "userDidDragFactorSliderMonthly(_:to:)"
+            landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
-            uuid = "AB46022B-D1B8-4A18-A977-4E89366AB835"
+            uuid = "5AD98A1C-83B9-45CE-8B86-430966207F12"
             shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
-            filePath = "BTC Simulator/FactorToggleRow.swift"
+            filePath = "BTC Simulator/SimulationSettings.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "55"
-            endingLineNumber = "55"
-            landmarkName = "body"
-            landmarkType = "24">
+            startingLineNumber = "471"
+            endingLineNumber = "471"
+            landmarkName = "userDidDragFactorSlider(_:to:)"
+            landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
    </Breakpoints>

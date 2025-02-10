@@ -27,6 +27,7 @@
 		E14D24092D3A677F007CC11A /* SettingsPrinter.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14D24082D3A677D007CC11A /* SettingsPrinter.swift */; };
 		E14D240B2D3A698A007CC11A /* SimulationSettingsInit.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14D240A2D3A6988007CC11A /* SimulationSettingsInit.swift */; };
 		E14D24112D3A9525007CC11A /* SimulationSettings+UnifiedFactors.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14D24102D3A9524007CC11A /* SimulationSettings+UnifiedFactors.swift */; };
+		E15DDF472D5A5A3A00CDD30A /* MonthlySimulationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = E15DDF462D5A5A3700CDD30A /* MonthlySimulationSettings.swift */; };
 		E166A8AE2CF855BF0003F518 /* MonteCarloSimulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = E166A8AD2CF855BF0003F518 /* MonteCarloSimulator.swift */; };
 		E166A8B02CF855C20003F518 /* SimulationData.swift in Sources */ = {isa = PBXBuildFile; fileRef = E166A8AF2CF855C20003F518 /* SimulationData.swift */; };
 		E166A8B22CF85B2B0003F518 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E166A8B12CF85B2B0003F518 /* ContentView.swift */; };
@@ -130,6 +131,7 @@
 		E14D24082D3A677D007CC11A /* SettingsPrinter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsPrinter.swift; sourceTree = "<group>"; };
 		E14D240A2D3A6988007CC11A /* SimulationSettingsInit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulationSettingsInit.swift; sourceTree = "<group>"; };
 		E14D24102D3A9524007CC11A /* SimulationSettings+UnifiedFactors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SimulationSettings+UnifiedFactors.swift"; sourceTree = "<group>"; };
+		E15DDF462D5A5A3700CDD30A /* MonthlySimulationSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlySimulationSettings.swift; sourceTree = "<group>"; };
 		E166A8AD2CF855BF0003F518 /* MonteCarloSimulator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonteCarloSimulator.swift; sourceTree = "<group>"; };
 		E166A8AF2CF855C20003F518 /* SimulationData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulationData.swift; sourceTree = "<group>"; };
 		E166A8B12CF85B2B0003F518 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -284,6 +286,7 @@
 				E19D10EA2D3EF69200E3A55E /* MempoolDataManager.swift */,
 				E166A8AD2CF855BF0003F518 /* MonteCarloSimulator.swift */,
 				E1C543B72D224D21005E416D /* MonteCarloResultsView.swift */,
+				E15DDF462D5A5A3700CDD30A /* MonthlySimulationSettings.swift */,
 				E19D11412D42F9E500E3A55E /* NetDeposit.swift */,
 				E1883F4F2D1FCEB9007AA90B /* OnboardingView.swift */,
 				E17B2F7F2D2800D100ECE087 /* OrientationObserver.swift */,
@@ -536,6 +539,7 @@
 				E1CFF0272D30D07A00D9D044 /* ChartBuilders.swift in Sources */,
 				E1883F382D1DD4C8007AA90B /* SettingsView.swift in Sources */,
 				E1B7B0A52D47532D00B60EC6 /* UIComponents.swift in Sources */,
+				E15DDF472D5A5A3A00CDD30A /* MonthlySimulationSettings.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

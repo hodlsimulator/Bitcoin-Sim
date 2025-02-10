@@ -1,5 +1,5 @@
 //
-//  BTC_SimulatorApp.swift
+//  BTCMonteCarloApp.swift
 //  BTC Simulator
 //
 //  Created by ... on 20/11/2024.
@@ -15,21 +15,22 @@ class SimChartSelection: ObservableObject {
 @main
 struct BTCMonteCarloApp: App {
     @Environment(\.scenePhase) private var scenePhase
-
     @AppStorage("hasOnboarded") private var didFinishOnboarding = false
 
-    // Show the consent alert if no decision has been recorded.
-    @State private var showConsent: Bool = UserDefaults.standard.object(forKey: "SentryConsentGiven") == nil
+    // 1) Remove @EnvironmentObject from the App struct — we want to *provide*, not consume, these objects
+    // 2) Convert all objects to @StateObject, then initialize them in init()
 
     @StateObject private var appViewModel: AppViewModel
     @StateObject private var inputManager: PersistentInputManager
-    @StateObject private var simSettings: SimulationSettings
+    @StateObject private var weeklySimSettings: SimulationSettings
+    @StateObject private var monthlySimSettings: MonthlySimulationSettings
     @StateObject private var chartDataCache: ChartDataCache
     @StateObject private var simChartSelection: SimChartSelection
     @StateObject private var coordinator: SimulationCoordinator
 
+    // MARK: - Init
     init() {
-        // Initialise Sentry SDK
+        // ---- Sentry Startup
         SentrySDK.start { options in
             options.dsn = "https://3ca36373246f91c44a0733a5d9489f52@o4508788421623808.ingest.de.sentry.io/4508788424376400"
             options.attachViewHierarchy = false
@@ -38,42 +39,51 @@ struct BTCMonteCarloApp: App {
             options.swiftAsyncStacktraces = true
             options.enableAppLaunchProfiling = true
         }
-        
+
+        // ---- Default toggles
         let defaultToggles: [String: Any] = [
             "useLockRandomSeed": false,
             "useLognormalGrowth": true,
             "useHistoricalSampling": true,
             "useVolShocks": true,
-            "useGarchVolatility": true, 
+            "useGarchVolatility": true,
             "useRegimeSwitching": true,
             "useAutoCorrelation": true,
             "autoCorrelationStrength": 0.05,
             "meanReversionTarget": 0.03
         ]
         UserDefaults.standard.register(defaults: defaultToggles)
-        
-        // Create local instances first
+
+        // ---- Create local instances
         let appViewModelInstance = AppViewModel()
         let inputManagerInstance = PersistentInputManager()
-        let simSettingsInstance = SimulationSettings(loadDefaults: true)
+        let weeklySimSettingsInstance = SimulationSettings(loadDefaults: true)
+        let monthlySimSettingsInstance = MonthlySimulationSettings()
         let chartDataCacheInstance = ChartDataCache()
         let simChartSelectionInstance = SimChartSelection()
+
+        // Create the coordinator using the local instances above
         let coordinatorInstance = SimulationCoordinator(
             chartDataCache: chartDataCacheInstance,
-            simSettings: simSettingsInstance,
+            simSettings: weeklySimSettingsInstance,  // weekly by default
             inputManager: inputManagerInstance,
             simChartSelection: simChartSelectionInstance
         )
 
-        // Then assign to the StateObjects
-        _appViewModel = StateObject(wrappedValue: appViewModelInstance)
-        _inputManager = StateObject(wrappedValue: inputManagerInstance)
-        _simSettings = StateObject(wrappedValue: simSettingsInstance)
-        _chartDataCache = StateObject(wrappedValue: chartDataCacheInstance)
-        _simChartSelection = StateObject(wrappedValue: simChartSelectionInstance)
-        _coordinator = StateObject(wrappedValue: coordinatorInstance)
+        // ---- Assign them to @StateObject wrappers
+        _appViewModel        = StateObject(wrappedValue: appViewModelInstance)
+        _inputManager        = StateObject(wrappedValue: inputManagerInstance)
+        _weeklySimSettings   = StateObject(wrappedValue: weeklySimSettingsInstance)
+        _monthlySimSettings  = StateObject(wrappedValue: monthlySimSettingsInstance)
+        _chartDataCache      = StateObject(wrappedValue: chartDataCacheInstance)
+        _simChartSelection   = StateObject(wrappedValue: simChartSelectionInstance)
+        _coordinator         = StateObject(wrappedValue: coordinatorInstance)
+
+        // **Don't** do anything else here that calls self.coordinator or other properties;
+        // just finish init.
     }
 
+    // MARK: - body
     var body: some Scene {
         WindowGroup {
             ZStack {
@@ -81,15 +91,22 @@ struct BTCMonteCarloApp: App {
 
                 GeometryReader { geo in
                     Color.clear
-                        .onAppear { appViewModel.windowSize = geo.size }
-                        .onChange(of: geo.size) { _, newSize in appViewModel.windowSize = newSize }
+                        .onAppear {
+                            appViewModel.windowSize = geo.size
+                        }
+                        .onChange(of: geo.size) { _, newSize in
+                            appViewModel.windowSize = newSize
+                        }
                 }
 
+                // Switch between main ContentView and Onboarding
                 if didFinishOnboarding {
                     NavigationStack {
                         ContentView()
+                            // Provide these objects so child views can consume them
                             .environmentObject(inputManager)
-                            .environmentObject(simSettings)
+                            .environmentObject(weeklySimSettings)
+                            .environmentObject(monthlySimSettings)
                             .environmentObject(chartDataCache)
                             .environmentObject(simChartSelection)
                             .environmentObject(coordinator)
@@ -100,7 +117,8 @@ struct BTCMonteCarloApp: App {
                     NavigationStack {
                         OnboardingView(didFinishOnboarding: $didFinishOnboarding)
                             .environmentObject(inputManager)
-                            .environmentObject(simSettings)
+                            .environmentObject(weeklySimSettings)
+                            .environmentObject(monthlySimSettings)
                             .environmentObject(chartDataCache)
                             .environmentObject(simChartSelection)
                             .environmentObject(coordinator)
@@ -109,29 +127,11 @@ struct BTCMonteCarloApp: App {
                     .preferredColorScheme(.dark)
                 }
             }
-            .alert("Data Collection Consent", isPresented: $showConsent) {
-                Button("No", role: .cancel) {
-                    UserDefaults.standard.set(false, forKey: "SentryConsentGiven")
-                    showConsent = false
-                }
-                Button("Yes") {
-                    UserDefaults.standard.set(true, forKey: "SentryConsentGiven")
-                    SentrySDK.start { options in
-                        options.dsn = "https://3ca36373246f91c44a0733a5d9489f52@o4508788421623808.ingest.de.sentry.io/4508788424376400"
-                        options.attachViewHierarchy = false
-                        options.enableMetricKit = true
-                        options.enableTimeToFullDisplayTracing = true
-                        options.swiftAsyncStacktraces = true
-                        options.enableAppLaunchProfiling = true
-                    }
-                    showConsent = false
-                }
-            } message: {
-                Text("We collect error logs and usage data to improve the app. Do you consent to share this data?")
-            }
             .onAppear {
-                simSettings.isOnboarding = !didFinishOnboarding
+                // Now we can safely call stuff on weeklySimSettings or monthlySimSettings
+                weeklySimSettings.isOnboarding = !didFinishOnboarding
 
+                // e.g. load historical data
                 historicalBTCWeeklyReturns = loadAndAlignWeeklyData()
                 extendedWeeklyReturns = historicalBTCWeeklyReturns
 
@@ -140,7 +140,9 @@ struct BTCMonteCarloApp: App {
             }
             .onChange(of: scenePhase) { _, newPhase in
                 if newPhase == .inactive || newPhase == .background {
-                    simSettings.saveToUserDefaults()
+                    // Save weekly & monthly user defaults
+                    weeklySimSettings.saveToUserDefaults()
+                    monthlySimSettings.saveToUserDefaultsMonthly()
                 }
             }
         }
