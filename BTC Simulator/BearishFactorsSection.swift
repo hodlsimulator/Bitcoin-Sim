@@ -22,6 +22,7 @@ struct BearishFactorsSection: View {
     var body: some View {
         Section("Bearish Factors") {
             
+            // Regulatory Clampdown
             FactorToggleRow(
                 factorName: "RegClampdown",
                 iconName: "hand.raised.slash",
@@ -41,6 +42,7 @@ struct BearishFactorsSection: View {
                 onFactorChange: onFactorChange
             )
             
+            // Competitor Coin
             FactorToggleRow(
                 factorName: "CompetitorCoin",
                 iconName: "bitcoinsign.circle",
@@ -60,6 +62,7 @@ struct BearishFactorsSection: View {
                 onFactorChange: onFactorChange
             )
             
+            // Security Breach
             FactorToggleRow(
                 factorName: "SecurityBreach",
                 iconName: "lock.shield",
@@ -79,6 +82,7 @@ struct BearishFactorsSection: View {
                 onFactorChange: onFactorChange
             )
             
+            // Bubble Pop
             FactorToggleRow(
                 factorName: "BubblePop",
                 iconName: "bubble.left.and.bubble.right.fill",
@@ -98,6 +102,7 @@ struct BearishFactorsSection: View {
                 onFactorChange: onFactorChange
             )
             
+            // Stablecoin Meltdown
             FactorToggleRow(
                 factorName: "StablecoinMeltdown",
                 iconName: "exclamationmark.triangle.fill",
@@ -117,6 +122,7 @@ struct BearishFactorsSection: View {
                 onFactorChange: onFactorChange
             )
             
+            // Black Swan Events
             FactorToggleRow(
                 factorName: "BlackSwan",
                 iconName: "tornado",
@@ -136,6 +142,7 @@ struct BearishFactorsSection: View {
                 onFactorChange: onFactorChange
             )
             
+            // Bear Market Conditions
             FactorToggleRow(
                 factorName: "BearMarket",
                 iconName: "chart.bar.xaxis",
@@ -155,6 +162,7 @@ struct BearishFactorsSection: View {
                 onFactorChange: onFactorChange
             )
             
+            // Declining ARR / Maturing Market
             FactorToggleRow(
                 factorName: "MaturingMarket",
                 iconName: "chart.line.downtrend.xyaxis",
@@ -174,6 +182,7 @@ struct BearishFactorsSection: View {
                 onFactorChange: onFactorChange
             )
             
+            // Recession / Macro Crash
             FactorToggleRow(
                 factorName: "Recession",
                 iconName: "chart.line.downtrend.xyaxis.circle.fill",

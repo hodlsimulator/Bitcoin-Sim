@@ -22,6 +22,7 @@ struct BullishFactorsSection: View {
     var body: some View {
         Section("Bullish Factors") {
             
+            // Halving
             FactorToggleRow(
                 factorName: "Halving",
                 iconName: "globe.europe.africa",
@@ -42,6 +43,7 @@ struct BullishFactorsSection: View {
                 onFactorChange: onFactorChange
             )
             
+            // Institutional Demand
             FactorToggleRow(
                 factorName: "InstitutionalDemand",
                 iconName: "bitcoinsign.bank.building",
@@ -61,6 +63,7 @@ struct BullishFactorsSection: View {
                 onFactorChange: onFactorChange
             )
             
+            // Country Adoption
             FactorToggleRow(
                 factorName: "CountryAdoption",
                 iconName: "flag.fill",
@@ -81,6 +84,7 @@ struct BullishFactorsSection: View {
                 onFactorChange: onFactorChange
             )
             
+            // Regulatory Clarity
             FactorToggleRow(
                 factorName: "RegulatoryClarity",
                 iconName: "checkmark.shield",
@@ -101,6 +105,7 @@ struct BullishFactorsSection: View {
                 onFactorChange: onFactorChange
             )
             
+            // ETF Approval
             FactorToggleRow(
                 factorName: "EtfApproval",
                 iconName: "building.2.crop.circle",
@@ -121,6 +126,7 @@ struct BullishFactorsSection: View {
                 onFactorChange: onFactorChange
             )
             
+            // Tech Breakthrough
             FactorToggleRow(
                 factorName: "TechBreakthrough",
                 iconName: "sparkles",
@@ -141,6 +147,7 @@ struct BullishFactorsSection: View {
                 onFactorChange: onFactorChange
             )
             
+            // Scarcity Events
             FactorToggleRow(
                 factorName: "ScarcityEvents",
                 iconName: "scalemass",
@@ -161,6 +168,7 @@ struct BullishFactorsSection: View {
                 onFactorChange: onFactorChange
             )
             
+            // Global Macro Hedge
             FactorToggleRow(
                 factorName: "GlobalMacroHedge",
                 iconName: "globe.americas.fill",
@@ -181,6 +189,7 @@ struct BullishFactorsSection: View {
                 onFactorChange: onFactorChange
             )
             
+            // Stablecoin Shift
             FactorToggleRow(
                 factorName: "StablecoinShift",
                 iconName: "dollarsign.arrow.circlepath",
@@ -200,6 +209,7 @@ struct BullishFactorsSection: View {
                 onFactorChange: onFactorChange
             )
             
+            // Demographic Adoption
             FactorToggleRow(
                 factorName: "DemographicAdoption",
                 iconName: "person.3.fill",
@@ -219,6 +229,7 @@ struct BullishFactorsSection: View {
                 onFactorChange: onFactorChange
             )
             
+            // Altcoin Flight
             FactorToggleRow(
                 factorName: "AltcoinFlight",
                 iconName: "bitcoinsign.circle.fill",
@@ -238,6 +249,7 @@ struct BullishFactorsSection: View {
                 onFactorChange: onFactorChange
             )
             
+            // Adoption Factor (Incremental Drift)
             FactorToggleRow(
                 factorName: "AdoptionFactor",
                 iconName: "arrow.up.right.circle.fill",
