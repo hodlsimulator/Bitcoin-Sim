@@ -1,3 +1,28 @@
+/*
+-----------------------------------------------------------
+                SETTINGS SECTIONS
+                  BTC MONTE CARLO
+                (HODL SIMULATOR)
+-----------------------------------------------------------
+Description:
+ This file extends the SettingsView by providing a collection of reusable UI sections and helper
+ functions that form the backbone of the settings interface. It defines custom bindings, computed views,
+ and utility methods to adjust and display simulation parameters, including:
+
+ • A custom Binding for factor intensity that synchronizes global intensity with individual factor settings.
+ • A tilt bar view that visually represents market sentiment—green for bullish and red for bearish conditions.
+ • A factor intensity section featuring extreme bullish and bearish toggle buttons to force extreme settings.
+ • Helper functions to lock/unlock individual factors and manage their state based on user interactions.
+ • Sections for toggling all factors on or off, restoring default settings, and navigating to the About page.
+
+Usage:
+ These components are integrated into the SettingsView to provide a user-friendly interface for fine-tuning
+ simulation parameters and market factor settings.
+-----------------------------------------------------------
+Created on 27/01/2025.
+-----------------------------------------------------------
+*/
+
 //
 //  SettingsSections.swift
 //  BTCMonteCarlo

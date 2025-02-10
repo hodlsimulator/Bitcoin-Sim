@@ -30,11 +30,10 @@ class SimulationSettings: ObservableObject {
     
     /// Global slider controlling the baseline for factors.
     /// When updated manually, its didSet calls syncFactors().
-    @Published var rawFactorIntensity: Double = 0.5 {
+    @Published var rawFactorIntensity: Double {
         didSet {
-            // Debug print to trace changes.
             print("[rawFactorIntensity didSet] New value: \(rawFactorIntensity), ignoreSync: \(ignoreSync)")
-            // If this change is not coming from an individual update, sync all factors.
+            UserDefaults.standard.set(rawFactorIntensity, forKey: "rawFactorIntensity")
             if !ignoreSync {
                 syncFactors()
             }
@@ -225,6 +224,13 @@ class SimulationSettings: ObservableObject {
     
     // MARK: - Init
     init() {
+        // Load saved value if it exists; otherwise default to 0.5.
+        if let savedIntensity = UserDefaults.standard.object(forKey: "rawFactorIntensity") as? Double {
+            rawFactorIntensity = savedIntensity
+        } else {
+            rawFactorIntensity = 0.5
+        }
+            
         isUpdating = false
         isInitialized = false
         loadFromUserDefaults()

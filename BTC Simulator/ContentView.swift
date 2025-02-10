@@ -1,3 +1,40 @@
+/*
+-----------------------------------------------------------
+                CONTENT VIEW
+                   BTC MONTE CARLO
+                 (HODL SIMULATOR)
+-----------------------------------------------------------
+Description:
+ This file implements the main user interface for the HODL Simulator. It combines multiple components to:
+ • Allow users to configure simulation parameters via an interactive input form.
+ • Manage and display simulation results, including detailed charts and summary views.
+ • Coordinate navigation between settings, about, and histogram/chart detail screens.
+ • Integrate persistent input management, chart data caching, and simulation coordination.
+ • Provide custom data formatting (e.g., currency and power-of-ten suffixes) for numerical values.
+
+Key Components:
+ • PersistentInputManager:
+   - Manages user inputs and persists simulation parameters using UserDefaults.
+ • ChartDataCache:
+   - Caches simulation run data and chart snapshots for efficient rendering.
+ • ContentView:
+   - Acts as the main entry point, toggling between the parameter input screen and the simulation
+     results view based on the simulation state.
+ • Navigation & Interaction:
+   - Supports navigation to Settings, About, and additional views with bottom icons and transition buttons.
+ • Data Formatting:
+   - Provides extensions for formatting numeric values for display in the simulation results.
+
+Usage:
+ When the app launches, ContentView displays the configuration form for simulation parameters. After
+ running a simulation, the view transitions to display the results along with interactive charts and
+ detailed summaries, making it easy to explore various simulation outcomes.
+
+-----------------------------------------------------------
+Created on 20/11/2024.
+-----------------------------------------------------------
+*/
+
 //
 //  ContentView.swift
 //  BTCMonteCarlo
