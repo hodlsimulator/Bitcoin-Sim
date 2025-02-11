@@ -31,6 +31,8 @@ class SimulationCoordinator: ObservableObject {
     
     // Step-by-step median BTC prices (week or month)
     @Published var stepMedianBTCs: [Decimal] = []
+    
+    @Published var useMonthly: Bool = false
 
     var chartDataCache: ChartDataCache
     var mempoolDataManager: MempoolDataManager?

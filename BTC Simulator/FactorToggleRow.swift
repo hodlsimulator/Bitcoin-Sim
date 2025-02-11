@@ -58,10 +58,7 @@ struct FactorToggleRow: View {
             set: { newVal in
                 let clampedVal = max(min(newVal, factor.maxValue), factor.minValue)
                 
-                // Print out the mode using the monthly object's property.
-                print("⚠️ FactorToggleRow: monthlySimSettings.periodUnitMonthly is \(monthlySimSettings.periodUnitMonthly)")
-                
-                // Decide which method to call based on monthlySimSettings.periodUnitMonthly.
+                // Check the current period mode (monthly vs weekly) and call the correct slider function.
                 if monthlySimSettings.periodUnitMonthly == .months {
                     print("Calling monthlySimSettings.userDidDragFactorSliderMonthly for \(factorName)")
                     monthlySimSettings.userDidDragFactorSliderMonthly(factorName, to: clampedVal)
@@ -70,7 +67,7 @@ struct FactorToggleRow: View {
                     weeklySimSettings.userDidDragFactorSlider(factorName, to: clampedVal)
                 }
                 
-                // Unlock factor after a manual drag.
+                // Always unlock factor after a manual drag.
                 unlockFactor()
                 onFactorChange()
             }
@@ -100,7 +97,7 @@ struct FactorToggleRow: View {
                         .onTapGesture {
                             onTitleTap(title)
                         }
-                        // Tooltip anchor.
+                        // Tooltip anchor
                         .anchorPreference(key: TooltipAnchorKey.self, value: .center) { pt in
                             guard activeFactor == title,
                                   let desc = parameterDescription,
@@ -142,7 +139,6 @@ struct FactorToggleRow: View {
     
     // -------------------------------------------
     // Helpers to pick factor from weekly or monthly.
-    // We now check monthlySimSettings.periodUnitMonthly.
     private func currentFactor() -> FactorState? {
         if monthlySimSettings.periodUnitMonthly == .months {
             return monthlySimSettings.factorsMonthly[factorName]

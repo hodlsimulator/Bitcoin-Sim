@@ -43,6 +43,7 @@ class MonthlySimulationSettings: ObservableObject {
         "BearMarket", "MaturingMarket", "Recession"
     ]
     
+    @Published var suspendUnifiedUpdates: Bool = false
     @Published var chartExtremeBearishMonthly: Bool = false {
         didSet { print("[chartExtremeBearishMonthly] Changed to \(chartExtremeBearishMonthly)") }
     }
@@ -242,13 +243,13 @@ class MonthlySimulationSettings: ObservableObject {
         }
     }
     
-    private let defaultTiltKeyMonthly = "defaultTiltMonthly"
-    private let maxSwingKeyMonthly = "maxSwingMonthly"
-    private let hasCapturedDefaultKeyMonthly = "capturedTiltMonthly"
-    private let tiltBarValueKeyMonthly = "tiltBarValueMonthly"
+    let defaultTiltKeyMonthly = "defaultTiltMonthly"
+    let maxSwingKeyMonthly = "maxSwingMonthly"
+    let hasCapturedDefaultKeyMonthly = "capturedTiltMonthly"
+    let tiltBarValueKeyMonthly = "tiltBarValueMonthly"
     
     // Key for periodUnitMonthly persistence
-    private let periodUnitKeyMonthly = "savedPeriodUnitMonthly"
+    let periodUnitKeyMonthly = "savedPeriodUnitMonthly"
 
     // MARK: - Init
     init(loadDefaults: Bool = true) {
@@ -705,12 +706,12 @@ class MonthlySimulationSettings: ObservableObject {
     // MARK: - Additional Factor Handling for monthly
     func applyDictionaryFactorForMonthly(_ factorName: String) {
         print("[applyDictionaryFactorForMonthly] Applying dictionary factor logic for \(factorName)")
-        // Place any factor-specific logic for monthly here.
+        // Factor-specific logic for monthly, if any.
     }
     
     func applyDictionaryFactorsToSimMonthly() {
         print("[applyDictionaryFactorsToSimMonthly] Applying dictionary factors to monthly simulation")
-        // Update your simulator with the entire monthly factor dictionary and any additional logic.
+        // Update your simulator with monthly factor data, if needed.
     }
     
     // MARK: - Toggle or restore monthly factors

@@ -9,76 +9,76 @@ import SwiftUI
 
 extension SimulationSettings {
     func restoreDefaults() {
-        // Signal that a bulk restore is in progress
+        print("[restoreDefaults (weekly)] Restoring all weekly defaults in one pass.")
         isRestoringDefaults = true
-        
-        // Clear locked factors
+
+        // 0) Clear locked factors
         lockedFactors.removeAll()
-        
-        print("RESTORE DEFAULTS CALLED!")
-        
-        let defaults = UserDefaults.standard
-        
-        // Reset global factor intensity
-        defaults.removeObject(forKey: "factorIntensity")
-        setFactorIntensity(0.5) // <-- call the setter, not factorIntensity = 0.5
-        
-        // Remove saved factor states so they’re rebuilt on next load
-        defaults.removeObject(forKey: "factorStates")
-        
-        // Reset chart flags
+
+        // 1) Rebuild the dictionary in one go
+        var newFactors: [String: FactorState] = [:]
+        for (factorName, def) in FactorCatalog.all {
+            let (minVal, midVal, maxVal) = (def.minWeekly, def.midWeekly, def.maxWeekly)
+            let fs = FactorState(
+                name: factorName,
+                currentValue: midVal,
+                defaultValue: midVal,
+                minValue: minVal,
+                maxValue: maxVal,
+                isEnabled: true,
+                isLocked: false
+            )
+            newFactors[factorName] = fs
+        }
+        factors = newFactors
+
+        // 2) Reset intensity, tilt bar, and chart extremes
+        rawFactorIntensity = 0.5
         chartExtremeBearish = false
         chartExtremeBullish = false
-        
-        // Preserve any general toggles if desired
-        defaults.set(useHistoricalSampling, forKey: "useHistoricalSampling")
-        defaults.set(useVolShocks, forKey: "useVolShocks")
-        
-        // Remove old keys
-        defaults.removeObject(forKey: "useHalving")
-        defaults.removeObject(forKey: "halvingBump")
-        
-        defaults.removeObject(forKey: "useHistoricalSampling")
-        defaults.removeObject(forKey: "useVolShocks")
-        defaults.removeObject(forKey: "useGarchVolatility")
-        defaults.removeObject(forKey: "useAutoCorrelation")
-        defaults.removeObject(forKey: "autoCorrelationStrength")
-        defaults.removeObject(forKey: "meanReversionTarget")
-        
-        defaults.removeObject(forKey: "useHalvingWeekly")
-        defaults.removeObject(forKey: "halvingBumpWeekly")
-        
-        // Reset lognormal growth
-        defaults.removeObject(forKey: "useLognormalGrowth")
-        useLognormalGrowth = true
-        
-        // Reassign toggles to defaults
-        useHistoricalSampling = true
-        useVolShocks = true
-        useGarchVolatility = true
-        useRegimeSwitching = true
-        
-        lockHistoricalSampling = false
-        
-        useLognormalGrowth = true
-        useHistoricalSampling = true
-        useVolShocks = true
-        useGarchVolatility = true
-        
-        // Loop over the factors and reset them to defaults
-        for (factorName, var factor) in factors {
-            factor.isEnabled = true
-            factor.currentValue = factor.defaultValue
-            factor.isLocked = false
-            factor.internalOffset = 0.0  // <-- reset any offset
-            factors[factorName] = factor
-        }
         resetTiltBar()
-        defaults.synchronize()
-        
-        // Turn off the bulk restore flag after changes settle
-        DispatchQueue.main.async {
-            self.isRestoringDefaults = false
+
+        // 3) Remove user defaults
+        let keysToRemove = [
+            "factorStates",
+            "rawFactorIntensity",
+            "defaultTilt",
+            "maxSwing",
+            "capturedTilt",
+            "tiltBarValue",
+            "savedUserPeriods",
+            "savedInitialBTCPriceUSD",
+            "savedStartingBalance",
+            "savedAverageCostBasis",
+            "currencyPreference",
+            "savedPeriodUnit",
+            "useLognormalGrowth",
+            "useAnnualStep",
+            "lockedRandomSeed",
+            "seedValue",
+            "useRandomSeed",
+            "useHistoricalSampling",
+            "useExtendedHistoricalSampling",
+            "useVolShocks",
+            "useGarchVolatility",
+            "useAutoCorrelation",
+            "autoCorrelationStrength",
+            "meanReversionTarget",
+            "useMeanReversion",
+            "useRegimeSwitching",
+            "lockHistoricalSampling"
+        ]
+        let defaults = UserDefaults.standard
+        for key in keysToRemove {
+            defaults.removeObject(forKey: key)
         }
+        defaults.synchronize()
+
+        // 4) Decide post-reset mode (stay weekly)
+        periodUnit = .weeks
+
+        // 5) Avoid reloading from user defaults
+        isRestoringDefaults = false
+        print("[restoreDefaults (weekly)] Completed weekly defaults reset.")
     }
 }

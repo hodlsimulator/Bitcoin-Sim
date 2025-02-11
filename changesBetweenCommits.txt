@@ -1,0 +1,2749 @@
+diff --git a/BTC Simulator/BTC_SimulatorApp.swift b/BTC Simulator/BTC_SimulatorApp.swift
+index 71417b3..c6e932f 100644
+--- a/BTC Simulator/BTC_SimulatorApp.swift	
++++ b/BTC Simulator/BTC_SimulatorApp.swift	
+@@ -17,9 +17,7 @@ struct BTCMonteCarloApp: App {
+     @Environment(\.scenePhase) private var scenePhase
+     @AppStorage("hasOnboarded") private var didFinishOnboarding = false
+ 
+-    // 1) Remove @EnvironmentObject from the App struct — we want to *provide*, not consume, these objects
+-    // 2) Convert all objects to @StateObject, then initialize them in init()
+-
++    // Each environment object is created once, in init(), and then provided to child views.
+     @StateObject private var appViewModel: AppViewModel
+     @StateObject private var inputManager: PersistentInputManager
+     @StateObject private var weeklySimSettings: SimulationSettings
+@@ -55,14 +53,17 @@ struct BTCMonteCarloApp: App {
+         UserDefaults.standard.register(defaults: defaultToggles)
+ 
+         // ---- Create local instances
+-        let appViewModelInstance = AppViewModel()
+-        let inputManagerInstance = PersistentInputManager()
+-        let weeklySimSettingsInstance = SimulationSettings(loadDefaults: true)
+-        let monthlySimSettingsInstance = MonthlySimulationSettings()
+-        let chartDataCacheInstance = ChartDataCache()
+-        let simChartSelectionInstance = SimChartSelection()
+-
+-        // Create the coordinator using the local instances above
++        let appViewModelInstance       = AppViewModel()
++        let inputManagerInstance       = PersistentInputManager()
++        let weeklySimSettingsInstance  = SimulationSettings(loadDefaults: true)
++        
++        // Pass loadDefaults: true so monthlySimSettings picks up user defaults on startup
++        let monthlySimSettingsInstance = MonthlySimulationSettings(loadDefaults: true)
++        
++        let chartDataCacheInstance     = ChartDataCache()
++        let simChartSelectionInstance  = SimChartSelection()
++
++        // Create the coordinator with the local instances
+         let coordinatorInstance = SimulationCoordinator(
+             chartDataCache: chartDataCacheInstance,
+             simSettings: weeklySimSettingsInstance,  // weekly by default
+@@ -128,15 +129,15 @@ struct BTCMonteCarloApp: App {
+                 }
+             }
+             .onAppear {
+-                // Now we can safely call stuff on weeklySimSettings or monthlySimSettings
++                // E.g. set a property if user hasn't onboarded:
+                 weeklySimSettings.isOnboarding = !didFinishOnboarding
+ 
+-                // e.g. load historical data
++                // Load historical data for weekly & monthly
+                 historicalBTCWeeklyReturns = loadAndAlignWeeklyData()
+-                extendedWeeklyReturns = historicalBTCWeeklyReturns
++                extendedWeeklyReturns      = historicalBTCWeeklyReturns
+ 
+                 historicalBTCMonthlyReturns = loadAndAlignMonthlyData()
+-                extendedMonthlyReturns = historicalBTCMonthlyReturns
++                extendedMonthlyReturns      = historicalBTCMonthlyReturns
+             }
+             .onChange(of: scenePhase) { _, newPhase in
+                 if newPhase == .inactive || newPhase == .background {
+diff --git a/BTC Simulator/FactorToggleRow.swift b/BTC Simulator/FactorToggleRow.swift
+index e37a758..2acf195 100644
+--- a/BTC Simulator/FactorToggleRow.swift	
++++ b/BTC Simulator/FactorToggleRow.swift	
+@@ -30,9 +30,8 @@ struct FactorToggleRow: View {
+     let onFactorChange: () -> Void
+ 
+     var body: some View {
+-        // Decide which object to pull the factor from
++        // Decide which factor state to use based on the monthly object's period unit.
+         let factor = currentFactor()
+-
+         guard let factor = factor else {
+             return AnyView(
+                 Text("Factor '\(factorName)' not found!")
+@@ -57,29 +56,32 @@ struct FactorToggleRow: View {
+             },
+             set: { newVal in
+                 let clampedVal = max(min(newVal, factor.maxValue), factor.minValue)
+-
+-                // *** Decide which method to call based on periodUnit
+-                if weeklySimSettings.periodUnit == .months {
++                
++                // Print out the mode using the monthly object's property.
++                print("⚠️ FactorToggleRow: monthlySimSettings.periodUnitMonthly is \(monthlySimSettings.periodUnitMonthly)")
++                
++                // Decide which method to call based on monthlySimSettings.periodUnitMonthly.
++                if monthlySimSettings.periodUnitMonthly == .months {
++                    print("Calling monthlySimSettings.userDidDragFactorSliderMonthly for \(factorName)")
+                     monthlySimSettings.userDidDragFactorSliderMonthly(factorName, to: clampedVal)
+                 } else {
++                    print("Calling weeklySimSettings.userDidDragFactorSlider for \(factorName)")
+                     weeklySimSettings.userDidDragFactorSlider(factorName, to: clampedVal)
+                 }
+-
+-                // Unlock factor after a manual drag
+-                unlockFactor()
+                 
++                // Unlock factor after a manual drag.
++                unlockFactor()
+                 onFactorChange()
+             }
+         )
+ 
+-        // Build the row UI
+         return AnyView(
+             VStack(alignment: .leading, spacing: 4) {
+                 // Title + Toggle row
+                 HStack(spacing: 8) {
+                     if let icon = iconName, !icon.isEmpty {
+                         Button {
+-                            // Reset to default if user taps icon
++                            // Reset to default if user taps icon.
+                             resetFactorToDefault()
+                             onFactorChange()
+                         } label: {
+@@ -91,13 +93,13 @@ struct FactorToggleRow: View {
+                         }
+                         .buttonStyle(.plain)
+                     }
+-
++                    
+                     Text(title)
+                         .font(.headline)
+                         .onTapGesture {
+                             onTitleTap(title)
+                         }
+-                        // Tooltip anchor
++                        // Tooltip anchor.
+                         .anchorPreference(key: TooltipAnchorKey.self, value: .center) { pt in
+                             guard activeFactor == title,
+                                   let desc = parameterDescription,
+@@ -107,14 +109,14 @@ struct FactorToggleRow: View {
+                             }
+                             return [TooltipItem(title: title, description: desc, anchor: pt)]
+                         }
+-
++                    
+                     Spacer()
+-
++                    
+                     Toggle("", isOn: toggleBinding)
+                         .labelsHidden()
+                         .tint(.orange)
+                 }
+-
++                
+                 // Slider row
+                 HStack {
+                     Slider(
+@@ -123,7 +125,7 @@ struct FactorToggleRow: View {
+                     )
+                     .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
+                     .disabled(!factor.isEnabled)
+-
++                    
+                     if displayAsPercent {
+                         Text(String(format: "%.4f%%", sliderBinding.wrappedValue * 100))
+                             .font(.caption)
+@@ -144,28 +146,28 @@ struct FactorToggleRow: View {
+             .opacity(factor.isEnabled ? 1.0 : 0.5)
+         )
+     }
+-
+-    // -------------------------------------------
+-    // Helpers to pick factor from weekly or monthly
++    
+     // -------------------------------------------
++    // Helpers to pick factor from weekly or monthly.
++    // We now check monthlySimSettings.periodUnitMonthly.
+     private func currentFactor() -> FactorState? {
+-        if weeklySimSettings.periodUnit == .months {
++        if monthlySimSettings.periodUnitMonthly == .months {
+             return monthlySimSettings.factorsMonthly[factorName]
+         } else {
+             return weeklySimSettings.factors[factorName]
+         }
+     }
+-
++    
+     private func setFactorEnabled(_ enabled: Bool) {
+-        if weeklySimSettings.periodUnit == .months {
++        if monthlySimSettings.periodUnitMonthly == .months {
+             monthlySimSettings.setFactorEnabled(factorName: factorName, enabled: enabled)
+         } else {
+             weeklySimSettings.setFactorEnabled(factorName: factorName, enabled: enabled)
+         }
+     }
+-
++    
+     private func resetFactorToDefault() {
+-        if weeklySimSettings.periodUnit == .months {
++        if monthlySimSettings.periodUnitMonthly == .months {
+             if var f = monthlySimSettings.factorsMonthly[factorName] {
+                 f.currentValue = defaultValue
+                 f.isLocked = false
+@@ -179,9 +181,9 @@ struct FactorToggleRow: View {
+             }
+         }
+     }
+-
++    
+     private func unlockFactor() {
+-        if weeklySimSettings.periodUnit == .months {
++        if monthlySimSettings.periodUnitMonthly == .months {
+             if var f = monthlySimSettings.factorsMonthly[factorName] {
+                 f.isLocked = false
+                 monthlySimSettings.factorsMonthly[factorName] = f
+diff --git a/BTC Simulator/InMemorySettings.swift b/BTC Simulator/InMemorySettings.swift
+index d16533f..4ee9a63 100644
+--- a/BTC Simulator/InMemorySettings.swift	
++++ b/BTC Simulator/InMemorySettings.swift	
+@@ -7,18 +7,18 @@
+ 
+ import SwiftUI
+ 
+-/// A pure in-memory model for all your bullish/bearish factor toggles.
++/// A pure in‐memory model for all your bullish/bearish factor toggles.
+ /// We load/save from UserDefaults only when we decide to (batching).
+ class InMemorySettings: ObservableObject {
+     
+-    // MARK: - Injected reference to SimulationSettings (so we can disable factors there)
+-    // CHANGED HERE: We store a reference to your main simSettings, so we can call
+-    // simSettings?.setFactorEnabled(...) whenever these toggles change.
+-    weak var simSettings: SimulationSettings?
++    // MARK: - References to both weekly & monthly objects
++    weak var weeklySimSettings: SimulationSettings?
++    weak var monthlySimSettings: MonthlySimulationSettings?
+     
+-    // Optionally, you can add an init that sets up this reference:
+-    init(simSettings: SimulationSettings? = nil) {
+-        self.simSettings = simSettings
++    // Optionally, you can add an init that sets up these references:
++    init(weekly: SimulationSettings? = nil, monthly: MonthlySimulationSettings? = nil) {
++        self.weeklySimSettings = weekly
++        self.monthlySimSettings = monthly
+     }
+     
+     // =============================
+@@ -26,7 +26,7 @@ class InMemorySettings: ObservableObject {
+     // =============================
+     @Published var useHalvingWeekly: Bool = true {
+         didSet {
+-            simSettings?.setFactorEnabled(factorName: "Halving", enabled: useHalvingWeekly)
++            weeklySimSettings?.setFactorEnabled(factorName: "Halving", enabled: useHalvingWeekly)
+         }
+     }
+     @Published var halvingBumpWeekly: Double = 0.35
+@@ -36,7 +36,7 @@ class InMemorySettings: ObservableObject {
+     // =============================
+     @Published var useHalvingMonthly: Bool = true {
+         didSet {
+-            simSettings?.setFactorEnabled(factorName: "Halving", enabled: useHalvingMonthly)
++            monthlySimSettings?.setFactorEnabled(factorName: "Halving", enabled: useHalvingMonthly)
+         }
+     }
+     @Published var halvingBumpMonthly: Double = 0.35
+@@ -46,14 +46,14 @@ class InMemorySettings: ObservableObject {
+     // =============================
+     @Published var useInstitutionalDemandWeekly: Bool = true {
+         didSet {
+-            simSettings?.setFactorEnabled(factorName: "InstitutionalDemand", enabled: useInstitutionalDemandWeekly)
++            weeklySimSettings?.setFactorEnabled(factorName: "InstitutionalDemand", enabled: useInstitutionalDemandWeekly)
+         }
+     }
+     @Published var maxDemandBoostWeekly: Double = 0.001239
+ 
+     @Published var useInstitutionalDemandMonthly: Bool = true {
+         didSet {
+-            simSettings?.setFactorEnabled(factorName: "InstitutionalDemand", enabled: useInstitutionalDemandMonthly)
++            monthlySimSettings?.setFactorEnabled(factorName: "InstitutionalDemand", enabled: useInstitutionalDemandMonthly)
+         }
+     }
+     @Published var maxDemandBoostMonthly: Double = 0.0056589855
+@@ -63,14 +63,14 @@ class InMemorySettings: ObservableObject {
+     // =============================
+     @Published var useCountryAdoptionWeekly: Bool = true {
+         didSet {
+-            simSettings?.setFactorEnabled(factorName: "CountryAdoption", enabled: useCountryAdoptionWeekly)
++            weeklySimSettings?.setFactorEnabled(factorName: "CountryAdoption", enabled: useCountryAdoptionWeekly)
+         }
+     }
+     @Published var maxCountryAdBoostWeekly: Double = 0.0009953916
+ 
+     @Published var useCountryAdoptionMonthly: Bool = true {
+         didSet {
+-            simSettings?.setFactorEnabled(factorName: "CountryAdoption", enabled: useCountryAdoptionMonthly)
++            monthlySimSettings?.setFactorEnabled(factorName: "CountryAdoption", enabled: useCountryAdoptionMonthly)
+         }
+     }
+     @Published var maxCountryAdBoostMonthly: Double = 0.00551551595
+@@ -80,14 +80,14 @@ class InMemorySettings: ObservableObject {
+     // =============================
+     @Published var useRegulatoryClarityWeekly: Bool = true {
+         didSet {
+-            simSettings?.setFactorEnabled(factorName: "RegulatoryClarity", enabled: useRegulatoryClarityWeekly)
++            weeklySimSettings?.setFactorEnabled(factorName: "RegulatoryClarity", enabled: useRegulatoryClarityWeekly)
+         }
+     }
+     @Published var maxClarityBoostWeekly: Double = 0.0007938497
+ 
+     @Published var useRegulatoryClarityMonthly: Bool = true {
+         didSet {
+-            simSettings?.setFactorEnabled(factorName: "RegulatoryClarity", enabled: useRegulatoryClarityMonthly)
++            monthlySimSettings?.setFactorEnabled(factorName: "RegulatoryClarity", enabled: useRegulatoryClarityMonthly)
+         }
+     }
+     @Published var maxClarityBoostMonthly: Double = 0.0040737327
+@@ -97,14 +97,14 @@ class InMemorySettings: ObservableObject {
+     // =============================
+     @Published var useEtfApprovalWeekly: Bool = true {
+         didSet {
+-            simSettings?.setFactorEnabled(factorName: "EtfApproval", enabled: useEtfApprovalWeekly)
++            weeklySimSettings?.setFactorEnabled(factorName: "EtfApproval", enabled: useEtfApprovalWeekly)
+         }
+     }
+     @Published var maxEtfBoostWeekly: Double = 0.002
+ 
+     @Published var useEtfApprovalMonthly: Bool = true {
+         didSet {
+-            simSettings?.setFactorEnabled(factorName: "EtfApproval", enabled: useEtfApprovalMonthly)
++            monthlySimSettings?.setFactorEnabled(factorName: "EtfApproval", enabled: useEtfApprovalMonthly)
+         }
+     }
+     @Published var maxEtfBoostMonthly: Double = 0.0057142851
+@@ -114,14 +114,14 @@ class InMemorySettings: ObservableObject {
+     // =============================
+     @Published var useTechBreakthroughWeekly: Bool = true {
+         didSet {
+-            simSettings?.setFactorEnabled(factorName: "TechBreakthrough", enabled: useTechBreakthroughWeekly)
++            weeklySimSettings?.setFactorEnabled(factorName: "TechBreakthrough", enabled: useTechBreakthroughWeekly)
+         }
+     }
+     @Published var maxTechBoostWeekly: Double = 0.00071162
+ 
+     @Published var useTechBreakthroughMonthly: Bool = true {
+         didSet {
+-            simSettings?.setFactorEnabled(factorName: "TechBreakthrough", enabled: useTechBreakthroughMonthly)
++            monthlySimSettings?.setFactorEnabled(factorName: "TechBreakthrough", enabled: useTechBreakthroughMonthly)
+         }
+     }
+     @Published var maxTechBoostMonthly: Double = 0.0028387091
+@@ -131,14 +131,14 @@ class InMemorySettings: ObservableObject {
+     // =============================
+     @Published var useScarcityEventsWeekly: Bool = true {
+         didSet {
+-            simSettings?.setFactorEnabled(factorName: "ScarcityEvents", enabled: useScarcityEventsWeekly)
++            weeklySimSettings?.setFactorEnabled(factorName: "ScarcityEvents", enabled: useScarcityEventsWeekly)
+         }
+     }
+     @Published var maxScarcityBoostWeekly: Double = 0.00041308753
+ 
+     @Published var useScarcityEventsMonthly: Bool = true {
+         didSet {
+-            simSettings?.setFactorEnabled(factorName: "ScarcityEvents", enabled: useScarcityEventsMonthly)
++            monthlySimSettings?.setFactorEnabled(factorName: "ScarcityEvents", enabled: useScarcityEventsMonthly)
+         }
+     }
+     @Published var maxScarcityBoostMonthly: Double = 0.00329287055
+@@ -148,14 +148,14 @@ class InMemorySettings: ObservableObject {
+     // =============================
+     @Published var useGlobalMacroHedgeWeekly: Bool = true {
+         didSet {
+-            simSettings?.setFactorEnabled(factorName: "GlobalMacroHedge", enabled: useGlobalMacroHedgeWeekly)
++            weeklySimSettings?.setFactorEnabled(factorName: "GlobalMacroHedge", enabled: useGlobalMacroHedgeWeekly)
+         }
+     }
+     @Published var maxMacroBoostWeekly: Double = 0.00041935
+ 
+     @Published var useGlobalMacroHedgeMonthly: Bool = true {
+         didSet {
+-            simSettings?.setFactorEnabled(factorName: "GlobalMacroHedge", enabled: useGlobalMacroHedgeMonthly)
++            monthlySimSettings?.setFactorEnabled(factorName: "GlobalMacroHedge", enabled: useGlobalMacroHedgeMonthly)
+         }
+     }
+     @Published var maxMacroBoostMonthly: Double = 0.0032442397
+@@ -165,14 +165,14 @@ class InMemorySettings: ObservableObject {
+     // =============================
+     @Published var useStablecoinShiftWeekly: Bool = true {
+         didSet {
+-            simSettings?.setFactorEnabled(factorName: "StablecoinShift", enabled: useStablecoinShiftWeekly)
++            weeklySimSettings?.setFactorEnabled(factorName: "StablecoinShift", enabled: useStablecoinShiftWeekly)
+         }
+     }
+     @Published var maxStablecoinBoostWeekly: Double = 0.00040493
+ 
+     @Published var useStablecoinShiftMonthly: Bool = true {
+         didSet {
+-            simSettings?.setFactorEnabled(factorName: "StablecoinShift", enabled: useStablecoinShiftMonthly)
++            monthlySimSettings?.setFactorEnabled(factorName: "StablecoinShift", enabled: useStablecoinShiftMonthly)
+         }
+     }
+     @Published var maxStablecoinBoostMonthly: Double = 0.0023041475
+@@ -182,14 +182,14 @@ class InMemorySettings: ObservableObject {
+     // =============================
+     @Published var useDemographicAdoptionWeekly: Bool = true {
+         didSet {
+-            simSettings?.setFactorEnabled(factorName: "DemographicAdoption", enabled: useDemographicAdoptionWeekly)
++            weeklySimSettings?.setFactorEnabled(factorName: "DemographicAdoption", enabled: useDemographicAdoptionWeekly)
+         }
+     }
+     @Published var maxDemoBoostWeekly: Double = 0.00130568
+ 
+     @Published var useDemographicAdoptionMonthly: Bool = true {
+         didSet {
+-            simSettings?.setFactorEnabled(factorName: "DemographicAdoption", enabled: useDemographicAdoptionMonthly)
++            monthlySimSettings?.setFactorEnabled(factorName: "DemographicAdoption", enabled: useDemographicAdoptionMonthly)
+         }
+     }
+     @Published var maxDemoBoostMonthly: Double = 0.00729112471
+@@ -199,14 +199,14 @@ class InMemorySettings: ObservableObject {
+     // =============================
+     @Published var useAltcoinFlightWeekly: Bool = true {
+         didSet {
+-            simSettings?.setFactorEnabled(factorName: "AltcoinFlight", enabled: useAltcoinFlightWeekly)
++            weeklySimSettings?.setFactorEnabled(factorName: "AltcoinFlight", enabled: useAltcoinFlightWeekly)
+         }
+     }
+     @Published var maxAltcoinBoostWeekly: Double = 0.00028021945
+ 
+     @Published var useAltcoinFlightMonthly: Bool = true {
+         didSet {
+-            simSettings?.setFactorEnabled(factorName: "AltcoinFlight", enabled: useAltcoinFlightMonthly)
++            monthlySimSettings?.setFactorEnabled(factorName: "AltcoinFlight", enabled: useAltcoinFlightMonthly)
+         }
+     }
+     @Published var maxAltcoinBoostMonthly: Double = 0.0021566817
+@@ -216,14 +216,14 @@ class InMemorySettings: ObservableObject {
+     // =============================
+     @Published var useAdoptionFactorWeekly: Bool = true {
+         didSet {
+-            simSettings?.setFactorEnabled(factorName: "AdoptionFactor", enabled: useAdoptionFactorWeekly)
++            weeklySimSettings?.setFactorEnabled(factorName: "AdoptionFactor", enabled: useAdoptionFactorWeekly)
+         }
+     }
+     @Published var adoptionBaseFactorWeekly: Double = 0.0016045109
+ 
+     @Published var useAdoptionFactorMonthly: Bool = true {
+         didSet {
+-            simSettings?.setFactorEnabled(factorName: "AdoptionFactor", enabled: useAdoptionFactorMonthly)
++            monthlySimSettings?.setFactorEnabled(factorName: "AdoptionFactor", enabled: useAdoptionFactorMonthly)
+         }
+     }
+     @Published var adoptionBaseFactorMonthly: Double = 0.01466095993
+@@ -233,14 +233,14 @@ class InMemorySettings: ObservableObject {
+     // =============================
+     @Published var useRegClampdownWeekly: Bool = true {
+         didSet {
+-            simSettings?.setFactorEnabled(factorName: "RegClampdown", enabled: useRegClampdownWeekly)
++            weeklySimSettings?.setFactorEnabled(factorName: "RegClampdown", enabled: useRegClampdownWeekly)
+         }
+     }
+     @Published var maxClampDownWeekly: Double = -0.00194128856
+ 
+     @Published var useRegClampdownMonthly: Bool = true {
+         didSet {
+-            simSettings?.setFactorEnabled(factorName: "RegClampdown", enabled: useRegClampdownMonthly)
++            monthlySimSettings?.setFactorEnabled(factorName: "RegClampdown", enabled: useRegClampdownMonthly)
+         }
+     }
+     @Published var maxClampDownMonthly: Double = -0.02
+@@ -250,14 +250,14 @@ class InMemorySettings: ObservableObject {
+     // =============================
+     @Published var useCompetitorCoinWeekly: Bool = true {
+         didSet {
+-            simSettings?.setFactorEnabled(factorName: "CompetitorCoin", enabled: useCompetitorCoinWeekly)
++            weeklySimSettings?.setFactorEnabled(factorName: "CompetitorCoin", enabled: useCompetitorCoinWeekly)
+         }
+     }
+     @Published var maxCompetitorBoostWeekly: Double = -0.0011293145
+ 
+     @Published var useCompetitorCoinMonthly: Bool = true {
+         didSet {
+-            simSettings?.setFactorEnabled(factorName: "CompetitorCoin", enabled: useCompetitorCoinMonthly)
++            monthlySimSettings?.setFactorEnabled(factorName: "CompetitorCoin", enabled: useCompetitorCoinMonthly)
+         }
+     }
+     @Published var maxCompetitorBoostMonthly: Double = -0.008
+@@ -267,14 +267,14 @@ class InMemorySettings: ObservableObject {
+     // =============================
+     @Published var useSecurityBreachWeekly: Bool = true {
+         didSet {
+-            simSettings?.setFactorEnabled(factorName: "SecurityBreach", enabled: useSecurityBreachWeekly)
++            weeklySimSettings?.setFactorEnabled(factorName: "SecurityBreach", enabled: useSecurityBreachWeekly)
+         }
+     }
+     @Published var breachImpactWeekly: Double = -0.0012699694
+ 
+     @Published var useSecurityBreachMonthly: Bool = true {
+         didSet {
+-            simSettings?.setFactorEnabled(factorName: "SecurityBreach", enabled: useSecurityBreachMonthly)
++            monthlySimSettings?.setFactorEnabled(factorName: "SecurityBreach", enabled: useSecurityBreachMonthly)
+         }
+     }
+     @Published var breachImpactMonthly: Double = -0.007
+@@ -284,14 +284,14 @@ class InMemorySettings: ObservableObject {
+     // =============================
+     @Published var useBubblePopWeekly: Bool = true {
+         didSet {
+-            simSettings?.setFactorEnabled(factorName: "BubblePop", enabled: useBubblePopWeekly)
++            weeklySimSettings?.setFactorEnabled(factorName: "BubblePop", enabled: useBubblePopWeekly)
+         }
+     }
+     @Published var maxPopDropWeekly: Double = -0.00321428597
+ 
+     @Published var useBubblePopMonthly: Bool = true {
+         didSet {
+-            simSettings?.setFactorEnabled(factorName: "BubblePop", enabled: useBubblePopMonthly)
++            monthlySimSettings?.setFactorEnabled(factorName: "BubblePop", enabled: useBubblePopMonthly)
+         }
+     }
+     @Published var maxPopDropMonthly: Double = -0.01
+@@ -301,14 +301,14 @@ class InMemorySettings: ObservableObject {
+     // =============================
+     @Published var useStablecoinMeltdownWeekly: Bool = true {
+         didSet {
+-            simSettings?.setFactorEnabled(factorName: "StablecoinMeltdown", enabled: useStablecoinMeltdownWeekly)
++            weeklySimSettings?.setFactorEnabled(factorName: "StablecoinMeltdown", enabled: useStablecoinMeltdownWeekly)
+         }
+     }
+     @Published var maxMeltdownDropWeekly: Double = -0.00169354829
+ 
+     @Published var useStablecoinMeltdownMonthly: Bool = true {
+         didSet {
+-            simSettings?.setFactorEnabled(factorName: "StablecoinMeltdown", enabled: useStablecoinMeltdownMonthly)
++            monthlySimSettings?.setFactorEnabled(factorName: "StablecoinMeltdown", enabled: useStablecoinMeltdownMonthly)
+         }
+     }
+     @Published var maxMeltdownDropMonthly: Double = -0.01
+@@ -318,14 +318,14 @@ class InMemorySettings: ObservableObject {
+     // =============================
+     @Published var useBlackSwanWeekly: Bool = true {
+         didSet {
+-            simSettings?.setFactorEnabled(factorName: "BlackSwan", enabled: useBlackSwanWeekly)
++            weeklySimSettings?.setFactorEnabled(factorName: "BlackSwan", enabled: useBlackSwanWeekly)
+         }
+     }
+     @Published var blackSwanDropWeekly: Double = -0.7977726936
+ 
+     @Published var useBlackSwanMonthly: Bool = true {
+         didSet {
+-            simSettings?.setFactorEnabled(factorName: "BlackSwan", enabled: useBlackSwanMonthly)
++            monthlySimSettings?.setFactorEnabled(factorName: "BlackSwan", enabled: useBlackSwanMonthly)
+         }
+     }
+     @Published var blackSwanDropMonthly: Double = -0.4
+@@ -335,14 +335,14 @@ class InMemorySettings: ObservableObject {
+     // =============================
+     @Published var useBearMarketWeekly: Bool = true {
+         didSet {
+-            simSettings?.setFactorEnabled(factorName: "BearMarket", enabled: useBearMarketWeekly)
++            weeklySimSettings?.setFactorEnabled(factorName: "BearMarket", enabled: useBearMarketWeekly)
+         }
+     }
+     @Published var bearWeeklyDriftWeekly: Double = -0.001
+ 
+     @Published var useBearMarketMonthly: Bool = true {
+         didSet {
+-            simSettings?.setFactorEnabled(factorName: "BearMarket", enabled: useBearMarketMonthly)
++            monthlySimSettings?.setFactorEnabled(factorName: "BearMarket", enabled: useBearMarketMonthly)
+         }
+     }
+     @Published var bearWeeklyDriftMonthly: Double = -0.01
+@@ -352,14 +352,14 @@ class InMemorySettings: ObservableObject {
+     // =============================
+     @Published var useMaturingMarketWeekly: Bool = true {
+         didSet {
+-            simSettings?.setFactorEnabled(factorName: "MaturingMarket", enabled: useMaturingMarketWeekly)
++            weeklySimSettings?.setFactorEnabled(factorName: "MaturingMarket", enabled: useMaturingMarketWeekly)
+         }
+     }
+     @Published var maxMaturingDropWeekly: Double = -0.00326881742
+ 
+     @Published var useMaturingMarketMonthly: Bool = true {
+         didSet {
+-            simSettings?.setFactorEnabled(factorName: "MaturingMarket", enabled: useMaturingMarketMonthly)
++            monthlySimSettings?.setFactorEnabled(factorName: "MaturingMarket", enabled: useMaturingMarketMonthly)
+         }
+     }
+     @Published var maxMaturingDropMonthly: Double = -0.01
+@@ -369,21 +369,18 @@ class InMemorySettings: ObservableObject {
+     // =============================
+     @Published var useRecessionWeekly: Bool = true {
+         didSet {
+-            simSettings?.setFactorEnabled(factorName: "Recession", enabled: useRecessionWeekly)
++            weeklySimSettings?.setFactorEnabled(factorName: "Recession", enabled: useRecessionWeekly)
+         }
+     }
+     @Published var maxRecessionDropWeekly: Double = -0.00100731624
+ 
+     @Published var useRecessionMonthly: Bool = true {
+         didSet {
+-            simSettings?.setFactorEnabled(factorName: "Recession", enabled: useRecessionMonthly)
++            monthlySimSettings?.setFactorEnabled(factorName: "Recession", enabled: useRecessionMonthly)
+         }
+     }
+     @Published var maxRecessionDropMonthly: Double = -0.00145080805
+ 
+-    // Simple init with no direct reading from UserDefaults in the constructor.
+-    // We rely on 'loadFromUserDefaults()' if needed.
+-    
+     // =============================
+     // MARK: - Toggling All Off
+     // =============================
+@@ -435,15 +432,15 @@ class InMemorySettings: ObservableObject {
+         useRecessionWeekly = false
+     }
+     
++    // =============================
+     // MARK: - Load & Save to UserDefaults (batch approach)
+     // (Unchanged except for your usual reading/writing; omitted for brevity)
+-
+     func loadFromUserDefaults() {
+         let defaults = UserDefaults.standard
+         
+         // ... same as before ...
+         
+-        // After loading, you could do a single call to apply these toggles to simSettings if you want:
++        // After loading, push the toggles to the simulation objects.
+         applyAllTogglesToSimulation()
+     }
+     
+@@ -455,28 +452,52 @@ class InMemorySettings: ObservableObject {
+         defaults.synchronize()
+     }
+     
+-    /// CHANGED HERE: optional convenience method to push all toggles to simSettings at once
++    /// Convenience method to push all toggles to both simulation settings objects.
+     func applyAllTogglesToSimulation() {
+-        simSettings?.setFactorEnabled(factorName: "Halving", enabled: useHalvingWeekly || useHalvingMonthly)
+-        simSettings?.setFactorEnabled(factorName: "InstitutionalDemand", enabled: useInstitutionalDemandWeekly || useInstitutionalDemandMonthly)
+-        simSettings?.setFactorEnabled(factorName: "CountryAdoption", enabled: useCountryAdoptionWeekly || useCountryAdoptionMonthly)
+-        simSettings?.setFactorEnabled(factorName: "RegulatoryClarity", enabled: useRegulatoryClarityWeekly || useRegulatoryClarityMonthly)
+-        simSettings?.setFactorEnabled(factorName: "EtfApproval", enabled: useEtfApprovalWeekly || useEtfApprovalMonthly)
+-        simSettings?.setFactorEnabled(factorName: "TechBreakthrough", enabled: useTechBreakthroughWeekly || useTechBreakthroughMonthly)
+-        simSettings?.setFactorEnabled(factorName: "ScarcityEvents", enabled: useScarcityEventsWeekly || useScarcityEventsMonthly)
+-        simSettings?.setFactorEnabled(factorName: "GlobalMacroHedge", enabled: useGlobalMacroHedgeWeekly || useGlobalMacroHedgeMonthly)
+-        simSettings?.setFactorEnabled(factorName: "StablecoinShift", enabled: useStablecoinShiftWeekly || useStablecoinShiftMonthly)
+-        simSettings?.setFactorEnabled(factorName: "DemographicAdoption", enabled: useDemographicAdoptionWeekly || useDemographicAdoptionMonthly)
+-        simSettings?.setFactorEnabled(factorName: "AltcoinFlight", enabled: useAltcoinFlightWeekly || useAltcoinFlightMonthly)
+-        simSettings?.setFactorEnabled(factorName: "AdoptionFactor", enabled: useAdoptionFactorWeekly || useAdoptionFactorMonthly)
+-        simSettings?.setFactorEnabled(factorName: "RegClampdown", enabled: useRegClampdownWeekly || useRegClampdownMonthly)
+-        simSettings?.setFactorEnabled(factorName: "CompetitorCoin", enabled: useCompetitorCoinWeekly || useCompetitorCoinMonthly)
+-        simSettings?.setFactorEnabled(factorName: "SecurityBreach", enabled: useSecurityBreachWeekly || useSecurityBreachMonthly)
+-        simSettings?.setFactorEnabled(factorName: "BubblePop", enabled: useBubblePopWeekly || useBubblePopMonthly)
+-        simSettings?.setFactorEnabled(factorName: "StablecoinMeltdown", enabled: useStablecoinMeltdownWeekly || useStablecoinMeltdownMonthly)
+-        simSettings?.setFactorEnabled(factorName: "BlackSwan", enabled: useBlackSwanWeekly || useBlackSwanMonthly)
+-        simSettings?.setFactorEnabled(factorName: "BearMarket", enabled: useBearMarketWeekly || useBearMarketMonthly)
+-        simSettings?.setFactorEnabled(factorName: "MaturingMarket", enabled: useMaturingMarketWeekly || useMaturingMarketMonthly)
+-        simSettings?.setFactorEnabled(factorName: "Recession", enabled: useRecessionWeekly || useRecessionMonthly)
++        // For weekly toggles:
++        weeklySimSettings?.setFactorEnabled(factorName: "Halving", enabled: useHalvingWeekly)
++        weeklySimSettings?.setFactorEnabled(factorName: "InstitutionalDemand", enabled: useInstitutionalDemandWeekly)
++        weeklySimSettings?.setFactorEnabled(factorName: "CountryAdoption", enabled: useCountryAdoptionWeekly)
++        weeklySimSettings?.setFactorEnabled(factorName: "RegulatoryClarity", enabled: useRegulatoryClarityWeekly)
++        weeklySimSettings?.setFactorEnabled(factorName: "EtfApproval", enabled: useEtfApprovalWeekly)
++        weeklySimSettings?.setFactorEnabled(factorName: "TechBreakthrough", enabled: useTechBreakthroughWeekly)
++        weeklySimSettings?.setFactorEnabled(factorName: "ScarcityEvents", enabled: useScarcityEventsWeekly)
++        weeklySimSettings?.setFactorEnabled(factorName: "GlobalMacroHedge", enabled: useGlobalMacroHedgeWeekly)
++        weeklySimSettings?.setFactorEnabled(factorName: "StablecoinShift", enabled: useStablecoinShiftWeekly)
++        weeklySimSettings?.setFactorEnabled(factorName: "DemographicAdoption", enabled: useDemographicAdoptionWeekly)
++        weeklySimSettings?.setFactorEnabled(factorName: "AltcoinFlight", enabled: useAltcoinFlightWeekly)
++        weeklySimSettings?.setFactorEnabled(factorName: "AdoptionFactor", enabled: useAdoptionFactorWeekly)
++        weeklySimSettings?.setFactorEnabled(factorName: "RegClampdown", enabled: useRegClampdownWeekly)
++        weeklySimSettings?.setFactorEnabled(factorName: "CompetitorCoin", enabled: useCompetitorCoinWeekly)
++        weeklySimSettings?.setFactorEnabled(factorName: "SecurityBreach", enabled: useSecurityBreachWeekly)
++        weeklySimSettings?.setFactorEnabled(factorName: "BubblePop", enabled: useBubblePopWeekly)
++        weeklySimSettings?.setFactorEnabled(factorName: "StablecoinMeltdown", enabled: useStablecoinMeltdownWeekly)
++        weeklySimSettings?.setFactorEnabled(factorName: "BlackSwan", enabled: useBlackSwanWeekly)
++        weeklySimSettings?.setFactorEnabled(factorName: "BearMarket", enabled: useBearMarketWeekly)
++        weeklySimSettings?.setFactorEnabled(factorName: "MaturingMarket", enabled: useMaturingMarketWeekly)
++        weeklySimSettings?.setFactorEnabled(factorName: "Recession", enabled: useRecessionWeekly)
++        
++        // For monthly toggles:
++        monthlySimSettings?.setFactorEnabled(factorName: "Halving", enabled: useHalvingMonthly)
++        monthlySimSettings?.setFactorEnabled(factorName: "InstitutionalDemand", enabled: useInstitutionalDemandMonthly)
++        monthlySimSettings?.setFactorEnabled(factorName: "CountryAdoption", enabled: useCountryAdoptionMonthly)
++        monthlySimSettings?.setFactorEnabled(factorName: "RegulatoryClarity", enabled: useRegulatoryClarityMonthly)
++        monthlySimSettings?.setFactorEnabled(factorName: "EtfApproval", enabled: useEtfApprovalMonthly)
++        monthlySimSettings?.setFactorEnabled(factorName: "TechBreakthrough", enabled: useTechBreakthroughMonthly)
++        monthlySimSettings?.setFactorEnabled(factorName: "ScarcityEvents", enabled: useScarcityEventsMonthly)
++        monthlySimSettings?.setFactorEnabled(factorName: "GlobalMacroHedge", enabled: useGlobalMacroHedgeMonthly)
++        monthlySimSettings?.setFactorEnabled(factorName: "StablecoinShift", enabled: useStablecoinShiftMonthly)
++        monthlySimSettings?.setFactorEnabled(factorName: "DemographicAdoption", enabled: useDemographicAdoptionMonthly)
++        monthlySimSettings?.setFactorEnabled(factorName: "AltcoinFlight", enabled: useAltcoinFlightMonthly)
++        monthlySimSettings?.setFactorEnabled(factorName: "AdoptionFactor", enabled: useAdoptionFactorMonthly)
++        monthlySimSettings?.setFactorEnabled(factorName: "RegClampdown", enabled: useRegClampdownMonthly)
++        monthlySimSettings?.setFactorEnabled(factorName: "CompetitorCoin", enabled: useCompetitorCoinMonthly)
++        monthlySimSettings?.setFactorEnabled(factorName: "SecurityBreach", enabled: useSecurityBreachMonthly)
++        monthlySimSettings?.setFactorEnabled(factorName: "BubblePop", enabled: useBubblePopMonthly)
++        monthlySimSettings?.setFactorEnabled(factorName: "StablecoinMeltdown", enabled: useStablecoinMeltdownMonthly)
++        monthlySimSettings?.setFactorEnabled(factorName: "BlackSwan", enabled: useBlackSwanMonthly)
++        monthlySimSettings?.setFactorEnabled(factorName: "BearMarket", enabled: useBearMarketMonthly)
++        monthlySimSettings?.setFactorEnabled(factorName: "MaturingMarket", enabled: useMaturingMarketMonthly)
++        monthlySimSettings?.setFactorEnabled(factorName: "Recession", enabled: useRecessionMonthly)
+     }
+ }
+diff --git a/BTC Simulator/MonthlySimulationSettings+FactorSync.swift b/BTC Simulator/MonthlySimulationSettings+FactorSync.swift
+new file mode 100644
+index 0000000..1c99a98
+--- /dev/null
++++ b/BTC Simulator/MonthlySimulationSettings+FactorSync.swift	
+@@ -0,0 +1,94 @@
++//
++//  MonthlySimulationSettings+FactorSync.swift
++//  BTCMonteCarlo
++//
++//  Created by . . on 11/02/2025.
++//
++
++import SwiftUI
++
++extension MonthlySimulationSettings {
++    
++    /// A computed property analogous to `factorIntensity` for weekly
++    var factorIntensityMonthlyComputed: Double {
++        get {
++            rawFactorIntensityMonthly
++        }
++        set {
++            rawFactorIntensityMonthly = newValue
++            syncFactorsToGlobalIntensityMonthly(for: newValue)
++        }
++    }
++
++    /// The monthly version of setFactorEnabled()
++    func setFactorEnabledMonthly(factorName: String, enabled: Bool) {
++        guard var factor = factorsMonthly[factorName] else {
++            print("[setFactorEnabledMonthly] Factor \(factorName) not found!")
++            return
++        }
++        
++        if enabled {
++            // Re-enable
++            if let frozen = factor.frozenValue {
++                factor.currentValue = frozen
++                let base = globalBaselineMonthly(for: factor)
++                let range = factor.maxValue - factor.minValue
++                factor.internalOffset = (frozen - base) / range
++                factor.frozenValue = nil
++                factor.wasChartForced = false
++            }
++            factor.isEnabled = true
++            factor.isLocked  = false
++            lockedFactorsMonthly.remove(factorName)
++        } else {
++            factor.frozenValue = factor.currentValue
++            factor.isEnabled   = false
++            factor.isLocked    = true
++            lockedFactorsMonthly.insert(factorName)
++        }
++        
++        factorsMonthly[factorName] = factor
++        // Possibly recalc tilt:
++        recalcTiltBarValueMonthly(
++            bullishKeys: [
++                "Halving","InstitutionalDemand","CountryAdoption","RegulatoryClarity",
++                "EtfApproval","TechBreakthrough","ScarcityEvents","GlobalMacroHedge",
++                "StablecoinShift","DemographicAdoption","AltcoinFlight","AdoptionFactor"
++            ],
++            bearishKeys: [
++                "RegClampdown","CompetitorCoin","SecurityBreach","BubblePop",
++                "StablecoinMeltdown","BlackSwan","BearMarket","MaturingMarket",
++                "Recession"
++            ]
++        )
++        applyDictionaryFactorsToSimMonthly()
++    }
++    
++    /// The monthly version of toggleAllFactors(on:)
++    func toggleAllFactorsMonthly(on: Bool) {
++        for (name, var factor) in factorsMonthly {
++            if on {
++                if let frozen = factor.frozenValue {
++                    factor.currentValue = frozen
++                    let base = globalBaselineMonthly(for: factor)
++                    let range = factor.maxValue - factor.minValue
++                    factor.internalOffset = (frozen - base) / range
++                    factor.frozenValue = nil
++                    factor.wasChartForced = false
++                }
++                factor.isEnabled = true
++                factor.isLocked  = false
++                lockedFactorsMonthly.remove(name)
++            } else {
++                factor.frozenValue = factor.currentValue
++                factor.isEnabled = false
++                factor.isLocked  = true
++                lockedFactorsMonthly.insert(name)
++            }
++            factorsMonthly[name] = factor
++        }
++        // If you want to re‐sync or recalc tilt, do so here
++        // recalcTiltBarValueMonthly(...)
++        // applyDictionaryFactorsToSimMonthly()
++    }
++}
+diff --git a/BTC Simulator/MonthlySimulationSettings.swift b/BTC Simulator/MonthlySimulationSettings.swift
+index 17a6fac..f564849 100644
+--- a/BTC Simulator/MonthlySimulationSettings.swift	
++++ b/BTC Simulator/MonthlySimulationSettings.swift	
+@@ -11,7 +11,7 @@ extension MonthlySimulationSettings {
+     // EXACT same signature that FactorToggleRow calls:
+     func setFactorEnabled(factorName: String, enabled: Bool) {
+         guard var factor = factorsMonthly[factorName] else { return }
+-
++        print("[setFactorEnabled (monthly)] \(factorName): Setting enabled to \(enabled)")
+         if enabled {
+             // Re-enable factor
+             if let frozenVal = factor.frozenValue {
+@@ -20,6 +20,7 @@ extension MonthlySimulationSettings {
+                 let range = factor.maxValue - factor.minValue
+                 factor.internalOffset = (frozenVal - base) / range
+                 factor.frozenValue = nil
++                print("[setFactorEnabled (monthly)] \(factorName): Re-enabled using frozen value \(frozenVal)")
+             }
+             factor.isEnabled = true
+             factor.isLocked  = false
+@@ -28,92 +29,122 @@ extension MonthlySimulationSettings {
+             factor.frozenValue = factor.currentValue
+             factor.isEnabled   = false
+             factor.isLocked    = true
++            print("[setFactorEnabled (monthly)] \(factorName): Disabled")
+         }
+-
+         factorsMonthly[factorName] = factor
+     }
+ }
+ 
+-/// A separate class duplicating SimulationSettings logic for monthly mode.
+-/// This way, the existing weekly logic in SimulationSettings.swift is left untouched.
+ class MonthlySimulationSettings: ObservableObject {
+     
+-    // MARK: - Bearish Keys
+     let bearishKeysMonthly: [String] = [
+         "RegClampdown", "CompetitorCoin", "SecurityBreach",
+         "BubblePop", "StablecoinMeltdown", "BlackSwan",
+         "BearMarket", "MaturingMarket", "Recession"
+     ]
+     
+-    // MARK: - Published Properties
+-    @Published var chartExtremeBearishMonthly: Bool = false
+-    @Published var chartExtremeBullishMonthly: Bool = false
+-    @Published var isRestoringDefaultsMonthly: Bool = false
++    @Published var chartExtremeBearishMonthly: Bool = false {
++        didSet { print("[chartExtremeBearishMonthly] Changed to \(chartExtremeBearishMonthly)") }
++    }
++    @Published var chartExtremeBullishMonthly: Bool = false {
++        didSet { print("[chartExtremeBullishMonthly] Changed to \(chartExtremeBullishMonthly)") }
++    }
++    @Published var isRestoringDefaultsMonthly: Bool = false {
++        didSet { print("[isRestoringDefaultsMonthly] Changed to \(isRestoringDefaultsMonthly)") }
++    }
+     
+-    /// Holds monthly factors
+-    @Published var factorsMonthly: [String: FactorState] = [:]
+-    @Published var lockedFactorsMonthly: Set<String> = []
++    @Published var factorsMonthly: [String: FactorState] = [:] {
++        didSet { print("[factorsMonthly] Updated factors: \(factorsMonthly.count) factors loaded") }
++    }
++    @Published var lockedFactorsMonthly: Set<String> = [] {
++        didSet { print("[lockedFactorsMonthly] Now locked: \(lockedFactorsMonthly)") }
++    }
+     
+-    /// The global slider for monthly mode
+     @Published var rawFactorIntensityMonthly: Double {
+         didSet {
++            print("[rawFactorIntensityMonthly] Changed to \(rawFactorIntensityMonthly)")
+             UserDefaults.standard.set(rawFactorIntensityMonthly, forKey: "rawFactorIntensityMonthly")
+-            if !ignoreSyncMonthly {
+-                syncFactorsMonthly()
+-            }
++            if !ignoreSyncMonthly { syncFactorsMonthly() }
+         }
+     }
+-    
+-    /// Ignore syncing to avoid recursion
+     var ignoreSyncMonthly: Bool = false
+     
+-    @Published var overrodeTiltManuallyMonthly = false
+-    @Published var tiltBarValueMonthly: Double = 0.0
++    @Published var overrodeTiltManuallyMonthly = false {
++        didSet { print("[overrodeTiltManuallyMonthly] Changed to \(overrodeTiltManuallyMonthly)") }
++    }
++    @Published var tiltBarValueMonthly: Double = 0.0 {
++        didSet { print("[tiltBarValueMonthly] Changed to \(tiltBarValueMonthly)") }
++    }
+     
+     @Published var userIsActuallyTogglingAllMonthly = false {
+         didSet {
+-            if !userIsActuallyTogglingAllMonthly {
+-                resetTiltBarMonthly()
+-            }
++            print("[userIsActuallyTogglingAllMonthly] Changed to \(userIsActuallyTogglingAllMonthly)")
++            if !userIsActuallyTogglingAllMonthly { resetTiltBarMonthly() }
+         }
+     }
+     
+-    @Published var defaultTiltMonthly: Double = 0.0
+-    @Published var maxSwingMonthly: Double = 1.0
+-    @Published var hasCapturedDefaultMonthly: Bool = false
+-    @Published var isOnboardingMonthly: Bool = false
+-    
+-    /// Number of months, default to 12 for demonstration, but adjust as needed
+-    @Published var userPeriodsMonthly: Int = 12
++    @Published var defaultTiltMonthly: Double = 0.0 {
++        didSet { print("[defaultTiltMonthly] Changed to \(defaultTiltMonthly)") }
++    }
++    @Published var maxSwingMonthly: Double = 1.0 {
++        didSet { print("[maxSwingMonthly] Changed to \(maxSwingMonthly)") }
++    }
++    @Published var hasCapturedDefaultMonthly: Bool = false {
++        didSet { print("[hasCapturedDefaultMonthly] Changed to \(hasCapturedDefaultMonthly)") }
++    }
++    @Published var isOnboardingMonthly: Bool = false {
++        didSet { print("[isOnboardingMonthly] Changed to \(isOnboardingMonthly)") }
++    }
+     
+-    /// Example of monthly-based price
+-    @Published var initialBTCPriceUSDMonthly: Double = 30000.0
++    // Persist periodUnitMonthly to a user-defaults key.
++    @Published var periodUnitMonthly: PeriodUnit = .weeks {
++        didSet { print("[periodUnitMonthly] Changed to \(periodUnitMonthly)") }
++    }
+     
+-    @Published var startingBalanceMonthly: Double = 0.0
+-    @Published var averageCostBasisMonthly: Double = 25000.0
++    @Published var userPeriodsMonthly: Int = 12 {
++        didSet { print("[userPeriodsMonthly] Changed to \(userPeriodsMonthly)") }
++    }
++    @Published var initialBTCPriceUSDMonthly: Double = 30000.0 {
++        didSet { print("[initialBTCPriceUSDMonthly] Changed to \(initialBTCPriceUSDMonthly)") }
++    }
++    @Published var startingBalanceMonthly: Double = 0.0 {
++        didSet { print("[startingBalanceMonthly] Changed to \(startingBalanceMonthly)") }
++    }
++    @Published var averageCostBasisMonthly: Double = 25000.0 {
++        didSet { print("[averageCostBasisMonthly] Changed to \(averageCostBasisMonthly)") }
++    }
+     
+     @Published var currencyPreferenceMonthly: PreferredCurrency = .eur {
+         didSet {
++            print("[currencyPreferenceMonthly] Changed to \(currencyPreferenceMonthly)")
+             if isInitializedMonthly {
+                 UserDefaults.standard.set(currencyPreferenceMonthly.rawValue, forKey: "currencyPreferenceMonthly")
+             }
+         }
+     }
+     
+-    @Published var contributionCurrencyWhenBothMonthly: PreferredCurrency = .eur
+-    @Published var startingBalanceCurrencyWhenBothMonthly: PreferredCurrency = .usd
++    @Published var contributionCurrencyWhenBothMonthly: PreferredCurrency = .eur {
++        didSet { print("[contributionCurrencyWhenBothMonthly] Changed to \(contributionCurrencyWhenBothMonthly)") }
++    }
++    @Published var startingBalanceCurrencyWhenBothMonthly: PreferredCurrency = .usd {
++        didSet { print("[startingBalanceCurrencyWhenBothMonthly] Changed to \(startingBalanceCurrencyWhenBothMonthly)") }
++    }
+     
+-    @Published var lastRunResultsMonthly: [SimulationData] = []
+-    @Published var allRunsMonthly: [[SimulationData]] = []
++    @Published var lastRunResultsMonthly: [SimulationData] = [] {
++        didSet { print("[lastRunResultsMonthly] Updated with \(lastRunResultsMonthly.count) results") }
++    }
++    @Published var allRunsMonthly: [[SimulationData]] = [] {
++        didSet { print("[allRunsMonthly] Updated with \(allRunsMonthly.count) runs") }
++    }
+     
+     var isInitializedMonthly = false
+     var isUpdatingMonthly = false
+-    
+     var isIndividualChangeMonthly = false
+     
+-    // MARK: - Advanced Toggles (Duplicated for monthly)
++    // Advanced toggles
+     @Published var useLognormalGrowthMonthly: Bool = true {
+         didSet {
++            print("[useLognormalGrowthMonthly] Changed to \(useLognormalGrowthMonthly)")
+             if isInitializedMonthly {
+                 UserDefaults.standard.set(useLognormalGrowthMonthly, forKey: "useLognormalGrowthMonthly")
+                 if !useLognormalGrowthMonthly { useAnnualStepMonthly = true }
+@@ -122,62 +153,55 @@ class MonthlySimulationSettings: ObservableObject {
+     }
+     @Published var useAnnualStepMonthly: Bool = false {
+         didSet {
+-            if isInitializedMonthly {
+-                UserDefaults.standard.set(useAnnualStepMonthly, forKey: "useAnnualStepMonthly")
+-            }
++            print("[useAnnualStepMonthly] Changed to \(useAnnualStepMonthly)")
++            if isInitializedMonthly { UserDefaults.standard.set(useAnnualStepMonthly, forKey: "useAnnualStepMonthly") }
+         }
+     }
+     @Published var lockedRandomSeedMonthly: Bool = false {
+         didSet {
+-            if isInitializedMonthly {
+-                UserDefaults.standard.set(lockedRandomSeedMonthly, forKey: "lockedRandomSeedMonthly")
+-            }
++            print("[lockedRandomSeedMonthly] Changed to \(lockedRandomSeedMonthly)")
++            if isInitializedMonthly { UserDefaults.standard.set(lockedRandomSeedMonthly, forKey: "lockedRandomSeedMonthly") }
+         }
+     }
+     @Published var seedValueMonthly: UInt64 = 0 {
+         didSet {
+-            if isInitializedMonthly {
+-                UserDefaults.standard.set(seedValueMonthly, forKey: "seedValueMonthly")
+-            }
++            print("[seedValueMonthly] Changed to \(seedValueMonthly)")
++            if isInitializedMonthly { UserDefaults.standard.set(seedValueMonthly, forKey: "seedValueMonthly") }
+         }
+     }
+     @Published var useRandomSeedMonthly: Bool = true {
+         didSet {
+-            if isInitializedMonthly {
+-                UserDefaults.standard.set(useRandomSeedMonthly, forKey: "useRandomSeedMonthly")
+-            }
++            print("[useRandomSeedMonthly] Changed to \(useRandomSeedMonthly)")
++            if isInitializedMonthly { UserDefaults.standard.set(useRandomSeedMonthly, forKey: "useRandomSeedMonthly") }
+         }
+     }
+     @Published var useHistoricalSamplingMonthly: Bool = true {
+         didSet {
+-            if isInitializedMonthly {
+-                UserDefaults.standard.set(useHistoricalSamplingMonthly, forKey: "useHistoricalSamplingMonthly")
+-            }
++            print("[useHistoricalSamplingMonthly] Changed to \(useHistoricalSamplingMonthly)")
++            if isInitializedMonthly { UserDefaults.standard.set(useHistoricalSamplingMonthly, forKey: "useHistoricalSamplingMonthly") }
+         }
+     }
+     @Published var useExtendedHistoricalSamplingMonthly: Bool = true {
+         didSet {
+-            if isInitializedMonthly {
+-                UserDefaults.standard.set(useExtendedHistoricalSamplingMonthly, forKey: "useExtendedHistoricalSamplingMonthly")
+-            }
++            print("[useExtendedHistoricalSamplingMonthly] Changed to \(useExtendedHistoricalSamplingMonthly)")
++            if isInitializedMonthly { UserDefaults.standard.set(useExtendedHistoricalSamplingMonthly, forKey: "useExtendedHistoricalSamplingMonthly") }
+         }
+     }
+     @Published var useVolShocksMonthly: Bool = true {
+         didSet {
+-            if isInitializedMonthly {
+-                UserDefaults.standard.set(useVolShocksMonthly, forKey: "useVolShocksMonthly")
+-            }
++            print("[useVolShocksMonthly] Changed to \(useVolShocksMonthly)")
++            if isInitializedMonthly { UserDefaults.standard.set(useVolShocksMonthly, forKey: "useVolShocksMonthly") }
+         }
+     }
+     @Published var useGarchVolatilityMonthly: Bool = true {
+         didSet {
+-            if isInitializedMonthly {
+-                UserDefaults.standard.set(useGarchVolatilityMonthly, forKey: "useGarchVolatilityMonthly")
+-            }
++            print("[useGarchVolatilityMonthly] Changed to \(useGarchVolatilityMonthly)")
++            if isInitializedMonthly { UserDefaults.standard.set(useGarchVolatilityMonthly, forKey: "useGarchVolatilityMonthly") }
+         }
+     }
+     @Published var useAutoCorrelationMonthly: Bool = true {
+         didSet {
++            print("[useAutoCorrelationMonthly] Changed to \(useAutoCorrelationMonthly)")
+             if isInitializedMonthly {
+                 UserDefaults.standard.set(useAutoCorrelationMonthly, forKey: "useAutoCorrelationMonthly")
+                 if !useAutoCorrelationMonthly { useMeanReversionMonthly = false }
+@@ -186,49 +210,48 @@ class MonthlySimulationSettings: ObservableObject {
+     }
+     @Published var autoCorrelationStrengthMonthly: Double = 0.05 {
+         didSet {
+-            if isInitializedMonthly {
+-                UserDefaults.standard.set(autoCorrelationStrengthMonthly, forKey: "autoCorrelationStrengthMonthly")
+-            }
++            print("[autoCorrelationStrengthMonthly] Changed to \(autoCorrelationStrengthMonthly)")
++            if isInitializedMonthly { UserDefaults.standard.set(autoCorrelationStrengthMonthly, forKey: "autoCorrelationStrengthMonthly") }
+         }
+     }
+     @Published var meanReversionTargetMonthly: Double = 0.03 {
+         didSet {
+-            if isInitializedMonthly {
+-                UserDefaults.standard.set(meanReversionTargetMonthly, forKey: "meanReversionTargetMonthly")
+-            }
++            print("[meanReversionTargetMonthly] Changed to \(meanReversionTargetMonthly)")
++            if isInitializedMonthly { UserDefaults.standard.set(meanReversionTargetMonthly, forKey: "meanReversionTargetMonthly") }
+         }
+     }
+     @Published var useMeanReversionMonthly: Bool = true {
+         didSet {
+-            if isInitializedMonthly {
+-                UserDefaults.standard.set(useMeanReversionMonthly, forKey: "useMeanReversionMonthly")
+-            }
++            print("[useMeanReversionMonthly] Changed to \(useMeanReversionMonthly)")
++            if isInitializedMonthly { UserDefaults.standard.set(useMeanReversionMonthly, forKey: "useMeanReversionMonthly") }
+         }
+     }
+-    @Published var lastUsedSeedMonthly: UInt64 = 0
++    @Published var lastUsedSeedMonthly: UInt64 = 0 {
++        didSet { print("[lastUsedSeedMonthly] Changed to \(lastUsedSeedMonthly)") }
++    }
+     @Published var lockHistoricalSamplingMonthly: Bool = false {
+         didSet {
+-            if isInitializedMonthly {
+-                UserDefaults.standard.set(lockHistoricalSamplingMonthly, forKey: "lockHistoricalSamplingMonthly")
+-            }
++            print("[lockHistoricalSamplingMonthly] Changed to \(lockHistoricalSamplingMonthly)")
++            if isInitializedMonthly { UserDefaults.standard.set(lockHistoricalSamplingMonthly, forKey: "lockHistoricalSamplingMonthly") }
+         }
+     }
+     @Published var useRegimeSwitchingMonthly: Bool = true {
+         didSet {
+-            if isInitializedMonthly {
+-                UserDefaults.standard.set(useRegimeSwitchingMonthly, forKey: "useRegimeSwitchingMonthly")
+-            }
++            print("[useRegimeSwitchingMonthly] Changed to \(useRegimeSwitchingMonthly)")
++            if isInitializedMonthly { UserDefaults.standard.set(useRegimeSwitchingMonthly, forKey: "useRegimeSwitchingMonthly") }
+         }
+     }
+     
+-    // MARK: - Keys
+     private let defaultTiltKeyMonthly = "defaultTiltMonthly"
+     private let maxSwingKeyMonthly = "maxSwingMonthly"
+     private let hasCapturedDefaultKeyMonthly = "capturedTiltMonthly"
+     private let tiltBarValueKeyMonthly = "tiltBarValueMonthly"
+     
++    // Key for periodUnitMonthly persistence
++    private let periodUnitKeyMonthly = "savedPeriodUnitMonthly"
++
+     // MARK: - Init
+-    init() {
++    init(loadDefaults: Bool = true) {
+         if let savedIntensity = UserDefaults.standard.object(forKey: "rawFactorIntensityMonthly") as? Double {
+             rawFactorIntensityMonthly = savedIntensity
+         } else {
+@@ -237,7 +260,10 @@ class MonthlySimulationSettings: ObservableObject {
+         
+         isUpdatingMonthly = false
+         isInitializedMonthly = false
+-        loadFromUserDefaultsMonthly()
++        
++        if loadDefaults {
++            loadFromUserDefaultsMonthly()
++        }
+         
+         if !hasCapturedDefaultMonthly {
+             defaultTiltMonthly = 0.0
+@@ -247,24 +273,15 @@ class MonthlySimulationSettings: ObservableObject {
+         }
+         
+         isInitializedMonthly = true
++        print("[MonthlySimulationSettings init] Initialized with periodUnitMonthly: \(periodUnitMonthly)")
+     }
+     
+-    // MARK: - Tilt Bar Reset
+-    func resetTiltBarMonthly() {
+-        UserDefaults.standard.removeObject(forKey: tiltBarValueKeyMonthly)
+-        tiltBarValueMonthly = 0.0
+-        defaultTiltMonthly = 0.0
+-        maxSwingMonthly = 1.0
+-        hasCapturedDefaultMonthly = true
+-        saveTiltStateMonthly()
+-        saveTiltBarValueMonthly()
+-    }
+-    
+-    // MARK: - Loading & Saving
+     func loadFromUserDefaultsMonthly() {
+         let defaults = UserDefaults.standard
+         isInitializedMonthly = false
++        print("[loadFromUserDefaultsMonthly] Loading monthly settings")
+         
++        // Read advanced toggles
+         useLognormalGrowthMonthly = defaults.bool(forKey: "useLognormalGrowthMonthly")
+         lockedRandomSeedMonthly   = defaults.bool(forKey: "lockedRandomSeedMonthly")
+         seedValueMonthly          = defaults.object(forKey: "seedValueMonthly") as? UInt64 ?? 0
+@@ -278,37 +295,33 @@ class MonthlySimulationSettings: ObservableObject {
+         } else {
+             useAutoCorrelationMonthly = defaults.bool(forKey: "useAutoCorrelationMonthly")
+         }
+-        
+         if defaults.object(forKey: "autoCorrelationStrengthMonthly") == nil {
+             autoCorrelationStrengthMonthly = 0.05
+         } else {
+             autoCorrelationStrengthMonthly = defaults.double(forKey: "autoCorrelationStrengthMonthly")
+         }
+-        
+         if defaults.object(forKey: "meanReversionTargetMonthly") == nil {
+             meanReversionTargetMonthly = 0.03
+         } else {
+             meanReversionTargetMonthly = defaults.double(forKey: "meanReversionTargetMonthly")
+         }
+-        
+         if defaults.object(forKey: "useMeanReversionMonthly") == nil {
+             useMeanReversionMonthly = true
+         } else {
+             useMeanReversionMonthly = defaults.bool(forKey: "useMeanReversionMonthly")
+         }
+-        
+         if defaults.object(forKey: "useRegimeSwitchingMonthly") == nil {
+             useRegimeSwitchingMonthly = true
+         } else {
+             useRegimeSwitchingMonthly = defaults.bool(forKey: "useRegimeSwitchingMonthly")
+         }
+-        
+         if defaults.object(forKey: "useExtendedHistoricalSamplingMonthly") == nil {
+             useExtendedHistoricalSamplingMonthly = true
+         } else {
+             useExtendedHistoricalSamplingMonthly = defaults.bool(forKey: "useExtendedHistoricalSamplingMonthly")
+         }
+         
++        // Read tilt bar values
+         if let dt = defaults.object(forKey: defaultTiltKeyMonthly) as? Double {
+             defaultTiltMonthly = dt
+         }
+@@ -322,8 +335,9 @@ class MonthlySimulationSettings: ObservableObject {
+             tiltBarValueMonthly = tv
+         }
+         
+-        if let savedUserPeriodsMonthly = defaults.object(forKey: "savedUserPeriodsMonthly") as? Int {
+-            userPeriodsMonthly = savedUserPeriodsMonthly
++        // Read monthly period and price/balance
++        if let savedPeriods = defaults.object(forKey: "savedUserPeriodsMonthly") as? Int {
++            userPeriodsMonthly = savedPeriods
+         }
+         if let savedBTCMonthly = defaults.object(forKey: "savedInitialBTCPriceUSDMonthly") as? Double {
+             initialBTCPriceUSDMonthly = savedBTCMonthly
+@@ -334,17 +348,28 @@ class MonthlySimulationSettings: ObservableObject {
+         if let savedACBMonthly = defaults.object(forKey: "savedAverageCostBasisMonthly") as? Double {
+             averageCostBasisMonthly = savedACBMonthly
+         }
+-        if let storedPrefRawMonthly = defaults.string(forKey: "currencyPreferenceMonthly"),
+-           let storedPrefMonthly = PreferredCurrency(rawValue: storedPrefRawMonthly) {
+-            currencyPreferenceMonthly = storedPrefMonthly
++        
++        // Read currency preference
++        if let storedPrefRaw = defaults.string(forKey: "currencyPreferenceMonthly"),
++           let storedPref = PreferredCurrency(rawValue: storedPrefRaw) {
++            currencyPreferenceMonthly = storedPref
+         } else {
+             currencyPreferenceMonthly = .eur
+         }
+         
+-        // Load monthly factor states
+-        if let savedFactorStatesDataMonthly = defaults.data(forKey: "factorStatesMonthly"),
+-           let savedFactorsMonthly = try? JSONDecoder().decode([String: FactorState].self, from: savedFactorStatesDataMonthly) {
+-            factorsMonthly = savedFactorsMonthly
++        // Read periodUnitMonthly from defaults
++        if let rawPU = defaults.string(forKey: periodUnitKeyMonthly),
++           let loadedPU = PeriodUnit(rawValue: rawPU) {
++            periodUnitMonthly = loadedPU
++        } else {
++            periodUnitMonthly = .weeks
++        }
++        print("[loadFromUserDefaultsMonthly] periodUnitMonthly loaded as \(periodUnitMonthly)")
++        
++        // Read monthly factor states
++        if let savedFactorData = defaults.data(forKey: "factorStatesMonthly"),
++           let savedFactors = try? JSONDecoder().decode([String: FactorState].self, from: savedFactorData) {
++            factorsMonthly = savedFactors
+         } else {
+             factorsMonthly.removeAll()
+             for (factorName, def) in FactorCatalog.all {
+@@ -362,11 +387,14 @@ class MonthlySimulationSettings: ObservableObject {
+                 factorsMonthly[factorName] = fs
+             }
+         }
++        
+         isInitializedMonthly = true
++        print("[loadFromUserDefaultsMonthly] Completed loading monthly settings")
+     }
+     
+     func saveToUserDefaultsMonthly() {
+         let defaults = UserDefaults.standard
++        print("[saveToUserDefaultsMonthly] Saving monthly settings with periodUnitMonthly: \(periodUnitMonthly)")
+         defaults.set(useLognormalGrowthMonthly, forKey: "useLognormalGrowthMonthly")
+         defaults.set(lockedRandomSeedMonthly,   forKey: "lockedRandomSeedMonthly")
+         defaults.set(seedValueMonthly,          forKey: "seedValueMonthly")
+@@ -383,6 +411,9 @@ class MonthlySimulationSettings: ObservableObject {
+         defaults.set(lockHistoricalSamplingMonthly, forKey: "lockHistoricalSamplingMonthly")
+         defaults.set(currencyPreferenceMonthly.rawValue, forKey: "currencyPreferenceMonthly")
+         
++        // Store periodUnitMonthly as a raw string
++        defaults.set(periodUnitMonthly.rawValue, forKey: periodUnitKeyMonthly)
++        
+         if let encodedFactors = try? JSONEncoder().encode(factorsMonthly) {
+             defaults.set(encodedFactors, forKey: "factorStatesMonthly")
+         }
+@@ -392,7 +423,7 @@ class MonthlySimulationSettings: ObservableObject {
+     private func saveTiltStateMonthly() {
+         let defaults = UserDefaults.standard
+         defaults.set(defaultTiltMonthly, forKey: defaultTiltKeyMonthly)
+-        defaults.set(maxSwingMonthly,    forKey: maxSwingKeyMonthly)
++        defaults.set(maxSwingMonthly, forKey: maxSwingKeyMonthly)
+         defaults.set(hasCapturedDefaultMonthly, forKey: hasCapturedDefaultKeyMonthly)
+     }
+     
+@@ -400,6 +431,17 @@ class MonthlySimulationSettings: ObservableObject {
+         UserDefaults.standard.set(tiltBarValueMonthly, forKey: tiltBarValueKeyMonthly)
+     }
+     
++    func resetTiltBarMonthly() {
++        print("[resetTiltBarMonthly] Resetting tilt bar for monthly settings")
++        UserDefaults.standard.removeObject(forKey: tiltBarValueKeyMonthly)
++        tiltBarValueMonthly = 0.0
++        defaultTiltMonthly = 0.0
++        maxSwingMonthly = 1.0
++        hasCapturedDefaultMonthly = true
++        saveTiltStateMonthly()
++        saveTiltBarValueMonthly()
++    }
++    
+     // MARK: - Factor Intensity Access
+     func getFactorIntensityMonthly() -> Double {
+         rawFactorIntensityMonthly
+@@ -411,7 +453,11 @@ class MonthlySimulationSettings: ObservableObject {
+     
+     // MARK: - userDidDragFactorSliderMonthly
+     func userDidDragFactorSliderMonthly(_ factorName: String, to newValue: Double) {
+-        guard var factor = factorsMonthly[factorName] else { return }
++        print("[userDidDragFactorSliderMonthly] Dragging factor \(factorName) to new value: \(newValue)")
++        guard var factor = factorsMonthly[factorName] else {
++            print("[userDidDragFactorSliderMonthly] Factor \(factorName) not found")
++            return
++        }
+         
+         // Define bullish & bearish for monthly tilt calculations:
+         let bullishKeysMonthly: [String] = [
+@@ -422,10 +468,12 @@ class MonthlySimulationSettings: ObservableObject {
+         let bearishKeysMonthly = self.bearishKeysMonthly
+         
+         if chartExtremeBearishMonthly && newValue > factor.minValue {
++            print("[userDidDragFactorSliderMonthly] Cancelling forced bearish state for \(factorName)")
+             chartExtremeBearishMonthly = false
+             recalcTiltBarValueMonthly(bullishKeys: bullishKeysMonthly, bearishKeys: bearishKeysMonthly)
+         }
+         if chartExtremeBullishMonthly && newValue < factor.maxValue {
++            print("[userDidDragFactorSliderMonthly] Cancelling forced bullish state for \(factorName)")
+             chartExtremeBullishMonthly = false
+             recalcTiltBarValueMonthly(bullishKeys: bullishKeysMonthly, bearishKeys: bearishKeysMonthly)
+         }
+@@ -437,13 +485,13 @@ class MonthlySimulationSettings: ObservableObject {
+         factor.currentValue = clampedVal
+         let newOffset = (clampedVal - baseline) / range
+         factor.internalOffset = newOffset
+-        
+         factorsMonthly[factorName] = factor
+         
+         let deltaOffset = newOffset - oldOffset
+         let activeCount = factorsMonthly.values.filter { $0.isEnabled && !$0.isLocked }.count
+         if activeCount > 0 {
+             let shift = deltaOffset / Double(activeCount)
++            print("[userDidDragFactorSliderMonthly] Adjusting global slider by shift: \(shift)")
+             ignoreSyncMonthly = true
+             rawFactorIntensityMonthly += shift
+             rawFactorIntensityMonthly = min(max(rawFactorIntensityMonthly, 0), 1)
+@@ -459,6 +507,7 @@ class MonthlySimulationSettings: ObservableObject {
+     
+     // Called when user moves the monthly global slider
+     func globalSliderChangedMonthly(to newGlobalValue: Double) {
++        print("[globalSliderChangedMonthly] Monthly global slider moved to \(newGlobalValue)")
+         rawFactorIntensityMonthly = newGlobalValue
+         applyDictionaryFactorsToSimMonthly()
+         saveToUserDefaultsMonthly()
+@@ -470,12 +519,14 @@ class MonthlySimulationSettings: ObservableObject {
+             let slope = 0.7
+             tiltBarValueMonthly = min(-1.0 + (rawFactorIntensityMonthly * slope), 0.0)
+             overrodeTiltManuallyMonthly = true
++            print("[recalcTiltBarValueMonthly] Extreme bearish: tiltBarValueMonthly = \(tiltBarValueMonthly)")
+             return
+         }
+         if chartExtremeBullishMonthly {
+             let slope = 0.7
+             tiltBarValueMonthly = max(1.0 - ((1.0 - rawFactorIntensityMonthly) * slope), 0.0)
+             overrodeTiltManuallyMonthly = true
++            print("[recalcTiltBarValueMonthly] Extreme bullish: tiltBarValueMonthly = \(tiltBarValueMonthly)")
+             return
+         }
+         
+@@ -529,10 +580,12 @@ class MonthlySimulationSettings: ObservableObject {
+             tiltBarValueMonthly = 0.0
+             overrodeTiltManuallyMonthly = true
+         }
++        print("[recalcTiltBarValueMonthly] New tiltBarValueMonthly = \(tiltBarValueMonthly)")
+     }
+     
+     // MARK: - syncFactorsMonthly
+     func syncFactorsMonthly() {
++        print("[syncFactorsMonthly] Syncing monthly factors with rawFactorIntensityMonthly: \(rawFactorIntensityMonthly)")
+         for (name, var factor) in factorsMonthly {
+             guard factor.isEnabled, !factor.isLocked else { continue }
+             let baseline = globalBaselineMonthly(for: factor)
+@@ -542,6 +595,7 @@ class MonthlySimulationSettings: ObservableObject {
+             if clamped != newValue {
+                 let oldOffset = factor.internalOffset
+                 factor.internalOffset = (clamped - baseline) / range
++                print("[syncFactorsMonthly] \(name): Clamped from \(newValue) to \(clamped); offset adjusted from \(oldOffset) to \(factor.internalOffset)")
+             }
+             factor.currentValue = clamped
+             factorsMonthly[name] = factor
+@@ -566,6 +620,7 @@ class MonthlySimulationSettings: ObservableObject {
+     func recalcGlobalSliderFromFactorsMonthly() {
+         let activeFactors = factorsMonthly.values.filter { $0.isEnabled && !$0.isLocked }
+         guard !activeFactors.isEmpty else {
++            print("[recalcGlobalSliderFromFactorsMonthly] No active factors; resetting rawFactorIntensityMonthly to 0.5")
+             ignoreSyncMonthly = true
+             rawFactorIntensityMonthly = 0.5
+             ignoreSyncMonthly = false
+@@ -575,6 +630,7 @@ class MonthlySimulationSettings: ObservableObject {
+         let avgOffset = sumOffsets / Double(activeFactors.count)
+         var newIntensity = 0.5 + avgOffset
+         newIntensity = max(0.0, min(1.0, newIntensity))
++        print("[recalcGlobalSliderFromFactorsMonthly] New rawFactorIntensityMonthly calculated: \(newIntensity)")
+         ignoreSyncMonthly = true
+         rawFactorIntensityMonthly = newIntensity
+         ignoreSyncMonthly = false
+@@ -582,7 +638,7 @@ class MonthlySimulationSettings: ObservableObject {
+     
+     // This duplicates your dictionary-based approach for monthly
+     func syncFactorsToGlobalIntensityMonthly(for forcedValue: Double) {
+-        // We never call weekly logic here.
++        print("[syncFactorsToGlobalIntensityMonthly] Forcing rawFactorIntensityMonthly to \(forcedValue)")
+         ignoreSyncMonthly = true
+         rawFactorIntensityMonthly = forcedValue
+         ignoreSyncMonthly = false
+@@ -648,53 +704,24 @@ class MonthlySimulationSettings: ObservableObject {
+     
+     // MARK: - Additional Factor Handling for monthly
+     func applyDictionaryFactorForMonthly(_ factorName: String) {
+-        // Do any factor-specific logic you'd normally do for monthly
+-        // E.g., updating some other part of your simulator
++        print("[applyDictionaryFactorForMonthly] Applying dictionary factor logic for \(factorName)")
++        // Place any factor-specific logic for monthly here.
+     }
+     
+     func applyDictionaryFactorsToSimMonthly() {
+-        // Update your simulator with the entire monthly factor dictionary
+-        // and any other monthly-only logic
++        print("[applyDictionaryFactorsToSimMonthly] Applying dictionary factors to monthly simulation")
++        // Update your simulator with the entire monthly factor dictionary and any additional logic.
+     }
+     
+     // MARK: - Toggle or restore monthly factors
+     var toggleAllMonthly: Bool {
+-        get {
+-            factorsMonthly.values.allSatisfy { $0.isEnabled }
+-        }
+-        set {
+-            toggleAllFactorsMonthly(on: newValue)
+-        }
+-    }
+-    
+-    func toggleAllFactorsMonthly(on: Bool) {
+-        for (name, var factor) in factorsMonthly {
+-            if on {
+-                // Re-enable
+-                if let frozen = factor.frozenValue {
+-                    factor.currentValue = frozen
+-                    let base = globalBaselineMonthly(for: factor)
+-                    let range = factor.maxValue - factor.minValue
+-                    factor.internalOffset = (frozen - base) / range
+-                    factor.frozenValue = nil
+-                }
+-                factor.isEnabled = true
+-                factor.isLocked = false
+-                factor.wasChartForced = false
+-                lockedFactorsMonthly.remove(name)
+-            } else {
+-                // Disable
+-                factor.frozenValue = factor.currentValue
+-                factor.isEnabled = false
+-                factor.isLocked = true
+-                lockedFactorsMonthly.insert(name)
+-            }
+-            factorsMonthly[name] = factor
+-        }
++        get { factorsMonthly.values.allSatisfy { $0.isEnabled } }
++        set { toggleAllFactorsMonthly(on: newValue) }
+     }
+     
+     // Lock factor at min or max
+     func lockFactorAtMinMonthly(_ factorName: String) {
++        print("[lockFactorAtMinMonthly] Locking \(factorName) at min")
+         guard var f = factorsMonthly[factorName] else { return }
+         f.currentValue = f.minValue
+         let base = globalBaselineMonthly(for: f)
+@@ -708,6 +735,7 @@ class MonthlySimulationSettings: ObservableObject {
+     }
+     
+     func lockFactorAtMaxMonthly(_ factorName: String) {
++        print("[lockFactorAtMaxMonthly] Locking \(factorName) at max")
+         guard var f = factorsMonthly[factorName] else { return }
+         f.currentValue = f.maxValue
+         let base = globalBaselineMonthly(for: f)
+@@ -721,6 +749,7 @@ class MonthlySimulationSettings: ObservableObject {
+     }
+     
+     func unlockFactorAndSetMinMonthly(_ factorName: String) {
++        print("[unlockFactorAndSetMinMonthly] Unlocking \(factorName) and setting to min")
+         guard var f = factorsMonthly[factorName] else { return }
+         f.currentValue = f.minValue
+         let base = globalBaselineMonthly(for: f)
+@@ -734,6 +763,7 @@ class MonthlySimulationSettings: ObservableObject {
+     }
+     
+     func unlockFactorAndSetMaxMonthly(_ factorName: String) {
++        print("[unlockFactorAndSetMaxMonthly] Unlocking \(factorName) and setting to max")
+         guard var f = factorsMonthly[factorName] else { return }
+         f.currentValue = f.maxValue
+         let base = globalBaselineMonthly(for: f)
+@@ -745,46 +775,4 @@ class MonthlySimulationSettings: ObservableObject {
+         lockedFactorsMonthly.remove(factorName)
+         factorsMonthly[factorName] = f
+     }
+-    
+-    // MARK: - Restore Defaults
+-    func restoreDefaultsMonthly() {
+-        isRestoringDefaultsMonthly = true
+-        
+-        // Clear user defaults to reset monthly stuff
+-        let defaults = UserDefaults.standard
+-        defaults.removeObject(forKey: "rawFactorIntensityMonthly")
+-        defaults.removeObject(forKey: "factorStatesMonthly")
+-        defaults.removeObject(forKey: "useLognormalGrowthMonthly")
+-        defaults.removeObject(forKey: "lockedRandomSeedMonthly")
+-        defaults.removeObject(forKey: "seedValueMonthly")
+-        defaults.removeObject(forKey: "useRandomSeedMonthly")
+-        defaults.removeObject(forKey: "useHistoricalSamplingMonthly")
+-        defaults.removeObject(forKey: "useVolShocksMonthly")
+-        defaults.removeObject(forKey: "useGarchVolatilityMonthly")
+-        defaults.removeObject(forKey: "useAutoCorrelationMonthly")
+-        defaults.removeObject(forKey: "autoCorrelationStrengthMonthly")
+-        defaults.removeObject(forKey: "meanReversionTargetMonthly")
+-        defaults.removeObject(forKey: "useMeanReversionMonthly")
+-        defaults.removeObject(forKey: "useRegimeSwitchingMonthly")
+-        defaults.removeObject(forKey: "useExtendedHistoricalSamplingMonthly")
+-        defaults.removeObject(forKey: "lockHistoricalSamplingMonthly")
+-        defaults.removeObject(forKey: "currencyPreferenceMonthly")
+-        defaults.removeObject(forKey: tiltBarValueKeyMonthly)
+-        defaults.removeObject(forKey: defaultTiltKeyMonthly)
+-        defaults.removeObject(forKey: maxSwingKeyMonthly)
+-        defaults.removeObject(forKey: hasCapturedDefaultKeyMonthly)
+-        
+-        defaults.removeObject(forKey: "savedUserPeriodsMonthly")
+-        defaults.removeObject(forKey: "savedInitialBTCPriceUSDMonthly")
+-        defaults.removeObject(forKey: "savedStartingBalanceMonthly")
+-        defaults.removeObject(forKey: "savedAverageCostBasisMonthly")
+-        defaults.removeObject(forKey: "currencyPreferenceMonthly")
+-        
+-        defaults.synchronize()
+-        
+-        // Force reinit
+-        loadFromUserDefaultsMonthly()
+-        
+-        isRestoringDefaultsMonthly = false
+-    }
+ }
+diff --git a/BTC Simulator/OnboardingView.swift b/BTC Simulator/OnboardingView.swift
+index 695e5fd..cdcfdc3 100644
+--- a/BTC Simulator/OnboardingView.swift	
++++ b/BTC Simulator/OnboardingView.swift	
+@@ -21,7 +21,8 @@ enum PreferredCurrency: String, CaseIterable, Identifiable {
+ }
+ 
+ struct OnboardingView: View {
+-    @EnvironmentObject var simSettings: SimulationSettings
++    @EnvironmentObject var weeklySimSettings: SimulationSettings          // weekly logic
++    @EnvironmentObject var monthlySimSettings: MonthlySimulationSettings // monthly logic
+     @EnvironmentObject var inputManager: PersistentInputManager
+     
+     @Binding var didFinishOnboarding: Bool
+@@ -38,8 +39,7 @@ struct OnboardingView: View {
+     // Step 2: Which currency
+     @State private var currencyPreference: PreferredCurrency = .usd
+     
+-    // Step 3: Starting Balance
+-    // Instead of Double, store it as a string:
++    // Step 3: Starting Balance as a String
+     @State private var startingBalanceText: String = "1,000"
+     @State private var startingBalanceCurrencyForBoth: PreferredCurrency = .usd
+     
+@@ -82,12 +82,11 @@ struct OnboardingView: View {
+         nf.usesGroupingSeparator = true
+         nf.minimumFractionDigits = 0
+         nf.maximumFractionDigits = 2
+-        nf.locale = Locale(identifier: "en_US") // or whatever locale you want
++        nf.locale = Locale(identifier: "en_US")
+         return nf
+     }()
+     
+-    // Convert the user’s typed string into a Double
+-    // If parsing fails, we treat it as zero
++    // Convert the user’s typed string into a Double. If parsing fails, treat as zero.
+     private var startingBalanceDouble: Double {
+         let digitsOnly = startingBalanceText.replacingOccurrences(of: "[^0-9.]", with: "", options: .regularExpression)
+         return Double(digitsOnly) ?? 0
+@@ -156,9 +155,7 @@ struct OnboardingView: View {
+             Group {
+                 if currentStep > 0 {
+                     Button {
+-                        withAnimation {
+-                            currentStep -= 1
+-                        }
++                        withAnimation { currentStep -= 1 }
+                     } label: {
+                         Image(systemName: "chevron.left")
+                             .font(.title2)
+@@ -185,6 +182,7 @@ struct OnboardingView: View {
+         )
+         .ignoresSafeArea(.keyboard, edges: .bottom)
+         .onChange(of: chosenPeriodUnit, initial: false) { _, newVal in
++            // If user picks monthly => totalPeriods = 240, else 1040
+             if newVal == .months {
+                 totalPeriods = 240
+             } else {
+@@ -192,6 +190,7 @@ struct OnboardingView: View {
+             }
+         }
+         .task {
++            // Attempt to fetch BTC price at start
+             await fetchBTCPriceFromAPI()
+             updateAverageCostBasisIfNeeded()
+         }
+@@ -215,9 +214,7 @@ struct OnboardingView: View {
+     // MARK: - Step 1
+     private func step1_TotalPeriods() -> some View {
+         VStack(spacing: 16) {
+-            Text(chosenPeriodUnit == .weeks
+-                 ? "How many weeks?"
+-                 : "How many months?")
++            Text(chosenPeriodUnit == .weeks ? "How many weeks?" : "How many months?")
+                 .foregroundColor(.white)
+             
+             TextField("e.g. 1040", value: $totalPeriods, format: .number)
+@@ -270,7 +267,6 @@ struct OnboardingView: View {
+                     .font(.headline)
+             }
+             
+-            // Bind to a String, then reformat on every change
+             TextField("e.g. 1,000", text: $startingBalanceText)
+                 .keyboardType(.decimalPad)
+                 .padding(8)
+@@ -280,22 +276,15 @@ struct OnboardingView: View {
+                 .frame(width: 200)
+                 .multilineTextAlignment(.center)
+                 .onChange(of: startingBalanceText, initial: false) { _, newValue in
+-                    // Strip out non-digit characters except the decimal
+-                    let digitsOnly = newValue.replacingOccurrences(
+-                        of: "[^0-9.]",
+-                        with: "",
+-                        options: .regularExpression
+-                    )
+-                    // Convert to number
++                    // re‐format using currencyFormatter
++                    let digitsOnly = newValue.replacingOccurrences(of: "[^0-9.]", with: "", options: .regularExpression)
+                     if let doubleVal = Double(digitsOnly) {
+-                        // Then re-format using your currencyFormatter
+                         if let formatted = currencyFormatter.string(from: NSNumber(value: doubleVal)) {
+                             if formatted != startingBalanceText {
+                                 startingBalanceText = formatted
+                             }
+                         }
+                     } else {
+-                        // If invalid, just revert to empty or "0"
+                         if newValue != "" {
+                             startingBalanceText = ""
+                         }
+@@ -361,13 +350,15 @@ struct OnboardingView: View {
+         }()
+         
+         return VStack(spacing: 20) {
+-            if currencyPreference == .both {
++            if currencyPreference == .both  {
+                 Spacer().frame(height: 20)
+                 
+                 Text("Are these contributions in USD or EUR?")
+                     .foregroundColor(.white)
+                 
+-                Picker("ContribCurrency", selection: $simSettings.contributionCurrencyWhenBoth) {
++                // This references weeklySimSettings if that's your design.
++                // Or if you need a monthly version, you might do monthlySimSettings.*.
++                Picker("ContribCurrency", selection: $weeklySimSettings.contributionCurrencyWhenBoth) {
+                     Text("USD").tag(PreferredCurrency.usd)
+                     Text("EUR").tag(PreferredCurrency.eur)
+                 }
+@@ -410,7 +401,9 @@ struct OnboardingView: View {
+         }
+         .onAppear {
+             if currencyPreference == .both {
+-                simSettings.contributionCurrencyWhenBoth = startingBalanceCurrencyForBoth
++                // If you want to fill 'weeklySimSettings.contributionCurrencyWhenBoth'
++                // from 'startingBalanceCurrencyForBoth', do it here:
++                weeklySimSettings.contributionCurrencyWhenBoth = startingBalanceCurrencyForBoth
+             }
+         }
+     }
+@@ -487,7 +480,7 @@ struct OnboardingView: View {
+                 Text("BTC Price: \(finalBTCPrice, specifier: "%.2f") \(currencyPreference == .eur ? "EUR" : "USD")")
+                 
+                 if currencyPreference == .both {
+-                    Text("Contrib typed in: \(simSettings.contributionCurrencyWhenBoth.rawValue)")
++                    Text("Contrib typed in: \(weeklySimSettings.contributionCurrencyWhenBoth.rawValue)")
+                 }
+                 Text("Contribution: \(contributionPerStep, specifier: "%.0f")")
+                 
+@@ -509,37 +502,71 @@ struct OnboardingView: View {
+         }
+     }
+     
+-    // MARK: - Apply settings
++    // MARK: - applySettingsToSim
+     private func applySettingsToSim() {
+-        simSettings.periodUnit = chosenPeriodUnit
+-        simSettings.userPeriods = totalPeriods
+-        simSettings.initialBTCPriceUSD = finalBTCPrice
+-        
+-        if currencyPreference == .both {
+-            simSettings.startingBalanceCurrencyWhenBoth = startingBalanceCurrencyForBoth
+-        }
+-        simSettings.startingBalance = startingBalanceDouble
+-        simSettings.averageCostBasis = averageCostBasis
+-        
+-        simSettings.currencyPreference = currencyPreference
+-        
+-        inputManager.firstYearContribution = String(contributionPerStep)
+-        inputManager.subsequentContribution = String(contributionPerStep)
+-        
+-        if currencyPreference == .both {
+-            simSettings.contributionCurrencyWhenBoth = simSettings.contributionCurrencyWhenBoth
++        if chosenPeriodUnit == .months {
++            // The monthly object properties
++            monthlySimSettings.periodUnitMonthly = .months
++            monthlySimSettings.userPeriodsMonthly = totalPeriods
++            monthlySimSettings.initialBTCPriceUSDMonthly = finalBTCPrice
++            
++            monthlySimSettings.startingBalanceMonthly = startingBalanceDouble
++            monthlySimSettings.averageCostBasisMonthly = averageCostBasis
++            
++            monthlySimSettings.currencyPreferenceMonthly = currencyPreference
++            
++            if currencyPreference == .both {
++                monthlySimSettings.startingBalanceCurrencyWhenBothMonthly = startingBalanceCurrencyForBoth
++                monthlySimSettings.contributionCurrencyWhenBothMonthly = monthlySimSettings.contributionCurrencyWhenBothMonthly
++            }
++            
++            // Update input manager
++            inputManager.firstYearContribution  = String(contributionPerStep)
++            inputManager.subsequentContribution = String(contributionPerStep)
++            inputManager.threshold1      = threshold1
++            inputManager.withdrawAmount1 = withdraw1
++            inputManager.threshold2      = threshold2
++            inputManager.withdrawAmount2 = withdraw2
++            
++            // **Important**: persist monthly settings
++            monthlySimSettings.saveToUserDefaultsMonthly()
++            
++            print("// DEBUG: user chose monthly => applying to monthlySimSettings")
++        } else {
++            // Weekly object
++            weeklySimSettings.periodUnit = .weeks
++            weeklySimSettings.userPeriods = totalPeriods
++            weeklySimSettings.initialBTCPriceUSD = finalBTCPrice
++            
++            weeklySimSettings.startingBalance     = startingBalanceDouble
++            weeklySimSettings.averageCostBasis    = averageCostBasis
++            weeklySimSettings.currencyPreference  = currencyPreference
++            
++            if currencyPreference == .both {
++                weeklySimSettings.startingBalanceCurrencyWhenBoth = startingBalanceCurrencyForBoth
++                weeklySimSettings.contributionCurrencyWhenBoth    = weeklySimSettings.contributionCurrencyWhenBoth
++            }
++            
++            // Update input manager
++            inputManager.firstYearContribution  = String(contributionPerStep)
++            inputManager.subsequentContribution = String(contributionPerStep)
++            inputManager.threshold1      = threshold1
++            inputManager.withdrawAmount1 = withdraw1
++            inputManager.threshold2      = threshold2
++            inputManager.withdrawAmount2 = withdraw2
++            
++            // Also persist weekly changes
++            weeklySimSettings.saveToUserDefaults()
++            
++            print("// DEBUG: user chose weekly => applying to weeklySimSettings")
+         }
+         
+-        inputManager.threshold1 = threshold1
+-        inputManager.withdrawAmount1 = withdraw1
+-        inputManager.threshold2 = threshold2
+-        inputManager.withdrawAmount2 = withdraw2
+-        
+-        UserDefaults.standard.set(startingBalanceDouble,    forKey: "savedStartingBalance")
+-        UserDefaults.standard.set(averageCostBasis,         forKey: "savedAverageCostBasis")
+-        UserDefaults.standard.set(totalPeriods,             forKey: "savedUserPeriods")
+-        UserDefaults.standard.set(chosenPeriodUnit.rawValue,forKey: "savedPeriodUnit")
+-        UserDefaults.standard.set(finalBTCPrice,            forKey: "savedInitialBTCPriceUSD")
++        // (Optionally also save your custom 'savedPeriodUnit' key if you really want both.)
++        UserDefaults.standard.set(startingBalanceDouble, forKey: "savedStartingBalance")
++        UserDefaults.standard.set(averageCostBasis,      forKey: "savedAverageCostBasis")
++        UserDefaults.standard.set(totalPeriods,          forKey: "savedUserPeriods")
++        UserDefaults.standard.set(chosenPeriodUnit.rawValue, forKey: "savedPeriodUnit")
++        UserDefaults.standard.set(finalBTCPrice,         forKey: "savedInitialBTCPriceUSD")
+         
+         print("// DEBUG: applySettingsToSim => periodUnit=\(chosenPeriodUnit.rawValue)")
+         print("// DEBUG: totalPeriods=\(totalPeriods)")
+diff --git a/BTC Simulator/RestoreDefaultsMonthly.swift b/BTC Simulator/RestoreDefaultsMonthly.swift
+new file mode 100644
+index 0000000..8b81e56
+--- /dev/null
++++ b/BTC Simulator/RestoreDefaultsMonthly.swift	
+@@ -0,0 +1,76 @@
++//
++//  RestoreDefaultsMonthly.swift
++//  BTCMonteCarlo
++//
++//  Created by . . on 11/02/2025.
++//
++
++import SwiftUI
++
++extension MonthlySimulationSettings {
++    func restoreDefaultsMonthly() {
++        print("[restoreDefaultsMonthly] Restoring defaults for monthly.")
++        
++        // Mark that we are restoring
++        isRestoringDefaultsMonthly = true
++        
++        // Clear locked monthly factors
++        lockedFactorsMonthly.removeAll()
++        
++        let defaults = UserDefaults.standard
++        
++        // Remove monthly factor states & intensity
++        defaults.removeObject(forKey: "factorStatesMonthly")
++        defaults.removeObject(forKey: "rawFactorIntensityMonthly")
++        
++        // Reset chart extremes
++        chartExtremeBearishMonthly = false
++        chartExtremeBullishMonthly = false
++        
++        // Remove advanced monthly toggles if you want them to revert
++        defaults.removeObject(forKey: "useLognormalGrowthMonthly")
++        defaults.removeObject(forKey: "useAnnualStepMonthly")
++        defaults.removeObject(forKey: "lockedRandomSeedMonthly")
++        defaults.removeObject(forKey: "seedValueMonthly")
++        defaults.removeObject(forKey: "useRandomSeedMonthly")
++        defaults.removeObject(forKey: "useHistoricalSamplingMonthly")
++        defaults.removeObject(forKey: "useExtendedHistoricalSamplingMonthly")
++        defaults.removeObject(forKey: "useVolShocksMonthly")
++        defaults.removeObject(forKey: "useGarchVolatilityMonthly")
++        defaults.removeObject(forKey: "useAutoCorrelationMonthly")
++        defaults.removeObject(forKey: "autoCorrelationStrengthMonthly")
++        defaults.removeObject(forKey: "meanReversionTargetMonthly")
++        defaults.removeObject(forKey: "useMeanReversionMonthly")
++        defaults.removeObject(forKey: "useRegimeSwitchingMonthly")
++        defaults.removeObject(forKey: "lockHistoricalSamplingMonthly")
++        
++        // Remove monthly currency preference & period unit if you want them reset
++        defaults.removeObject(forKey: "currencyPreferenceMonthly")
++        defaults.removeObject(forKey: "savedPeriodUnitMonthly")
++        
++        // Rebuild from scratch in code:
++        rawFactorIntensityMonthly = 0.5
++        
++        // Reset each monthly factor to its default
++        for (factorName, var factor) in factorsMonthly {
++            factor.isEnabled = true
++            factor.currentValue = factor.defaultValue
++            factor.isLocked = false
++            factor.internalOffset = 0.0
++            factorsMonthly[factorName] = factor
++        }
++        
++        // If you track monthly tilt bar
++        resetTiltBarMonthly()
++        
++        // Persist these changes
++        defaults.synchronize()
++        
++        // End restore
++        DispatchQueue.main.async {
++            self.isRestoringDefaultsMonthly = false
++        }
++        
++        print("[restoreDefaultsMonthly] Completed monthly defaults restore.")
++    }
++}
+diff --git a/BTC Simulator/SettingsSections.swift b/BTC Simulator/SettingsSections.swift
+index 39eabb1..49d5a83 100644
+--- a/BTC Simulator/SettingsSections.swift	
++++ b/BTC Simulator/SettingsSections.swift	
+@@ -1,39 +1,67 @@
+-/*
+------------------------------------------------------------
+-                SETTINGS SECTIONS
+-                  BTC MONTE CARLO
+-                (HODL SIMULATOR)
+------------------------------------------------------------
+-Description:
+- This file extends the SettingsView by providing a collection of reusable UI sections and helper
+- functions that form the backbone of the settings interface. It defines custom bindings, computed views,
+- and utility methods to adjust and display simulation parameters, including:
+-
+- • A custom Binding for factor intensity that synchronizes global intensity with individual factor settings.
+- • A tilt bar view that visually represents market sentiment—green for bullish and red for bearish conditions.
+- • A factor intensity section featuring extreme bullish and bearish toggle buttons to force extreme settings.
+- • Helper functions to lock/unlock individual factors and manage their state based on user interactions.
+- • Sections for toggling all factors on or off, restoring default settings, and navigating to the About page.
+-
+-Usage:
+- These components are integrated into the SettingsView to provide a user-friendly interface for fine-tuning
+- simulation parameters and market factor settings.
+------------------------------------------------------------
+-Created on 27/01/2025.
+------------------------------------------------------------
+-*/
+-
+ //
+ //  SettingsSections.swift
+ //  BTCMonteCarlo
+ //
+-//  Created by . . on 27/01/2025.
++//  Created by ... on 27/01/2025.
+ //
+ 
+ import SwiftUI
+ 
+-extension SettingsView {
++// A simple namespace struct
++struct SettingsSections { }
+ 
++extension SettingsSections {
++    // MARK: - Toggle All Section
++    static func toggleAllSection(
++        simSettings: SimulationSettings,
++        monthlySimSettings: MonthlySimulationSettings
++    ) -> some View {
++        Section {
++            Toggle("Toggle All Factors", isOn:
++                Binding<Bool>(
++                    get: {
++                        if monthlySimSettings.periodUnitMonthly == .months {
++                            return monthlySimSettings.toggleAllMonthly
++                        } else {
++                            return simSettings.toggleAll
++                        }
++                    },
++                    set: { newValue in
++                        if monthlySimSettings.periodUnitMonthly == .months {
++                            // Monthly path
++                            monthlySimSettings.userIsActuallyTogglingAllMonthly = true
++                            monthlySimSettings.toggleAllMonthly = newValue
++                            monthlySimSettings.toggleAllFactorsMonthly(on: newValue)
++                            if newValue {
++                                monthlySimSettings.chartExtremeBearishMonthly = false
++                                monthlySimSettings.chartExtremeBullishMonthly = false
++                                monthlySimSettings.lockedFactorsMonthly.removeAll()
++                            }
++                        } else {
++                            // Weekly path
++                            simSettings.userIsActuallyTogglingAll = true
++                            simSettings.toggleAll = newValue
++                            simSettings.toggleAllFactors(on: newValue)
++                            if newValue {
++                                simSettings.chartExtremeBearish = false
++                                simSettings.chartExtremeBullish = false
++                                simSettings.lockedFactors.removeAll()
++                            }
++                        }
++                    }
++                )
++            )
++            .tint(.orange)
++            .foregroundColor(.white)
++        } footer: {
++            Text("Switches ON or OFF all bullish/bearish factors.")
++                .foregroundColor(.white)
++        }
++        .listRowBackground(Color(white: 0.15))
++    }
++}
++
++extension SettingsView {
+     func logistic(_ x: Double, steepness: Double, midpoint: Double) -> Double {
+         1.0 / (1.0 + exp(-steepness * (x - midpoint)))
+     }
+@@ -41,8 +69,6 @@ extension SettingsView {
+     // -------------------------------------------------------
+     // MARK: - A custom Binding for factorIntensity
+     // -------------------------------------------------------
+-    /// This binding reads factorIntensity via simSettings.getFactorIntensity(),
+-    /// and writes it back via simSettings.setFactorIntensity(...).
+     private var factorIntensityBinding: Binding<Double> {
+         Binding(
+             get: {
+@@ -73,21 +99,19 @@ extension SettingsView {
+                             .fill(Color.gray.opacity(0.3))
+                             .frame(height: 8)
+                         
+-                        // Green bar for positive tilt, anchored on the left
++                        // Green bar for positive tilt
+                         Rectangle()
+                             .fill(Color.green)
+                             .frame(width: effectiveTilt > 0 ? computedWidth : 0, height: 8)
+                             .animation(.easeInOut(duration: 0.3), value: effectiveTilt)
+                         
+-                        // Red bar for negative tilt, anchored on the right
++                        // Red bar for negative tilt
+                         Rectangle()
+                             .fill(Color.red)
+                             .frame(width: effectiveTilt < 0 ? computedWidth : 0, height: 8)
+                             .offset(x: effectiveTilt < 0 ? (barWidth - computedWidth) : barWidth)
+                             .animation(.easeInOut(duration: 0.3), value: effectiveTilt)
+                     }
+-                    .contentShape(Rectangle())
+-                    // No drag gesture here—tilt bar is display-only.
+                 }
+                 .frame(height: 8)
+             }
+@@ -107,26 +131,20 @@ extension SettingsView {
+                 // EXTREME BEARISH BUTTON
+                 Button {
+                     if simSettings.chartExtremeBearish {
+-                        // Cancel forced extreme if tapped again.
+                         simSettings.chartExtremeBearish = false
+                         simSettings.recalcTiltBarValue(bullishKeys: bullishKeys, bearishKeys: bearishKeys)
+                     } else {
+-                        // Force Bearish:
+                         isManualOverride = true
+                         simSettings.setFactorIntensity(0.0)
+                         simSettings.tiltBarValue = -1.0
+-
+-                        // Turn OFF all bullish factors and force them to their minimum.
+                         for key in bullishKeys {
+                             simSettings.setFactorEnabled(factorName: key, enabled: false)
+                             lockFactorAtMin(key)
+                         }
+-                        // Turn ON all bearish factors and force them to their minimum.
+                         for key in bearishKeys {
+                             simSettings.setFactorEnabled(factorName: key, enabled: true)
+                             unlockFactorAndSetMin(key)
+                         }
+-
+                         simSettings.chartExtremeBearish = true
+                         simSettings.chartExtremeBullish = false
+                         simSettings.recalcTiltBarValue(bullishKeys: bullishKeys, bearishKeys: bearishKeys)
+@@ -149,7 +167,7 @@ extension SettingsView {
+                     : 1.0
+                 )
+ 
+-                // MAIN INTENSITY SLIDER with Haptic Feedback
++                // MAIN INTENSITY SLIDER
+                 Slider(
+                     value: factorIntensityBinding,
+                     in: 0...1,
+@@ -158,7 +176,7 @@ extension SettingsView {
+                 .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
+                 .disabled(simSettings.isGlobalSliderDisabled)
+                 .onChange(of: factorIntensityBinding.wrappedValue) { newValue in
+-                    // Trigger haptic feedback when the intensity changes significantly.
++                    // Haptic, etc.
+                     if abs(newValue - oldFactorIntensity) > 0.05 {
+                         let feedbackGenerator = UIImpactFeedbackGenerator(style: .medium)
+                         feedbackGenerator.prepare()
+@@ -177,18 +195,14 @@ extension SettingsView {
+                         isManualOverride = true
+                         simSettings.setFactorIntensity(1.0)
+                         simSettings.tiltBarValue = 1.0
+-
+-                        // Turn OFF all bearish factors and force them to their maximum.
+                         for key in bearishKeys {
+                             simSettings.setFactorEnabled(factorName: key, enabled: false)
+                             lockFactorAtMax(key)
+                         }
+-                        // Turn ON all bullish factors and force them to their maximum.
+                         for key in bullishKeys {
+                             simSettings.setFactorEnabled(factorName: key, enabled: true)
+                             unlockFactorAndSetMax(key)
+                         }
+-
+                         simSettings.chartExtremeBullish = true
+                         simSettings.chartExtremeBearish = false
+                         simSettings.recalcTiltBarValue(bullishKeys: bullishKeys, bearishKeys: bearishKeys)
+@@ -219,7 +233,6 @@ extension SettingsView {
+     }
+ 
+     // MARK: - Helper Functions for Locking/Unlocking Factors
+-
+     func lockFactorAtMin(_ factorName: String) {
+         guard var f = simSettings.factors[factorName] else { return }
+         f.currentValue = f.minValue
+@@ -272,33 +285,6 @@ extension SettingsView {
+         simSettings.factors[factorName] = f
+     }
+ 
+-    // MARK: - Toggle All Section
+-    var toggleAllSection: some View {
+-        Section {
+-            Toggle("Toggle All Factors", isOn:
+-                Binding<Bool>(
+-                    get: { simSettings.toggleAll },
+-                    set: { newValue in
+-                        simSettings.userIsActuallyTogglingAll = true
+-                        simSettings.toggleAll = newValue
+-                        simSettings.toggleAllFactors(on: newValue)
+-                        if newValue {
+-                            simSettings.chartExtremeBearish = false
+-                            simSettings.chartExtremeBullish = false
+-                            simSettings.lockedFactors.removeAll()
+-                        }
+-                    }
+-                )
+-            )
+-            .tint(.orange)
+-            .foregroundColor(.white)
+-        } footer: {
+-            Text("Switches ON or OFF all bullish/bearish factors.")
+-                .foregroundColor(.white)
+-        }
+-        .listRowBackground(Color(white: 0.15))
+-    }
+-
+     // MARK: - Restore Defaults
+     var restoreDefaultsSection: some View {
+         Section {
+@@ -329,7 +315,7 @@ extension SettingsView {
+ 
+     // MARK: - Reset All Criteria
+     var resetCriteriaSection: some View {
+-        Section(footer: Text("Resetting all criteria will revert your custom settings to their default values and restart the onboarding process.")
++        Section(footer: Text("Resetting all criteria will revert your custom settings to default and restart onboarding.")
+                     .foregroundColor(.white)
+                     .font(.footnote)
+         ) {
+@@ -338,7 +324,7 @@ extension SettingsView {
+             }) {
+                 HStack {
+                     Text("Reset All Criteria")
+-                        .foregroundColor(.red)  // Or your desired color/style
++                        .foregroundColor(.red)
+                     Spacer()
+                 }
+                 .contentShape(Rectangle())
+@@ -353,7 +339,7 @@ extension SettingsView {
+                 }
+                 Button("Cancel", role: .cancel) { }
+             }, message: {
+-                Text("This will restore default settings and restart onboarding. Do you want to proceed?")
++                Text("This will restore default settings and restart onboarding. Proceed?")
+             })
+         }
+         .listRowBackground(Color(white: 0.15))
+diff --git a/BTC Simulator/SettingsView.swift b/BTC Simulator/SettingsView.swift
+index 526c712..42718d4 100644
+--- a/BTC Simulator/SettingsView.swift	
++++ b/BTC Simulator/SettingsView.swift	
+@@ -11,6 +11,7 @@ import Sentry
+ 
+ struct SettingsView: View {
+     @EnvironmentObject var simSettings: SimulationSettings
++    @EnvironmentObject var monthlySimSettings: MonthlySimulationSettings
+     
+     @AppStorage("hasOnboarded") var didFinishOnboarding = false
+     @AppStorage("showAdvancedSettings") private var showAdvancedSettings: Bool = false
+@@ -68,11 +69,28 @@ struct SettingsView: View {
+             // 2) Factor intensity section (slider + extreme toggles)
+             factorIntensitySection
+             
+-            // 3) Toggle-all section
+-            toggleAllSection
++            // 3) Toggle-all section (changed here)
++            SettingsSections.toggleAllSection(
++                simSettings: simSettings,
++                monthlySimSettings: monthlySimSettings
++            )
+             
+-            // 4) Restore defaults
+-            restoreDefaultsSection
++            // 4) Restore defaults (now calls monthlySimSettings too)
++            Section {
++                Button(action: {
++                    simSettings.restoreDefaults()
++                    monthlySimSettings.restoreDefaultsMonthly()
++                }) {
++                    HStack {
++                        Text("Restore Defaults")
++                            .foregroundColor(.red)
++                        Spacer()
++                    }
++                    .contentShape(Rectangle())
++                }
++                .buttonStyle(.plain)
++            }
++            .listRowBackground(Color(white: 0.15))
+             
+             // 5) Bullish factors
+             BullishFactorsSection(
+diff --git a/BTC Simulator/SimulationSettings+FactorSync.swift b/BTC Simulator/SimulationSettings+FactorSync.swift
+index fc2ad1e..e5701fb 100644
+--- a/BTC Simulator/SimulationSettings+FactorSync.swift	
++++ b/BTC Simulator/SimulationSettings+FactorSync.swift	
+@@ -113,12 +113,12 @@ extension SimulationSettings {
+                 // Re-enable
+                 if let frozen = factor.frozenValue {
+                     factor.currentValue = frozen
+-                    print("[toggleAll] Restoring factor \(name) -> \(frozen)")
++                    print("[toggleAll (monthly)] Restoring factor \(name) -> \(frozen)")
+                     
+                     let base = globalBaseline(for: factor)
+                     let range = factor.maxValue - factor.minValue
+                     factor.internalOffset = (frozen - base) / range
+-                    print("[toggleAll]   New offset = \(factor.internalOffset) for factor \(name)")
++                    print("[toggleAll (monthly)]   New offset = \(factor.internalOffset) for factor \(name)")
+                     
+                     factor.frozenValue = nil
+                 }
+@@ -128,7 +128,7 @@ extension SimulationSettings {
+             } else {
+                 // Disable
+                 factor.frozenValue = factor.currentValue
+-                print("[toggleAll] Freezing factor \(name) at \(factor.currentValue)")
++                print("[toggleAll (monthly)] Freezing factor \(name) at \(factor.currentValue)")
+                 
+                 factor.isEnabled = false
+                 factor.isLocked = true
+diff --git a/BTC Simulator/SimulationSettings.swift b/BTC Simulator/SimulationSettings.swift
+index bf38798..0e655e0 100644
+--- a/BTC Simulator/SimulationSettings.swift	
++++ b/BTC Simulator/SimulationSettings.swift	
+@@ -1,49 +1,3 @@
+-/*
+------------------------------------------------------------
+-               SIMULATION SETTINGS
+-                  BTC MONTE CARLO
+-                (HODL SIMULATOR)
+------------------------------------------------------------
+-Description:
+- This file defines the main settings object for HODL Simulator, the core component that manages
+- all global simulation parameters. It holds the global slider value (rawFactorIntensity), a dictionary
+- of factor states (for both bullish and bearish influences), the tilt bar value, and various advanced
+- toggles that control simulation behavior (such as volatility modeling, growth models, regime switching,
+- autocorrelation, and mean reversion). User preferences are persisted via UserDefaults, ensuring that
+- settings remain consistent across app launches.
+-
+-Key Components:
+- • Published Properties:
+-    - Global simulation parameters including initial BTC price, starting balance, user periods, and currency
+-      preference.
+-    - Advanced toggles (e.g., useLognormalGrowth, useGarchVolatility, useAutoCorrelation, etc.) that modify
+-      simulation dynamics.
+-    - The rawFactorIntensity property, which drives the global slider and automatically syncs individual
+-      factor settings when updated.
+-    - The tilt bar value and related properties to visually indicate market sentiment.
+-    - A dictionary of FactorState objects representing individual market factors and their current settings.
+- • Persistence:
+-    - Methods to load and save settings from/to UserDefaults, ensuring that user configurations persist
+-      between sessions.
+- • Factor Synchronization & Interaction:
+-    - Functions to recalculate the global baseline for each factor, sync individual factors to the global
+-      slider, and adjust the tilt bar based on the weighted contributions of bullish and bearish factors.
+-    - Handlers for user interactions, such as dragging factor sliders and adjusting the global slider,
+-      which automatically update related settings.
+- • S-Curve & Logistic Functions:
+-    - Implements logistic (S-curve) functions to normalize and scale factor impacts, ensuring smooth and
+-      controlled adjustments of simulation parameters.
+-
+-Usage:
+- Instantiate a SimulationSettings object to act as the central configuration hub for all Monte Carlo
+- simulations. This object provides a single source of truth for simulation parameters, synchronizes changes
+- across the UI, and persists user settings to enable a consistent simulation experience.
+-
+------------------------------------------------------------
+-Created on 26/12/2024.
+------------------------------------------------------------
+-*/
+-
+ //
+ //  SimulationSettings.swift
+ //  BTCMonteCarlo
+@@ -78,7 +32,7 @@ class SimulationSettings: ObservableObject {
+     /// When updated manually, its didSet calls syncFactors().
+     @Published var rawFactorIntensity: Double {
+         didSet {
+-            print("[rawFactorIntensity didSet] New value: \(rawFactorIntensity), ignoreSync: \(ignoreSync)")
++            print("[rawFactorIntensity didSet (weekly)] rawFactorIntensity changed to \(rawFactorIntensity)")
+             UserDefaults.standard.set(rawFactorIntensity, forKey: "rawFactorIntensity")
+             if !ignoreSync {
+                 syncFactors()
+@@ -106,7 +60,7 @@ class SimulationSettings: ObservableObject {
+     @Published var periodUnit: PeriodUnit = .weeks {
+         didSet {
+             if isInitialized {
+-                print("[periodUnit didSet] periodUnit changed to \(periodUnit)")
++                print("[periodUnit didSet (weekly)] periodUnit changed to \(periodUnit)")
+             }
+         }
+     }
+@@ -119,7 +73,7 @@ class SimulationSettings: ObservableObject {
+     @Published var currencyPreference: PreferredCurrency = .eur {
+         didSet {
+             if isInitialized {
+-                print("[currencyPreference didSet] currencyPreference changed to \(currencyPreference)")
++                print("[currencyPreference didSet (weekly)] currencyPreference changed to \(currencyPreference)")
+                 UserDefaults.standard.set(currencyPreference.rawValue, forKey: "currencyPreference")
+             }
+         }
+@@ -138,11 +92,10 @@ class SimulationSettings: ObservableObject {
+     var isIndividualChange = false
+     
+     // MARK: - Advanced Toggles
+-    // Set defaults here so that on a fresh install these are enabled
+     @Published var useLognormalGrowth: Bool = true {
+         didSet {
+             if isInitialized {
+-                print("[useLognormalGrowth didSet] useLognormalGrowth changed to \(useLognormalGrowth)")
++                print("[useLognormalGrowth didSet (weekly)] useLognormalGrowth changed to \(useLognormalGrowth)")
+                 UserDefaults.standard.set(useLognormalGrowth, forKey: "useLognormalGrowth")
+                 if !useLognormalGrowth { useAnnualStep = true }
+             }
+@@ -151,7 +104,7 @@ class SimulationSettings: ObservableObject {
+     @Published var useAnnualStep: Bool = false {
+         didSet {
+             if isInitialized {
+-                print("[useAnnualStep didSet] useAnnualStep changed to \(useAnnualStep)")
++                print("[useAnnualStep didSet (weekly)] useAnnualStep changed to \(useAnnualStep)")
+                 UserDefaults.standard.set(useAnnualStep, forKey: "useAnnualStep")
+             }
+         }
+@@ -159,7 +112,7 @@ class SimulationSettings: ObservableObject {
+     @Published var lockedRandomSeed: Bool = false {
+         didSet {
+             if isInitialized {
+-                print("[lockedRandomSeed didSet] lockedRandomSeed changed to \(lockedRandomSeed)")
++                print("[lockedRandomSeed didSet (weekly)] lockedRandomSeed changed to \(lockedRandomSeed)")
+                 UserDefaults.standard.set(lockedRandomSeed, forKey: "lockedRandomSeed")
+             }
+         }
+@@ -167,7 +120,7 @@ class SimulationSettings: ObservableObject {
+     @Published var seedValue: UInt64 = 0 {
+         didSet {
+             if isInitialized {
+-                print("[seedValue didSet] seedValue changed to \(seedValue)")
++                print("[seedValue didSet (weekly)] seedValue changed to \(seedValue)")
+                 UserDefaults.standard.set(seedValue, forKey: "seedValue")
+             }
+         }
+@@ -175,7 +128,7 @@ class SimulationSettings: ObservableObject {
+     @Published var useRandomSeed: Bool = true {
+         didSet {
+             if isInitialized {
+-                print("[useRandomSeed didSet] useRandomSeed changed to \(useRandomSeed)")
++                print("[useRandomSeed didSet (weekly)] useRandomSeed changed to \(useRandomSeed)")
+                 UserDefaults.standard.set(useRandomSeed, forKey: "useRandomSeed")
+             }
+         }
+@@ -183,7 +136,7 @@ class SimulationSettings: ObservableObject {
+     @Published var useHistoricalSampling: Bool = true {
+         didSet {
+             if isInitialized {
+-                print("[useHistoricalSampling didSet] useHistoricalSampling changed to \(useHistoricalSampling)")
++                print("[useHistoricalSampling didSet (weekly)] useHistoricalSampling changed to \(useHistoricalSampling)")
+                 UserDefaults.standard.set(useHistoricalSampling, forKey: "useHistoricalSampling")
+             }
+         }
+@@ -191,7 +144,7 @@ class SimulationSettings: ObservableObject {
+     @Published var useExtendedHistoricalSampling: Bool = true {
+         didSet {
+             if isInitialized {
+-                print("[useExtendedHistoricalSampling didSet] useExtendedHistoricalSampling changed to \(useExtendedHistoricalSampling)")
++                print("[useExtendedHistoricalSampling didSet (weekly)] useExtendedHistoricalSampling changed to \(useExtendedHistoricalSampling)")
+                 UserDefaults.standard.set(useExtendedHistoricalSampling, forKey: "useExtendedHistoricalSampling")
+             }
+         }
+@@ -199,7 +152,7 @@ class SimulationSettings: ObservableObject {
+     @Published var useVolShocks: Bool = true {
+         didSet {
+             if isInitialized {
+-                print("[useVolShocks didSet] useVolShocks changed to \(useVolShocks)")
++                print("[useVolShocks didSet (weekly)] useVolShocks changed to \(useVolShocks)")
+                 UserDefaults.standard.set(useVolShocks, forKey: "useVolShocks")
+             }
+         }
+@@ -207,35 +160,32 @@ class SimulationSettings: ObservableObject {
+     @Published var useGarchVolatility: Bool = true {
+         didSet {
+             if isInitialized {
+-                print("[useGarchVolatility didSet] useGarchVolatility changed to \(useGarchVolatility)")
++                print("[useGarchVolatility didSet (weekly)] useGarchVolatility changed to \(useGarchVolatility)")
+                 UserDefaults.standard.set(useGarchVolatility, forKey: "useGarchVolatility")
+             }
+         }
+     }
+-    // Autocorrelation is now on by default.
+     @Published var useAutoCorrelation: Bool = true {
+         didSet {
+             if isInitialized {
+-                print("[useAutoCorrelation didSet] useAutoCorrelation changed to \(useAutoCorrelation)")
++                print("[useAutoCorrelation didSet (weekly)] useAutoCorrelation changed to \(useAutoCorrelation)")
+                 UserDefaults.standard.set(useAutoCorrelation, forKey: "useAutoCorrelation")
+                 if !useAutoCorrelation { useMeanReversion = false }
+             }
+         }
+     }
+-    // Default strength set to 0.05 on a fresh install.
+     @Published var autoCorrelationStrength: Double = 0.05 {
+         didSet {
+             if isInitialized {
+-                print("[autoCorrelationStrength didSet] autoCorrelationStrength changed to \(autoCorrelationStrength)")
++                print("[autoCorrelationStrength didSet (weekly)] autoCorrelationStrength changed to \(autoCorrelationStrength)")
+                 UserDefaults.standard.set(autoCorrelationStrength, forKey: "autoCorrelationStrength")
+             }
+         }
+     }
+-    // Default target set to 0.03.
+     @Published var meanReversionTarget: Double = 0.03 {
+         didSet {
+             if isInitialized {
+-                print("[meanReversionTarget didSet] meanReversionTarget changed to \(meanReversionTarget)")
++                print("[meanReversionTarget didSet (weekly)] meanReversionTarget changed to \(meanReversionTarget)")
+                 UserDefaults.standard.set(meanReversionTarget, forKey: "meanReversionTarget")
+             }
+         }
+@@ -243,7 +193,7 @@ class SimulationSettings: ObservableObject {
+     @Published var useMeanReversion: Bool = true {
+         didSet {
+             if isInitialized {
+-                print("[useMeanReversion didSet] useMeanReversion changed to \(useMeanReversion)")
++                print("[useMeanReversion didSet (weekly)] useMeanReversion changed to \(useMeanReversion)")
+                 UserDefaults.standard.set(useMeanReversion, forKey: "useMeanReversion")
+             }
+         }
+@@ -252,16 +202,15 @@ class SimulationSettings: ObservableObject {
+     @Published var lockHistoricalSampling: Bool = false {
+         didSet {
+             if isInitialized {
+-                print("[lockHistoricalSampling didSet] lockHistoricalSampling changed to \(lockHistoricalSampling)")
++                print("[lockHistoricalSampling didSet (weekly)] lockHistoricalSampling changed to \(lockHistoricalSampling)")
+                 UserDefaults.standard.set(lockHistoricalSampling, forKey: "lockHistoricalSampling")
+             }
+         }
+     }
+-    // Regime switching is now on by default.
+     @Published var useRegimeSwitching: Bool = true {
+         didSet {
+             if isInitialized {
+-                print("[useRegimeSwitching didSet] useRegimeSwitching changed to \(useRegimeSwitching)")
++                print("[useRegimeSwitching didSet (weekly)] useRegimeSwitching changed to \(useRegimeSwitching)")
+                 UserDefaults.standard.set(useRegimeSwitching, forKey: "useRegimeSwitching")
+             }
+         }
+@@ -275,7 +224,6 @@ class SimulationSettings: ObservableObject {
+     
+     // MARK: - Init
+     init() {
+-        // Load saved global slider value if it exists; otherwise default to 0.5.
+         if let savedIntensity = UserDefaults.standard.object(forKey: "rawFactorIntensity") as? Double {
+             rawFactorIntensity = savedIntensity
+         } else {
+@@ -298,7 +246,7 @@ class SimulationSettings: ObservableObject {
+     
+     // MARK: - Tilt Bar Reset
+     func resetTiltBar() {
+-        print("[resetTiltBar] Resetting tilt bar")
++        print("[resetTiltBar (weekly)] Resetting tilt bar")
+         UserDefaults.standard.removeObject(forKey: tiltBarValueKey)
+         tiltBarValue = 0.0
+         defaultTilt = 0.0
+@@ -311,7 +259,7 @@ class SimulationSettings: ObservableObject {
+     // MARK: - Loading & Saving
+     func loadFromUserDefaults() {
+         let defaults = UserDefaults.standard
+-        print("[loadFromUserDefaults] Loading settings")
++        print("[loadFromUserDefaults (weekly)] Loading settings")
+         isInitialized = false
+         
+         useLognormalGrowth = defaults.bool(forKey: "useLognormalGrowth")
+@@ -398,9 +346,7 @@ class SimulationSettings: ObservableObject {
+         if let savedFactorStatesData = defaults.data(forKey: "factorStates"),
+            let savedFactors = try? JSONDecoder().decode([String: FactorState].self, from: savedFactorStatesData) {
+             factors = savedFactors
+-            print("[loadFromUserDefaults] Loaded \(factors.count) factors from defaults")
+         } else {
+-            print("[loadFromUserDefaults] No saved factor states; creating defaults")
+             factors.removeAll()
+             for (factorName, def) in FactorCatalog.all {
+                 let (minVal, midVal, maxVal) = (periodUnit == .weeks)
+@@ -419,12 +365,13 @@ class SimulationSettings: ObservableObject {
+             }
+         }
+         
++        print("[loadFromUserDefaults (weekly)] periodUnit = \(periodUnit)")
+         isInitialized = true
+     }
+     
+     func saveToUserDefaults() {
+         let defaults = UserDefaults.standard
+-        print("[saveToUserDefaults] Saving settings")
++        print("[saveToUserDefaults (weekly)] Saving settings")
+         defaults.set(useLognormalGrowth, forKey: "useLognormalGrowth")
+         defaults.set(lockedRandomSeed, forKey: "lockedRandomSeed")
+         defaults.set(seedValue, forKey: "seedValue")
+@@ -469,7 +416,11 @@ class SimulationSettings: ObservableObject {
+     
+     // MARK: - userDidDragFactorSlider
+     func userDidDragFactorSlider(_ factorName: String, to newValue: Double) {
+-        guard var factor = factors[factorName] else { return }
++        print("[userDidDragFactorSlider (weekly)] Dragging factor \(factorName) to new value: \(newValue)")
++        guard var factor = factors[factorName] else {
++            print("[userDidDragFactorSlider] Factor \(factorName) not found.")
++            return
++        }
+         
+         // Define bullish and bearish keys (for tilt calculations)
+         let bullishKeys: [String] = [
+@@ -483,17 +434,17 @@ class SimulationSettings: ObservableObject {
+             "Recession"
+         ]
+         
+-        // Cancel forced extremes if needed
+         if chartExtremeBearish && newValue > factor.minValue {
++            print("[userDidDragFactorSlider (weekly)] Canceling forced bearish state for \(factorName)")
+             chartExtremeBearish = false
+             recalcTiltBarValue(bullishKeys: bullishKeys, bearishKeys: bearishKeys)
+         }
+         if chartExtremeBullish && newValue < factor.maxValue {
++            print("[userDidDragFactorSlider (weekly)] Canceling forced bullish state for \(factorName)")
+             chartExtremeBullish = false
+             recalcTiltBarValue(bullishKeys: bullishKeys, bearishKeys: bearishKeys)
+         }
+         
+-        // Compute the new value and offset:
+         let oldOffset = factor.internalOffset
+         let baseline  = globalBaseline(for: factor)
+         let range     = factor.maxValue - factor.minValue
+@@ -502,22 +453,18 @@ class SimulationSettings: ObservableObject {
+         let newOffset = (clampedVal - baseline) / range
+         factor.internalOffset = newOffset
+         
+-        // Write back into the dictionary:
+         factors[factorName] = factor
+-        print("[userDidDragFactorSlider] Updated \(factorName): currentValue=\(factor.currentValue), internalOffset=\(factor.internalOffset)")
+         
+-        // Compute the delta offset and adjust the global slider:
+         let deltaOffset = newOffset - oldOffset
+         let activeCount = factors.values.filter { $0.isEnabled && !$0.isLocked }.count
+         if activeCount > 0 {
+             let shift = deltaOffset / Double(activeCount)
+-            print("[userDidDragFactorSlider] Applying global slider shift of \(shift) from deltaOffset \(deltaOffset)")
++            print("[userDidDragFactorSlider (weekly)] Adjusting global slider by shift: \(shift)")
+             ignoreSync = true
+             rawFactorIntensity += shift
+             rawFactorIntensity = min(max(rawFactorIntensity, 0), 1)
+             DispatchQueue.main.async {
+                 self.ignoreSync = false
+-                print("[userDidDragFactorSlider] ignoreSync reset to false")
+             }
+         }
+         
+@@ -528,7 +475,7 @@ class SimulationSettings: ObservableObject {
+     
+     // Called when the user manually moves the global slider:
+     func globalSliderChanged(to newGlobalValue: Double) {
+-        print("[globalSliderChanged] Global slider changed to \(newGlobalValue)")
++        print("[globalSliderChanged (weekly)] Global slider moved to \(newGlobalValue)")
+         rawFactorIntensity = newGlobalValue
+         applyDictionaryFactorsToSim()
+         saveToUserDefaults()
+@@ -536,20 +483,18 @@ class SimulationSettings: ObservableObject {
+     
+     // MARK: - recalcTiltBarValue
+     func recalcTiltBarValue(bullishKeys: [String], bearishKeys: [String]) {
+-        print("[recalcTiltBarValue] Starting recalculation with rawFactorIntensity: \(rawFactorIntensity)")
+-        
+         if chartExtremeBearish {
+             let slope = 0.7
+             tiltBarValue = min(-1.0 + (rawFactorIntensity * slope), 0.0)
+             overrodeTiltManually = true
+-            print("[recalcTiltBarValue] Extreme bearish active. Tilt bar set to \(tiltBarValue)")
++            print("[recalcTiltBarValue (weekly)] Using extreme bearish tilt, tiltBarValue: \(tiltBarValue)")
+             return
+         }
+         if chartExtremeBullish {
+             let slope = 0.7
+             tiltBarValue = max(1.0 - ((1.0 - rawFactorIntensity) * slope), 0.0)
+             overrodeTiltManually = true
+-            print("[recalcTiltBarValue] Extreme bullish active. Tilt bar set to \(tiltBarValue)")
++            print("[recalcTiltBarValue (weekly)] Using extreme bullish tilt, tiltBarValue: \(tiltBarValue)")
+             return
+         }
+         
+@@ -603,12 +548,12 @@ class SimulationSettings: ObservableObject {
+             tiltBarValue = 0.0
+             overrodeTiltManually = true
+         }
+-        print("[recalcTiltBarValue] Final tiltBarValue set to \(tiltBarValue)")
++        print("[recalcTiltBarValue (weekly)] New tiltBarValue: \(tiltBarValue)")
+     }
+     
+     // MARK: - syncFactors
+     func syncFactors() {
+-        print("[syncFactors] Syncing all factors using rawFactorIntensity: \(rawFactorIntensity)")
++        print("[syncFactors (weekly)] Syncing factors with global slider value: \(rawFactorIntensity)")
+         for (name, var factor) in factors {
+             guard factor.isEnabled, !factor.isLocked else { continue }
+             let baseline = globalBaseline(for: factor)
+@@ -618,11 +563,10 @@ class SimulationSettings: ObservableObject {
+             if clamped != newValue {
+                 let oldOffset = factor.internalOffset
+                 factor.internalOffset = (clamped - baseline) / range
+-                print("[syncFactors] \(name): Adjusting offset from \(oldOffset) to \(factor.internalOffset)")
++                print("[syncFactors] Factor \(name): clamped from \(newValue) to \(clamped), old offset: \(oldOffset), new offset: \(factor.internalOffset)")
+             }
+             factor.currentValue = clamped
+             factors[name] = factor
+-            print("[syncFactors] \(name): currentValue updated to \(factor.currentValue) using baseline \(baseline)")
+         }
+     }
+     
+@@ -642,38 +586,22 @@ class SimulationSettings: ObservableObject {
+     
+     // MARK: - recalcGlobalSliderFromFactors
+     func recalcGlobalSliderFromFactors() {
+-        print("[recalcGlobalSliderFromFactors] Recalculating global slider from factor offsets.")
+         let activeFactors = factors.values.filter { $0.isEnabled && !$0.isLocked }
+         guard !activeFactors.isEmpty else {
++            print("[recalcGlobalSliderFromFactors (weekly)] No active factors; resetting global slider to 0.5")
+             ignoreSync = true
+             rawFactorIntensity = 0.5
+             ignoreSync = false
+-            print("[recalcGlobalSliderFromFactors] No active factors; global slider reset to 0.5")
+             return
+         }
+         let sumOffsets = activeFactors.reduce(0.0) { $0 + $1.internalOffset }
+         let avgOffset = sumOffsets / Double(activeFactors.count)
+         var newIntensity = 0.5 + avgOffset
+         newIntensity = max(0.0, min(1.0, newIntensity))
++        print("[recalcGlobalSliderFromFactors (weekly)] New global slider intensity calculated: \(newIntensity)")
+         ignoreSync = true
+         rawFactorIntensity = newIntensity
+         ignoreSync = false
+-        print("[recalcGlobalSliderFromFactors] Global slider set to \(rawFactorIntensity) from avgOffset \(avgOffset)")
+-    }
+-    
+-    // In SimulationSettings.swift
+-    func syncFactorsToGlobalIntensityMonthly(for forcedValue: Double) {
+-        // Only override in monthly mode; weekly mode uses the default logic.
+-        if periodUnit == .weeks {
+-            rawFactorIntensity = forcedValue
+-            syncFactors()
+-        } else {
+-            // Temporarily ignore syncing so we force the raw value.
+-            ignoreSync = true
+-            rawFactorIntensity = forcedValue
+-            ignoreSync = false
+-            syncFactors()
+-        }
+     }
+ }
+ 
+diff --git a/BTCMonteCarlo.xcodeproj/project.pbxproj b/BTCMonteCarlo.xcodeproj/project.pbxproj
+index 3c9161d..ee9419b 100644
+--- a/BTCMonteCarlo.xcodeproj/project.pbxproj
++++ b/BTCMonteCarlo.xcodeproj/project.pbxproj
+@@ -28,6 +28,8 @@
+ 		E14D240B2D3A698A007CC11A /* SimulationSettingsInit.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14D240A2D3A6988007CC11A /* SimulationSettingsInit.swift */; };
+ 		E14D24112D3A9525007CC11A /* SimulationSettings+UnifiedFactors.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14D24102D3A9524007CC11A /* SimulationSettings+UnifiedFactors.swift */; };
+ 		E15DDF472D5A5A3A00CDD30A /* MonthlySimulationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = E15DDF462D5A5A3700CDD30A /* MonthlySimulationSettings.swift */; };
++		E15DDF492D5AD0F100CDD30A /* MonthlySimulationSettings+FactorSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = E15DDF482D5AD0EC00CDD30A /* MonthlySimulationSettings+FactorSync.swift */; };
++		E15DDF4B2D5AE1F700CDD30A /* RestoreDefaultsMonthly.swift in Sources */ = {isa = PBXBuildFile; fileRef = E15DDF4A2D5AE1EF00CDD30A /* RestoreDefaultsMonthly.swift */; };
+ 		E166A8AE2CF855BF0003F518 /* MonteCarloSimulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = E166A8AD2CF855BF0003F518 /* MonteCarloSimulator.swift */; };
+ 		E166A8B02CF855C20003F518 /* SimulationData.swift in Sources */ = {isa = PBXBuildFile; fileRef = E166A8AF2CF855C20003F518 /* SimulationData.swift */; };
+ 		E166A8B22CF85B2B0003F518 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E166A8B12CF85B2B0003F518 /* ContentView.swift */; };
+@@ -132,6 +134,8 @@
+ 		E14D240A2D3A6988007CC11A /* SimulationSettingsInit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulationSettingsInit.swift; sourceTree = "<group>"; };
+ 		E14D24102D3A9524007CC11A /* SimulationSettings+UnifiedFactors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SimulationSettings+UnifiedFactors.swift"; sourceTree = "<group>"; };
+ 		E15DDF462D5A5A3700CDD30A /* MonthlySimulationSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlySimulationSettings.swift; sourceTree = "<group>"; };
++		E15DDF482D5AD0EC00CDD30A /* MonthlySimulationSettings+FactorSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MonthlySimulationSettings+FactorSync.swift"; sourceTree = "<group>"; };
++		E15DDF4A2D5AE1EF00CDD30A /* RestoreDefaultsMonthly.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RestoreDefaultsMonthly.swift; sourceTree = "<group>"; };
+ 		E166A8AD2CF855BF0003F518 /* MonteCarloSimulator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonteCarloSimulator.swift; sourceTree = "<group>"; };
+ 		E166A8AF2CF855C20003F518 /* SimulationData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulationData.swift; sourceTree = "<group>"; };
+ 		E166A8B12CF85B2B0003F518 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+@@ -287,12 +291,14 @@
+ 				E166A8AD2CF855BF0003F518 /* MonteCarloSimulator.swift */,
+ 				E1C543B72D224D21005E416D /* MonteCarloResultsView.swift */,
+ 				E15DDF462D5A5A3700CDD30A /* MonthlySimulationSettings.swift */,
++				E15DDF482D5AD0EC00CDD30A /* MonthlySimulationSettings+FactorSync.swift */,
+ 				E19D11412D42F9E500E3A55E /* NetDeposit.swift */,
+ 				E1883F4F2D1FCEB9007AA90B /* OnboardingView.swift */,
+ 				E17B2F7F2D2800D100ECE087 /* OrientationObserver.swift */,
+ 				E1F1CB652D4F31B9003DB24F /* ParallelSimulationRunner.swift */,
+ 				E1883F3B2D1DDC75007AA90B /* ParametersFormView.swift */,
+ 				E1A1E51E2D2A7362008F7658 /* PortfolioChartView.swift */,
++				E15DDF4A2D5AE1EF00CDD30A /* RestoreDefaultsMonthly.swift */,
+ 				E19D11432D42FA6600E3A55E /* RNGHelpers.swift */,
+ 				E1A1E52E2D2E3A3E008F7658 /* RowOffsetHelpers.swift */,
+ 				E14D24082D3A677D007CC11A /* SettingsPrinter.swift */,
+@@ -478,6 +484,7 @@
+ 				E191AD5D2D1B06E600020DBE /* BitcoinHistoricalData.swift in Sources */,
+ 				E1883F482D1E8E21007AA90B /* AboutView.swift in Sources */,
+ 				E112E3742D58B2EB00167E92 /* ConsentView.swift in Sources */,
++				E15DDF492D5AD0F100CDD30A /* MonthlySimulationSettings+FactorSync.swift in Sources */,
+ 				E17B2F282D27505300ECE087 /* LandscapePlaceholderView.swift in Sources */,
+ 				E166A8B22CF85B2B0003F518 /* ContentView.swift in Sources */,
+ 				E19D10EB2D3EF69300E3A55E /* MempoolDataManager.swift in Sources */,
+@@ -519,6 +526,7 @@
+ 				E1F1CB602D4EF179003DB24F /* CalibrationManager.swift in Sources */,
+ 				E14344D62D52D85600225A49 /* FactorState.swift in Sources */,
+ 				E19D11402D42F97700E3A55E /* DampenOutliers.swift in Sources */,
++				E15DDF4B2D5AE1F700CDD30A /* RestoreDefaultsMonthly.swift in Sources */,
+ 				E12CCD8B2CF8235F0059931D /* BTC_SimulatorApp.swift in Sources */,
+ 				E1A1E5272D2E371D008F7658 /* TipsData.swift in Sources */,
+ 				E1E31C4F2D4349E000ED22E6 /* DataLoader.swift in Sources */,
+diff --git a/BTCMonteCarlo.xcodeproj/project.xcworkspace/xcuserdata/conor.xcuserdatad/UserInterfaceState.xcuserstate b/BTCMonteCarlo.xcodeproj/project.xcworkspace/xcuserdata/conor.xcuserdatad/UserInterfaceState.xcuserstate
+index adb9bad..5f977ea 100644
+Binary files a/BTCMonteCarlo.xcodeproj/project.xcworkspace/xcuserdata/conor.xcuserdatad/UserInterfaceState.xcuserstate and b/BTCMonteCarlo.xcodeproj/project.xcworkspace/xcuserdata/conor.xcuserdatad/UserInterfaceState.xcuserstate differ
+diff --git a/BTCMonteCarlo.xcodeproj/xcuserdata/conor.xcuserdatad/xcdebugger/Breakpoints_v2.xcbkptlist b/BTCMonteCarlo.xcodeproj/xcuserdata/conor.xcuserdatad/xcdebugger/Breakpoints_v2.xcbkptlist
+index 0a0cc65..dc56d1f 100644
+--- a/BTCMonteCarlo.xcodeproj/xcuserdata/conor.xcuserdatad/xcdebugger/Breakpoints_v2.xcbkptlist
++++ b/BTCMonteCarlo.xcodeproj/xcuserdata/conor.xcuserdatad/xcdebugger/Breakpoints_v2.xcbkptlist
+@@ -100,37 +100,5 @@
+             landmarkType = "7">
+          </BreakpointContent>
+       </BreakpointProxy>
+-      <BreakpointProxy
+-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+-         <BreakpointContent
+-            uuid = "5304398B-8D10-4EDF-A855-253E6F288AE9"
+-            shouldBeEnabled = "Yes"
+-            ignoreCount = "0"
+-            continueAfterRunningActions = "No"
+-            filePath = "BTC Simulator/MonthlySimulationSettings.swift"
+-            startingColumnNumber = "9223372036854775807"
+-            endingColumnNumber = "9223372036854775807"
+-            startingLineNumber = "413"
+-            endingLineNumber = "413"
+-            landmarkName = "userDidDragFactorSliderMonthly(_:to:)"
+-            landmarkType = "7">
+-         </BreakpointContent>
+-      </BreakpointProxy>
+-      <BreakpointProxy
+-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+-         <BreakpointContent
+-            uuid = "5AD98A1C-83B9-45CE-8B86-430966207F12"
+-            shouldBeEnabled = "No"
+-            ignoreCount = "0"
+-            continueAfterRunningActions = "No"
+-            filePath = "BTC Simulator/SimulationSettings.swift"
+-            startingColumnNumber = "9223372036854775807"
+-            endingColumnNumber = "9223372036854775807"
+-            startingLineNumber = "471"
+-            endingLineNumber = "471"
+-            landmarkName = "userDidDragFactorSlider(_:to:)"
+-            landmarkType = "7">
+-         </BreakpointContent>
+-      </BreakpointProxy>
+    </Breakpoints>
+ </Bucket>

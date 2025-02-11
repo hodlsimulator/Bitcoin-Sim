@@ -17,7 +17,7 @@ class SimulationSettings: ObservableObject {
     ]
     
     var isGlobalSliderDisabled: Bool {
-        return factors.values.allSatisfy { !$0.isEnabled }
+        factors.values.allSatisfy { !$0.isEnabled }
     }
     
     // MARK: - Published Properties
@@ -229,7 +229,7 @@ class SimulationSettings: ObservableObject {
         } else {
             rawFactorIntensity = 0.5
         }
-            
+        
         isUpdating = false
         isInitialized = false
         loadFromUserDefaults()
@@ -349,9 +349,11 @@ class SimulationSettings: ObservableObject {
         } else {
             factors.removeAll()
             for (factorName, def) in FactorCatalog.all {
+                // If you want different weekly vs monthly defaults, pick minWeekly/midWeekly here
                 let (minVal, midVal, maxVal) = (periodUnit == .weeks)
                     ? (def.minWeekly, def.midWeekly, def.maxWeekly)
                     : (def.minMonthly, def.midMonthly, def.maxMonthly)
+                
                 let fs = FactorState(
                     name: factorName,
                     currentValue: midVal,
@@ -575,12 +577,10 @@ class SimulationSettings: ObservableObject {
         let t = rawFactorIntensity
         if t < 0.5 {
             let ratio = t / 0.5
-            let baseline = factor.defaultValue - (factor.defaultValue - factor.minValue) * (1.0 - ratio)
-            return baseline
+            return factor.defaultValue - (factor.defaultValue - factor.minValue) * (1.0 - ratio)
         } else {
             let ratio = (t - 0.5) / 0.5
-            let baseline = factor.defaultValue + (factor.maxValue - factor.defaultValue) * ratio
-            return baseline
+            return factor.defaultValue + (factor.maxValue - factor.defaultValue) * ratio
         }
     }
     

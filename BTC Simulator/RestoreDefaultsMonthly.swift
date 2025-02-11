@@ -9,68 +9,96 @@ import SwiftUI
 
 extension MonthlySimulationSettings {
     func restoreDefaultsMonthly() {
-        print("[restoreDefaultsMonthly] Restoring defaults for monthly.")
-        
-        // Mark that we are restoring
+        print("[restoreDefaultsMonthly] Restoring all monthly defaults in one pass.")
         isRestoringDefaultsMonthly = true
+        suspendUnifiedUpdates = true
         
-        // Clear locked monthly factors
+        // 0) Clear locked factors
         lockedFactorsMonthly.removeAll()
         
-        let defaults = UserDefaults.standard
+        // 1) Rebuild the dictionary in one go
+        var newFactors: [String: FactorState] = [:]
+        for (factorName, def) in FactorCatalog.all {
+            let (minVal, midVal, maxVal) = (def.minMonthly, def.midMonthly, def.maxMonthly)
+            let fs = FactorState(
+                name: factorName,
+                currentValue: midVal,
+                defaultValue: midVal,
+                minValue: minVal,
+                maxValue: maxVal,
+                isEnabled: true,
+                isLocked: false
+            )
+            newFactors[factorName] = fs
+        }
+        factorsMonthly = newFactors
         
-        // Remove monthly factor states & intensity
-        defaults.removeObject(forKey: "factorStatesMonthly")
-        defaults.removeObject(forKey: "rawFactorIntensityMonthly")
-        
-        // Reset chart extremes
+        // 2) Reset rawFactorIntensityMonthly, chart extremes, tilt bar
+        rawFactorIntensityMonthly = 0.5
         chartExtremeBearishMonthly = false
         chartExtremeBullishMonthly = false
-        
-        // Remove advanced monthly toggles if you want them to revert
-        defaults.removeObject(forKey: "useLognormalGrowthMonthly")
-        defaults.removeObject(forKey: "useAnnualStepMonthly")
-        defaults.removeObject(forKey: "lockedRandomSeedMonthly")
-        defaults.removeObject(forKey: "seedValueMonthly")
-        defaults.removeObject(forKey: "useRandomSeedMonthly")
-        defaults.removeObject(forKey: "useHistoricalSamplingMonthly")
-        defaults.removeObject(forKey: "useExtendedHistoricalSamplingMonthly")
-        defaults.removeObject(forKey: "useVolShocksMonthly")
-        defaults.removeObject(forKey: "useGarchVolatilityMonthly")
-        defaults.removeObject(forKey: "useAutoCorrelationMonthly")
-        defaults.removeObject(forKey: "autoCorrelationStrengthMonthly")
-        defaults.removeObject(forKey: "meanReversionTargetMonthly")
-        defaults.removeObject(forKey: "useMeanReversionMonthly")
-        defaults.removeObject(forKey: "useRegimeSwitchingMonthly")
-        defaults.removeObject(forKey: "lockHistoricalSamplingMonthly")
-        
-        // Remove monthly currency preference & period unit if you want them reset
-        defaults.removeObject(forKey: "currencyPreferenceMonthly")
-        defaults.removeObject(forKey: "savedPeriodUnitMonthly")
-        
-        // Rebuild from scratch in code:
-        rawFactorIntensityMonthly = 0.5
-        
-        // Reset each monthly factor to its default
-        for (factorName, var factor) in factorsMonthly {
-            factor.isEnabled = true
-            factor.currentValue = factor.defaultValue
-            factor.isLocked = false
-            factor.internalOffset = 0.0
-            factorsMonthly[factorName] = factor
-        }
-        
-        // If you track monthly tilt bar
         resetTiltBarMonthly()
         
-        // Persist these changes
+        // 3) Remove the relevant UserDefaults keys
+        let keysToRemove = [
+            "factorStatesMonthly",
+            "rawFactorIntensityMonthly",
+            defaultTiltKeyMonthly,
+            maxSwingKeyMonthly,
+            hasCapturedDefaultKeyMonthly,
+            tiltBarValueKeyMonthly,
+            "savedUserPeriodsMonthly",
+            "savedInitialBTCPriceUSDMonthly",
+            "savedStartingBalanceMonthly",
+            "savedAverageCostBasisMonthly",
+            "currencyPreferenceMonthly",
+            periodUnitKeyMonthly,
+            "useLognormalGrowthMonthly",
+            "lockedRandomSeedMonthly",
+            "useRandomSeedMonthly",
+            "useHistoricalSamplingMonthly",
+            "useVolShocksMonthly",
+            "useGarchVolatilityMonthly",
+            "useAutoCorrelationMonthly",
+            "autoCorrelationStrengthMonthly",
+            "meanReversionTargetMonthly",
+            "useMeanReversionMonthly",
+            "useRegimeSwitchingMonthly",
+            "useExtendedHistoricalSamplingMonthly",
+            "lockHistoricalSamplingMonthly"
+        ]
+        let defaults = UserDefaults.standard
+        for key in keysToRemove {
+            defaults.removeObject(forKey: key)
+        }
         defaults.synchronize()
         
-        // End restore
-        DispatchQueue.main.async {
-            self.isRestoringDefaultsMonthly = false
-        }
+        // 4) Decide post-reset mode (remain monthly)
+        periodUnitMonthly = .months
         
-        print("[restoreDefaultsMonthly] Completed monthly defaults restore.")
+        // 5) Re-assign advanced toggles to your preferred fresh defaults
+        useLognormalGrowthMonthly      = true
+        lockedRandomSeedMonthly        = false
+        useRandomSeedMonthly           = true
+        useHistoricalSamplingMonthly   = true
+        useVolShocksMonthly            = true
+        useGarchVolatilityMonthly      = true
+        useAutoCorrelationMonthly      = true
+        autoCorrelationStrengthMonthly = 0.05
+        meanReversionTargetMonthly     = 0.03   
+        useMeanReversionMonthly        = true
+        useRegimeSwitchingMonthly      = true
+        useExtendedHistoricalSamplingMonthly = true
+        lockHistoricalSamplingMonthly  = false
+        
+        // 6) Done with restore
+        isRestoringDefaultsMonthly = false
+        print("[restoreDefaultsMonthly] Completed monthly defaults reset.")
+        
+        // Turn off suspend after a short delay:
+        DispatchQueue.main.async {
+            self.suspendUnifiedUpdates = false
+        }
     }
 }
+

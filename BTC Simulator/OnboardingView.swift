@@ -24,6 +24,8 @@ struct OnboardingView: View {
     @EnvironmentObject var weeklySimSettings: SimulationSettings          // weekly logic
     @EnvironmentObject var monthlySimSettings: MonthlySimulationSettings // monthly logic
     @EnvironmentObject var inputManager: PersistentInputManager
+    @EnvironmentObject var coordinator: SimulationCoordinator
+    @EnvironmentObject var simSettings: SimulationSettings
     
     @Binding var didFinishOnboarding: Bool
     
@@ -51,6 +53,8 @@ struct OnboardingView: View {
     @State private var userBTCPrice: String = ""
     
     // Step 6: Single contribution
+    // We won’t store currency in a local var if user picks .both,
+    // because we bind directly to the correct environment object below.
     @State private var contributionPerStep: Double = 100.0
     
     // Step 7: Withdrawals
@@ -356,14 +360,25 @@ struct OnboardingView: View {
                 Text("Are these contributions in USD or EUR?")
                     .foregroundColor(.white)
                 
-                // This references weeklySimSettings if that's your design.
-                // Or if you need a monthly version, you might do monthlySimSettings.*.
-                Picker("ContribCurrency", selection: $weeklySimSettings.contributionCurrencyWhenBoth) {
-                    Text("USD").tag(PreferredCurrency.usd)
-                    Text("EUR").tag(PreferredCurrency.eur)
+                // If user selected monthly, bind to the monthlySimSettings property.
+                // Otherwise, bind to the weeklySimSettings property.
+                if chosenPeriodUnit == .months {
+                    Picker("ContribCurrency",
+                           selection: $monthlySimSettings.contributionCurrencyWhenBothMonthly) {
+                        Text("USD").tag(PreferredCurrency.usd)
+                        Text("EUR").tag(PreferredCurrency.eur)
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 160)
+                } else {
+                    Picker("ContribCurrency",
+                           selection: $weeklySimSettings.contributionCurrencyWhenBoth) {
+                        Text("USD").tag(PreferredCurrency.usd)
+                        Text("EUR").tag(PreferredCurrency.eur)
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 160)
                 }
-                .pickerStyle(.segmented)
-                .frame(width: 160)
                 
                 HStack {
                     Text("\(frequencyWord.capitalized) Amount:")
@@ -397,13 +412,6 @@ struct OnboardingView: View {
                         .foregroundColor(.white)
                         .frame(width: 80)
                 }
-            }
-        }
-        .onAppear {
-            if currencyPreference == .both {
-                // If you want to fill 'weeklySimSettings.contributionCurrencyWhenBoth'
-                // from 'startingBalanceCurrencyForBoth', do it here:
-                weeklySimSettings.contributionCurrencyWhenBoth = startingBalanceCurrencyForBoth
             }
         }
     }
@@ -480,7 +488,11 @@ struct OnboardingView: View {
                 Text("BTC Price: \(finalBTCPrice, specifier: "%.2f") \(currencyPreference == .eur ? "EUR" : "USD")")
                 
                 if currencyPreference == .both {
-                    Text("Contrib typed in: \(weeklySimSettings.contributionCurrencyWhenBoth.rawValue)")
+                    if chosenPeriodUnit == .months {
+                        Text("Contrib typed in: \(monthlySimSettings.contributionCurrencyWhenBothMonthly.rawValue)")
+                    } else {
+                        Text("Contrib typed in: \(weeklySimSettings.contributionCurrencyWhenBoth.rawValue)")
+                    }
                 }
                 Text("Contribution: \(contributionPerStep, specifier: "%.0f")")
                 
@@ -505,22 +517,26 @@ struct OnboardingView: View {
     // MARK: - applySettingsToSim
     private func applySettingsToSim() {
         if chosenPeriodUnit == .months {
-            // The monthly object properties
+            // Update monthly settings
             monthlySimSettings.periodUnitMonthly = .months
             monthlySimSettings.userPeriodsMonthly = totalPeriods
             monthlySimSettings.initialBTCPriceUSDMonthly = finalBTCPrice
-            
             monthlySimSettings.startingBalanceMonthly = startingBalanceDouble
             monthlySimSettings.averageCostBasisMonthly = averageCostBasis
-            
             monthlySimSettings.currencyPreferenceMonthly = currencyPreference
-            
             if currencyPreference == .both {
                 monthlySimSettings.startingBalanceCurrencyWhenBothMonthly = startingBalanceCurrencyForBoth
-                monthlySimSettings.contributionCurrencyWhenBothMonthly = monthlySimSettings.contributionCurrencyWhenBothMonthly
             }
             
-            // Update input manager
+            // Also update simSettings if that's what your SimulationCoordinator uses:
+            simSettings.periodUnit = .months
+            simSettings.userPeriods = totalPeriods
+            simSettings.initialBTCPriceUSD = finalBTCPrice
+            simSettings.startingBalance = startingBalanceDouble
+            simSettings.averageCostBasis = averageCostBasis
+            simSettings.currencyPreference = currencyPreference
+            
+            // Update input manager as before
             inputManager.firstYearContribution  = String(contributionPerStep)
             inputManager.subsequentContribution = String(contributionPerStep)
             inputManager.threshold1      = threshold1
@@ -528,26 +544,22 @@ struct OnboardingView: View {
             inputManager.threshold2      = threshold2
             inputManager.withdrawAmount2 = withdraw2
             
-            // **Important**: persist monthly settings
             monthlySimSettings.saveToUserDefaultsMonthly()
             
             print("// DEBUG: user chose monthly => applying to monthlySimSettings")
+            coordinator.useMonthly = true
         } else {
-            // Weekly object
+            // Weekly branch remains unchanged
             weeklySimSettings.periodUnit = .weeks
             weeklySimSettings.userPeriods = totalPeriods
             weeklySimSettings.initialBTCPriceUSD = finalBTCPrice
-            
-            weeklySimSettings.startingBalance     = startingBalanceDouble
-            weeklySimSettings.averageCostBasis    = averageCostBasis
-            weeklySimSettings.currencyPreference  = currencyPreference
-            
+            weeklySimSettings.startingBalance    = startingBalanceDouble
+            weeklySimSettings.averageCostBasis   = averageCostBasis
+            weeklySimSettings.currencyPreference = currencyPreference
             if currencyPreference == .both {
                 weeklySimSettings.startingBalanceCurrencyWhenBoth = startingBalanceCurrencyForBoth
-                weeklySimSettings.contributionCurrencyWhenBoth    = weeklySimSettings.contributionCurrencyWhenBoth
             }
             
-            // Update input manager
             inputManager.firstYearContribution  = String(contributionPerStep)
             inputManager.subsequentContribution = String(contributionPerStep)
             inputManager.threshold1      = threshold1
@@ -555,10 +567,10 @@ struct OnboardingView: View {
             inputManager.threshold2      = threshold2
             inputManager.withdrawAmount2 = withdraw2
             
-            // Also persist weekly changes
             weeklySimSettings.saveToUserDefaults()
             
             print("// DEBUG: user chose weekly => applying to weeklySimSettings")
+            coordinator.useMonthly = false
         }
         
         // (Optionally also save your custom 'savedPeriodUnit' key if you really want both.)
