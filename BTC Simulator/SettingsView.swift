@@ -11,6 +11,7 @@ import Sentry
 
 struct SettingsView: View {
     @EnvironmentObject var simSettings: SimulationSettings
+    @EnvironmentObject var monthlySimSettings: MonthlySimulationSettings
     
     @AppStorage("hasOnboarded") var didFinishOnboarding = false
     @AppStorage("showAdvancedSettings") private var showAdvancedSettings: Bool = false
@@ -68,11 +69,28 @@ struct SettingsView: View {
             // 2) Factor intensity section (slider + extreme toggles)
             factorIntensitySection
             
-            // 3) Toggle-all section
-            toggleAllSection
+            // 3) Toggle-all section (changed here)
+            SettingsSections.toggleAllSection(
+                simSettings: simSettings,
+                monthlySimSettings: monthlySimSettings
+            )
             
-            // 4) Restore defaults
-            restoreDefaultsSection
+            // 4) Restore defaults (now calls monthlySimSettings too)
+            Section {
+                Button(action: {
+                    simSettings.restoreDefaults()
+                    monthlySimSettings.restoreDefaultsMonthly()
+                }) {
+                    HStack {
+                        Text("Restore Defaults")
+                            .foregroundColor(.red)
+                        Spacer()
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+            .listRowBackground(Color(white: 0.15))
             
             // 5) Bullish factors
             BullishFactorsSection(

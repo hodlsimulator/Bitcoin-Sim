@@ -28,6 +28,8 @@
 		E14D240B2D3A698A007CC11A /* SimulationSettingsInit.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14D240A2D3A6988007CC11A /* SimulationSettingsInit.swift */; };
 		E14D24112D3A9525007CC11A /* SimulationSettings+UnifiedFactors.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14D24102D3A9524007CC11A /* SimulationSettings+UnifiedFactors.swift */; };
 		E15DDF472D5A5A3A00CDD30A /* MonthlySimulationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = E15DDF462D5A5A3700CDD30A /* MonthlySimulationSettings.swift */; };
+		E15DDF492D5AD0F100CDD30A /* MonthlySimulationSettings+FactorSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = E15DDF482D5AD0EC00CDD30A /* MonthlySimulationSettings+FactorSync.swift */; };
+		E15DDF4B2D5AE1F700CDD30A /* RestoreDefaultsMonthly.swift in Sources */ = {isa = PBXBuildFile; fileRef = E15DDF4A2D5AE1EF00CDD30A /* RestoreDefaultsMonthly.swift */; };
 		E166A8AE2CF855BF0003F518 /* MonteCarloSimulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = E166A8AD2CF855BF0003F518 /* MonteCarloSimulator.swift */; };
 		E166A8B02CF855C20003F518 /* SimulationData.swift in Sources */ = {isa = PBXBuildFile; fileRef = E166A8AF2CF855C20003F518 /* SimulationData.swift */; };
 		E166A8B22CF85B2B0003F518 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E166A8B12CF85B2B0003F518 /* ContentView.swift */; };
@@ -132,6 +134,8 @@
 		E14D240A2D3A6988007CC11A /* SimulationSettingsInit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulationSettingsInit.swift; sourceTree = "<group>"; };
 		E14D24102D3A9524007CC11A /* SimulationSettings+UnifiedFactors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SimulationSettings+UnifiedFactors.swift"; sourceTree = "<group>"; };
 		E15DDF462D5A5A3700CDD30A /* MonthlySimulationSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlySimulationSettings.swift; sourceTree = "<group>"; };
+		E15DDF482D5AD0EC00CDD30A /* MonthlySimulationSettings+FactorSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MonthlySimulationSettings+FactorSync.swift"; sourceTree = "<group>"; };
+		E15DDF4A2D5AE1EF00CDD30A /* RestoreDefaultsMonthly.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RestoreDefaultsMonthly.swift; sourceTree = "<group>"; };
 		E166A8AD2CF855BF0003F518 /* MonteCarloSimulator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonteCarloSimulator.swift; sourceTree = "<group>"; };
 		E166A8AF2CF855C20003F518 /* SimulationData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulationData.swift; sourceTree = "<group>"; };
 		E166A8B12CF85B2B0003F518 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -287,12 +291,14 @@
 				E166A8AD2CF855BF0003F518 /* MonteCarloSimulator.swift */,
 				E1C543B72D224D21005E416D /* MonteCarloResultsView.swift */,
 				E15DDF462D5A5A3700CDD30A /* MonthlySimulationSettings.swift */,
+				E15DDF482D5AD0EC00CDD30A /* MonthlySimulationSettings+FactorSync.swift */,
 				E19D11412D42F9E500E3A55E /* NetDeposit.swift */,
 				E1883F4F2D1FCEB9007AA90B /* OnboardingView.swift */,
 				E17B2F7F2D2800D100ECE087 /* OrientationObserver.swift */,
 				E1F1CB652D4F31B9003DB24F /* ParallelSimulationRunner.swift */,
 				E1883F3B2D1DDC75007AA90B /* ParametersFormView.swift */,
 				E1A1E51E2D2A7362008F7658 /* PortfolioChartView.swift */,
+				E15DDF4A2D5AE1EF00CDD30A /* RestoreDefaultsMonthly.swift */,
 				E19D11432D42FA6600E3A55E /* RNGHelpers.swift */,
 				E1A1E52E2D2E3A3E008F7658 /* RowOffsetHelpers.swift */,
 				E14D24082D3A677D007CC11A /* SettingsPrinter.swift */,
@@ -478,6 +484,7 @@
 				E191AD5D2D1B06E600020DBE /* BitcoinHistoricalData.swift in Sources */,
 				E1883F482D1E8E21007AA90B /* AboutView.swift in Sources */,
 				E112E3742D58B2EB00167E92 /* ConsentView.swift in Sources */,
+				E15DDF492D5AD0F100CDD30A /* MonthlySimulationSettings+FactorSync.swift in Sources */,
 				E17B2F282D27505300ECE087 /* LandscapePlaceholderView.swift in Sources */,
 				E166A8B22CF85B2B0003F518 /* ContentView.swift in Sources */,
 				E19D10EB2D3EF69300E3A55E /* MempoolDataManager.swift in Sources */,
@@ -519,6 +526,7 @@
 				E1F1CB602D4EF179003DB24F /* CalibrationManager.swift in Sources */,
 				E14344D62D52D85600225A49 /* FactorState.swift in Sources */,
 				E19D11402D42F97700E3A55E /* DampenOutliers.swift in Sources */,
+				E15DDF4B2D5AE1F700CDD30A /* RestoreDefaultsMonthly.swift in Sources */,
 				E12CCD8B2CF8235F0059931D /* BTC_SimulatorApp.swift in Sources */,
 				E1A1E5272D2E371D008F7658 /* TipsData.swift in Sources */,
 				E1E31C4F2D4349E000ED22E6 /* DataLoader.swift in Sources */,

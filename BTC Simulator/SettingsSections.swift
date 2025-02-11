@@ -1,39 +1,67 @@
-/*
------------------------------------------------------------
-                SETTINGS SECTIONS
-                  BTC MONTE CARLO
-                (HODL SIMULATOR)
------------------------------------------------------------
-Description:
- This file extends the SettingsView by providing a collection of reusable UI sections and helper
- functions that form the backbone of the settings interface. It defines custom bindings, computed views,
- and utility methods to adjust and display simulation parameters, including:
-
- • A custom Binding for factor intensity that synchronizes global intensity with individual factor settings.
- • A tilt bar view that visually represents market sentiment—green for bullish and red for bearish conditions.
- • A factor intensity section featuring extreme bullish and bearish toggle buttons to force extreme settings.
- • Helper functions to lock/unlock individual factors and manage their state based on user interactions.
- • Sections for toggling all factors on or off, restoring default settings, and navigating to the About page.
-
-Usage:
- These components are integrated into the SettingsView to provide a user-friendly interface for fine-tuning
- simulation parameters and market factor settings.
------------------------------------------------------------
-Created on 27/01/2025.
------------------------------------------------------------
-*/
-
 //
 //  SettingsSections.swift
 //  BTCMonteCarlo
 //
-//  Created by . . on 27/01/2025.
+//  Created by ... on 27/01/2025.
 //
 
 import SwiftUI
 
-extension SettingsView {
+// A simple namespace struct
+struct SettingsSections { }
 
+extension SettingsSections {
+    // MARK: - Toggle All Section
+    static func toggleAllSection(
+        simSettings: SimulationSettings,
+        monthlySimSettings: MonthlySimulationSettings
+    ) -> some View {
+        Section {
+            Toggle("Toggle All Factors", isOn:
+                Binding<Bool>(
+                    get: {
+                        if monthlySimSettings.periodUnitMonthly == .months {
+                            return monthlySimSettings.toggleAllMonthly
+                        } else {
+                            return simSettings.toggleAll
+                        }
+                    },
+                    set: { newValue in
+                        if monthlySimSettings.periodUnitMonthly == .months {
+                            // Monthly path
+                            monthlySimSettings.userIsActuallyTogglingAllMonthly = true
+                            monthlySimSettings.toggleAllMonthly = newValue
+                            monthlySimSettings.toggleAllFactorsMonthly(on: newValue)
+                            if newValue {
+                                monthlySimSettings.chartExtremeBearishMonthly = false
+                                monthlySimSettings.chartExtremeBullishMonthly = false
+                                monthlySimSettings.lockedFactorsMonthly.removeAll()
+                            }
+                        } else {
+                            // Weekly path
+                            simSettings.userIsActuallyTogglingAll = true
+                            simSettings.toggleAll = newValue
+                            simSettings.toggleAllFactors(on: newValue)
+                            if newValue {
+                                simSettings.chartExtremeBearish = false
+                                simSettings.chartExtremeBullish = false
+                                simSettings.lockedFactors.removeAll()
+                            }
+                        }
+                    }
+                )
+            )
+            .tint(.orange)
+            .foregroundColor(.white)
+        } footer: {
+            Text("Switches ON or OFF all bullish/bearish factors.")
+                .foregroundColor(.white)
+        }
+        .listRowBackground(Color(white: 0.15))
+    }
+}
+
+extension SettingsView {
     func logistic(_ x: Double, steepness: Double, midpoint: Double) -> Double {
         1.0 / (1.0 + exp(-steepness * (x - midpoint)))
     }
@@ -41,8 +69,6 @@ extension SettingsView {
     // -------------------------------------------------------
     // MARK: - A custom Binding for factorIntensity
     // -------------------------------------------------------
-    /// This binding reads factorIntensity via simSettings.getFactorIntensity(),
-    /// and writes it back via simSettings.setFactorIntensity(...).
     private var factorIntensityBinding: Binding<Double> {
         Binding(
             get: {
@@ -73,21 +99,19 @@ extension SettingsView {
                             .fill(Color.gray.opacity(0.3))
                             .frame(height: 8)
                         
-                        // Green bar for positive tilt, anchored on the left
+                        // Green bar for positive tilt
                         Rectangle()
                             .fill(Color.green)
                             .frame(width: effectiveTilt > 0 ? computedWidth : 0, height: 8)
                             .animation(.easeInOut(duration: 0.3), value: effectiveTilt)
                         
-                        // Red bar for negative tilt, anchored on the right
+                        // Red bar for negative tilt
                         Rectangle()
                             .fill(Color.red)
                             .frame(width: effectiveTilt < 0 ? computedWidth : 0, height: 8)
                             .offset(x: effectiveTilt < 0 ? (barWidth - computedWidth) : barWidth)
                             .animation(.easeInOut(duration: 0.3), value: effectiveTilt)
                     }
-                    .contentShape(Rectangle())
-                    // No drag gesture here—tilt bar is display-only.
                 }
                 .frame(height: 8)
             }
@@ -107,26 +131,20 @@ extension SettingsView {
                 // EXTREME BEARISH BUTTON
                 Button {
                     if simSettings.chartExtremeBearish {
-                        // Cancel forced extreme if tapped again.
                         simSettings.chartExtremeBearish = false
                         simSettings.recalcTiltBarValue(bullishKeys: bullishKeys, bearishKeys: bearishKeys)
                     } else {
-                        // Force Bearish:
                         isManualOverride = true
                         simSettings.setFactorIntensity(0.0)
                         simSettings.tiltBarValue = -1.0
-
-                        // Turn OFF all bullish factors and force them to their minimum.
                         for key in bullishKeys {
                             simSettings.setFactorEnabled(factorName: key, enabled: false)
                             lockFactorAtMin(key)
                         }
-                        // Turn ON all bearish factors and force them to their minimum.
                         for key in bearishKeys {
                             simSettings.setFactorEnabled(factorName: key, enabled: true)
                             unlockFactorAndSetMin(key)
                         }
-
                         simSettings.chartExtremeBearish = true
                         simSettings.chartExtremeBullish = false
                         simSettings.recalcTiltBarValue(bullishKeys: bullishKeys, bearishKeys: bearishKeys)
@@ -149,7 +167,7 @@ extension SettingsView {
                     : 1.0
                 )
 
-                // MAIN INTENSITY SLIDER with Haptic Feedback
+                // MAIN INTENSITY SLIDER
                 Slider(
                     value: factorIntensityBinding,
                     in: 0...1,
@@ -158,7 +176,7 @@ extension SettingsView {
                 .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
                 .disabled(simSettings.isGlobalSliderDisabled)
                 .onChange(of: factorIntensityBinding.wrappedValue) { newValue in
-                    // Trigger haptic feedback when the intensity changes significantly.
+                    // Haptic, etc.
                     if abs(newValue - oldFactorIntensity) > 0.05 {
                         let feedbackGenerator = UIImpactFeedbackGenerator(style: .medium)
                         feedbackGenerator.prepare()
@@ -177,18 +195,14 @@ extension SettingsView {
                         isManualOverride = true
                         simSettings.setFactorIntensity(1.0)
                         simSettings.tiltBarValue = 1.0
-
-                        // Turn OFF all bearish factors and force them to their maximum.
                         for key in bearishKeys {
                             simSettings.setFactorEnabled(factorName: key, enabled: false)
                             lockFactorAtMax(key)
                         }
-                        // Turn ON all bullish factors and force them to their maximum.
                         for key in bullishKeys {
                             simSettings.setFactorEnabled(factorName: key, enabled: true)
                             unlockFactorAndSetMax(key)
                         }
-
                         simSettings.chartExtremeBullish = true
                         simSettings.chartExtremeBearish = false
                         simSettings.recalcTiltBarValue(bullishKeys: bullishKeys, bearishKeys: bearishKeys)
@@ -219,7 +233,6 @@ extension SettingsView {
     }
 
     // MARK: - Helper Functions for Locking/Unlocking Factors
-
     func lockFactorAtMin(_ factorName: String) {
         guard var f = simSettings.factors[factorName] else { return }
         f.currentValue = f.minValue
@@ -272,33 +285,6 @@ extension SettingsView {
         simSettings.factors[factorName] = f
     }
 
-    // MARK: - Toggle All Section
-    var toggleAllSection: some View {
-        Section {
-            Toggle("Toggle All Factors", isOn:
-                Binding<Bool>(
-                    get: { simSettings.toggleAll },
-                    set: { newValue in
-                        simSettings.userIsActuallyTogglingAll = true
-                        simSettings.toggleAll = newValue
-                        simSettings.toggleAllFactors(on: newValue)
-                        if newValue {
-                            simSettings.chartExtremeBearish = false
-                            simSettings.chartExtremeBullish = false
-                            simSettings.lockedFactors.removeAll()
-                        }
-                    }
-                )
-            )
-            .tint(.orange)
-            .foregroundColor(.white)
-        } footer: {
-            Text("Switches ON or OFF all bullish/bearish factors.")
-                .foregroundColor(.white)
-        }
-        .listRowBackground(Color(white: 0.15))
-    }
-
     // MARK: - Restore Defaults
     var restoreDefaultsSection: some View {
         Section {
@@ -329,7 +315,7 @@ extension SettingsView {
 
     // MARK: - Reset All Criteria
     var resetCriteriaSection: some View {
-        Section(footer: Text("Resetting all criteria will revert your custom settings to their default values and restart the onboarding process.")
+        Section(footer: Text("Resetting all criteria will revert your custom settings to default and restart onboarding.")
                     .foregroundColor(.white)
                     .font(.footnote)
         ) {
@@ -338,7 +324,7 @@ extension SettingsView {
             }) {
                 HStack {
                     Text("Reset All Criteria")
-                        .foregroundColor(.red)  // Or your desired color/style
+                        .foregroundColor(.red)
                     Spacer()
                 }
                 .contentShape(Rectangle())
@@ -353,7 +339,7 @@ extension SettingsView {
                 }
                 Button("Cancel", role: .cancel) { }
             }, message: {
-                Text("This will restore default settings and restart onboarding. Do you want to proceed?")
+                Text("This will restore default settings and restart onboarding. Proceed?")
             })
         }
         .listRowBackground(Color(white: 0.15))

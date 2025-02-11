@@ -113,12 +113,12 @@ extension SimulationSettings {
                 // Re-enable
                 if let frozen = factor.frozenValue {
                     factor.currentValue = frozen
-                    print("[toggleAll] Restoring factor \(name) -> \(frozen)")
+                    print("[toggleAll (monthly)] Restoring factor \(name) -> \(frozen)")
                     
                     let base = globalBaseline(for: factor)
                     let range = factor.maxValue - factor.minValue
                     factor.internalOffset = (frozen - base) / range
-                    print("[toggleAll]   New offset = \(factor.internalOffset) for factor \(name)")
+                    print("[toggleAll (monthly)]   New offset = \(factor.internalOffset) for factor \(name)")
                     
                     factor.frozenValue = nil
                 }
@@ -128,7 +128,7 @@ extension SimulationSettings {
             } else {
                 // Disable
                 factor.frozenValue = factor.currentValue
-                print("[toggleAll] Freezing factor \(name) at \(factor.currentValue)")
+                print("[toggleAll (monthly)] Freezing factor \(name) at \(factor.currentValue)")
                 
                 factor.isEnabled = false
                 factor.isLocked = true

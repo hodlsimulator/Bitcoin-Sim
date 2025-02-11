@@ -21,7 +21,8 @@ enum PreferredCurrency: String, CaseIterable, Identifiable {
 }
 
 struct OnboardingView: View {
-    @EnvironmentObject var simSettings: SimulationSettings
+    @EnvironmentObject var weeklySimSettings: SimulationSettings          // weekly logic
+    @EnvironmentObject var monthlySimSettings: MonthlySimulationSettings // monthly logic
     @EnvironmentObject var inputManager: PersistentInputManager
     
     @Binding var didFinishOnboarding: Bool
@@ -38,8 +39,7 @@ struct OnboardingView: View {
     // Step 2: Which currency
     @State private var currencyPreference: PreferredCurrency = .usd
     
-    // Step 3: Starting Balance
-    // Instead of Double, store it as a string:
+    // Step 3: Starting Balance as a String
     @State private var startingBalanceText: String = "1,000"
     @State private var startingBalanceCurrencyForBoth: PreferredCurrency = .usd
     
@@ -82,12 +82,11 @@ struct OnboardingView: View {
         nf.usesGroupingSeparator = true
         nf.minimumFractionDigits = 0
         nf.maximumFractionDigits = 2
-        nf.locale = Locale(identifier: "en_US") // or whatever locale you want
+        nf.locale = Locale(identifier: "en_US")
         return nf
     }()
     
-    // Convert the user’s typed string into a Double
-    // If parsing fails, we treat it as zero
+    // Convert the user’s typed string into a Double. If parsing fails, treat as zero.
     private var startingBalanceDouble: Double {
         let digitsOnly = startingBalanceText.replacingOccurrences(of: "[^0-9.]", with: "", options: .regularExpression)
         return Double(digitsOnly) ?? 0
@@ -156,9 +155,7 @@ struct OnboardingView: View {
             Group {
                 if currentStep > 0 {
                     Button {
-                        withAnimation {
-                            currentStep -= 1
-                        }
+                        withAnimation { currentStep -= 1 }
                     } label: {
                         Image(systemName: "chevron.left")
                             .font(.title2)
@@ -185,6 +182,7 @@ struct OnboardingView: View {
         )
         .ignoresSafeArea(.keyboard, edges: .bottom)
         .onChange(of: chosenPeriodUnit, initial: false) { _, newVal in
+            // If user picks monthly => totalPeriods = 240, else 1040
             if newVal == .months {
                 totalPeriods = 240
             } else {
@@ -192,6 +190,7 @@ struct OnboardingView: View {
             }
         }
         .task {
+            // Attempt to fetch BTC price at start
             await fetchBTCPriceFromAPI()
             updateAverageCostBasisIfNeeded()
         }
@@ -215,9 +214,7 @@ struct OnboardingView: View {
     // MARK: - Step 1
     private func step1_TotalPeriods() -> some View {
         VStack(spacing: 16) {
-            Text(chosenPeriodUnit == .weeks
-                 ? "How many weeks?"
-                 : "How many months?")
+            Text(chosenPeriodUnit == .weeks ? "How many weeks?" : "How many months?")
                 .foregroundColor(.white)
             
             TextField("e.g. 1040", value: $totalPeriods, format: .number)
@@ -270,7 +267,6 @@ struct OnboardingView: View {
                     .font(.headline)
             }
             
-            // Bind to a String, then reformat on every change
             TextField("e.g. 1,000", text: $startingBalanceText)
                 .keyboardType(.decimalPad)
                 .padding(8)
@@ -280,22 +276,15 @@ struct OnboardingView: View {
                 .frame(width: 200)
                 .multilineTextAlignment(.center)
                 .onChange(of: startingBalanceText, initial: false) { _, newValue in
-                    // Strip out non-digit characters except the decimal
-                    let digitsOnly = newValue.replacingOccurrences(
-                        of: "[^0-9.]",
-                        with: "",
-                        options: .regularExpression
-                    )
-                    // Convert to number
+                    // re‐format using currencyFormatter
+                    let digitsOnly = newValue.replacingOccurrences(of: "[^0-9.]", with: "", options: .regularExpression)
                     if let doubleVal = Double(digitsOnly) {
-                        // Then re-format using your currencyFormatter
                         if let formatted = currencyFormatter.string(from: NSNumber(value: doubleVal)) {
                             if formatted != startingBalanceText {
                                 startingBalanceText = formatted
                             }
                         }
                     } else {
-                        // If invalid, just revert to empty or "0"
                         if newValue != "" {
                             startingBalanceText = ""
                         }
@@ -361,13 +350,15 @@ struct OnboardingView: View {
         }()
         
         return VStack(spacing: 20) {
-            if currencyPreference == .both {
+            if currencyPreference == .both  {
                 Spacer().frame(height: 20)
                 
                 Text("Are these contributions in USD or EUR?")
                     .foregroundColor(.white)
                 
-                Picker("ContribCurrency", selection: $simSettings.contributionCurrencyWhenBoth) {
+                // This references weeklySimSettings if that's your design.
+                // Or if you need a monthly version, you might do monthlySimSettings.*.
+                Picker("ContribCurrency", selection: $weeklySimSettings.contributionCurrencyWhenBoth) {
                     Text("USD").tag(PreferredCurrency.usd)
                     Text("EUR").tag(PreferredCurrency.eur)
                 }
@@ -410,7 +401,9 @@ struct OnboardingView: View {
         }
         .onAppear {
             if currencyPreference == .both {
-                simSettings.contributionCurrencyWhenBoth = startingBalanceCurrencyForBoth
+                // If you want to fill 'weeklySimSettings.contributionCurrencyWhenBoth'
+                // from 'startingBalanceCurrencyForBoth', do it here:
+                weeklySimSettings.contributionCurrencyWhenBoth = startingBalanceCurrencyForBoth
             }
         }
     }
@@ -487,7 +480,7 @@ struct OnboardingView: View {
                 Text("BTC Price: \(finalBTCPrice, specifier: "%.2f") \(currencyPreference == .eur ? "EUR" : "USD")")
                 
                 if currencyPreference == .both {
-                    Text("Contrib typed in: \(simSettings.contributionCurrencyWhenBoth.rawValue)")
+                    Text("Contrib typed in: \(weeklySimSettings.contributionCurrencyWhenBoth.rawValue)")
                 }
                 Text("Contribution: \(contributionPerStep, specifier: "%.0f")")
                 
@@ -509,37 +502,71 @@ struct OnboardingView: View {
         }
     }
     
-    // MARK: - Apply settings
+    // MARK: - applySettingsToSim
     private func applySettingsToSim() {
-        simSettings.periodUnit = chosenPeriodUnit
-        simSettings.userPeriods = totalPeriods
-        simSettings.initialBTCPriceUSD = finalBTCPrice
-        
-        if currencyPreference == .both {
-            simSettings.startingBalanceCurrencyWhenBoth = startingBalanceCurrencyForBoth
+        if chosenPeriodUnit == .months {
+            // The monthly object properties
+            monthlySimSettings.periodUnitMonthly = .months
+            monthlySimSettings.userPeriodsMonthly = totalPeriods
+            monthlySimSettings.initialBTCPriceUSDMonthly = finalBTCPrice
+            
+            monthlySimSettings.startingBalanceMonthly = startingBalanceDouble
+            monthlySimSettings.averageCostBasisMonthly = averageCostBasis
+            
+            monthlySimSettings.currencyPreferenceMonthly = currencyPreference
+            
+            if currencyPreference == .both {
+                monthlySimSettings.startingBalanceCurrencyWhenBothMonthly = startingBalanceCurrencyForBoth
+                monthlySimSettings.contributionCurrencyWhenBothMonthly = monthlySimSettings.contributionCurrencyWhenBothMonthly
+            }
+            
+            // Update input manager
+            inputManager.firstYearContribution  = String(contributionPerStep)
+            inputManager.subsequentContribution = String(contributionPerStep)
+            inputManager.threshold1      = threshold1
+            inputManager.withdrawAmount1 = withdraw1
+            inputManager.threshold2      = threshold2
+            inputManager.withdrawAmount2 = withdraw2
+            
+            // **Important**: persist monthly settings
+            monthlySimSettings.saveToUserDefaultsMonthly()
+            
+            print("// DEBUG: user chose monthly => applying to monthlySimSettings")
+        } else {
+            // Weekly object
+            weeklySimSettings.periodUnit = .weeks
+            weeklySimSettings.userPeriods = totalPeriods
+            weeklySimSettings.initialBTCPriceUSD = finalBTCPrice
+            
+            weeklySimSettings.startingBalance     = startingBalanceDouble
+            weeklySimSettings.averageCostBasis    = averageCostBasis
+            weeklySimSettings.currencyPreference  = currencyPreference
+            
+            if currencyPreference == .both {
+                weeklySimSettings.startingBalanceCurrencyWhenBoth = startingBalanceCurrencyForBoth
+                weeklySimSettings.contributionCurrencyWhenBoth    = weeklySimSettings.contributionCurrencyWhenBoth
+            }
+            
+            // Update input manager
+            inputManager.firstYearContribution  = String(contributionPerStep)
+            inputManager.subsequentContribution = String(contributionPerStep)
+            inputManager.threshold1      = threshold1
+            inputManager.withdrawAmount1 = withdraw1
+            inputManager.threshold2      = threshold2
+            inputManager.withdrawAmount2 = withdraw2
+            
+            // Also persist weekly changes
+            weeklySimSettings.saveToUserDefaults()
+            
+            print("// DEBUG: user chose weekly => applying to weeklySimSettings")
         }
-        simSettings.startingBalance = startingBalanceDouble
-        simSettings.averageCostBasis = averageCostBasis
         
-        simSettings.currencyPreference = currencyPreference
-        
-        inputManager.firstYearContribution = String(contributionPerStep)
-        inputManager.subsequentContribution = String(contributionPerStep)
-        
-        if currencyPreference == .both {
-            simSettings.contributionCurrencyWhenBoth = simSettings.contributionCurrencyWhenBoth
-        }
-        
-        inputManager.threshold1 = threshold1
-        inputManager.withdrawAmount1 = withdraw1
-        inputManager.threshold2 = threshold2
-        inputManager.withdrawAmount2 = withdraw2
-        
-        UserDefaults.standard.set(startingBalanceDouble,    forKey: "savedStartingBalance")
-        UserDefaults.standard.set(averageCostBasis,         forKey: "savedAverageCostBasis")
-        UserDefaults.standard.set(totalPeriods,             forKey: "savedUserPeriods")
-        UserDefaults.standard.set(chosenPeriodUnit.rawValue,forKey: "savedPeriodUnit")
-        UserDefaults.standard.set(finalBTCPrice,            forKey: "savedInitialBTCPriceUSD")
+        // (Optionally also save your custom 'savedPeriodUnit' key if you really want both.)
+        UserDefaults.standard.set(startingBalanceDouble, forKey: "savedStartingBalance")
+        UserDefaults.standard.set(averageCostBasis,      forKey: "savedAverageCostBasis")
+        UserDefaults.standard.set(totalPeriods,          forKey: "savedUserPeriods")
+        UserDefaults.standard.set(chosenPeriodUnit.rawValue, forKey: "savedPeriodUnit")
+        UserDefaults.standard.set(finalBTCPrice,         forKey: "savedInitialBTCPriceUSD")
         
         print("// DEBUG: applySettingsToSim => periodUnit=\(chosenPeriodUnit.rawValue)")
         print("// DEBUG: totalPeriods=\(totalPeriods)")

@@ -30,9 +30,8 @@ struct FactorToggleRow: View {
     let onFactorChange: () -> Void
 
     var body: some View {
-        // Decide which object to pull the factor from
+        // Decide which factor state to use based on the monthly object's period unit.
         let factor = currentFactor()
-
         guard let factor = factor else {
             return AnyView(
                 Text("Factor '\(factorName)' not found!")
@@ -57,29 +56,32 @@ struct FactorToggleRow: View {
             },
             set: { newVal in
                 let clampedVal = max(min(newVal, factor.maxValue), factor.minValue)
-
-                // *** Decide which method to call based on periodUnit
-                if weeklySimSettings.periodUnit == .months {
+                
+                // Print out the mode using the monthly object's property.
+                print("⚠️ FactorToggleRow: monthlySimSettings.periodUnitMonthly is \(monthlySimSettings.periodUnitMonthly)")
+                
+                // Decide which method to call based on monthlySimSettings.periodUnitMonthly.
+                if monthlySimSettings.periodUnitMonthly == .months {
+                    print("Calling monthlySimSettings.userDidDragFactorSliderMonthly for \(factorName)")
                     monthlySimSettings.userDidDragFactorSliderMonthly(factorName, to: clampedVal)
                 } else {
+                    print("Calling weeklySimSettings.userDidDragFactorSlider for \(factorName)")
                     weeklySimSettings.userDidDragFactorSlider(factorName, to: clampedVal)
                 }
-
-                // Unlock factor after a manual drag
-                unlockFactor()
                 
+                // Unlock factor after a manual drag.
+                unlockFactor()
                 onFactorChange()
             }
         )
 
-        // Build the row UI
         return AnyView(
             VStack(alignment: .leading, spacing: 4) {
                 // Title + Toggle row
                 HStack(spacing: 8) {
                     if let icon = iconName, !icon.isEmpty {
                         Button {
-                            // Reset to default if user taps icon
+                            // Reset to default if user taps icon.
                             resetFactorToDefault()
                             onFactorChange()
                         } label: {
@@ -91,13 +93,13 @@ struct FactorToggleRow: View {
                         }
                         .buttonStyle(.plain)
                     }
-
+                    
                     Text(title)
                         .font(.headline)
                         .onTapGesture {
                             onTitleTap(title)
                         }
-                        // Tooltip anchor
+                        // Tooltip anchor.
                         .anchorPreference(key: TooltipAnchorKey.self, value: .center) { pt in
                             guard activeFactor == title,
                                   let desc = parameterDescription,
@@ -107,14 +109,14 @@ struct FactorToggleRow: View {
                             }
                             return [TooltipItem(title: title, description: desc, anchor: pt)]
                         }
-
+                    
                     Spacer()
-
+                    
                     Toggle("", isOn: toggleBinding)
                         .labelsHidden()
                         .tint(.orange)
                 }
-
+                
                 // Slider row
                 HStack {
                     Slider(
@@ -123,7 +125,7 @@ struct FactorToggleRow: View {
                     )
                     .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
                     .disabled(!factor.isEnabled)
-
+                    
                     if displayAsPercent {
                         Text(String(format: "%.4f%%", sliderBinding.wrappedValue * 100))
                             .font(.caption)
@@ -144,28 +146,28 @@ struct FactorToggleRow: View {
             .opacity(factor.isEnabled ? 1.0 : 0.5)
         )
     }
-
+    
     // -------------------------------------------
-    // Helpers to pick factor from weekly or monthly
-    // -------------------------------------------
+    // Helpers to pick factor from weekly or monthly.
+    // We now check monthlySimSettings.periodUnitMonthly.
     private func currentFactor() -> FactorState? {
-        if weeklySimSettings.periodUnit == .months {
+        if monthlySimSettings.periodUnitMonthly == .months {
             return monthlySimSettings.factorsMonthly[factorName]
         } else {
             return weeklySimSettings.factors[factorName]
         }
     }
-
+    
     private func setFactorEnabled(_ enabled: Bool) {
-        if weeklySimSettings.periodUnit == .months {
+        if monthlySimSettings.periodUnitMonthly == .months {
             monthlySimSettings.setFactorEnabled(factorName: factorName, enabled: enabled)
         } else {
             weeklySimSettings.setFactorEnabled(factorName: factorName, enabled: enabled)
         }
     }
-
+    
     private func resetFactorToDefault() {
-        if weeklySimSettings.periodUnit == .months {
+        if monthlySimSettings.periodUnitMonthly == .months {
             if var f = monthlySimSettings.factorsMonthly[factorName] {
                 f.currentValue = defaultValue
                 f.isLocked = false
@@ -179,9 +181,9 @@ struct FactorToggleRow: View {
             }
         }
     }
-
+    
     private func unlockFactor() {
-        if weeklySimSettings.periodUnit == .months {
+        if monthlySimSettings.periodUnitMonthly == .months {
             if var f = monthlySimSettings.factorsMonthly[factorName] {
                 f.isLocked = false
                 monthlySimSettings.factorsMonthly[factorName] = f

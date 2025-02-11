@@ -17,9 +17,7 @@ struct BTCMonteCarloApp: App {
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("hasOnboarded") private var didFinishOnboarding = false
 
-    // 1) Remove @EnvironmentObject from the App struct — we want to *provide*, not consume, these objects
-    // 2) Convert all objects to @StateObject, then initialize them in init()
-
+    // Each environment object is created once, in init(), and then provided to child views.
     @StateObject private var appViewModel: AppViewModel
     @StateObject private var inputManager: PersistentInputManager
     @StateObject private var weeklySimSettings: SimulationSettings
@@ -55,14 +53,17 @@ struct BTCMonteCarloApp: App {
         UserDefaults.standard.register(defaults: defaultToggles)
 
         // ---- Create local instances
-        let appViewModelInstance = AppViewModel()
-        let inputManagerInstance = PersistentInputManager()
-        let weeklySimSettingsInstance = SimulationSettings(loadDefaults: true)
-        let monthlySimSettingsInstance = MonthlySimulationSettings()
-        let chartDataCacheInstance = ChartDataCache()
-        let simChartSelectionInstance = SimChartSelection()
+        let appViewModelInstance       = AppViewModel()
+        let inputManagerInstance       = PersistentInputManager()
+        let weeklySimSettingsInstance  = SimulationSettings(loadDefaults: true)
+        
+        // Pass loadDefaults: true so monthlySimSettings picks up user defaults on startup
+        let monthlySimSettingsInstance = MonthlySimulationSettings(loadDefaults: true)
+        
+        let chartDataCacheInstance     = ChartDataCache()
+        let simChartSelectionInstance  = SimChartSelection()
 
-        // Create the coordinator using the local instances above
+        // Create the coordinator with the local instances
         let coordinatorInstance = SimulationCoordinator(
             chartDataCache: chartDataCacheInstance,
             simSettings: weeklySimSettingsInstance,  // weekly by default
@@ -128,15 +129,15 @@ struct BTCMonteCarloApp: App {
                 }
             }
             .onAppear {
-                // Now we can safely call stuff on weeklySimSettings or monthlySimSettings
+                // E.g. set a property if user hasn't onboarded:
                 weeklySimSettings.isOnboarding = !didFinishOnboarding
 
-                // e.g. load historical data
+                // Load historical data for weekly & monthly
                 historicalBTCWeeklyReturns = loadAndAlignWeeklyData()
-                extendedWeeklyReturns = historicalBTCWeeklyReturns
+                extendedWeeklyReturns      = historicalBTCWeeklyReturns
 
                 historicalBTCMonthlyReturns = loadAndAlignMonthlyData()
-                extendedMonthlyReturns = historicalBTCMonthlyReturns
+                extendedMonthlyReturns      = historicalBTCMonthlyReturns
             }
             .onChange(of: scenePhase) { _, newPhase in
                 if newPhase == .inactive || newPhase == .background {
