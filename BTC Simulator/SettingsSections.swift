@@ -126,107 +126,20 @@ extension SettingsView {
     // MARK: - Universal Factor Intensity
     // -------------------------------------------------------
     var factorIntensitySection: some View {
-        Section {
-            HStack {
-                // EXTREME BEARISH BUTTON
-                Button {
-                    if simSettings.chartExtremeBearish {
-                        simSettings.chartExtremeBearish = false
-                        simSettings.recalcTiltBarValue(bullishKeys: bullishKeys, bearishKeys: bearishKeys)
-                    } else {
-                        isManualOverride = true
-                        simSettings.setFactorIntensity(0.0)
-                        simSettings.tiltBarValue = -1.0
-                        for key in bullishKeys {
-                            simSettings.setFactorEnabled(factorName: key, enabled: false)
-                            lockFactorAtMin(key)
-                        }
-                        for key in bearishKeys {
-                            simSettings.setFactorEnabled(factorName: key, enabled: true)
-                            unlockFactorAndSetMin(key)
-                        }
-                        simSettings.chartExtremeBearish = true
-                        simSettings.chartExtremeBullish = false
-                        simSettings.recalcTiltBarValue(bullishKeys: bullishKeys, bearishKeys: bearishKeys)
-
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                            isManualOverride = false
-                        }
-                    }
-                } label: {
-                    Image(systemName: "chart.line.downtrend.xyaxis")
-                        .foregroundColor(.red)
-                }
-                .buttonStyle(.plain)
-                .disabled(
-                    simSettings.chartExtremeBearish && factorIntensityBinding.wrappedValue <= 0.0001
-                )
-                .opacity(
-                    simSettings.chartExtremeBearish && factorIntensityBinding.wrappedValue <= 0.0001
-                    ? 0.5
-                    : 1.0
-                )
-
-                // MAIN INTENSITY SLIDER
-                Slider(
-                    value: factorIntensityBinding,
-                    in: 0...1,
-                    step: 0.01
-                )
-                .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
-                .disabled(simSettings.isGlobalSliderDisabled)
-                .onChange(of: factorIntensityBinding.wrappedValue) { newValue in
-                    simSettings.recalcTiltBarValue(
-                        bullishKeys: bullishKeys,
-                        bearishKeys: bearishKeys
-                    )
-                }
-
-                // EXTREME BULLISH BUTTON
-                Button {
-                    if simSettings.chartExtremeBullish {
-                        simSettings.chartExtremeBullish = false
-                        simSettings.recalcTiltBarValue(bullishKeys: bullishKeys, bearishKeys: bearishKeys)
-                    } else {
-                        isManualOverride = true
-                        simSettings.setFactorIntensity(1.0)
-                        simSettings.tiltBarValue = 1.0
-                        for key in bearishKeys {
-                            simSettings.setFactorEnabled(factorName: key, enabled: false)
-                            lockFactorAtMax(key)
-                        }
-                        for key in bullishKeys {
-                            simSettings.setFactorEnabled(factorName: key, enabled: true)
-                            unlockFactorAndSetMax(key)
-                        }
-                        simSettings.chartExtremeBullish = true
-                        simSettings.chartExtremeBearish = false
-                        simSettings.recalcTiltBarValue(bullishKeys: bullishKeys, bearishKeys: bearishKeys)
-
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                            isManualOverride = false
-                        }
-                    }
-                } label: {
-                    Image(systemName: "chart.line.uptrend.xyaxis")
-                        .foregroundColor(.green)
-                }
-                .buttonStyle(.plain)
-                .disabled(
-                    simSettings.chartExtremeBullish && factorIntensityBinding.wrappedValue >= 0.9999
-                )
-                .opacity(
-                    simSettings.chartExtremeBullish && factorIntensityBinding.wrappedValue >= 0.9999
-                    ? 0.5
-                    : 1.0
-                )
-            }
-        } footer: {
-            Text("Press a chart icon to force extreme factor settings.")
-                .foregroundColor(.white)
+            // Instead of the old chunk of Button/Slider code, just do:
+            FactorIntensitySection(
+                simSettings: simSettings,
+                monthlySimSettings: monthlySimSettings,
+                displayedTilt: displayedTilt,
+                bullishKeys: bullishKeys,
+                bearishKeys: bearishKeys,
+                isManualOverride: $isManualOverride,
+                lockFactorAtMin: lockFactorAtMin,
+                lockFactorAtMax: lockFactorAtMax,
+                unlockFactorAndSetMin: unlockFactorAndSetMin,
+                unlockFactorAndSetMax: unlockFactorAndSetMax
+            )
         }
-        .listRowBackground(Color(white: 0.15))
-    }
 
     // MARK: - Helper Functions for Locking/Unlocking Factors
     func lockFactorAtMin(_ factorName: String) {
@@ -286,6 +199,7 @@ extension SettingsView {
         Section {
             Button(action: {
                 simSettings.restoreDefaults()
+                monthlySimSettings.restoreDefaultsMonthly()
             }) {
                 HStack {
                     Text("Restore Defaults")
@@ -329,6 +243,7 @@ extension SettingsView {
             .alert("Confirm Reset", isPresented: $showResetCriteriaConfirmation, actions: {
                 Button("Reset", role: .destructive) {
                     simSettings.restoreDefaults()
+                    monthlySimSettings.restoreDefaultsMonthly()
                     didFinishOnboarding = false
                     simSettings.setFactorIntensity(0.5)
                     simSettings.tiltBarValue = 0.0

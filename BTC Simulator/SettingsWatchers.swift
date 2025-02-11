@@ -70,8 +70,13 @@ struct UnifiedValueWatchersA: View {
                               _ rawValue: Double,
                               minVal: Double,
                               maxVal: Double) {
-        print("[UnifiedValueWatchersA] updateFactor(\(name)) rawValue=\(rawValue), range=[\(minVal), \(maxVal)]")
+        // Weekly watchers skip update if a weekly restore is in progress.
+        if simSettings.isRestoringDefaults {
+            print("[UnifiedValueWatchersA] Skipping update for \(name) because weekly restore defaults is in progress")
+            return
+        }
         
+        print("[UnifiedValueWatchersA] updateFactor(\(name)) rawValue=\(rawValue), range=[\(minVal), \(maxVal)]")
         guard var factor = simSettings.factors[name] else {
             print("  -> Factor '\(name)' not found!")
             return
@@ -99,7 +104,7 @@ struct UnifiedValueWatchersA: View {
 // ----------------------------------------------------------
 struct UnifiedValueWatchersB: View {
     @ObservedObject var simSettings: SimulationSettings
-    
+
     var body: some View {
         Group {
             watchersB1
@@ -165,8 +170,13 @@ struct UnifiedValueWatchersB: View {
                               _ rawValue: Double,
                               minVal: Double,
                               maxVal: Double) {
-        print("[UnifiedValueWatchersB] updateFactor(\(name)) rawValue=\(rawValue), range=[\(minVal), \(maxVal)]")
+        // Weekly watchers skip update if weekly restore is in progress.
+        if simSettings.isRestoringDefaults {
+            print("[UnifiedValueWatchersB] Skipping update for \(name) because weekly restore defaults is in progress")
+            return
+        }
         
+        print("[UnifiedValueWatchersB] updateFactor(\(name)) rawValue=\(rawValue), range=[\(minVal), \(maxVal)]")
         guard var factor = simSettings.factors[name] else {
             print("  -> Factor '\(name)' not found!")
             return
@@ -194,7 +204,7 @@ struct UnifiedValueWatchersB: View {
 // ----------------------------------------------------------
 struct UnifiedValueWatchersC: View {
     @ObservedObject var simSettings: SimulationSettings
-    
+
     var body: some View {
         Group {
             watchersC1
@@ -260,8 +270,13 @@ struct UnifiedValueWatchersC: View {
                               _ rawValue: Double,
                               minVal: Double,
                               maxVal: Double) {
-        print("[UnifiedValueWatchersC] updateFactor(\(name)) rawValue=\(rawValue), range=[\(minVal), \(maxVal)]")
+        // Weekly watchers skip update if weekly restore is in progress.
+        if simSettings.isRestoringDefaults {
+            print("[UnifiedValueWatchersC] Skipping update for \(name) because weekly restore defaults is in progress")
+            return
+        }
         
+        print("[UnifiedValueWatchersC] updateFactor(\(name)) rawValue=\(rawValue), range=[\(minVal), \(maxVal)]")
         guard var factor = simSettings.factors[name] else {
             print("  -> Factor '\(name)' not found!")
             return
@@ -277,8 +292,7 @@ struct UnifiedValueWatchersC: View {
         
         let base = simSettings.globalBaseline(for: factor)
         let range = factor.maxValue - factor.minValue
-        let rawOffset = (clamped - base) / range
-        factor.internalOffset = rawOffset
+        factor.internalOffset = (clamped - base) / range
         
         print("  -> base=\(base), new offset=\(factor.internalOffset)")
         simSettings.factors[name] = factor
@@ -289,8 +303,8 @@ struct UnifiedValueWatchersC: View {
 // MARK: - MONTHLY VALUE WATCHERS
 // ----------------------------------------------------------
 struct MonthlyValueWatchers: View {
-    @ObservedObject var simSettings: SimulationSettings
-    
+    @ObservedObject var simSettings: SimulationSettings  // If your monthly watchers share simSettings factors.
+
     var body: some View {
         Group {
             monthlyWatchersA
@@ -441,6 +455,7 @@ struct MonthlyValueWatchers: View {
                               _ rawValue: Double,
                               minVal: Double,
                               maxVal: Double) {
+        
         print("[MonthlyValueWatchers] updateFactor(\(name)) rawValue=\(rawValue), range=[\(minVal), \(maxVal)]")
         guard var factor = simSettings.factors[name] else {
             print("  -> Factor '\(name)' not found!")

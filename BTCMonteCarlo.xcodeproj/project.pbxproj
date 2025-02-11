@@ -30,6 +30,7 @@
 		E15DDF472D5A5A3A00CDD30A /* MonthlySimulationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = E15DDF462D5A5A3700CDD30A /* MonthlySimulationSettings.swift */; };
 		E15DDF492D5AD0F100CDD30A /* MonthlySimulationSettings+FactorSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = E15DDF482D5AD0EC00CDD30A /* MonthlySimulationSettings+FactorSync.swift */; };
 		E15DDF4B2D5AE1F700CDD30A /* RestoreDefaultsMonthly.swift in Sources */ = {isa = PBXBuildFile; fileRef = E15DDF4A2D5AE1EF00CDD30A /* RestoreDefaultsMonthly.swift */; };
+		E15DDF4D2D5AECBB00CDD30A /* FactorIntensitySection.swift in Sources */ = {isa = PBXBuildFile; fileRef = E15DDF4C2D5AECB900CDD30A /* FactorIntensitySection.swift */; };
 		E166A8AE2CF855BF0003F518 /* MonteCarloSimulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = E166A8AD2CF855BF0003F518 /* MonteCarloSimulator.swift */; };
 		E166A8B02CF855C20003F518 /* SimulationData.swift in Sources */ = {isa = PBXBuildFile; fileRef = E166A8AF2CF855C20003F518 /* SimulationData.swift */; };
 		E166A8B22CF85B2B0003F518 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E166A8B12CF85B2B0003F518 /* ContentView.swift */; };
@@ -136,6 +137,7 @@
 		E15DDF462D5A5A3700CDD30A /* MonthlySimulationSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlySimulationSettings.swift; sourceTree = "<group>"; };
 		E15DDF482D5AD0EC00CDD30A /* MonthlySimulationSettings+FactorSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MonthlySimulationSettings+FactorSync.swift"; sourceTree = "<group>"; };
 		E15DDF4A2D5AE1EF00CDD30A /* RestoreDefaultsMonthly.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RestoreDefaultsMonthly.swift; sourceTree = "<group>"; };
+		E15DDF4C2D5AECB900CDD30A /* FactorIntensitySection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FactorIntensitySection.swift; sourceTree = "<group>"; };
 		E166A8AD2CF855BF0003F518 /* MonteCarloSimulator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonteCarloSimulator.swift; sourceTree = "<group>"; };
 		E166A8AF2CF855C20003F518 /* SimulationData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulationData.swift; sourceTree = "<group>"; };
 		E166A8B12CF85B2B0003F518 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -274,6 +276,7 @@
 				E1E31C4E2D4349DE00ED22E6 /* DataLoader.swift */,
 				E1E31C4A2D43352200ED22E6 /* ExtendedBootstrapSimulator.swift */,
 				E14344D72D52DE5300225A49 /* FactorCatalog.swift */,
+				E15DDF4C2D5AECB900CDD30A /* FactorIntensitySection.swift */,
 				E14344D52D52D85400225A49 /* FactorState.swift */,
 				E19D11452D42FCAC00E3A55E /* FactorToggles.swift */,
 				E1883F432D1E69B5007AA90B /* FactorToggleRow.swift */,
@@ -519,6 +522,7 @@
 				E18C2BE12D259248006E7438 /* ChartSnapshotView.swift in Sources */,
 				E1A1E52D2D2E39E4008F7658 /* SnapshotExtensions.swift in Sources */,
 				E1A1E51F2D2A7364008F7658 /* PortfolioChartView.swift in Sources */,
+				E15DDF4D2D5AECBB00CDD30A /* FactorIntensitySection.swift in Sources */,
 				E1F1CB682D4F3369003DB24F /* SimulationUtilities.swift in Sources */,
 				E1883F442D1E69B9007AA90B /* FactorToggleRow.swift in Sources */,
 				E17B2F222D26A9F300ECE087 /* SimulationCoordinator.swift in Sources */,

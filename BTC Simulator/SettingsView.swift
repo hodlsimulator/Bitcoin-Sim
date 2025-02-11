@@ -166,9 +166,11 @@ struct SettingsView: View {
             mainForm
             
             // The watchers are invisible but in the SwiftUI hierarchy, so .onChange will fire
-            UnifiedValueWatchersA(simSettings: simSettings).hidden()
-            UnifiedValueWatchersB(simSettings: simSettings).hidden()
-            UnifiedValueWatchersC(simSettings: simSettings).hidden()
+            UnifiedValueWatchersA(simSettings: simSettings)
+            UnifiedValueWatchersB(simSettings: simSettings)
+            UnifiedValueWatchersC(simSettings: simSettings)
+            // For monthly watchers, you might do:
+            // MonthlyValueWatchers(simSettings: simSettings, monthlySimSettings: monthlySimSettings)
         }
         .onAppear {
             hasAppeared = true
