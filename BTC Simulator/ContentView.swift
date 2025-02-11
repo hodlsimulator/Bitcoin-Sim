@@ -35,13 +35,6 @@ Created on 20/11/2024.
 -----------------------------------------------------------
 */
 
-//
-//  ContentView.swift
-//  BTCMonteCarlo
-//
-//  Created by ... on 20/11/2024.
-//
-
 import SwiftUI
 import PDFKit
 import UniformTypeIdentifiers
@@ -218,36 +211,33 @@ extension Double {
 
 // MARK: - Suffix Logic
 extension Double {
-
     /// For large numeric values using the short scale up to 10^30 (nonillion):
-        ///  - If exponent < 3 => just show normal comma formatting.
-        ///  - If exponent is between 3 and 30 => show K, M, B, T, Q, Qi, Sx, Sp, Oc, No.
-        ///  - If exponent > 30 => fallback to plain decimal with 2 decimals.
-        func formattedWithPowerOfTenSuffix() -> String {
-            guard self != 0 else { return "0" }
+    ///  - If exponent < 3 => just show normal comma formatting.
+    ///  - If exponent is between 3 and 30 => show K, M, B, T, Q, Qi, Sx, Sp, Oc, No.
+    ///  - If exponent > 30 => fallback to plain decimal with 2 decimals.
+    func formattedWithPowerOfTenSuffix() -> String {
+        guard self != 0 else { return "0" }
 
-            let sign = self < 0 ? "-" : ""
-            let absVal = abs(self)
-            let exponent = Int(floor(log10(absVal)))
+        let sign = self < 0 ? "-" : ""
+        let absVal = abs(self)
+        let exponent = Int(floor(log10(absVal)))
 
-            // Under 1,000 => just format normally
-            if exponent < 3 {
-                return sign + normalNumberFormat(absVal)
-            }
-
-            // If exponent is above 30 => fallback
-            if exponent > 30 {
-                return "\(sign)\(String(format: "%.2f", absVal))"
-            }
-
-            // Otherwise, find the 'leading number' and suffix:
-            // e.g. if exponent = 15, leading number = 1.234..., suffix = Q (quadrillion)
-            let leadingNumber = absVal / pow(10, Double(exponent))
-            let suffix = formatPowerOfTenLabel(exponent)
-            // Show 2 decimals for the leading number
-            return "\(sign)\(String(format: "%.2f", leadingNumber))\(suffix)"
+        // Under 1,000 => just format normally
+        if exponent < 3 {
+            return sign + normalNumberFormat(absVal)
         }
+
+        // If exponent is above 30 => fallback
+        if exponent > 30 {
+            return "\(sign)\(String(format: "%.2f", absVal))"
+        }
+
+        // Otherwise, find the 'leading number' and suffix:
+        let leadingNumber = absVal / pow(10, Double(exponent))
+        let suffix = formatPowerOfTenLabel(exponent)
+        return "\(sign)\(String(format: "%.2f", leadingNumber))\(suffix)"
     }
+}
 
 /// Helper for standard comma formatting
 private func normalNumberFormat(_ value: Double) -> String {
@@ -298,11 +288,17 @@ class ChartDataCache: ObservableObject {
 }
 
 struct ContentView: View {
-    // Track old values so we can invalidate the chart if changed
+    // Track old values so we can invalidate the chart if needed
     @State private var oldIterationsValue: String = ""
     @State private var oldAnnualCAGRValue: String = ""
     @State private var oldAnnualVolatilityValue: String = ""
     @State private var oldStandardDevValue: String = ""
+    
+    // Instead of binding text fields directly to inputManager, we use local text states:
+    @State private var localIterations: String = ""
+    @State private var localAnnualCAGR: String = ""
+    @State private var localAnnualVolatility: String = ""
+    @State private var localStandardDev: String = ""
     
     // Focus for text fields
     @FocusState private var activeField: ActiveField?
@@ -323,12 +319,14 @@ struct ContentView: View {
     
     @State private var hideScrollIndicators = true
     
+    @State private var isKeyboardVisible: Bool = false
+    
     @AppStorage("advancedSettingsUnlocked") private var advancedSettingsUnlocked: Bool = false
     
     private var loadingTips: [String] { TipsData.filteredLoadingTips(for: simSettings) }
     private var usageTips: [String] { TipsData.filteredUsageTips(for: simSettings) }
     
-    // Columns in the table view (depending on the user’s currency preference):
+    // Columns in the table view
     private var columns: [(String, PartialKeyPath<SimulationData>)] {
         switch simSettings.currencyPreference {
         case .usd:
@@ -395,256 +393,100 @@ struct ContentView: View {
     @EnvironmentObject var chartDataCache: ChartDataCache
     @EnvironmentObject var coordinator: SimulationCoordinator
     
-    var body: some View {
-        NavigationStack {
-            ZStack {
-                if !coordinator.isSimulationRun {
-                    parametersScreen
-                    if !coordinator.isLoading && activeField == nil {
-                        bottomIcons
+    // MARK: - Body
+        var body: some View {
+            NavigationStack {
+                ZStack {
+                    if !coordinator.isSimulationRun {
+                        
+                        // Embed ParameterEntryView directly
+                        ParameterEntryView(
+                            inputManager: inputManager,
+                            simSettings: simSettings,
+                            coordinator: coordinator,
+                            isKeyboardVisible: $isKeyboardVisible
+                        )
+                        
+                        // Hide bottom icons if loading or keyboard is up
+                        if !coordinator.isLoading && !isKeyboardVisible {
+                            bottomIcons
+                        }
+                    } else {
+                        simulationResultsView
                     }
-                } else {
-                    simulationResultsView
-                }
-                
-                if !coordinator.isSimulationRun &&
-                    !coordinator.monteCarloResults.isEmpty &&
-                    !coordinator.isChartBuilding {
-                    transitionToResultsButton
-                }
-                
-                if coordinator.isLoading || coordinator.isChartBuilding {
-                    loadingOverlayCombined
-                }
-            }
-            .navigationDestination(isPresented: $showSettings) {
-                SettingsView()
-                    .environmentObject(simSettings)
-                    .environmentObject(monthlySimSettings) // <-- Add this
-            }
-            .navigationDestination(isPresented: $showAbout) {
-                AboutView()
-            }
-            .onAppear {
-                if UserDefaults.standard.object(forKey: "lastViewedPage") == nil {
-                    if let btcPriceIndex = columns.firstIndex(where: { $0.0.contains("BTC Price") }) {
-                        currentPage = btcPriceIndex
-                        lastViewedPage = btcPriceIndex
+                    
+                    if !coordinator.isSimulationRun &&
+                        !coordinator.monteCarloResults.isEmpty &&
+                        !coordinator.isChartBuilding {
+                        transitionToResultsButton
                     }
-                } else {
-                    let savedWeek = UserDefaults.standard.integer(forKey: "lastViewedWeek")
-                    if savedWeek != 0 {
-                        lastViewedWeek = savedWeek
-                    }
-                    let savedPage = UserDefaults.standard.integer(forKey: "lastViewedPage")
-                    if savedPage < columns.count {
-                        lastViewedPage = savedPage
-                        currentPage = savedPage
-                    } else if let usdIndex = columns.firstIndex(where: { $0.0.contains("BTC Price") }) {
-                        currentPage = usdIndex
-                        lastViewedPage = usdIndex
+                    
+                    if coordinator.isLoading || coordinator.isChartBuilding {
+                        loadingOverlayCombined
                     }
                 }
-            }
-        }
-        .navigationDestination(isPresented: $showHistograms) {
-            ForceReflowView {
-                if let existingChartData = coordinator.chartDataCache.allRuns {
-                    MonteCarloResultsView()
-                        .environmentObject(coordinator.chartDataCache)
+                .navigationDestination(isPresented: $showSettings) {
+                    SettingsView()
                         .environmentObject(simSettings)
-                        .environmentObject(coordinator.simChartSelection)
-                } else {
-                    Text("Loading chart…")
-                        .foregroundColor(.white)
+                        .environmentObject(monthlySimSettings)
+                }
+                .navigationDestination(isPresented: $showAbout) {
+                    AboutView()
+                }
+                .onAppear {
+                    // You can remove these lines if your ParameterEntryView
+                    // now handles loading the persisted values.
+                    localIterations = inputManager.iterations
+                    localAnnualCAGR = inputManager.annualCAGR
+                    localAnnualVolatility = inputManager.annualVolatility
+                    localStandardDev = inputManager.standardDeviation
+                    
+                    // Keep the user-defaults logic for results table:
+                    if UserDefaults.standard.object(forKey: "lastViewedPage") == nil {
+                        if let btcPriceIndex = columns.firstIndex(where: { $0.0.contains("BTC Price") }) {
+                            currentPage = btcPriceIndex
+                            lastViewedPage = btcPriceIndex
+                        }
+                    } else {
+                        let savedWeek = UserDefaults.standard.integer(forKey: "lastViewedWeek")
+                        if savedWeek != 0 {
+                            lastViewedWeek = savedWeek
+                        }
+                        let savedPage = UserDefaults.standard.integer(forKey: "lastViewedPage")
+                        if savedPage < columns.count {
+                            lastViewedPage = savedPage
+                            currentPage = savedPage
+                        } else if let usdIndex = columns.firstIndex(where: { $0.0.contains("BTC Price") }) {
+                            currentPage = usdIndex
+                            lastViewedPage = usdIndex
+                        }
+                    }
+                }
+            }
+            .navigationDestination(isPresented: $showHistograms) {
+                ForceReflowView {
+                    if let existingChartData = coordinator.chartDataCache.allRuns {
+                        MonteCarloResultsView()
+                            .environmentObject(coordinator.chartDataCache)
+                            .environmentObject(simSettings)
+                            .environmentObject(coordinator.simChartSelection)
+                    } else {
+                        Text("Loading chart…")
+                            .foregroundColor(.white)
+                    }
                 }
             }
         }
-    }
 
     // MARK: - Parameter Screen
     private var parametersScreen: some View {
-        ZStack {
-            LinearGradient(
-                gradient: Gradient(colors: [Color.black, Color(white: 0.15), Color.black]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
-            
-            VStack(spacing: 30) {
-                Spacer().frame(height: 60)
-                
-                Text("HODL Simulator")
-                    .font(.custom("AvenirNext-Heavy", size: 36))
-                    .foregroundColor(.white)
-                    .shadow(color: Color.white.opacity(0.6), radius: 6, x: 0, y: 0)
-                
-                Text("Set your simulation parameters")
-                    .font(.callout)
-                    .foregroundColor(.gray)
-                
-                VStack(spacing: 20) {
-                    // Row 1: Iterations & CAGR
-                    HStack(spacing: 24) {
-                        // Iterations
-                        VStack(spacing: 4) {
-                            Text("Iterations")
-                                .foregroundColor(.white)
-                            TextField("100", text: $inputManager.iterations)
-                                .keyboardType(.numberPad)
-                                .padding(8)
-                                .frame(width: 80)
-                                .background(Color.white)
-                                .cornerRadius(6)
-                                .foregroundColor(.black)
-                                .focused($activeField, equals: .iterations)
-                                .onChange(of: inputManager.iterations, initial: false) { _, newVal in
-                                    if newVal != oldIterationsValue {
-                                        oldIterationsValue = newVal
-                                        invalidateChartIfInputChanged()
-                                    }
-                                }
-                        }
-                        
-                        // CAGR
-                        VStack(spacing: 4) {
-                            Text("CAGR (%)")
-                                .foregroundColor(.white)
-                            TextField("30", text: $inputManager.annualCAGR)
-                                .keyboardType(.decimalPad)
-                                .padding(8)
-                                .frame(width: 80)
-                                .background(Color.white)
-                                .cornerRadius(6)
-                                .foregroundColor(.black)
-                                .focused($activeField, equals: .annualCAGR)
-                                .onChange(of: inputManager.annualCAGR, initial: false) { _, newVal in
-                                    if newVal != oldAnnualCAGRValue {
-                                        oldAnnualCAGRValue = newVal
-                                        invalidateChartIfInputChanged()
-                                    }
-                                }
-                        }
-                    }
-                    
-                    // Row 2: Vol & StdDev
-                    HStack(spacing: 24) {
-                        // Vol
-                        VStack(spacing: 4) {
-                            Text("Vol (%)")
-                                .foregroundColor(.white)
-                            TextField("80", text: $inputManager.annualVolatility)
-                                .keyboardType(.decimalPad)
-                                .padding(8)
-                                .frame(width: 80)
-                                .background(Color.white)
-                                .cornerRadius(6)
-                                .foregroundColor(.black)
-                                .focused($activeField, equals: .annualVolatility)
-                                .onChange(of: inputManager.annualVolatility, initial: false) { _, newVal in
-                                    if newVal != oldAnnualVolatilityValue {
-                                        oldAnnualVolatilityValue = newVal
-                                        invalidateChartIfInputChanged()
-                                    }
-                                }
-                        }
-                        
-                        // StdDev
-                        VStack(spacing: 4) {
-                            Text("StdDev")
-                                .foregroundColor(.white)
-                            TextField("150", text: $inputManager.standardDeviation)
-                                .keyboardType(.decimalPad)
-                                .padding(8)
-                                .frame(width: 80)
-                                .background(Color.white)
-                                .cornerRadius(6)
-                                .foregroundColor(.black)
-                                .focused($activeField, equals: .standardDeviation)
-                                .onChange(of: inputManager.standardDeviation, initial: false) { _, newVal in
-                                    if newVal != oldStandardDevValue {
-                                        oldStandardDevValue = newVal
-                                        invalidateChartIfInputChanged()
-                                    }
-                                }
-                        }
-                    }
-                    
-                    // Row 3: Toggles
-                    HStack(spacing: 32) {
-                        Toggle("Charts", isOn: $inputManager.generateGraphs)
-                            .toggleStyle(CheckboxToggleStyle())
-                            .foregroundColor(.white)
-                        
-                        Toggle("Lock Seed", isOn: $simSettings.lockedRandomSeed)
-                            .toggleStyle(CheckboxToggleStyle())
-                            .foregroundColor(.white)
-                            .disabled(!advancedSettingsUnlocked)
-                            .opacity(advancedSettingsUnlocked ? 1.0 : 0.5)
-                            .onChange(of: simSettings.lockedRandomSeed, initial: false) { _, locked in
-                                if locked {
-                                    let newSeed = UInt64.random(in: 0..<UInt64.max)
-                                    simSettings.seedValue = newSeed
-                                    simSettings.useRandomSeed = false
-                                } else {
-                                    simSettings.seedValue = 0
-                                    simSettings.useRandomSeed = true
-                                }
-                            }
-                    }
-                }
-                .padding(20)
-                .frame(maxWidth: .infinity)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color(white: 0.1).opacity(0.8))
-                )
-                .padding(.horizontal, 30)
-                
-                if coordinator.isLoading || coordinator.isChartBuilding {
-                    Text(" ")
-                        .font(.callout)
-                        .foregroundColor(.clear)
-                        .padding(.horizontal, 32)
-                        .padding(.vertical, 14)
-                        .background(Color.clear)
-                        .cornerRadius(8)
-                        .padding(.top, 6)
-                    
-                    Spacer()
-                } else {
-                    Button {
-                        activeField = nil
-                        coordinator.isLoading = true
-                        coordinator.isChartBuilding = false
-                        
-                        coordinator.runSimulation(
-                            generateGraphs: inputManager.generateGraphs,
-                            lockRandomSeed: simSettings.lockedRandomSeed
-                        )
-                    } label: {
-                        Text("RUN SIMULATION")
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 32)
-                            .padding(.vertical, 14)
-                            .background(Color.orange)
-                            .cornerRadius(8)
-                    }
-                    .padding(.top, 6)
-                    
-                    Spacer()
-                }
-            }
-        }
-        .onTapGesture {
-            activeField = nil
-        }
-    }
-    
-    private func invalidateChartIfInputChanged() {
-        coordinator.chartDataCache.allRuns = nil
-        coordinator.chartDataCache.storedInputsHash = nil
+        // Simply embed the new ParameterEntryView here:
+        ParameterEntryView(
+            inputManager: inputManager,
+            simSettings: simSettings,
+            coordinator: coordinator,
+            isKeyboardVisible: $isKeyboardVisible
+        )
     }
     
     // MARK: - Bottom icons
@@ -784,8 +626,8 @@ struct ContentView: View {
                                 ForEach(displayedResults.indices, id: \.self) { index in
                                     let result = displayedResults[index]
                                     let rowBackground = index.isMultiple(of: 2)
-                                    ? Color(white: 0.10)
-                                    : Color(white: 0.14)
+                                        ? Color(white: 0.10)
+                                        : Color(white: 0.14)
                                     
                                     Text("\(result.week)")
                                         .frame(width: 70, alignment: .leading)
@@ -806,8 +648,8 @@ struct ContentView: View {
                                             ForEach(displayedResults.indices, id: \.self) { rowIndex in
                                                 let rowResult = displayedResults[rowIndex]
                                                 let rowBackground = rowIndex.isMultiple(of: 2)
-                                                ? Color(white: 0.10)
-                                                : Color(white: 0.14)
+                                                    ? Color(white: 0.10)
+                                                    : Color(white: 0.14)
                                                 
                                                 Text(getValueForTable(rowResult, columns[idx].1))
                                                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -934,8 +776,8 @@ struct ContentView: View {
         }
         
         let finalBTC = simSettings.currencyPreference == .eur
-        ? NSDecimalNumber(decimal: lastRow.btcPriceEUR).doubleValue
-        : NSDecimalNumber(decimal: lastRow.btcPriceUSD).doubleValue
+            ? NSDecimalNumber(decimal: lastRow.btcPriceEUR).doubleValue
+            : NSDecimalNumber(decimal: lastRow.btcPriceUSD).doubleValue
         
         let finalPortfolio: Double
         if simSettings.currencyPreference == .eur {
@@ -1096,13 +938,11 @@ struct ContentView: View {
         showTip = false
     }
     
-    // MARK: - This is where we changed logic for Decimal fields to also get suffix:
+    // MARK: - Displaying table data
     private func getValueForTable(_ item: SimulationData, _ keyPath: PartialKeyPath<SimulationData>) -> String {
-        // If the field is a Decimal:
         if let decimalVal = item[keyPath: keyPath] as? Decimal {
             let doubleValue = NSDecimalNumber(decimal: decimalVal).doubleValue
             
-            // Added a matching switch here so large decimals also get suffix formatting
             switch keyPath {
             case \SimulationData.btcPriceUSD,
                  \SimulationData.btcPriceEUR,
@@ -1115,13 +955,12 @@ struct ContentView: View {
                 }
                 
             default:
-                // For other Decimals, do normal currency
+                // For other decimals, do normal currency
                 return doubleValue.formattedCurrency()
             }
             
         } else if let doubleVal = item[keyPath: keyPath] as? Double {
             switch keyPath {
-                
             case \SimulationData.startingBTC,
                  \SimulationData.netBTCHoldings,
                  \SimulationData.netContributionBTC:
