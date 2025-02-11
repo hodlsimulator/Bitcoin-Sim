@@ -19,6 +19,23 @@ struct BearishFactorsSection: View {
     // This closure is called by FactorToggleRow so we can recalc tilt bar
     let onFactorChange: () -> Void
     
+    // Bearish tilt-bar weights (for display)
+    private let bearishTiltValues: [String: Double] = [
+        "regclampdown": 13.15,
+        "competitorcoin": 11.02,
+        "securitybreach": 11.02,
+        "bubblepop": 10.69,
+        "stablecoinmeltdown": 10.69,
+        "blackswan": 20.18,
+        "bearmarket": 11.62,
+        "maturingmarket": 11.62,
+        "recession": 7.96
+    ]
+    
+    private func tiltBarValue(for factorName: String) -> Double {
+        bearishTiltValues[factorName.lowercased()] ?? 0.0
+    }
+    
     var body: some View {
         Section("Bearish Factors") {
             
@@ -36,6 +53,7 @@ struct BearishFactorsSection: View {
                 defaultValue: simSettings.periodUnit == .weeks
                     ? -0.0011361452243542672
                     : -0.02,
+                tiltBarValue: tiltBarValue(for: "RegClampdown"),
                 displayAsPercent: false,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor,
@@ -56,6 +74,7 @@ struct BearishFactorsSection: View {
                 defaultValue: simSettings.periodUnit == .weeks
                     ? -0.0010148181746411323
                     : -0.008,
+                tiltBarValue: tiltBarValue(for: "CompetitorCoin"),
                 displayAsPercent: false,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor,
@@ -76,6 +95,7 @@ struct BearishFactorsSection: View {
                 defaultValue: simSettings.periodUnit == .weeks
                     ? -0.0010914715168380737
                     : -0.007,
+                tiltBarValue: tiltBarValue(for: "SecurityBreach"),
                 displayAsPercent: false,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor,
@@ -96,6 +116,7 @@ struct BearishFactorsSection: View {
                 defaultValue: simSettings.periodUnit == .weeks
                     ? -0.001762673890762329
                     : -0.01,
+                tiltBarValue: tiltBarValue(for: "BubblePop"),
                 displayAsPercent: false,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor,
@@ -116,6 +137,7 @@ struct BearishFactorsSection: View {
                 defaultValue: simSettings.periodUnit == .weeks
                     ? -0.0007141026159477233
                     : -0.01,
+                tiltBarValue: tiltBarValue(for: "StablecoinMeltdown"),
                 displayAsPercent: false,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor,
@@ -136,6 +158,7 @@ struct BearishFactorsSection: View {
                 defaultValue: simSettings.periodUnit == .weeks
                     ? -0.398885
                     : -0.4,
+                tiltBarValue: tiltBarValue(for: "BlackSwan"),
                 displayAsPercent: false,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor,
@@ -156,6 +179,7 @@ struct BearishFactorsSection: View {
                 defaultValue: simSettings.periodUnit == .weeks
                     ? -0.0008778802752494812
                     : -0.01,
+                tiltBarValue: tiltBarValue(for: "BearMarket"),
                 displayAsPercent: false,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor,
@@ -176,6 +200,7 @@ struct BearishFactorsSection: View {
                 defaultValue: simSettings.periodUnit == .weeks
                     ? -0.0015440231055486196
                     : -0.01,
+                tiltBarValue: tiltBarValue(for: "MaturingMarket"),
                 displayAsPercent: false,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor,
@@ -196,6 +221,7 @@ struct BearishFactorsSection: View {
                 defaultValue: simSettings.periodUnit == .weeks
                     ? -0.0009005491467487811
                     : -0.0014508080482482913,
+                tiltBarValue: tiltBarValue(for: "Recession"),
                 displayAsPercent: false,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor,

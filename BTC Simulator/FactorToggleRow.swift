@@ -20,6 +20,7 @@ struct FactorToggleRow: View {
     let parameterDescription: String?
     let sliderRange: ClosedRange<Double>
     let defaultValue: Double
+    let tiltBarValue: Double
     let displayAsPercent: Bool
 
     // Tooltip
@@ -126,19 +127,11 @@ struct FactorToggleRow: View {
                     .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
                     .disabled(!factor.isEnabled)
                     
-                    if displayAsPercent {
-                        Text(String(format: "%.4f%%", sliderBinding.wrappedValue * 100))
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .frame(width: 70, alignment: .trailing)
-                            .disabled(!factor.isEnabled)
-                    } else {
-                        Text(String(format: "%.4f", sliderBinding.wrappedValue))
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .frame(width: 70, alignment: .trailing)
-                            .disabled(!factor.isEnabled)
-                    }
+                    Text(String(format: "%.2f", tiltBarValue * (sliderBinding.wrappedValue / defaultValue)))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .frame(width: 70, alignment: .trailing)
+                        .disabled(!factor.isEnabled)
                 }
                 .opacity(factor.isEnabled ? 1.0 : 0.6)
             }

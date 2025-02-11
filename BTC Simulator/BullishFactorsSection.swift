@@ -19,6 +19,27 @@ struct BullishFactorsSection: View {
     // This closure is called by FactorToggleRow so we can recalc tilt bar
     let onFactorChange: () -> Void
     
+    // Here are the tilt-bar weights you mentioned:
+    private let bullishTiltValues: [String: Double] = [
+        "halving": 20.15,
+        "institutionaldemand": 8.69,
+        "countryadoption": 8.47,
+        "regulatoryclarity": 7.55,
+        "etfapproval": 8.24,
+        "techbreakthrough": 7.09,
+        "scarcityevents": 7.55,
+        "globalmacrohedge": 7.32,
+        "stablecoinshift": 6.86,
+        "demographicadoption": 9.39,
+        "altcoinflight": 6.40,
+        "adoptionfactor": 10.29
+    ]
+    
+    private func tiltBarValue(for factorName: String) -> Double {
+        // Just look up the factor in our dictionary (case-insensitive)
+        bullishTiltValues[factorName.lowercased()] ?? 0.0
+    }
+    
     var body: some View {
         Section("Bullish Factors") {
             
@@ -37,6 +58,7 @@ struct BullishFactorsSection: View {
                 defaultValue: (simSettings.periodUnit == .weeks)
                     ? 0.3298386887
                     : 0.35,
+                tiltBarValue: tiltBarValue(for: "Halving"),
                 displayAsPercent: false,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor,
@@ -57,6 +79,7 @@ struct BullishFactorsSection: View {
                 defaultValue: (simSettings.periodUnit == .weeks)
                     ? 0.001239
                     : 0.0056589855,
+                tiltBarValue: tiltBarValue(for: "InstitutionalDemand"),
                 displayAsPercent: false,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor,
@@ -78,6 +101,7 @@ struct BullishFactorsSection: View {
                 defaultValue: (simSettings.periodUnit == .weeks)
                     ? 0.0011375879977
                     : 0.005515515952320099,
+                tiltBarValue: tiltBarValue(for: "CountryAdoption"),
                 displayAsPercent: false,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor,
@@ -99,6 +123,7 @@ struct BullishFactorsSection: View {
                 defaultValue: (simSettings.periodUnit == .weeks)
                     ? 0.0007170254861605167
                     : 0.0040737327,
+                tiltBarValue: tiltBarValue(for: "RegulatoryClarity"),
                 displayAsPercent: false,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor,
@@ -120,6 +145,7 @@ struct BullishFactorsSection: View {
                 defaultValue: (simSettings.periodUnit == .weeks)
                     ? 0.0017880183160305023
                     : 0.0057142851,
+                tiltBarValue: tiltBarValue(for: "EtfApproval"),
                 displayAsPercent: false,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor,
@@ -141,6 +167,7 @@ struct BullishFactorsSection: View {
                 defaultValue: (simSettings.periodUnit == .weeks)
                     ? 0.0006083193579173088
                     : 0.0028387091,
+                tiltBarValue: tiltBarValue(for: "TechBreakthrough"),
                 displayAsPercent: false,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor,
@@ -162,6 +189,7 @@ struct BullishFactorsSection: View {
                 defaultValue: (simSettings.periodUnit == .weeks)
                     ? 0.00041308753681182863
                     : 0.0032928705475521085,
+                tiltBarValue: tiltBarValue(for: "ScarcityEvents"),
                 displayAsPercent: false,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor,
@@ -183,6 +211,7 @@ struct BullishFactorsSection: View {
                 defaultValue: (simSettings.periodUnit == .weeks)
                     ? 0.0003497809724932909
                     : 0.0032442397,
+                tiltBarValue: tiltBarValue(for: "GlobalMacroHedge"),
                 displayAsPercent: false,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor,
@@ -203,6 +232,7 @@ struct BullishFactorsSection: View {
                 defaultValue: (simSettings.periodUnit == .weeks)
                     ? 0.0003312209116327763
                     : 0.0023041475,
+                tiltBarValue: tiltBarValue(for: "StablecoinShift"),
                 displayAsPercent: false,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor,
@@ -223,6 +253,7 @@ struct BullishFactorsSection: View {
                 defaultValue: (simSettings.periodUnit == .weeks)
                     ? 0.0010619932036626339
                     : 0.007291124714649915,
+                tiltBarValue: tiltBarValue(for: "DemographicAdoption"),
                 displayAsPercent: false,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor,
@@ -243,6 +274,7 @@ struct BullishFactorsSection: View {
                 defaultValue: (simSettings.periodUnit == .weeks)
                     ? 0.0002802194461803342
                     : 0.0021566817,
+                tiltBarValue: tiltBarValue(for: "AltcoinFlight"),
                 displayAsPercent: false,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor,
@@ -263,6 +295,7 @@ struct BullishFactorsSection: View {
                 defaultValue: (simSettings.periodUnit == .weeks)
                     ? 0.0016045109088897705
                     : 0.014660959934071304,
+                tiltBarValue: tiltBarValue(for: "AdoptionFactor"),
                 displayAsPercent: false,
                 activeFactor: activeFactor,
                 onTitleTap: toggleFactor,
