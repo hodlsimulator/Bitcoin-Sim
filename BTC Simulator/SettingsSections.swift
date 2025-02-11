@@ -176,14 +176,10 @@ extension SettingsView {
                 .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
                 .disabled(simSettings.isGlobalSliderDisabled)
                 .onChange(of: factorIntensityBinding.wrappedValue) { newValue in
-                    // Haptic, etc.
-                    if abs(newValue - oldFactorIntensity) > 0.05 {
-                        let feedbackGenerator = UIImpactFeedbackGenerator(style: .medium)
-                        feedbackGenerator.prepare()
-                        feedbackGenerator.impactOccurred()
-                        oldFactorIntensity = newValue
-                    }
-                    simSettings.recalcTiltBarValue(bullishKeys: bullishKeys, bearishKeys: bearishKeys)
+                    simSettings.recalcTiltBarValue(
+                        bullishKeys: bullishKeys,
+                        bearishKeys: bearishKeys
+                    )
                 }
 
                 // EXTREME BULLISH BUTTON
