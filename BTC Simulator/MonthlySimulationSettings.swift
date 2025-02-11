@@ -647,30 +647,30 @@ class MonthlySimulationSettings: ObservableObject {
     
     // MARK: - Weights & S-Curves for monthly
     static let bullishWeightsMonthly: [String: Double] = [
-        "halving":            25.41,
-        "institutionaldemand": 8.30,
-        "countryadoption":     8.19,
-        "regulatoryclarity":   7.46,
-        "etfapproval":         8.94,
-        "techbreakthrough":    7.20,
-        "scarcityevents":      6.66,
-        "globalmacrohedge":    6.43,
-        "stablecoinshift":     6.37,
-        "demographicadoption": 8.06,
-        "altcoinflight":       6.19,
-        "adoptionfactor":      8.75
+        "halving":            20.15,
+        "institutionaldemand": 8.69,
+        "countryadoption":     8.47,
+        "regulatoryclarity":   7.55,
+        "etfapproval":         8.24,
+        "techbreakthrough":    7.09,
+        "scarcityevents":      7.55,
+        "globalmacrohedge":    7.32,
+        "stablecoinshift":     6.86,
+        "demographicadoption": 9.39,
+        "altcoinflight":       6.40,
+        "adoptionfactor":     10.29
     ]
     
     static let bearishWeightsMonthly: [String: Double] = [
-        "regclampdown":       9.66,
-        "competitorcoin":     9.46,
-        "securitybreach":     9.60,
-        "bubblepop":         10.57,
-        "stablecoinmeltdown": 8.79,
-        "blackswan":         31.21,
-        "bearmarket":         9.18,
-        "maturingmarket":    10.29,
-        "recession":          9.22
+        "regclampdown":       13.15,
+        "competitorcoin":     11.02,
+        "securitybreach":     11.02,
+        "bubblepop":          10.69,
+        "stablecoinmeltdown": 10.69,
+        "blackswan":          20.18,
+        "bearmarket":         11.62,
+        "maturingmarket":     11.62,
+        "recession":           7.96
     ]
     
     func applyGlobalSCurveMonthly(_ x: Double,

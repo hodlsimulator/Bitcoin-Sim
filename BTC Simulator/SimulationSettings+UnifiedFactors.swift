@@ -18,7 +18,7 @@ extension SimulationSettings {
             } else {
                 useHalvingMonthly = newValue
             }
-        }
+        }   
     }
     var halvingBumpUnified: Double {
         get { periodUnit == .weeks ? halvingBumpWeekly : halvingBumpMonthly }
