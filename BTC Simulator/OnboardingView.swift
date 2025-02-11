@@ -517,36 +517,22 @@ struct OnboardingView: View {
     // MARK: - applySettingsToSim
     private func applySettingsToSim() {
         if chosenPeriodUnit == .months {
-            // Update monthly settings
+            // Update monthly defaults
             monthlySimSettings.periodUnitMonthly = .months
             monthlySimSettings.userPeriodsMonthly = totalPeriods
             monthlySimSettings.initialBTCPriceUSDMonthly = finalBTCPrice
             monthlySimSettings.startingBalanceMonthly = startingBalanceDouble
             monthlySimSettings.averageCostBasisMonthly = averageCostBasis
             monthlySimSettings.currencyPreferenceMonthly = currencyPreference
-            if currencyPreference == .both {
-                monthlySimSettings.startingBalanceCurrencyWhenBothMonthly = startingBalanceCurrencyForBoth
-            }
-            
-            // Also update simSettings if that's what your SimulationCoordinator uses:
+            // Persist monthly settings
+            monthlySimSettings.saveToUserDefaultsMonthly()
+            // Now copy these monthly values into your simulation settings
             simSettings.periodUnit = .months
             simSettings.userPeriods = totalPeriods
             simSettings.initialBTCPriceUSD = finalBTCPrice
             simSettings.startingBalance = startingBalanceDouble
             simSettings.averageCostBasis = averageCostBasis
             simSettings.currencyPreference = currencyPreference
-            
-            // Update input manager as before
-            inputManager.firstYearContribution  = String(contributionPerStep)
-            inputManager.subsequentContribution = String(contributionPerStep)
-            inputManager.threshold1      = threshold1
-            inputManager.withdrawAmount1 = withdraw1
-            inputManager.threshold2      = threshold2
-            inputManager.withdrawAmount2 = withdraw2
-            
-            monthlySimSettings.saveToUserDefaultsMonthly()
-            
-            print("// DEBUG: user chose monthly => applying to monthlySimSettings")
             coordinator.useMonthly = true
         } else {
             // Weekly branch remains unchanged

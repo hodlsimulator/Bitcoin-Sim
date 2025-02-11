@@ -72,9 +72,11 @@ extension MonthlySimulationSettings {
             defaults.removeObject(forKey: key)
         }
         defaults.synchronize()
+        print("[restoreDefaultsMonthly] Removed UserDefaults keys.")
         
         // 4) Decide post-reset mode (remain monthly)
         periodUnitMonthly = .months
+        print("[restoreDefaultsMonthly] periodUnitMonthly set to: \(periodUnitMonthly)")
         
         // 5) Re-assign advanced toggles to your preferred fresh defaults
         useLognormalGrowthMonthly      = true
@@ -85,11 +87,26 @@ extension MonthlySimulationSettings {
         useGarchVolatilityMonthly      = true
         useAutoCorrelationMonthly      = true
         autoCorrelationStrengthMonthly = 0.05
-        meanReversionTargetMonthly     = 0.03   
+        meanReversionTargetMonthly     = 0.03
         useMeanReversionMonthly        = true
         useRegimeSwitchingMonthly      = true
         useExtendedHistoricalSamplingMonthly = true
         lockHistoricalSamplingMonthly  = false
+        
+        print("[restoreDefaultsMonthly] Advanced toggles reset:")
+        print("   useLognormalGrowthMonthly: \(useLognormalGrowthMonthly)")
+        print("   lockedRandomSeedMonthly: \(lockedRandomSeedMonthly)")
+        print("   useRandomSeedMonthly: \(useRandomSeedMonthly)")
+        print("   useHistoricalSamplingMonthly: \(useHistoricalSamplingMonthly)")
+        print("   useVolShocksMonthly: \(useVolShocksMonthly)")
+        print("   useGarchVolatilityMonthly: \(useGarchVolatilityMonthly)")
+        print("   useAutoCorrelationMonthly: \(useAutoCorrelationMonthly)")
+        print("   autoCorrelationStrengthMonthly: \(autoCorrelationStrengthMonthly)")
+        print("   meanReversionTargetMonthly: \(meanReversionTargetMonthly)")
+        print("   useMeanReversionMonthly: \(useMeanReversionMonthly)")
+        print("   useRegimeSwitchingMonthly: \(useRegimeSwitchingMonthly)")
+        print("   useExtendedHistoricalSamplingMonthly: \(useExtendedHistoricalSamplingMonthly)")
+        print("   lockHistoricalSamplingMonthly: \(lockHistoricalSamplingMonthly)")
         
         // 6) Done with restore
         isRestoringDefaultsMonthly = false
@@ -98,7 +115,9 @@ extension MonthlySimulationSettings {
         // Turn off suspend after a short delay:
         DispatchQueue.main.async {
             self.suspendUnifiedUpdates = false
+            print("[restoreDefaultsMonthly] suspendUnifiedUpdates set to false.")
         }
+        
+        self.saveToUserDefaultsMonthly()
     }
 }
-

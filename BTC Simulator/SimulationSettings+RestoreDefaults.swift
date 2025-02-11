@@ -73,9 +73,11 @@ extension SimulationSettings {
             defaults.removeObject(forKey: key)
         }
         defaults.synchronize()
+        print("[restoreDefaults (weekly)] Removed UserDefaults keys.")
 
         // 4) Decide post-reset mode (stay weekly)
         periodUnit = .weeks
+        print("[restoreDefaults (weekly)] periodUnit set to: \(periodUnit)")
 
         // 5) Avoid reloading from user defaults
         isRestoringDefaults = false

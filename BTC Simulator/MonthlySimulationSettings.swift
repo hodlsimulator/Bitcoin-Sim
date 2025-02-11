@@ -363,7 +363,7 @@ class MonthlySimulationSettings: ObservableObject {
            let loadedPU = PeriodUnit(rawValue: rawPU) {
             periodUnitMonthly = loadedPU
         } else {
-            periodUnitMonthly = .weeks
+            periodUnitMonthly = .months  // Default changed to .months
         }
         print("[loadFromUserDefaultsMonthly] periodUnitMonthly loaded as \(periodUnitMonthly)")
         
@@ -395,7 +395,7 @@ class MonthlySimulationSettings: ObservableObject {
     
     func saveToUserDefaultsMonthly() {
         let defaults = UserDefaults.standard
-        print("[saveToUserDefaultsMonthly] Saving monthly settings with periodUnitMonthly: \(periodUnitMonthly)")
+        print("Saving periodUnitMonthly as \(periodUnitMonthly.rawValue)")
         defaults.set(useLognormalGrowthMonthly, forKey: "useLognormalGrowthMonthly")
         defaults.set(lockedRandomSeedMonthly,   forKey: "lockedRandomSeedMonthly")
         defaults.set(seedValueMonthly,          forKey: "seedValueMonthly")

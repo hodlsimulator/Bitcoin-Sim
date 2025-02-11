@@ -78,8 +78,13 @@ struct SettingsView: View {
             // 4) Restore defaults (now calls monthlySimSettings too)
             Section {
                 Button(action: {
-                    simSettings.restoreDefaults()
-                    monthlySimSettings.restoreDefaultsMonthly()
+                    if simSettings.periodUnit == .months {
+                        monthlySimSettings.restoreDefaultsMonthly()
+                        monthlySimSettings.saveToUserDefaultsMonthly()
+                    } else {
+                        simSettings.restoreDefaults()
+                        simSettings.saveToUserDefaults()
+                    }
                 }) {
                     HStack {
                         Text("Restore Defaults")
