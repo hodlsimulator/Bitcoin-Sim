@@ -241,7 +241,13 @@ struct SettingsView: View {
     }
     // MARK: - Tilt Computation
     var displayedTilt: Double {
-        simSettings.tiltBarValue
+        if monthlySimSettings.periodUnitMonthly == .months {
+            // Show monthly tilt
+            return monthlySimSettings.tiltBarValueMonthly
+        } else {
+            // Otherwise, weekly tilt
+            return simSettings.tiltBarValue
+        }
     }
 
     // MARK: - Tooltip Overlay
