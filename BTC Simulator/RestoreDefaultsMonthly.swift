@@ -8,14 +8,19 @@
 import SwiftUI
 
 extension MonthlySimulationSettings {
-    func restoreDefaultsMonthly() {
+    func restoreDefaultsMonthly(whenIn mode: PeriodUnit) {
+        // Only restore if the mode is not weekly
+        guard mode != .weeks else {
+            print("Skipping monthly restore because weekly mode is active")
+            return
+        }
         print("[restoreDefaultsMonthly] Restoring all monthly defaults in one pass.")
         isRestoringDefaultsMonthly = true
         suspendUnifiedUpdates = true
-        
+
         // 0) Clear locked factors
         lockedFactorsMonthly.removeAll()
-        
+
         // 1) Rebuild the dictionary in one go
         var newFactors: [String: FactorState] = [:]
         for (factorName, def) in FactorCatalog.all {
@@ -32,13 +37,13 @@ extension MonthlySimulationSettings {
             newFactors[factorName] = fs
         }
         factorsMonthly = newFactors
-        
+
         // 2) Reset rawFactorIntensityMonthly, chart extremes, tilt bar
         rawFactorIntensityMonthly = 0.5
         chartExtremeBearishMonthly = false
         chartExtremeBullishMonthly = false
         resetTiltBarMonthly()
-        
+
         // 3) Remove the relevant UserDefaults keys
         let keysToRemove = [
             "factorStatesMonthly",
@@ -73,11 +78,11 @@ extension MonthlySimulationSettings {
         }
         defaults.synchronize()
         print("[restoreDefaultsMonthly] Removed UserDefaults keys.")
-        
+
         // 4) Decide post-reset mode (remain monthly)
         periodUnitMonthly = .months
         print("[restoreDefaultsMonthly] periodUnitMonthly set to: \(periodUnitMonthly)")
-        
+
         // 5) Re-assign advanced toggles to your preferred fresh defaults
         useLognormalGrowthMonthly      = true
         lockedRandomSeedMonthly        = false
@@ -92,7 +97,7 @@ extension MonthlySimulationSettings {
         useRegimeSwitchingMonthly      = true
         useExtendedHistoricalSamplingMonthly = true
         lockHistoricalSamplingMonthly  = false
-        
+
         print("[restoreDefaultsMonthly] Advanced toggles reset:")
         print("   useLognormalGrowthMonthly: \(useLognormalGrowthMonthly)")
         print("   lockedRandomSeedMonthly: \(lockedRandomSeedMonthly)")
@@ -107,17 +112,17 @@ extension MonthlySimulationSettings {
         print("   useRegimeSwitchingMonthly: \(useRegimeSwitchingMonthly)")
         print("   useExtendedHistoricalSamplingMonthly: \(useExtendedHistoricalSamplingMonthly)")
         print("   lockHistoricalSamplingMonthly: \(lockHistoricalSamplingMonthly)")
-        
+
         // 6) Done with restore
         isRestoringDefaultsMonthly = false
         print("[restoreDefaultsMonthly] Completed monthly defaults reset.")
-        
+
         // Turn off suspend after a short delay:
         DispatchQueue.main.async {
             self.suspendUnifiedUpdates = false
             print("[restoreDefaultsMonthly] suspendUnifiedUpdates set to false.")
         }
-        
+
         self.saveToUserDefaultsMonthly()
     }
 }

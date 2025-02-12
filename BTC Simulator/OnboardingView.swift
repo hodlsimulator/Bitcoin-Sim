@@ -542,6 +542,7 @@ struct OnboardingView: View {
             weeklySimSettings.startingBalance    = startingBalanceDouble
             weeklySimSettings.averageCostBasis   = averageCostBasis
             weeklySimSettings.currencyPreference = currencyPreference
+            monthlySimSettings.periodUnitMonthly = .weeks
             if currencyPreference == .both {
                 weeklySimSettings.startingBalanceCurrencyWhenBoth = startingBalanceCurrencyForBoth
             }

@@ -58,12 +58,12 @@ struct FactorToggleRow: View {
             set: { newVal in
                 let clampedVal = max(min(newVal, factor.maxValue), factor.minValue)
                 
-                // Check the current period mode (monthly vs weekly) and call the correct slider function.
-                if monthlySimSettings.periodUnitMonthly == .months {
-                    print("Calling monthlySimSettings.userDidDragFactorSliderMonthly for \(factorName)")
+                // Replace `if monthlySimSettings.periodUnitMonthly == .months` with:
+                if weeklySimSettings.periodUnit == .months {
+                    print("Calling monthly userDidDragFactorSliderMonthly for \(factorName)")
                     monthlySimSettings.userDidDragFactorSliderMonthly(factorName, to: clampedVal)
                 } else {
-                    print("Calling weeklySimSettings.userDidDragFactorSlider for \(factorName)")
+                    print("Calling weekly userDidDragFactorSlider for \(factorName)")
                     weeklySimSettings.userDidDragFactorSlider(factorName, to: clampedVal)
                 }
                 

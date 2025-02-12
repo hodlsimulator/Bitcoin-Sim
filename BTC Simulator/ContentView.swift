@@ -429,6 +429,9 @@ struct ContentView: View {
                     SettingsView()
                         .environmentObject(simSettings)
                         .environmentObject(monthlySimSettings)
+                        .environmentObject(inputManager)
+                        .environmentObject(chartDataCache)
+                        .environmentObject(coordinator)
                 }
                 .navigationDestination(isPresented: $showAbout) {
                     AboutView()

@@ -127,7 +127,7 @@ extension SettingsView {
     // -------------------------------------------------------
     var factorIntensitySection: some View {
             // Instead of the old chunk of Button/Slider code, just do:
-            FactorIntensitySection(
+        FactorIntensitySection(
                 simSettings: simSettings,
                 monthlySimSettings: monthlySimSettings,
                 displayedTilt: displayedTilt,
@@ -195,13 +195,22 @@ extension SettingsView {
     }
 
     // MARK: - Restore Defaults
+    /*
     var restoreDefaultsSection: some View {
         Section {
             Button(action: {
-                simSettings.restoreDefaults()
-                monthlySimSettings.restoreDefaultsMonthly()
+                print("simSettings.periodUnit = \(simSettings.periodUnit)")
+                if simSettings.periodUnit == .weeks {
+                    print("Restoring weekly defaults")
+                    simSettings.restoreDefaults()
+                    simSettings.saveToUserDefaults()
+                } else {
+                    print("Restoring monthly defaults")
+                    monthlySimSettings.restoreDefaultsMonthly()
+                    monthlySimSettings.saveToUserDefaultsMonthly()
+                }
             }) {
-                HStack {
+                HStack {    
                     Text("Restore Defaults")
                         .foregroundColor(.red)
                     Spacer()
@@ -212,6 +221,7 @@ extension SettingsView {
         }
         .listRowBackground(Color(white: 0.15))
     }
+    */
 
     // MARK: - About
     var aboutSection: some View {
@@ -242,8 +252,11 @@ extension SettingsView {
             .buttonStyle(PressableDestructiveButtonStyle())
             .alert("Confirm Reset", isPresented: $showResetCriteriaConfirmation, actions: {
                 Button("Reset", role: .destructive) {
-                    simSettings.restoreDefaults()
-                    monthlySimSettings.restoreDefaultsMonthly()
+                    if simSettings.periodUnit == .weeks {
+                        simSettings.restoreDefaults()
+                    } else {
+                        monthlySimSettings.restoreDefaultsMonthly(whenIn: .months)
+                    }
                     didFinishOnboarding = false
                     simSettings.setFactorIntensity(0.5)
                     simSettings.tiltBarValue = 0.0

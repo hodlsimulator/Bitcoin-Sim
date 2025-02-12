@@ -20,7 +20,19 @@ struct BearishFactorsSection: View {
     let onFactorChange: () -> Void
     
     // Bearish tilt-bar weights (for display)
-    private let bearishTiltValues: [String: Double] = [
+    private let bearishTiltValuesWeekly: [String: Double] = [
+        "regclampdown":       9.66,
+        "competitorcoin":     9.46,
+        "securitybreach":     9.60,
+        "bubblepop":         10.57,
+        "stablecoinmeltdown": 8.79,
+        "blackswan":         31.21,
+        "bearmarket":         9.18,
+        "maturingmarket":    10.29,
+        "recession":          9.22
+    ]
+    
+    private let bearishTiltValuesMonthly: [String: Double] = [
         "regclampdown": 13.15,
         "competitorcoin": 11.02,
         "securitybreach": 11.02,
@@ -33,7 +45,11 @@ struct BearishFactorsSection: View {
     ]
     
     private func tiltBarValue(for factorName: String) -> Double {
-        bearishTiltValues[factorName.lowercased()] ?? 0.0
+        if simSettings.periodUnit == .weeks {
+            return bearishTiltValuesWeekly[factorName.lowercased()] ?? 0.0
+        } else {
+            return bearishTiltValuesMonthly[factorName.lowercased()] ?? 0.0
+        }
     }
     
     var body: some View {

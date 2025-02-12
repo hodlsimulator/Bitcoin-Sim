@@ -15,9 +15,13 @@ class SimChartSelection: ObservableObject {
 @main
 struct BTCMonteCarloApp: App {
     @Environment(\.scenePhase) private var scenePhase
+    
     @AppStorage("hasOnboarded") private var didFinishOnboarding = false
+    // Keep the @AppStorage for reading/writing mode elsewhere,
+    // but do NOT reference it in init(). We’ll manually read from UserDefaults below.
+    @AppStorage("isMonthlyMode") private var isMonthlyMode = false
 
-    // Each environment object is created once, in init(), and then provided to child views.
+    // Just declare these; don’t initialise them yet.
     @StateObject private var appViewModel: AppViewModel
     @StateObject private var inputManager: PersistentInputManager
     @StateObject private var weeklySimSettings: SimulationSettings
@@ -28,7 +32,26 @@ struct BTCMonteCarloApp: App {
 
     // MARK: - Init
     init() {
-        // ---- Sentry Startup
+        // 1) Read the mode from UserDefaults (instead of referencing self.isMonthlyMode).
+        let localIsMonthlyMode = UserDefaults.standard.bool(forKey: "isMonthlyMode")
+
+        // 2) Create local objects.
+        let localAppViewModel       = AppViewModel()
+        let localInputManager       = PersistentInputManager()
+        let localWeeklySimSettings  = SimulationSettings(loadDefaults: true)
+
+        // Conditionally init monthlySimSettings.
+        let localMonthlySimSettings: MonthlySimulationSettings
+        if localIsMonthlyMode {
+            localMonthlySimSettings = MonthlySimulationSettings(loadDefaults: true)
+        } else {
+            localMonthlySimSettings = MonthlySimulationSettings(loadDefaults: false)
+        }
+
+        let localChartDataCache     = ChartDataCache()
+        let localSimChartSelection  = SimChartSelection()
+
+        // 3) Start Sentry (optional).
         SentrySDK.start { options in
             options.dsn = "https://3ca36373246f91c44a0733a5d9489f52@o4508788421623808.ingest.de.sentry.io/4508788424376400"
             options.attachViewHierarchy = false
@@ -38,7 +61,7 @@ struct BTCMonteCarloApp: App {
             options.enableAppLaunchProfiling = true
         }
 
-        // ---- Default toggles
+        // 4) Register any default toggles.
         let defaultToggles: [String: Any] = [
             "useLockRandomSeed": false,
             "useLognormalGrowth": true,
@@ -52,36 +75,22 @@ struct BTCMonteCarloApp: App {
         ]
         UserDefaults.standard.register(defaults: defaultToggles)
 
-        // ---- Create local instances
-        let appViewModelInstance       = AppViewModel()
-        let inputManagerInstance       = PersistentInputManager()
-        let weeklySimSettingsInstance  = SimulationSettings(loadDefaults: true)
-        
-        // Pass loadDefaults: true so monthlySimSettings picks up user defaults on startup
-        let monthlySimSettingsInstance = MonthlySimulationSettings(loadDefaults: true)
-        
-        let chartDataCacheInstance     = ChartDataCache()
-        let simChartSelectionInstance  = SimChartSelection()
-
-        // Create the coordinator with the local instances
-        let coordinatorInstance = SimulationCoordinator(
-            chartDataCache: chartDataCacheInstance,
-            simSettings: weeklySimSettingsInstance,  // weekly by default
-            inputManager: inputManagerInstance,
-            simChartSelection: simChartSelectionInstance
+        // 5) Create the coordinator with local objects.
+        let localCoordinator = SimulationCoordinator(
+            chartDataCache: localChartDataCache,
+            simSettings: localWeeklySimSettings,
+            inputManager: localInputManager,
+            simChartSelection: localSimChartSelection
         )
 
-        // ---- Assign them to @StateObject wrappers
-        _appViewModel        = StateObject(wrappedValue: appViewModelInstance)
-        _inputManager        = StateObject(wrappedValue: inputManagerInstance)
-        _weeklySimSettings   = StateObject(wrappedValue: weeklySimSettingsInstance)
-        _monthlySimSettings  = StateObject(wrappedValue: monthlySimSettingsInstance)
-        _chartDataCache      = StateObject(wrappedValue: chartDataCacheInstance)
-        _simChartSelection   = StateObject(wrappedValue: simChartSelectionInstance)
-        _coordinator         = StateObject(wrappedValue: coordinatorInstance)
-
-        // **Don't** do anything else here that calls self.coordinator or other properties;
-        // just finish init.
+        // 6) Assign locals to @StateObject wrappers — last step in init().
+        _appViewModel        = StateObject(wrappedValue: localAppViewModel)
+        _inputManager        = StateObject(wrappedValue: localInputManager)
+        _weeklySimSettings   = StateObject(wrappedValue: localWeeklySimSettings)
+        _monthlySimSettings  = StateObject(wrappedValue: localMonthlySimSettings)
+        _chartDataCache      = StateObject(wrappedValue: localChartDataCache)
+        _simChartSelection   = StateObject(wrappedValue: localSimChartSelection)
+        _coordinator         = StateObject(wrappedValue: localCoordinator)
     }
 
     // MARK: - body
@@ -104,7 +113,6 @@ struct BTCMonteCarloApp: App {
                 if didFinishOnboarding {
                     NavigationStack {
                         ContentView()
-                            // Provide these objects so child views can consume them
                             .environmentObject(inputManager)
                             .environmentObject(weeklySimSettings)
                             .environmentObject(monthlySimSettings)
@@ -129,10 +137,9 @@ struct BTCMonteCarloApp: App {
                 }
             }
             .onAppear {
-                // E.g. set a property if user hasn't onboarded:
                 weeklySimSettings.isOnboarding = !didFinishOnboarding
 
-                // Load historical data for weekly & monthly
+                // Load your historical data here.
                 historicalBTCWeeklyReturns = loadAndAlignWeeklyData()
                 extendedWeeklyReturns      = historicalBTCWeeklyReturns
 
@@ -141,7 +148,6 @@ struct BTCMonteCarloApp: App {
             }
             .onChange(of: scenePhase) { _, newPhase in
                 if newPhase == .inactive || newPhase == .background {
-                    // Save weekly & monthly user defaults
                     weeklySimSettings.saveToUserDefaults()
                     monthlySimSettings.saveToUserDefaultsMonthly()
                 }

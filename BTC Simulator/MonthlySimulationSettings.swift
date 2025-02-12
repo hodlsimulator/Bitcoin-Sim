@@ -8,6 +8,15 @@
 import SwiftUI
 
 extension MonthlySimulationSettings {
+    
+    func getBullishTilt(for factor: String) -> Double {
+        return factorsMonthly[factor]?.currentValue ?? 0.0
+    }
+    
+    func getBearishTilt(for factor: String) -> Double {
+        return factorsMonthly[factor]?.currentValue ?? 0.0
+    }
+    
     // EXACT same signature that FactorToggleRow calls:
     func setFactorEnabled(factorName: String, enabled: Bool) {
         guard var factor = factorsMonthly[factorName] else { return }
@@ -36,7 +45,6 @@ extension MonthlySimulationSettings {
 }
 
 class MonthlySimulationSettings: ObservableObject {
-    
     let bearishKeysMonthly: [String] = [
         "RegClampdown", "CompetitorCoin", "SecurityBreach",
         "BubblePop", "StablecoinMeltdown", "BlackSwan",

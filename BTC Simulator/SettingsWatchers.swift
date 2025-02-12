@@ -502,6 +502,12 @@ struct MonthlyValueWatchers: View {
             print("[MonthlyValueWatchers] Skipping update for \(name) because monthly restore is in progress")
             return
         }
+
+        // Also skip if factorsMonthly is still empty, so we don't get "Factor X not found"
+        guard !monthlySimSettings.factorsMonthly.isEmpty else {
+            print("[MonthlyValueWatchers] factorsMonthly is empty; skipping \(name)")
+            return
+        }
         
         print("[MonthlyValueWatchers] updateFactor(\(name)) rawValue=\(rawValue), range=[\(minVal), \(maxVal)]")
         guard var factor = monthlySimSettings.factorsMonthly[name] else {

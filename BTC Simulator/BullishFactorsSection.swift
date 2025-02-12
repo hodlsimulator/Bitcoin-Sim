@@ -19,8 +19,24 @@ struct BullishFactorsSection: View {
     // This closure is called by FactorToggleRow so we can recalc tilt bar
     let onFactorChange: () -> Void
     
+    // The weekly dictionary you shared:
+    private let bullishTiltValuesWeekly: [String: Double] = [
+        "halving":            25.41,
+        "institutionaldemand": 8.30,
+        "countryadoption":     8.19,
+        "regulatoryclarity":   7.46,
+        "etfapproval":         8.94,
+        "techbreakthrough":    7.20,
+        "scarcityevents":      6.66,
+        "globalmacrohedge":    6.43,
+        "stablecoinshift":     6.37,
+        "demographicadoption": 8.06,
+        "altcoinflight":       6.19,
+        "adoptionfactor":      8.75
+    ]
+    
     // Here are the tilt-bar weights you mentioned:
-    private let bullishTiltValues: [String: Double] = [
+    private let bullishTiltValuesMonthly: [String: Double] = [
         "halving": 20.15,
         "institutionaldemand": 8.69,
         "countryadoption": 8.47,
@@ -36,8 +52,15 @@ struct BullishFactorsSection: View {
     ]
     
     private func tiltBarValue(for factorName: String) -> Double {
-        // Just look up the factor in our dictionary (case-insensitive)
-        bullishTiltValues[factorName.lowercased()] ?? 0.0
+        // Lowercase factor name so dictionary lookup is case-insensitive:
+        let key = factorName.lowercased()
+        
+        // Decide which dictionary to use based on simSettings.periodUnit
+        if simSettings.periodUnit == .months {
+            return bullishTiltValuesMonthly[key] ?? 0.0
+        } else {
+            return bullishTiltValuesWeekly[key] ?? 0.0
+        }
     }
     
     var body: some View {

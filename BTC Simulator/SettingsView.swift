@@ -12,6 +12,7 @@ import Sentry
 struct SettingsView: View {
     @EnvironmentObject var simSettings: SimulationSettings
     @EnvironmentObject var monthlySimSettings: MonthlySimulationSettings
+    @EnvironmentObject var coordinator: SimulationCoordinator
     
     @AppStorage("hasOnboarded") var didFinishOnboarding = false
     @AppStorage("showAdvancedSettings") private var showAdvancedSettings: Bool = false
@@ -35,6 +36,8 @@ struct SettingsView: View {
     // For toggling
     @State var disableFactorSync = false
     @State var isManualOverride: Bool = false
+    
+    @State private var isRestoringDefaults = false
     
     // Factor keys
     let bullishKeys: [String] = [
@@ -77,25 +80,30 @@ struct SettingsView: View {
             
             // 4) Restore defaults (now calls monthlySimSettings too)
             Section {
-                Button(action: {
-                    if simSettings.periodUnit == .months {
-                        monthlySimSettings.restoreDefaultsMonthly()
-                        monthlySimSettings.saveToUserDefaultsMonthly()
-                    } else {
-                        simSettings.restoreDefaults()
-                        simSettings.saveToUserDefaults()
+                    Button(action: {
+                        print("simSettings.periodUnit = \(simSettings.periodUnit)")
+                        if simSettings.periodUnit == .weeks {
+                            print("Restoring weekly defaults")
+                            simSettings.restoreDefaults()
+                            simSettings.saveToUserDefaults()
+                            simSettings.loadFromUserDefaults()  // Force re‑loading into memory
+                        } else if simSettings.periodUnit == .months {
+                            print("Restoring monthly defaults")
+                            monthlySimSettings.restoreDefaultsMonthly(whenIn: simSettings.periodUnit)
+                            monthlySimSettings.saveToUserDefaultsMonthly()
+                            monthlySimSettings.loadFromUserDefaultsMonthly()  // Likewise for monthly
+                        }
+                    }) {
+                        HStack {
+                            Text("Restore Defaults")
+                                .foregroundColor(.red)
+                            Spacer()
+                        }
+                        .contentShape(Rectangle())
                     }
-                }) {
-                    HStack {
-                        Text("Restore Defaults")
-                            .foregroundColor(.red)
-                        Spacer()
-                    }
-                    .contentShape(Rectangle())
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
-            }
-            .listRowBackground(Color(white: 0.15))
+                .listRowBackground(Color(white: 0.15))
             
             // 5) Bullish factors
             BullishFactorsSection(
