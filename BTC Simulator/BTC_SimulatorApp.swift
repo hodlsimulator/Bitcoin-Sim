@@ -79,6 +79,7 @@ struct BTCMonteCarloApp: App {
         let localCoordinator = SimulationCoordinator(
             chartDataCache: localChartDataCache,
             simSettings: localWeeklySimSettings,
+            monthlySimSettings: localMonthlySimSettings,
             inputManager: localInputManager,
             simChartSelection: localSimChartSelection
         )

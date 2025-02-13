@@ -32,6 +32,7 @@
 		E15DDF4B2D5AE1F700CDD30A /* RestoreDefaultsMonthly.swift in Sources */ = {isa = PBXBuildFile; fileRef = E15DDF4A2D5AE1EF00CDD30A /* RestoreDefaultsMonthly.swift */; };
 		E15DDF4D2D5AECBB00CDD30A /* FactorIntensitySection.swift in Sources */ = {isa = PBXBuildFile; fileRef = E15DDF4C2D5AECB900CDD30A /* FactorIntensitySection.swift */; };
 		E15DDF4F2D5B3AC500CDD30A /* ParameterEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E15DDF4E2D5B3AC000CDD30A /* ParameterEntryView.swift */; };
+		E15DDF512D5D6F2200CDD30A /* FactorTogglesMonthly.swift in Sources */ = {isa = PBXBuildFile; fileRef = E15DDF502D5D6F1900CDD30A /* FactorTogglesMonthly.swift */; };
 		E166A8AE2CF855BF0003F518 /* MonteCarloSimulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = E166A8AD2CF855BF0003F518 /* MonteCarloSimulator.swift */; };
 		E166A8B02CF855C20003F518 /* SimulationData.swift in Sources */ = {isa = PBXBuildFile; fileRef = E166A8AF2CF855C20003F518 /* SimulationData.swift */; };
 		E166A8B22CF85B2B0003F518 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E166A8B12CF85B2B0003F518 /* ContentView.swift */; };
@@ -140,6 +141,7 @@
 		E15DDF4A2D5AE1EF00CDD30A /* RestoreDefaultsMonthly.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RestoreDefaultsMonthly.swift; sourceTree = "<group>"; };
 		E15DDF4C2D5AECB900CDD30A /* FactorIntensitySection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FactorIntensitySection.swift; sourceTree = "<group>"; };
 		E15DDF4E2D5B3AC000CDD30A /* ParameterEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParameterEntryView.swift; sourceTree = "<group>"; };
+		E15DDF502D5D6F1900CDD30A /* FactorTogglesMonthly.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FactorTogglesMonthly.swift; sourceTree = "<group>"; };
 		E166A8AD2CF855BF0003F518 /* MonteCarloSimulator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonteCarloSimulator.swift; sourceTree = "<group>"; };
 		E166A8AF2CF855C20003F518 /* SimulationData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulationData.swift; sourceTree = "<group>"; };
 		E166A8B12CF85B2B0003F518 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -281,6 +283,7 @@
 				E15DDF4C2D5AECB900CDD30A /* FactorIntensitySection.swift */,
 				E14344D52D52D85400225A49 /* FactorState.swift */,
 				E19D11452D42FCAC00E3A55E /* FactorToggles.swift */,
+				E15DDF502D5D6F1900CDD30A /* FactorTogglesMonthly.swift */,
 				E1883F432D1E69B5007AA90B /* FactorToggleRow.swift */,
 				E1E31C502D438DD700ED22E6 /* GarchCalibrator.swift */,
 				E19D10E62D3ED96000E3A55E /* GARCHHelper.swift */,
@@ -531,6 +534,7 @@
 				E1883F442D1E69B9007AA90B /* FactorToggleRow.swift in Sources */,
 				E17B2F222D26A9F300ECE087 /* SimulationCoordinator.swift in Sources */,
 				E1E31C4B2D43352300ED22E6 /* ExtendedBootstrapSimulator.swift in Sources */,
+				E15DDF512D5D6F2200CDD30A /* FactorTogglesMonthly.swift in Sources */,
 				E1F1CB602D4EF179003DB24F /* CalibrationManager.swift in Sources */,
 				E14344D62D52D85600225A49 /* FactorState.swift in Sources */,
 				E19D11402D42F97700E3A55E /* DampenOutliers.swift in Sources */,

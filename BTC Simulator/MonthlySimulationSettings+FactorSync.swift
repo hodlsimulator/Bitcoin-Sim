@@ -61,7 +61,7 @@ extension MonthlySimulationSettings {
                 "Recession"
             ]
         )
-        applyDictionaryFactorsToSimMonthly()
+        // applyDictionaryFactorsToSimMonthly()
     }
     
     /// The monthly version of toggleAllFactors(on:)

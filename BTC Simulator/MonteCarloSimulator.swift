@@ -280,9 +280,9 @@ private func runWeeklySimulation(
     return results
 }
 
-// MARK: - MONTHLY SIMULATION
+/// A version of runMonthlySimulation that reads from MonthlySimulationSettings directly.
 private func runMonthlySimulation(
-    settings: SimulationSettings,
+    monthlySettings: MonthlySimulationSettings,
     annualCAGR: Double,
     annualVolatility: Double,
     exchangeRateEURUSD: Double,
@@ -297,35 +297,35 @@ private func runMonthlySimulation(
     var prevBTCPriceUSD = initialBTCPriceUSD
     var prevBTCHoldings = 0.0
     
+    // Convert CAGR % to decimal
     let cagrDecimal = annualCAGR / 100.0
+    // Base monthly volatility = annualVol / sqrt(12)
     let baseMonthlyVol = (annualVolatility / 100.0) / sqrt(12.0)
     
-    // GARCH setup
+    // If monthlySettings.useGarchVolatilityMonthly == true, calibrate or apply a GARCH model
     var garchModelToUse: GarchModel
-    if let fitted = garchModel, settings.useGarchVolatility {
-        let initialVol = baseMonthlyVol
+    if let fitted = garchModel, monthlySettings.useGarchVolatilityMonthly {
         var copy = fitted
-        copy.currentVariance = initialVol * initialVol
+        copy.currentVariance = baseMonthlyVol * baseMonthlyVol
         garchModelToUse = copy
     } else {
         garchModelToUse = GarchModel(
             omega: 0.00001,
             alpha: 0.1,
-            beta: 0.85,
+            beta:  0.85,
             initialVariance: baseMonthlyVol * baseMonthlyVol
         )
     }
     
+    // If monthlySettings.useRegimeSwitchingMonthly == true, set up your regime switching model
     var regimeModel = RegimeSwitchingModel()
     
-    let firstYearVal  = 100.0
-    let secondYearVal = 50.0
-    
     var lastStepLogReturn = 0.0
-    var lastAutoReturn = 0.0
+    var lastAutoReturn    = 0.0
 
+    // Extended sampling if monthlySettings.useExtendedHistoricalSamplingMonthly == true
     var extendedBlock = [Double]()
-    if settings.useExtendedHistoricalSampling {
+    if monthlySettings.useExtendedHistoricalSamplingMonthly, !historicalBTCMonthlyReturns.isEmpty {
         if totalMonths <= historicalBTCMonthlyReturns.count {
             extendedBlock = pickContiguousBlock(
                 from: historicalBTCMonthlyReturns,
@@ -341,87 +341,107 @@ private func runMonthlySimulation(
             )
         }
     }
-    
+
+    // Compute monthly growth so 12 increments yield the annual CAGR
     let monthlyGrowth = pow(1.0 + cagrDecimal, 1.0 / 12.0) - 1.0
     
     for currentMonth in 1...totalMonths {
-        if settings.useRegimeSwitching {
+        
+        // Optional: regime switching each month
+        if monthlySettings.useRegimeSwitchingMonthly {
             regimeModel.updateRegime(rng: rng)
         }
         
         var totalReturn = 0.0
-        var currentVol = baseMonthlyVol
-        if settings.useRegimeSwitching {
+        var currentVol  = baseMonthlyVol
+        
+        // If regime switching is on, scale the base vol
+        if monthlySettings.useRegimeSwitchingMonthly {
             currentVol *= regimeModel.currentRegime.volMultiplier
         }
-        if settings.useGarchVolatility {
+        if monthlySettings.useGarchVolatilityMonthly {
             currentVol = garchModelToUse.currentStdDev()
         }
         
-        if settings.useExtendedHistoricalSampling, !extendedBlock.isEmpty {
-            var sample = extendedBlock[currentMonth - 1]
+        // Historical sampling if enabled
+        if monthlySettings.useExtendedHistoricalSamplingMonthly, !extendedBlock.isEmpty {
+            let sample = extendedBlock[currentMonth - 1]
             totalReturn += dampenArctanMonthly(sample)
-        } else if settings.useHistoricalSampling {
-            var sample = pickRandomReturn(from: historicalBTCMonthlyReturns, rng: rng)
+        } else if monthlySettings.useHistoricalSamplingMonthly {
+            let sample = pickRandomReturn(from: historicalBTCMonthlyReturns, rng: rng)
             totalReturn += dampenArctanMonthly(sample)
         }
         
-        if settings.useAnnualStep {
-            totalReturn += monthlyGrowth
-        } else if settings.useLognormalGrowth {
+        // Growth adjustments
+        // (If you have a “useAnnualStepMonthly” or “useLognormalGrowthMonthly,” handle them)
+        if monthlySettings.useLognormalGrowthMonthly {
             totalReturn += (cagrDecimal / 12.0)
+        } else {
+            // Example “annual step” approach
+            totalReturn += monthlyGrowth
         }
         
-        if settings.useVolShocks && annualVolatility > 0 {
+        // Volatility shocks if monthlySettings.useVolShocksMonthly == true
+        if monthlySettings.useVolShocksMonthly, annualVolatility > 0 {
             let shockVol = randomNormalWithRNG(mean: 0, standardDeviation: currentVol, rng: rng)
             totalReturn += shockVol
         }
         
-        if settings.useMeanReversion {
+        // Mean reversion if monthlySettings.useMeanReversionMonthly == true
+        if monthlySettings.useMeanReversionMonthly {
             let reversionFactor = 0.1
-            let distance = (settings.meanReversionTarget - totalReturn)
+            let distance = (monthlySettings.meanReversionTargetMonthly - totalReturn)
             totalReturn += reversionFactor * distance
         }
-        if settings.useAutoCorrelation {
-            let phi = settings.autoCorrelationStrength
+        
+        // Auto-correlation if monthlySettings.useAutoCorrelationMonthly == true
+        if monthlySettings.useAutoCorrelationMonthly {
+            let phi = monthlySettings.autoCorrelationStrengthMonthly
             totalReturn = (1 - phi) * totalReturn + phi * lastAutoReturn
         }
         
-        let toggled = applyFactorToggles(
+        // Apply any monthly factor toggles (you need a monthly variant of this):
+        let toggled = applyFactorTogglesMonthly(
             baseReturn: totalReturn,
             stepIndex: currentMonth,
-            settings: settings,
+            monthlySettings: monthlySettings,
             mempoolDataManager: mempoolDataManager,
             rng: rng
         )
         
+        // Update BTC price with the final (log) return
         prevBTCPriceUSD *= exp(toggled)
         lastStepLogReturn = toggled
-        lastAutoReturn = toggled
+        lastAutoReturn    = toggled
         
+        // Guard against negative or near-zero prices
         if prevBTCPriceUSD < 1.0 {
             prevBTCPriceUSD = 1.0
         }
         let newPriceUSD = prevBTCPriceUSD
         let newPriceEUR = newPriceUSD / exchangeRateEURUSD
         
+        // Example deposit logic (replace with actual monthlySimSettings)
         var typedDeposit = 0.0
         if currentMonth == 1 {
-            typedDeposit = settings.startingBalance
+            typedDeposit = monthlySettings.startingBalanceMonthly
         } else if currentMonth <= 12 {
-            typedDeposit = firstYearVal
+            typedDeposit = 100.0  // first-year deposit
         } else {
-            typedDeposit = secondYearVal
+            typedDeposit = 50.0   // subsequent deposit
         }
         
-        let (feeEUR, feeUSD, cEur, cUsd, depositBTC) = computeNetDeposit(
+        // Any function you have to compute deposit in BTC
+        let (feeEUR, feeUSD, cEur, cUsd, depositBTC) = computeNetDepositMonthly(
             typedDeposit: typedDeposit,
-            settings: settings,
+            monthlySettings: monthlySettings,
             btcPriceUSD: newPriceUSD,
             btcPriceEUR: newPriceEUR
         )
         
         let holdingsAfterDeposit = prevBTCHoldings + depositBTC
+        
+        // Example withdrawal logic
         let hypotheticalValueEUR = holdingsAfterDeposit * newPriceEUR
         var withdrawalEUR = 0.0
         let threshold1 = 0.0
@@ -440,12 +460,14 @@ private func runMonthlySimulation(
         let portfolioValueEUR = finalHoldings * newPriceEUR
         let portfolioValueUSD = finalHoldings * newPriceUSD
         
-        if settings.useGarchVolatility {
+        // Update GARCH variance
+        if monthlySettings.useGarchVolatilityMonthly {
             garchModelToUse.updateVariance(lastReturn: lastStepLogReturn)
         }
         
+        // Build up a SimulationData record
         let dataPoint = SimulationData(
-            week: currentMonth,
+            week: currentMonth,  // just reuse .week for indexing
             startingBTC: prevBTCHoldings,
             netBTCHoldings: finalHoldings,
             btcPriceUSD: Decimal(newPriceUSD),
@@ -462,6 +484,7 @@ private func runMonthlySimulation(
         )
         results.append(dataPoint)
         
+        // Prepare for next iteration
         prevBTCHoldings = finalHoldings
     }
     
@@ -471,6 +494,7 @@ private func runMonthlySimulation(
 // MARK: - Single Simulation Entry
 func runOneFullSimulation(
     settings: SimulationSettings,
+    monthlySettings: MonthlySimulationSettings,
     annualCAGR: Double,
     annualVolatility: Double,
     exchangeRateEURUSD: Double,
@@ -484,7 +508,7 @@ func runOneFullSimulation(
     if settings.periodUnit == .months {
         let totalMonths = userWeeks
         return runMonthlySimulation(
-            settings: settings,
+            monthlySettings: monthlySettings,
             annualCAGR: annualCAGR,
             annualVolatility: annualVolatility,
             exchangeRateEURUSD: exchangeRateEURUSD,
@@ -515,6 +539,7 @@ func runOneFullSimulation(
 // MARK: - runMonteCarloSimulationsWithProgress
 func runMonteCarloSimulationsWithProgress(
     settings: SimulationSettings,
+    monthlySettings: MonthlySimulationSettings,
     annualCAGR: Double,
     annualVolatility: Double,
     correlationWithSP500: Double,
@@ -548,6 +573,7 @@ func runMonteCarloSimulationsWithProgress(
         
         let simRun = runOneFullSimulation(
             settings: settings,
+            monthlySettings: monthlySettings,
             annualCAGR: annualCAGR,
             annualVolatility: annualVolatility,
             exchangeRateEURUSD: exchangeRateEURUSD,
@@ -596,6 +622,7 @@ func integrateSimulation() {
     HistoricalDataCache.shared.cacheMonthlyData(original: historicalBTCMonthlyReturns)
     
     let simulationSettings = SimulationSettings()
+    let monthlySettings = MonthlySimulationSettings()
     let annualCAGR = 30.0
     let annualVolatility = 20.0
     let correlationWithSP500 = 0.0
@@ -608,6 +635,7 @@ func integrateSimulation() {
     
     ParallelSimulationRunner.runSimulationsConcurrently(
         settings: simulationSettings,
+        monthlySettings: monthlySettings,
         annualCAGR: annualCAGR,
         annualVolatility: annualVolatility,
         correlationWithSP500: correlationWithSP500,
@@ -629,3 +657,15 @@ func integrateSimulation() {
 
 // Uncomment the line below to run the integrated simulation when appropriate
 // integrateSimulation()
+
+func computeNetDepositMonthly(
+    typedDeposit: Double,
+    monthlySettings: MonthlySimulationSettings,
+    btcPriceUSD: Double,
+    btcPriceEUR: Double
+) -> (Double, Double, Double, Double, Double) {
+    // e.g. same return type (feeEUR, feeUSD, cEur, cUsd, depositBTC)
+    // but references monthly toggles if needed
+    // or just do something simple:
+    return (0.0, 0.0, 0.0, 0.0, typedDeposit / btcPriceUSD)
+}

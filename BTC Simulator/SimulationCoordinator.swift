@@ -49,15 +49,19 @@ class SimulationCoordinator: ObservableObject {
     private var sp500WeeklyReturns: [Double] = []
     private var historicalBTCMonthlyReturns: [Double] = []
     private var sp500MonthlyReturns: [Double] = []
+    
+    private var monthlySimSettings: MonthlySimulationSettings
 
     init(
         chartDataCache: ChartDataCache,
         simSettings: SimulationSettings,
+        monthlySimSettings: MonthlySimulationSettings,
         inputManager: PersistentInputManager,
         simChartSelection: SimChartSelection
     ) {
         self.chartDataCache = chartDataCache
         self.simSettings = simSettings
+        self.monthlySimSettings = monthlySimSettings
         self.inputManager = inputManager
         self.simChartSelection = simChartSelection
     }
@@ -174,6 +178,7 @@ class SimulationCoordinator: ObservableObject {
             // 5) Run the simulations
             let (medianRun, allIterations, stepMedianPrices) = runMonteCarloSimulationsWithProgress(
                 settings: self.simSettings,
+                monthlySettings: self.monthlySimSettings,
                 annualCAGR: userInputCAGR,
                 annualVolatility: userInputVolatility,
                 correlationWithSP500: 0.0,

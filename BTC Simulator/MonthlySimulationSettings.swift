@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import GameplayKit
 
 extension MonthlySimulationSettings {
     
@@ -518,7 +519,7 @@ class MonthlySimulationSettings: ObservableObject {
     func globalSliderChangedMonthly(to newGlobalValue: Double) {
         print("[globalSliderChangedMonthly] Monthly global slider moved to \(newGlobalValue)")
         rawFactorIntensityMonthly = newGlobalValue
-        applyDictionaryFactorsToSimMonthly()
+        // applyDictionaryFactorsToSimMonthly()
         saveToUserDefaultsMonthly()
     }
     
@@ -717,9 +718,22 @@ class MonthlySimulationSettings: ObservableObject {
         // Factor-specific logic for monthly, if any.
     }
     
-    func applyDictionaryFactorsToSimMonthly() {
-        print("[applyDictionaryFactorsToSimMonthly] Applying dictionary factors to monthly simulation")
-        // Update your simulator with monthly factor data, if needed.
+    func applyDictionaryFactorsToSimMonthly(
+        baseReturn: Double,
+        stepIndex: Int,
+        mempoolDataManager: MempoolDataManager,
+        rng: GKRandomSource
+    ) -> Double {
+        print("[applyDictionaryFactorsToSimMonthly] Actually calling applyFactorTogglesMonthly now.")
+
+        let adjusted = applyFactorTogglesMonthly(
+            baseReturn: baseReturn,
+            stepIndex: stepIndex,
+            monthlySettings: self, // self is MonthlySimulationSettings
+            mempoolDataManager: mempoolDataManager,
+            rng: rng
+        )
+        return adjusted
     }
     
     // MARK: - Toggle or restore monthly factors

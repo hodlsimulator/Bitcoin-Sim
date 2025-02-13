@@ -11,6 +11,7 @@ import GameplayKit
 class ParallelSimulationRunner {
     static func runSimulationsConcurrently(
         settings: SimulationSettings,
+        monthlySettings: MonthlySimulationSettings,
         annualCAGR: Double,
         annualVolatility: Double,
         correlationWithSP500: Double,
@@ -45,6 +46,7 @@ class ParallelSimulationRunner {
                 
                 let simRun = runOneFullSimulation(
                     settings: settings,
+                    monthlySettings: monthlySettings,
                     annualCAGR: annualCAGR,
                     annualVolatility: annualVolatility,
                     exchangeRateEURUSD: exchangeRateEURUSD,
