@@ -95,83 +95,111 @@ struct OnboardingView: View {
     }
     
     var body: some View {
+        // 1) Decide how far to shift main content (titles/fields) for steps 0–7 vs. the final step (8)
+        //    - We set it to -30 for steps 0..7 so they move up a bit more
+        //    - On the final step, we bring them down (offset = 0) so there's more space from the bottom
+        let offsetForContent: CGFloat = (currentStep == 8) ? 0 : -30
+
         ZStack {
+            // 2) Background gradient that also dismisses numberPad when you tap away.
+            //    We place the onTapGesture on the gradient so any tap outside the fields
+            //    will call hideKeyboard().
             LinearGradient(
                 gradient: Gradient(colors: [Color.black, Color(white: 0.15), Color.black]),
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
-            
-            ScrollView {
-                VStack(spacing: 20) {
-                    Spacer().frame(height: 40)
-                    
-                    OfficialBitcoinLogo()
-                        .frame(width: 80, height: 80)
-                    
-                    Text(titleForStep(currentStep))
-                        .font(.title)
-                        .foregroundColor(.white)
-                        .padding(.top, 30)
-                    
-                    if !subtitleForStep(currentStep).isEmpty {
-                        Text(subtitleForStep(currentStep))
-                            .foregroundColor(.gray)
-                            .font(.callout)
-                            .padding(.top, 2)
-                    }
-                    
-                    switch currentStep {
-                    case 0:
-                        step0_PeriodFrequency()
-                    case 1:
-                        step1_TotalPeriods()
-                    case 2:
-                        step2_PickCurrency()
-                    case 3:
-                        step3_StartingBalance()
-                    case 4:
-                        step4_AverageCostBasis()
-                    case 5:
-                        step5_BTCPriceInput()
-                    case 6:
-                        step6_Contributions()
-                    case 7:
-                        step7_Withdrawals()
-                    default:
-                        step8_ReviewAndFinish()
-                    }
-                    
-                    Spacer().frame(height: 40)
-                }
-                .frame(maxWidth: .infinity)
-                .background(Color.clear)
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    hideKeyboard()
-                }
+            .onTapGesture {
+                // This dismisses the numberPad
+                hideKeyboard()
             }
+
+            // 3) Main content (titles, text fields, etc.), placed in a VStack.
+            //    We apply .offset(y: offsetForContent) to shift it up or down based on the step.
+            VStack(spacing: 20) {
+                Text(titleForStep(currentStep))
+                    .font(.title)
+                    .foregroundColor(.white)
+                
+                // Optional subtitle
+                if !subtitleForStep(currentStep).isEmpty {
+                    Text(subtitleForStep(currentStep))
+                        .foregroundColor(.gray)
+                        .font(.callout)
+                        // Slight negative top padding to tuck it closer if needed
+                        .padding(.top, -2)
+                }
+                
+                // Render different fields or text based on which step we are on
+                switch currentStep {
+                case 0:
+                    step0_PeriodFrequency()
+                case 1:
+                    step1_TotalPeriods()
+                case 2:
+                    step2_PickCurrency()
+                case 3:
+                    step3_StartingBalance()
+                case 4:
+                    step4_AverageCostBasis()
+                case 5:
+                    step5_BTCPriceInput()
+                case 6:
+                    step6_Contributions()
+                case 7:
+                    step7_Withdrawals()
+                default:
+                    step8_ReviewAndFinish()
+                }
+                
+                // A bit of space below the dynamic content
+                Spacer().frame(height: 20)
+            }
+            .offset(y: offsetForContent) // Moves the main content up (negative) or down
+            .frame(maxWidth: .infinity)
         }
+        // 4) The Bitcoin logo pinned at the top (so it never bobs up/down).
+        //    We set top padding to 67 so it’s aligned with the back button's top padding.
+        .overlay(
+            OfficialBitcoinLogo()
+                .frame(width: 80, height: 80)
+                .padding(.top, 67),  // Adjust up/down if you want the logo higher/lower
+            alignment: .top
+        )
+        // 5) Back button pinned top-left.
+        //    We give it similar .padding(.top, 50) (or 67 if you want exact alignment with the logo),
+        //    extra padding for a bigger tap area, and a high zIndex so it's above other overlays.
         .overlay(
             Group {
                 if currentStep > 0 {
                     Button {
-                        withAnimation { currentStep -= 1 }
+                        // Use a shorter animation to make transitions quicker
+                        withAnimation(.easeOut(duration: 0.15)) {
+                            currentStep -= 1
+                        }
                     } label: {
                         Image(systemName: "chevron.left")
                             .font(.title2)
                             .foregroundColor(.white)
+                            .padding(10)       // Extra padding for a larger tap area
                     }
-                    .padding(.top, 50)
+                    .background(Color.clear)
+                    .contentShape(Rectangle()) // Ensure the whole area is tappable
+                    .padding(.top, 50)         // Move down from the very top
                     .padding(.leading, 20)
+                    .zIndex(10)               // Ensure it's above any other overlay
                 }
             },
             alignment: .topLeading
         )
+        // 6) Next/Finish button pinned at the bottom with appropriate bottom padding.
+        //    We also shorten the animation here so transitions are quicker.
         .overlay(
             Button(currentStep == 8 ? "Finish" : "Next") {
-                onNextTapped()
+                withAnimation(.easeOut(duration: 0.15)) {
+                    onNextTapped()
+                }
             }
             .foregroundColor(.white)
             .padding(.horizontal, 20)
@@ -179,20 +207,22 @@ struct OnboardingView: View {
             .background(Color.orange)
             .cornerRadius(6)
             .shadow(color: .black.opacity(0.3), radius: 4, x: 2, y: 2)
-            .padding(.bottom, bottomPaddingForStep),
+            .padding(.bottom, bottomPaddingForStep)
+            .zIndex(5),
             alignment: .bottom
         )
+        // 7) Keep the keyboard area safe, so it doesn't hide your fields
         .ignoresSafeArea(.keyboard, edges: .bottom)
+        // 8) If user changes from weekly to monthly, or vice versa, update totalPeriods
         .onChange(of: chosenPeriodUnit, initial: false) { _, newVal in
-            // If user picks monthly => totalPeriods = 240, else 1040
             if newVal == .months {
                 totalPeriods = 240
             } else {
                 totalPeriods = 1040
             }
         }
+        // 9) On .task, fetch BTC price and possibly update cost basis
         .task {
-            // Attempt to fetch BTC price at start
             await fetchBTCPriceFromAPI()
             updateAverageCostBasisIfNeeded()
         }
@@ -521,19 +551,14 @@ struct OnboardingView: View {
             monthlySimSettings.averageCostBasisMonthly = averageCostBasis
             monthlySimSettings.currencyPreferenceMonthly = currencyPreference
 
-            // If the user did NOT pick .both, ensure monthlySimSettings.contributionCurrencyWhenBothMonthly
-            // doesn't remain stuck on EUR (or vice versa):
             if currencyPreference != .both {
-                // Force monthly "both" sub-setting to match the main currency
                 monthlySimSettings.contributionCurrencyWhenBothMonthly = currencyPreference
             }
 
-            // If user chose both currencies, store the "starting balance" currency
             if currencyPreference == .both {
                 monthlySimSettings.startingBalanceCurrencyWhenBothMonthly = startingBalanceCurrencyForBoth
             }
 
-            // NEW: set these so monthly has contributions as well
             inputManager.firstYearContribution  = String(contributionPerStep)
             inputManager.subsequentContribution = String(contributionPerStep)
             inputManager.threshold1      = threshold1
@@ -541,11 +566,9 @@ struct OnboardingView: View {
             inputManager.threshold2      = threshold2
             inputManager.withdrawAmount2 = withdraw2
 
-            // Persist monthly settings
             monthlySimSettings.saveToUserDefaultsMonthly()
             print("Just saved to user defaults, verifying =>", monthlySimSettings.startingBalanceMonthly)
 
-            // Copy monthly values into your main sim settings
             simSettings.periodUnit = .months
             simSettings.userPeriods = totalPeriods
             simSettings.initialBTCPriceUSD = finalBTCPrice
@@ -556,7 +579,6 @@ struct OnboardingView: View {
             coordinator.useMonthly = true
 
         } else {
-            // Weekly branch remains the same
             weeklySimSettings.periodUnit = .weeks
             weeklySimSettings.userPeriods = totalPeriods
             weeklySimSettings.initialBTCPriceUSD = finalBTCPrice
