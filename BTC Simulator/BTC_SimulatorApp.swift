@@ -138,6 +138,17 @@ struct BTCMonteCarloApp: App {
                 }
             }
             .onAppear {
+                // (1) Load monthly settings from UserDefaults each time the app launches
+                monthlySimSettings.loadFromUserDefaultsMonthly()
+
+                // (2) If monthly mode was chosen, let the coordinator know
+                if monthlySimSettings.periodUnitMonthly == .months {
+                    coordinator.useMonthly = true
+                } else {
+                    coordinator.useMonthly = false
+                }
+
+                // Keep the existing code unchanged
                 weeklySimSettings.isOnboarding = !didFinishOnboarding
 
                 // Load your historical data here.

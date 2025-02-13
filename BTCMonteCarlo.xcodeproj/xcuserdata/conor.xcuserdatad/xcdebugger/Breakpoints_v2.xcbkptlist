@@ -110,8 +110,8 @@
             filePath = "BTC Simulator/MonthlySimulationSettings.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "465"
-            endingLineNumber = "465"
+            startingLineNumber = "470"
+            endingLineNumber = "470"
             landmarkName = "userDidDragFactorSliderMonthly(_:to:)"
             landmarkType = "7">
          </BreakpointContent>
@@ -232,7 +232,7 @@
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
             uuid = "E228B150-1A9C-4CAC-BF25-2AD7C08BA1B0"
-            shouldBeEnabled = "Yes"
+            shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "BTC Simulator/MonthlySimulationSettings.swift"
@@ -322,6 +322,22 @@
             endingLineNumber = "66"
             landmarkName = "factorsMonthly"
             landmarkType = "24">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "AAA63BC7-4D4C-4F81-8EFC-1526605E5313"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "BTC Simulator/MonteCarloSimulator.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "284"
+            endingLineNumber = "284"
+            landmarkName = "runMonthlySimulation(monthlySettings:annualCAGR:annualVolatility:exchangeRateEURUSD:totalMonths:initialBTCPriceUSD:iterationIndex:mempoolDataManager:rng:garchModel:)"
+            landmarkType = "9">
          </BreakpointContent>
       </BreakpointProxy>
    </Breakpoints>

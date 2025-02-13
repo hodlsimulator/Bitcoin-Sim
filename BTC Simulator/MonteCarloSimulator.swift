@@ -294,6 +294,7 @@ private func runMonthlySimulation(
     garchModel: GarchModel? = nil
 ) -> [SimulationData] {
     var results = [SimulationData]()
+    print(">>> monthlySettings.startingBalanceMonthly = \(monthlySettings.startingBalanceMonthly)")
     var prevBTCPriceUSD = initialBTCPriceUSD
     var prevBTCHoldings = 0.0
     

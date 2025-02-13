@@ -424,6 +424,11 @@ class MonthlySimulationSettings: ObservableObject {
         // Store periodUnitMonthly as a raw string
         defaults.set(periodUnitMonthly.rawValue, forKey: periodUnitKeyMonthly)
         
+        defaults.set(userPeriodsMonthly,             forKey: "savedUserPeriodsMonthly")
+        defaults.set(initialBTCPriceUSDMonthly,      forKey: "savedInitialBTCPriceUSDMonthly")
+        defaults.set(startingBalanceMonthly,         forKey: "savedStartingBalanceMonthly")
+        defaults.set(averageCostBasisMonthly,        forKey: "savedAverageCostBasisMonthly")
+        
         if let encodedFactors = try? JSONEncoder().encode(factorsMonthly) {
             defaults.set(encodedFactors, forKey: "factorStatesMonthly")
         }

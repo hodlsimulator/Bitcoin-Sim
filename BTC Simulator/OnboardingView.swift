@@ -517,6 +517,7 @@ struct OnboardingView: View {
             monthlySimSettings.userPeriodsMonthly = totalPeriods
             monthlySimSettings.initialBTCPriceUSDMonthly = finalBTCPrice
             monthlySimSettings.startingBalanceMonthly = startingBalanceDouble
+            print("Onboarding set monthlySimSettings.startingBalanceMonthly to", monthlySimSettings.startingBalanceMonthly)
             monthlySimSettings.averageCostBasisMonthly = averageCostBasis
             monthlySimSettings.currencyPreferenceMonthly = currencyPreference
 
@@ -542,6 +543,7 @@ struct OnboardingView: View {
 
             // Persist monthly settings
             monthlySimSettings.saveToUserDefaultsMonthly()
+            print("Just saved to user defaults, verifying =>", monthlySimSettings.startingBalanceMonthly)
 
             // Copy monthly values into your main sim settings
             simSettings.periodUnit = .months
