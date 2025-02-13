@@ -17,11 +17,8 @@ struct BTCMonteCarloApp: App {
     @Environment(\.scenePhase) private var scenePhase
     
     @AppStorage("hasOnboarded") private var didFinishOnboarding = false
-    // Keep the @AppStorage for reading/writing mode elsewhere,
-    // but do NOT reference it in init(). We’ll manually read from UserDefaults below.
     @AppStorage("isMonthlyMode") private var isMonthlyMode = false
 
-    // Just declare these; don’t initialise them yet.
     @StateObject private var appViewModel: AppViewModel
     @StateObject private var inputManager: PersistentInputManager
     @StateObject private var weeklySimSettings: SimulationSettings
@@ -30,37 +27,11 @@ struct BTCMonteCarloApp: App {
     @StateObject private var simChartSelection: SimChartSelection
     @StateObject private var coordinator: SimulationCoordinator
 
-    // MARK: - Init
     init() {
-        // 1) Read the mode from UserDefaults (instead of referencing self.isMonthlyMode).
-        // NOTE: We no longer use this to decide loadDefaults: false vs true.
-        let _ = UserDefaults.standard.bool(forKey: "isMonthlyMode")
-
-        // 2) Create local objects.
-        let localAppViewModel       = AppViewModel()
-        let localInputManager       = PersistentInputManager()
-        let localWeeklySimSettings  = SimulationSettings(loadDefaults: true)
-
-        // Always init monthlySimSettings with loadDefaults: true
-        let localMonthlySimSettings = MonthlySimulationSettings(loadDefaults: true)
-
-        let localChartDataCache     = ChartDataCache()
-        let localSimChartSelection  = SimChartSelection()
-
-        // 3) Start Sentry (optional).
-        SentrySDK.start { options in
-            options.dsn = "https://3ca36373246f91c44a0733a5d9489f52@o4508788421623808.ingest.de.sentry.io/4508788424376400"
-            options.attachViewHierarchy = false
-            options.enableMetricKit = true
-            options.enableTimeToFullDisplayTracing = true
-            options.swiftAsyncStacktraces = true
-            options.enableAppLaunchProfiling = true
-        }
-
-        // 4) Register any default toggles (both weekly and monthly).
+        // 1) Register toggles first:
         let defaultToggles: [String: Any] = [
             // Weekly toggles
-            "useLockRandomSeed": false,
+            "lockedRandomSeed": false,
             "useLognormalGrowth": true,
             "useHistoricalSampling": true,
             "useVolShocks": true,
@@ -69,7 +40,11 @@ struct BTCMonteCarloApp: App {
             "useAutoCorrelation": true,
             "autoCorrelationStrength": 0.05,
             "meanReversionTarget": 0.03,
-
+            "useMeanReversion": true,
+            "useAnnualStep": false,
+            "useRandomSeed": true,
+            "seedValue": 0,
+            
             // Monthly toggles
             "useLognormalGrowthMonthly": true,
             "lockedRandomSeedMonthly": false,
@@ -87,7 +62,26 @@ struct BTCMonteCarloApp: App {
         ]
         UserDefaults.standard.register(defaults: defaultToggles)
 
-        // 5) Create the coordinator with local objects.
+        // 2) Create local objects
+        let localAppViewModel       = AppViewModel()
+        let localInputManager       = PersistentInputManager()
+        let localWeeklySimSettings  = SimulationSettings(loadDefaults: true)
+        let localMonthlySimSettings = MonthlySimulationSettings(loadDefaults: true)
+        
+        let localChartDataCache     = ChartDataCache()
+        let localSimChartSelection  = SimChartSelection()
+
+        // 3) Start Sentry (optional).
+        SentrySDK.start { options in
+            options.dsn = "https://examplePublicKey.ingest.sentry.io/exampleProjectID"
+            options.attachViewHierarchy = false
+            options.enableMetricKit = true
+            options.enableTimeToFullDisplayTracing = true
+            options.swiftAsyncStacktraces = true
+            options.enableAppLaunchProfiling = true
+        }
+        
+        // 4) Create coordinator
         let localCoordinator = SimulationCoordinator(
             chartDataCache: localChartDataCache,
             simSettings: localWeeklySimSettings,
@@ -95,8 +89,8 @@ struct BTCMonteCarloApp: App {
             inputManager: localInputManager,
             simChartSelection: localSimChartSelection
         )
-
-        // 6) Assign locals to @StateObject wrappers — last step in init().
+        
+        // 5) Assign to @StateObject
         _appViewModel        = StateObject(wrappedValue: localAppViewModel)
         _inputManager        = StateObject(wrappedValue: localInputManager)
         _weeklySimSettings   = StateObject(wrappedValue: localWeeklySimSettings)
@@ -106,12 +100,11 @@ struct BTCMonteCarloApp: App {
         _coordinator         = StateObject(wrappedValue: localCoordinator)
     }
 
-    // MARK: - body
     var body: some Scene {
         WindowGroup {
             ZStack {
                 Color.black.ignoresSafeArea()
-
+                
                 GeometryReader { geo in
                     Color.clear
                         .onAppear {
@@ -122,7 +115,6 @@ struct BTCMonteCarloApp: App {
                         }
                 }
 
-                // Switch between main ContentView and Onboarding
                 if didFinishOnboarding {
                     NavigationStack {
                         ContentView()
@@ -150,23 +142,43 @@ struct BTCMonteCarloApp: App {
                 }
             }
             .onAppear {
-                // (1) Load monthly settings from UserDefaults each time the app launches
-                monthlySimSettings.loadFromUserDefaultsMonthly()
+                
+                // (A) Call them on *every* launch if you like:
+                // weeklySimSettings.loadFromUserDefaults()
+                // monthlySimSettings.loadFromUserDefaultsMonthly()
 
-                // (2) If monthly mode was chosen, let the coordinator know
+                // (B) Check if it's a fresh install (no "hasLaunchedBefore" set)
+                let hasLaunchedBefore = UserDefaults.standard.bool(forKey: "hasLaunchedBefore")
+                if !hasLaunchedBefore {
+                    // This is the very first time the app runs
+                    print("🚀 First Launch detected — calling restoreDefaults() for weekly and monthly.")
+                    
+                    // If you only want to restore weekly by default:
+                    weeklySimSettings.restoreDefaults()
+                    weeklySimSettings.saveToUserDefaults()
+                    
+                    // If you also want monthly defaults set (in case user chooses monthly later):
+                    monthlySimSettings.restoreDefaultsMonthly(whenIn: .months)
+                    monthlySimSettings.saveToUserDefaultsMonthly()
+                    
+                    // Mark that we've now done first-launch setup
+                    UserDefaults.standard.set(true, forKey: "hasLaunchedBefore")
+                }
+                
+                // Decide monthly vs weekly
+                monthlySimSettings.loadFromUserDefaultsMonthly()
                 if monthlySimSettings.periodUnitMonthly == .months {
                     coordinator.useMonthly = true
                 } else {
                     coordinator.useMonthly = false
                 }
-
-                // Keep the existing code unchanged
+                
                 weeklySimSettings.isOnboarding = !didFinishOnboarding
-
-                // Load your historical data here.
+                
+                // Load historical data etc.
                 historicalBTCWeeklyReturns = loadAndAlignWeeklyData()
                 extendedWeeklyReturns      = historicalBTCWeeklyReturns
-
+                
                 historicalBTCMonthlyReturns = loadAndAlignMonthlyData()
                 extendedMonthlyReturns      = historicalBTCMonthlyReturns
             }
