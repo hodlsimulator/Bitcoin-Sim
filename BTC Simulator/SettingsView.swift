@@ -255,25 +255,32 @@ struct SettingsView: View {
     private func tooltipOverlay(_ allItems: [TooltipItem]) -> some View {
         GeometryReader { proxy in
             if let item = allItems.last {
+                // Smaller bubble to fit closer
                 let bubbleWidth: CGFloat = 240
-                let bubbleHeight: CGFloat = 220
-                let offset: CGFloat = 8
-                let anchorPoint = proxy[item.anchor]
+                let bubbleHeight: CGFloat = 140
+                let offset: CGFloat = 4
                 
+                let anchorPoint = proxy[item.anchor]
                 let anchorX = anchorPoint.x
                 let anchorY = anchorPoint.y
+                
+                // Decide arrow direction
                 let spaceBelow = proxy.size.height - anchorY
                 let arrowDirection: ArrowDirection = (spaceBelow > bubbleHeight + 40) ? .up : .down
                 
+                // Horizontal position
                 let proposedX = anchorX - (bubbleWidth / 2)
                 let clampedX = max(10, min(proposedX, proxy.size.width - bubbleWidth - 10))
                 
+                // Vertical position (loosen clamp so it can get closer to the anchor)
                 let proposedY = (arrowDirection == .up)
                     ? (anchorY + offset)
                     : (anchorY - offset - bubbleHeight)
-                let clampedY = max(10, min(proposedY, proxy.size.height - bubbleHeight - 10))
+                // e.g. allow partial off-screen by using -50 instead of 10, if you like
+                let clampedY = max(0, min(proposedY, proxy.size.height - bubbleHeight))
                 
                 ZStack {
+                    // Dark overlay blocking scroll behind
                     Color.black.opacity(0.3)
                         .ignoresSafeArea()
                         .onTapGesture {
@@ -282,6 +289,7 @@ struct SettingsView: View {
                             }
                         }
                     
+                    // Tooltip Bubble
                     TooltipBubble(text: item.description, arrowDirection: arrowDirection)
                         .fixedSize(horizontal: false, vertical: true)
                         .frame(width: bubbleWidth)
