@@ -77,6 +77,14 @@ extension SimulationSettings {
                 factor.frozenValue = nil
                 factor.wasChartForced = false
             }
+            
+            if chartExtremeBearish && factor.currentValue > factor.minValue {
+                chartExtremeBearish = false
+            }
+            if chartExtremeBullish && factor.currentValue < factor.maxValue {
+                chartExtremeBullish = false
+            }
+            
             factor.isEnabled = true
             factor.isLocked = false
             lockedFactors.remove(factorName)
@@ -89,7 +97,44 @@ extension SimulationSettings {
         
         factors[factorName] = factor
         
-        // Recalculate tilt bar to apply sign-flip logic
+        // Mark the tilt bar as manually overridden
+        overrodeTiltManually = true
+        
+        // If NOT toggling all factors, shift the global slider like a single slider-drag
+        if !userIsActuallyTogglingAll {
+            mimicSliderDrag(for: factorName)
+        }
+        
+        applyDictionaryFactorsToSim()
+    }
+
+    private func mimicSliderDrag(for factorName: String) {
+        guard var factor = factors[factorName] else { return }
+        
+        // 1) Capture old offset
+        let oldOffset = factor.internalOffset
+        
+        // 2) Recompute offset from currentValue
+        let base = globalBaseline(for: factor)
+        let range = factor.maxValue - factor.minValue
+        let clampedVal = max(factor.minValue, min(factor.currentValue, factor.maxValue))
+        factor.currentValue = clampedVal
+        let newOffset = (clampedVal - base) / range
+        factor.internalOffset = newOffset
+        
+        factors[factorName] = factor
+
+        // 3) Shift global slider by the offset delta
+        let deltaOffset = newOffset - oldOffset
+        let activeCount = factors.values.filter { $0.isEnabled && !$0.isLocked }.count
+        if activeCount > 0 {
+            let shift = deltaOffset / Double(activeCount)
+            ignoreSync = true
+            rawFactorIntensity = min(max(rawFactorIntensity + shift, 0.0), 1.0)
+            ignoreSync = false
+        }
+
+        // 4) Recalc tilt
         recalcTiltBarValue(
             bullishKeys: [
                 "Halving", "InstitutionalDemand", "CountryAdoption", "RegulatoryClarity",
@@ -102,8 +147,6 @@ extension SimulationSettings {
                 "Recession"
             ]
         )
-        // Minimal change: re-sync the simulation factor properties:
-        applyDictionaryFactorsToSim()
     }
 
     // MARK: - Toggle All Factors
