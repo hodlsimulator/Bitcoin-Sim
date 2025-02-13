@@ -80,30 +80,30 @@ struct SettingsView: View {
             
             // 4) Restore defaults (now calls monthlySimSettings too)
             Section {
-                    Button(action: {
-                        print("simSettings.periodUnit = \(simSettings.periodUnit)")
-                        if simSettings.periodUnit == .weeks {
-                            print("Restoring weekly defaults")
-                            simSettings.restoreDefaults()
-                            simSettings.saveToUserDefaults()
-                            simSettings.loadFromUserDefaults()  // Force re‑loading into memory
-                        } else if simSettings.periodUnit == .months {
-                            print("Restoring monthly defaults")
-                            monthlySimSettings.restoreDefaultsMonthly(whenIn: simSettings.periodUnit)
-                            monthlySimSettings.saveToUserDefaultsMonthly()
-                            monthlySimSettings.loadFromUserDefaultsMonthly()  // Likewise for monthly
-                        }
-                    }) {
-                        HStack {
-                            Text("Restore Defaults")
-                                .foregroundColor(.red)
-                            Spacer()
-                        }
-                        .contentShape(Rectangle())
+                Button(action: {
+                    print("simSettings.periodUnit = \(simSettings.periodUnit)")
+                    if simSettings.periodUnit == .weeks {
+                        print("Restoring weekly defaults")
+                        simSettings.restoreDefaults()
+                        simSettings.saveToUserDefaults()
+                        simSettings.loadFromUserDefaults()  // Force re‑loading into memory
+                    } else if simSettings.periodUnit == .months {
+                        print("Restoring monthly defaults")
+                        monthlySimSettings.restoreDefaultsMonthly(whenIn: simSettings.periodUnit)
+                        monthlySimSettings.saveToUserDefaultsMonthly()
+                        monthlySimSettings.loadFromUserDefaultsMonthly()  // Likewise for monthly
                     }
-                    .buttonStyle(.plain)
+                }) {
+                    HStack {
+                        Text("Restore Defaults")
+                            .foregroundColor(.red)
+                        Spacer()
+                    }
+                    .contentShape(Rectangle())
                 }
-                .listRowBackground(Color(white: 0.15))
+                .buttonStyle(.plain)
+            }
+            .listRowBackground(Color(white: 0.15))
             
             // 5) Bullish factors
             BullishFactorsSection(
@@ -113,10 +113,17 @@ struct SettingsView: View {
                 },
                 onFactorChange: {
                     // Recompute the tilt bar whenever a bullish factor changes
-                    simSettings.recalcTiltBarValue(
-                        bullishKeys: bullishKeys,
-                        bearishKeys: bearishKeys
-                    )
+                    if simSettings.periodUnit == .months {
+                        monthlySimSettings.recalcTiltBarValueMonthly(
+                            bullishKeys: bullishKeys,
+                            bearishKeys: bearishKeys
+                        )
+                    } else {
+                        simSettings.recalcTiltBarValue(
+                            bullishKeys: bullishKeys,
+                            bearishKeys: bearishKeys
+                        )
+                    }
                 }
             )
             .environmentObject(simSettings)
@@ -129,10 +136,17 @@ struct SettingsView: View {
                 },
                 onFactorChange: {
                     // Recompute the tilt bar whenever a bearish factor changes
-                    simSettings.recalcTiltBarValue(
-                        bullishKeys: bullishKeys,
-                        bearishKeys: bearishKeys
-                    )
+                    if simSettings.periodUnit == .months {
+                        monthlySimSettings.recalcTiltBarValueMonthly(
+                            bullishKeys: bullishKeys,
+                            bearishKeys: bearishKeys
+                        )
+                    } else {
+                        simSettings.recalcTiltBarValue(
+                            bullishKeys: bullishKeys,
+                            bearishKeys: bearishKeys
+                        )
+                    }
                 }
             )
             .environmentObject(simSettings)
@@ -239,6 +253,7 @@ struct SettingsView: View {
                 .foregroundColor(.white)
         }
     }
+
     // MARK: - Tilt Computation
     var displayedTilt: Double {
         if monthlySimSettings.periodUnitMonthly == .months {
