@@ -17,12 +17,11 @@ func applyFactorTogglesMonthly(
     rng: GKRandomSource
 ) -> Double {
     
-    print("[applyFactorTogglesMonthly] Called at stepIndex=\(stepIndex), baseReturn=\(baseReturn)")
     var adjustedReturn = baseReturn
     
-    // Helper function to log each factor:
+    // Helper function to log each factor (now empty):
     func logFactor(_ name: String, _ factor: FactorState) {
-        print("[applyFactorTogglesMonthly] \(name) => enabled=\(factor.isEnabled), currentValue=\(factor.currentValue)")
+        // (Removed print statements)
     }
     
     // ─────────────────────────
@@ -43,7 +42,6 @@ func applyFactorTogglesMonthly(
                 let rawBump = (userBump + historicalBump) * CalibrationManager.shared.halvingMultiplierMonthly
                 let dampenedBump = rawBump * (atan(rawBump) / (Double.pi / 2))
                 adjustedReturn += dampenedBump
-                print("   [Halving Triggered] roll=\(roll), finalBump=\(dampenedBump), newReturn=\(adjustedReturn)")
             }
         }
     }
@@ -53,7 +51,6 @@ func applyFactorTogglesMonthly(
         logFactor("InstitutionalDemand", instDemand)
         if instDemand.isEnabled {
             adjustedReturn += instDemand.currentValue
-            print("   [InstitutionalDemand] Added \(instDemand.currentValue), newReturn=\(adjustedReturn)")
         }
     }
     
@@ -62,7 +59,6 @@ func applyFactorTogglesMonthly(
         logFactor("CountryAdoption", countryAdoption)
         if countryAdoption.isEnabled {
             adjustedReturn += countryAdoption.currentValue
-            print("   [CountryAdoption] Added \(countryAdoption.currentValue), newReturn=\(adjustedReturn)")
         }
     }
     
@@ -71,7 +67,6 @@ func applyFactorTogglesMonthly(
         logFactor("RegulatoryClarity", regClarity)
         if regClarity.isEnabled {
             adjustedReturn += regClarity.currentValue
-            print("   [RegulatoryClarity] Added \(regClarity.currentValue), newReturn=\(adjustedReturn)")
         }
     }
     
@@ -80,7 +75,6 @@ func applyFactorTogglesMonthly(
         logFactor("EtfApproval", etfApproval)
         if etfApproval.isEnabled {
             adjustedReturn += etfApproval.currentValue
-            print("   [EtfApproval] Added \(etfApproval.currentValue), newReturn=\(adjustedReturn)")
         }
     }
     
@@ -89,7 +83,6 @@ func applyFactorTogglesMonthly(
         logFactor("TechBreakthrough", techBreakthrough)
         if techBreakthrough.isEnabled {
             adjustedReturn += techBreakthrough.currentValue
-            print("   [TechBreakthrough] Added \(techBreakthrough.currentValue), newReturn=\(adjustedReturn)")
         }
     }
     
@@ -98,7 +91,6 @@ func applyFactorTogglesMonthly(
         logFactor("ScarcityEvents", scarcity)
         if scarcity.isEnabled {
             adjustedReturn += scarcity.currentValue
-            print("   [ScarcityEvents] Added \(scarcity.currentValue), newReturn=\(adjustedReturn)")
         }
     }
     
@@ -107,7 +99,6 @@ func applyFactorTogglesMonthly(
         logFactor("GlobalMacroHedge", macro)
         if macro.isEnabled {
             adjustedReturn += macro.currentValue
-            print("   [GlobalMacroHedge] Added \(macro.currentValue), newReturn=\(adjustedReturn)")
         }
     }
     
@@ -116,7 +107,6 @@ func applyFactorTogglesMonthly(
         logFactor("StablecoinShift", stablecoin)
         if stablecoin.isEnabled {
             adjustedReturn += stablecoin.currentValue
-            print("   [StablecoinShift] Added \(stablecoin.currentValue), newReturn=\(adjustedReturn)")
         }
     }
     
@@ -125,7 +115,6 @@ func applyFactorTogglesMonthly(
         logFactor("DemographicAdoption", demo)
         if demo.isEnabled {
             adjustedReturn += demo.currentValue
-            print("   [DemographicAdoption] Added \(demo.currentValue), newReturn=\(adjustedReturn)")
         }
     }
     
@@ -134,7 +123,6 @@ func applyFactorTogglesMonthly(
         logFactor("AltcoinFlight", altcoin)
         if altcoin.isEnabled {
             adjustedReturn += altcoin.currentValue
-            print("   [AltcoinFlight] Added \(altcoin.currentValue), newReturn=\(adjustedReturn)")
         }
     }
     
@@ -143,7 +131,6 @@ func applyFactorTogglesMonthly(
         logFactor("AdoptionFactor", adoption)
         if adoption.isEnabled {
             adjustedReturn += adoption.currentValue
-            print("   [AdoptionFactor] Added \(adoption.currentValue), newReturn=\(adjustedReturn)")
         }
     }
     
@@ -156,7 +143,6 @@ func applyFactorTogglesMonthly(
         logFactor("RegClampdown", regClampdown)
         if regClampdown.isEnabled {
             adjustedReturn += regClampdown.currentValue
-            print("   [RegClampdown] Added \(regClampdown.currentValue), newReturn=\(adjustedReturn)")
         }
     }
     
@@ -165,7 +151,6 @@ func applyFactorTogglesMonthly(
         logFactor("CompetitorCoin", competitor)
         if competitor.isEnabled {
             adjustedReturn += competitor.currentValue
-            print("   [CompetitorCoin] Added \(competitor.currentValue), newReturn=\(adjustedReturn)")
         }
     }
     
@@ -174,7 +159,6 @@ func applyFactorTogglesMonthly(
         logFactor("SecurityBreach", breach)
         if breach.isEnabled {
             adjustedReturn += breach.currentValue
-            print("   [SecurityBreach] Added \(breach.currentValue), newReturn=\(adjustedReturn)")
         }
     }
     
@@ -183,7 +167,6 @@ func applyFactorTogglesMonthly(
         logFactor("BubblePop", bubble)
         if bubble.isEnabled {
             adjustedReturn += bubble.currentValue
-            print("   [BubblePop] Added \(bubble.currentValue), newReturn=\(adjustedReturn)")
         }
     }
     
@@ -192,7 +175,6 @@ func applyFactorTogglesMonthly(
         logFactor("StablecoinMeltdown", meltdown)
         if meltdown.isEnabled {
             adjustedReturn += meltdown.currentValue
-            print("   [StablecoinMeltdown] Added \(meltdown.currentValue), newReturn=\(adjustedReturn)")
         }
     }
     
@@ -208,7 +190,6 @@ func applyFactorTogglesMonthly(
                 let rawDrop = blackSwan.currentValue * CalibrationManager.shared.blackSwanMultiplierMonthly
                 let dampenedDrop = rawDrop * (atan(abs(rawDrop)) / (Double.pi / 2))
                 adjustedReturn += dampenedDrop
-                print("   [BlackSwan Triggered] roll=\(roll), finalDrop=\(dampenedDrop), newReturn=\(adjustedReturn)")
             }
         }
     }
@@ -218,7 +199,6 @@ func applyFactorTogglesMonthly(
         logFactor("BearMarket", bearMarket)
         if bearMarket.isEnabled {
             adjustedReturn += bearMarket.currentValue
-            print("   [BearMarket] Added \(bearMarket.currentValue), newReturn=\(adjustedReturn)")
         }
     }
     
@@ -227,7 +207,6 @@ func applyFactorTogglesMonthly(
         logFactor("MaturingMarket", maturing)
         if maturing.isEnabled {
             adjustedReturn += maturing.currentValue
-            print("   [MaturingMarket] Added \(maturing.currentValue), newReturn=\(adjustedReturn)")
         }
     }
     
@@ -236,10 +215,9 @@ func applyFactorTogglesMonthly(
         logFactor("Recession", recession)
         if recession.isEnabled {
             adjustedReturn += recession.currentValue
-            print("   [Recession] Added \(recession.currentValue), newReturn=\(adjustedReturn)")
         }
     }
     
-    print("[applyFactorTogglesMonthly] Finished. Final adjustedReturn = \(adjustedReturn)")
     return adjustedReturn
 }
+    

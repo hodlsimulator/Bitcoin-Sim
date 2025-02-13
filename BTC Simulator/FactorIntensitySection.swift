@@ -212,7 +212,7 @@ struct FactorIntensitySection: View {
                                 bullishKeys: bullishKeys,
                                 bearishKeys: bearishKeys
                             )
-                            // monthlySimSettings.applyDictionaryFactorsToSimMonthly()
+                            //  monthlySimSettings.applyDictionaryFactorsToSimMonthly()
 
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                                 isManualOverride = false
