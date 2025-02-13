@@ -15,7 +15,7 @@ struct SettingsView: View {
     @EnvironmentObject var coordinator: SimulationCoordinator
     
     @AppStorage("hasOnboarded") var didFinishOnboarding = false
-    @AppStorage("showAdvancedSettings") private var showAdvancedSettings: Bool = false
+    @State private var showAdvancedSettings = false
     
     // MARK: - Tilt & Slider
     @State var oldFactorIntensity: Double = 0.5
