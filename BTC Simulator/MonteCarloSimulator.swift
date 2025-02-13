@@ -664,8 +664,41 @@ func computeNetDepositMonthly(
     btcPriceUSD: Double,
     btcPriceEUR: Double
 ) -> (Double, Double, Double, Double, Double) {
-    // e.g. same return type (feeEUR, feeUSD, cEur, cUsd, depositBTC)
-    // but references monthly toggles if needed
-    // or just do something simple:
-    return (0.0, 0.0, 0.0, 0.0, typedDeposit / btcPriceUSD)
+    // feeEUR, feeUSD, cEur, cUsd, depositBTC
+    var feeEUR = 0.0
+    var feeUSD = 0.0
+    var cEur   = 0.0
+    var cUsd   = 0.0
+    var depositBTC = 0.0
+    
+    switch monthlySettings.currencyPreferenceMonthly {
+    case .eur:
+        // If the user’s main monthly currency is EUR
+        cEur = typedDeposit
+        depositBTC = typedDeposit / btcPriceEUR
+        
+    case .usd:
+        // If the user’s main monthly currency is USD
+        cUsd = typedDeposit
+        depositBTC = typedDeposit / btcPriceUSD
+        
+    case .both:
+        // The user picks which currency they contribute in if “Both” is selected
+        switch monthlySettings.contributionCurrencyWhenBothMonthly {
+        case .eur:
+            cEur = typedDeposit
+            depositBTC = typedDeposit / btcPriceEUR
+            
+        case .usd:
+            cUsd = typedDeposit
+            depositBTC = typedDeposit / btcPriceUSD
+            
+        case .both:
+            // If “both” can’t happen again inside monthly, default to USD or your preferred fallback
+            cUsd = typedDeposit
+            depositBTC = typedDeposit / btcPriceUSD
+        }
+    }
+    
+    return (feeEUR, feeUSD, cEur, cUsd, depositBTC)
 }

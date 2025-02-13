@@ -53,8 +53,6 @@ struct OnboardingView: View {
     @State private var userBTCPrice: String = ""
     
     // Step 6: Single contribution
-    // We won’t store currency in a local var if user picks .both,
-    // because we bind directly to the correct environment object below.
     @State private var contributionPerStep: Double = 100.0
     
     // Step 7: Withdrawals
@@ -280,7 +278,6 @@ struct OnboardingView: View {
                 .frame(width: 200)
                 .multilineTextAlignment(.center)
                 .onChange(of: startingBalanceText, initial: false) { _, newValue in
-                    // re‐format using currencyFormatter
                     let digitsOnly = newValue.replacingOccurrences(of: "[^0-9.]", with: "", options: .regularExpression)
                     if let doubleVal = Double(digitsOnly) {
                         if let formatted = currencyFormatter.string(from: NSNumber(value: doubleVal)) {
@@ -360,8 +357,6 @@ struct OnboardingView: View {
                 Text("Are these contributions in USD or EUR?")
                     .foregroundColor(.white)
                 
-                // If user selected monthly, bind to the monthlySimSettings property.
-                // Otherwise, bind to the weeklySimSettings property.
                 if chosenPeriodUnit == .months {
                     Picker("ContribCurrency",
                            selection: $monthlySimSettings.contributionCurrencyWhenBothMonthly) {
@@ -524,18 +519,42 @@ struct OnboardingView: View {
             monthlySimSettings.startingBalanceMonthly = startingBalanceDouble
             monthlySimSettings.averageCostBasisMonthly = averageCostBasis
             monthlySimSettings.currencyPreferenceMonthly = currencyPreference
+
+            // If the user did NOT pick .both, ensure monthlySimSettings.contributionCurrencyWhenBothMonthly
+            // doesn't remain stuck on EUR (or vice versa):
+            if currencyPreference != .both {
+                // Force monthly "both" sub-setting to match the main currency
+                monthlySimSettings.contributionCurrencyWhenBothMonthly = currencyPreference
+            }
+
+            // If user chose both currencies, store the "starting balance" currency
+            if currencyPreference == .both {
+                monthlySimSettings.startingBalanceCurrencyWhenBothMonthly = startingBalanceCurrencyForBoth
+            }
+
+            // NEW: set these so monthly has contributions as well
+            inputManager.firstYearContribution  = String(contributionPerStep)
+            inputManager.subsequentContribution = String(contributionPerStep)
+            inputManager.threshold1      = threshold1
+            inputManager.withdrawAmount1 = withdraw1
+            inputManager.threshold2      = threshold2
+            inputManager.withdrawAmount2 = withdraw2
+
             // Persist monthly settings
             monthlySimSettings.saveToUserDefaultsMonthly()
-            // Now copy these monthly values into your simulation settings
+
+            // Copy monthly values into your main sim settings
             simSettings.periodUnit = .months
             simSettings.userPeriods = totalPeriods
             simSettings.initialBTCPriceUSD = finalBTCPrice
             simSettings.startingBalance = startingBalanceDouble
             simSettings.averageCostBasis = averageCostBasis
             simSettings.currencyPreference = currencyPreference
+
             coordinator.useMonthly = true
+
         } else {
-            // Weekly branch remains unchanged
+            // Weekly branch remains the same
             weeklySimSettings.periodUnit = .weeks
             weeklySimSettings.userPeriods = totalPeriods
             weeklySimSettings.initialBTCPriceUSD = finalBTCPrice
@@ -543,30 +562,30 @@ struct OnboardingView: View {
             weeklySimSettings.averageCostBasis   = averageCostBasis
             weeklySimSettings.currencyPreference = currencyPreference
             monthlySimSettings.periodUnitMonthly = .weeks
+
             if currencyPreference == .both {
                 weeklySimSettings.startingBalanceCurrencyWhenBoth = startingBalanceCurrencyForBoth
             }
-            
+
             inputManager.firstYearContribution  = String(contributionPerStep)
             inputManager.subsequentContribution = String(contributionPerStep)
             inputManager.threshold1      = threshold1
             inputManager.withdrawAmount1 = withdraw1
             inputManager.threshold2      = threshold2
             inputManager.withdrawAmount2 = withdraw2
-            
+
             weeklySimSettings.saveToUserDefaults()
-            
-            print("// DEBUG: user chose weekly => applying to weeklySimSettings")
+
             coordinator.useMonthly = false
         }
-        
-        // (Optionally also save your custom 'savedPeriodUnit' key if you really want both.)
+
+        // Save shared defaults
         UserDefaults.standard.set(startingBalanceDouble, forKey: "savedStartingBalance")
         UserDefaults.standard.set(averageCostBasis,      forKey: "savedAverageCostBasis")
         UserDefaults.standard.set(totalPeriods,          forKey: "savedUserPeriods")
         UserDefaults.standard.set(chosenPeriodUnit.rawValue, forKey: "savedPeriodUnit")
         UserDefaults.standard.set(finalBTCPrice,         forKey: "savedInitialBTCPriceUSD")
-        
+
         print("// DEBUG: applySettingsToSim => periodUnit=\(chosenPeriodUnit.rawValue)")
         print("// DEBUG: totalPeriods=\(totalPeriods)")
         print("// DEBUG: currencyPreference=\(currencyPreference.rawValue)")

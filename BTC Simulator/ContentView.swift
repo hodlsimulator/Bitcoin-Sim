@@ -778,27 +778,77 @@ struct ContentView: View {
             return (0, 0, 0, "$")
         }
         
-        let finalBTC = simSettings.currencyPreference == .eur
-            ? NSDecimalNumber(decimal: lastRow.btcPriceEUR).doubleValue
-            : NSDecimalNumber(decimal: lastRow.btcPriceUSD).doubleValue
+        // We'll pick the final BTC price & portfolio according to user's main currency preference:
+        // .usd => use row.btcPriceUSD / row.portfolioValueUSD
+        // .eur => use row.btcPriceEUR / row.portfolioValueEUR
+        // .both => depends on whether the user ended up contributing in USD or EUR.
         
+        let finalBTC: Double
         let finalPortfolio: Double
-        if simSettings.currencyPreference == .eur {
-            finalPortfolio = NSDecimalNumber(decimal: lastRow.portfolioValueEUR).doubleValue
-        } else {
+        let totalContributions: Double
+        let symbol: String
+        
+        switch simSettings.currencyPreference {
+        case .usd:
+            // Pure USD
+            finalBTC = NSDecimalNumber(decimal: lastRow.btcPriceUSD).doubleValue
             finalPortfolio = NSDecimalNumber(decimal: lastRow.portfolioValueUSD).doubleValue
+            totalContributions = coordinator.monteCarloResults.reduce(0.0) {
+                $0 + $1.contributionUSD
+            }
+            symbol = "$"
+            
+        case .eur:
+            // Pure EUR
+            finalBTC = NSDecimalNumber(decimal: lastRow.btcPriceEUR).doubleValue
+            finalPortfolio = NSDecimalNumber(decimal: lastRow.portfolioValueEUR).doubleValue
+            totalContributions = coordinator.monteCarloResults.reduce(0.0) {
+                $0 + $1.contributionEUR
+            }
+            symbol = "€"
+            
+        case .both:
+            // If “Both” is chosen, then the user ultimately picks which currency they actually
+            // contributed in for either monthly or weekly. We’ll check coordinator.useMonthly
+            // to know which environment object we read from:
+            let userPickedCurrencyForContrib = coordinator.useMonthly
+                ? monthlySimSettings.contributionCurrencyWhenBothMonthly
+                : simSettings.contributionCurrencyWhenBoth  // <— Make sure you have this property in `simSettings`
+            
+            switch userPickedCurrencyForContrib {
+            case .usd:
+                finalBTC = NSDecimalNumber(decimal: lastRow.btcPriceUSD).doubleValue
+                finalPortfolio = NSDecimalNumber(decimal: lastRow.portfolioValueUSD).doubleValue
+                totalContributions = coordinator.monteCarloResults.reduce(0.0) {
+                    $0 + $1.contributionUSD
+                }
+                symbol = "$"
+                
+            case .eur:
+                finalBTC = NSDecimalNumber(decimal: lastRow.btcPriceEUR).doubleValue
+                finalPortfolio = NSDecimalNumber(decimal: lastRow.portfolioValueEUR).doubleValue
+                totalContributions = coordinator.monteCarloResults.reduce(0.0) {
+                    $0 + $1.contributionEUR
+                }
+                symbol = "€"
+                
+            case .both:
+                // If you never actually allow them to pick "both" inside the "both" scenario,
+                // just choose a safe default. We'll do USD for safety:
+                finalBTC = NSDecimalNumber(decimal: lastRow.btcPriceUSD).doubleValue
+                finalPortfolio = NSDecimalNumber(decimal: lastRow.portfolioValueUSD).doubleValue
+                totalContributions = coordinator.monteCarloResults.reduce(0.0) {
+                    $0 + $1.contributionUSD
+                }
+                symbol = "$"
+            }
         }
         
-        let totalContributions = coordinator.monteCarloResults.reduce(0.0) { partialSum, row in
-            partialSum + row.contributionUSD
-        }
-        
+        // Calculate growth if totalContributions > 0
         var growth = 0.0
         if totalContributions > 0 {
             growth = (finalPortfolio - totalContributions) / totalContributions * 100.0
         }
-        
-        let symbol = (simSettings.currencyPreference == .eur) ? "€" : "$"
         
         return (finalBTC, finalPortfolio, growth, symbol)
     }

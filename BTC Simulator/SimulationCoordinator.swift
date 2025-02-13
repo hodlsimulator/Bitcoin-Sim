@@ -254,6 +254,11 @@ class SimulationCoordinator: ObservableObject {
                 let bestFitRun = allIterations[bestFitRunIndex]
                 self.monteCarloResults = bestFitRun
                 
+                print("coordinator.monteCarloResults after run =>")
+                for row in self.monteCarloResults.prefix(20) {
+                    print("Month \(row.week), contribUSD=\(row.contributionUSD), contribEUR=\(row.contributionEUR)")
+                }
+                
                 self.selectedPercentile = .median
                 self.allSimData = allIterations
 
