@@ -175,7 +175,7 @@ struct OnboardingView: View {
                 if currentStep > 0 {
                     Button {
                         // Use a shorter animation to make transitions quicker
-                        withAnimation(.easeOut(duration: 0.15)) {
+                        withAnimation(.easeOut(duration: 0.05)) {
                             currentStep -= 1
                         }
                     } label: {
