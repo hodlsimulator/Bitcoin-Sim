@@ -79,8 +79,7 @@ extension SimulationSettings {
         periodUnit = .weeks
         print("[restoreDefaults (weekly)] periodUnit set to: \(periodUnit)")
 
-        // 5) Reset all your 'unified' slider properties to their midWeekly default
-        //    (so watchers see the new default values, not old ones).
+        // 5) Reset your 'unified' slider properties to their midWeekly default
         halvingBumpUnified            = FactorCatalog.all["Halving"]?.midWeekly ?? 0.2773386887
         maxDemandBoostUnified         = FactorCatalog.all["InstitutionalDemand"]?.midWeekly ?? 0.00142485
         maxCountryAdBoostUnified      = FactorCatalog.all["CountryAdoption"]?.midWeekly ?? 0.0012868959977
@@ -102,9 +101,25 @@ extension SimulationSettings {
         bearWeeklyDriftUnified        = FactorCatalog.all["BearMarket"]?.midWeekly ?? -0.0007278802752494812
         maxMaturingDropUnified        = FactorCatalog.all["MaturingMarket"]?.midWeekly ?? -0.0010537001055486196
         maxRecessionDropUnified       = FactorCatalog.all["Recession"]?.midWeekly ?? -0.0007494520467487811
-        
-        // 6) Optional: Defer flipping isRestoringDefaults back to false
-        //    so watchers don’t re-run in the same render pass.
+
+        // 6) Reassign weekly advanced toggles to desired “on by default” values
+        useLognormalGrowth = true
+        useAnnualStep      = false
+        lockedRandomSeed   = false
+        seedValue          = 0
+        useRandomSeed      = true
+        useHistoricalSampling         = true
+        useExtendedHistoricalSampling = true
+        useVolShocks       = true
+        useGarchVolatility = true
+        useAutoCorrelation = true
+        autoCorrelationStrength = 0.05
+        meanReversionTarget = 0.03
+        useMeanReversion   = true
+        useRegimeSwitching = true
+        lockHistoricalSampling = false
+
+        // 7) Defer flipping isRestoringDefaults back to false
         DispatchQueue.main.async {
             self.isRestoringDefaults = false
             print("[restoreDefaults (weekly)] Completed weekly defaults reset.")

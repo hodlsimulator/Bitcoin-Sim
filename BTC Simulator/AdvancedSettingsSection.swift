@@ -8,7 +8,11 @@
 import SwiftUI
 
 struct AdvancedSettingsSection: View {
-    @EnvironmentObject var simSettings: SimulationSettings
+    // Instead of a single "simSettings," we pull in both weekly and monthly, plus the coordinator
+    @EnvironmentObject var weeklySimSettings: SimulationSettings
+    @EnvironmentObject var monthlySimSettings: MonthlySimulationSettings
+    @EnvironmentObject var coordinator: SimulationCoordinator
+
     @Binding var showAdvancedSettings: Bool
 
     @AppStorage("advancedSettingsUnlocked") var advancedSettingsUnlocked: Bool = false
@@ -30,7 +34,7 @@ struct AdvancedSettingsSection: View {
                         Image(systemName: showAdvancedSettings ? "chevron.down" : "chevron.forward")
                             .foregroundColor(.gray)
                     }
-                    .contentShape(Rectangle()) // Only applies to this button.
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 
@@ -61,31 +65,24 @@ struct AdvancedSettingsSection: View {
                 Group {
                     // RANDOM SEED Section
                     Section {
-                        Toggle("Lock Random Seed", isOn: $simSettings.lockedRandomSeed)
+                        Toggle("Lock Random Seed", isOn: lockedRandomSeedBinding)
                             .tint(.orange)
                             .foregroundColor(.white)
-                            .onChange(of: simSettings.lockedRandomSeed) { _ in
-                                if simSettings.lockedRandomSeed {
-                                    let newSeed = UInt64.random(in: 0..<UInt64.max)
-                                    simSettings.seedValue = newSeed
-                                    simSettings.useRandomSeed = false
-                                } else {
-                                    simSettings.seedValue = 0
-                                    simSettings.useRandomSeed = true
-                                }
-                            }
                         
-                        if simSettings.lockedRandomSeed {
-                            Text("Current Seed (Locked): \(simSettings.seedValue)")
+                        // Show "Current Seed" line, with monthly vs weekly logic
+                        if lockedRandomSeedBinding.wrappedValue {
+                            // If locked
+                            Text("Current Seed (Locked): \(currentSeedValue)")
                                 .font(.footnote)
                                 .foregroundColor(.white)
                         } else {
-                            if simSettings.lastUsedSeed == 0 {
+                            // If unlocked
+                            if lastUsedSeedValue == 0 {
                                 Text("Current Seed: (no run yet)")
                                     .font(.footnote)
                                     .foregroundColor(.white)
                             } else {
-                                Text("Current Seed (Unlocked): \(simSettings.lastUsedSeed)")
+                                Text("Current Seed (Unlocked): \(lastUsedSeedValue)")
                                     .font(.footnote)
                                     .foregroundColor(.white)
                             }
@@ -104,12 +101,9 @@ struct AdvancedSettingsSection: View {
                     
                     // Growth Model Section
                     Section {
-                        Toggle("Use Lognormal Growth", isOn: $simSettings.useLognormalGrowth)
+                        Toggle("Use Lognormal Growth", isOn: lognormalGrowthBinding)
                             .tint(.orange)
                             .foregroundColor(.white)
-                            .onChange(of: simSettings.useLognormalGrowth) { _ in
-                                simSettings.useAnnualStep = !simSettings.useLognormalGrowth
-                            }
                         
                         Text("Uses a lognormal model for Bitcoin’s price distribution. Uncheck to use an alternative approach (annual step).")
                             .font(.footnote)
@@ -124,19 +118,22 @@ struct AdvancedSettingsSection: View {
                     
                     // Historical Sampling Section
                     Section {
-                        Toggle("Use Historical Sampling", isOn: $simSettings.useHistoricalSampling)
+                        Toggle("Use Historical Sampling", isOn: historicalSamplingBinding)
                             .tint(.orange)
                             .foregroundColor(.white)
-                            .onChange(of: simSettings.useHistoricalSampling) { newValue in
-                                if !newValue {
-                                    simSettings.useExtendedHistoricalSampling = false
+                            .onChange(of: historicalSamplingBinding.wrappedValue) { newVal in
+                                // If they turned OFF historical sampling, also turn off extended
+                                if !newVal {
+                                    extendedHistoricalSamplingBinding.wrappedValue = false
                                 }
                             }
-                        Toggle("Use Extended Historical Sampling", isOn: $simSettings.useExtendedHistoricalSampling)
+                        
+                        Toggle("Use Extended Historical Sampling", isOn: extendedHistoricalSamplingBinding)
                             .tint(.orange)
                             .foregroundColor(.white)
-                            .disabled(!simSettings.useHistoricalSampling)
-                        Toggle("Lock Historical Sampling", isOn: $simSettings.lockHistoricalSampling)
+                            .disabled(!historicalSamplingBinding.wrappedValue)
+                        
+                        Toggle("Lock Historical Sampling", isOn: lockHistoricalSamplingBinding)
                             .tint(.orange)
                             .foregroundColor(.white)
                         
@@ -153,13 +150,14 @@ struct AdvancedSettingsSection: View {
                     
                     // Autocorrelation Section
                     Section {
-                        Toggle("Use Autocorrelation", isOn: $simSettings.useAutoCorrelation)
-                            .tint(simSettings.useAutoCorrelation ? .orange : .gray)
+                        Toggle("Use Autocorrelation", isOn: autoCorrelationBinding)
+                            .tint(autoCorrelationBinding.wrappedValue ? .orange : .gray)
                             .foregroundColor(.white)
                         
+                        // Autocorrelation Strength
                         HStack {
                             Button {
-                                simSettings.autoCorrelationStrength = 0.05
+                                autoCorrelationStrengthBinding.wrappedValue = 0.05
                             } label: {
                                 Image(systemName: "arrow.uturn.backward.circle")
                                     .foregroundColor(.orange)
@@ -171,18 +169,19 @@ struct AdvancedSettingsSection: View {
                                 .foregroundColor(.white)
                             
                             Slider(
-                                value: $simSettings.autoCorrelationStrength,
+                                value: autoCorrelationStrengthBinding,
                                 in: 0.01...0.09,
                                 step: 0.01
                             )
                             .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
                         }
-                        .disabled(!simSettings.useAutoCorrelation)
-                        .opacity(simSettings.useAutoCorrelation ? 1.0 : 0.4)
+                        .disabled(!autoCorrelationBinding.wrappedValue)
+                        .opacity(autoCorrelationBinding.wrappedValue ? 1.0 : 0.4)
                         
+                        // Mean Reversion Target
                         HStack {
                             Button {
-                                simSettings.meanReversionTarget = 0.03
+                                meanReversionTargetBinding.wrappedValue = 0.03
                             } label: {
                                 Image(systemName: "arrow.uturn.backward.circle")
                                     .foregroundColor(.orange)
@@ -194,14 +193,14 @@ struct AdvancedSettingsSection: View {
                                 .foregroundColor(.white)
                             
                             Slider(
-                                value: $simSettings.meanReversionTarget,
+                                value: meanReversionTargetBinding,
                                 in: 0.01...0.05,
                                 step: 0.001
                             )
                             .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
                         }
-                        .disabled(!simSettings.useAutoCorrelation)
-                        .opacity(simSettings.useAutoCorrelation ? 1.0 : 0.4)
+                        .disabled(!autoCorrelationBinding.wrappedValue)
+                        .opacity(autoCorrelationBinding.wrappedValue ? 1.0 : 0.4)
                         
                         Text("Autocorrelation makes returns partially follow their previous trend, while mean reversion nudges them back toward a target.")
                             .font(.footnote)
@@ -216,10 +215,11 @@ struct AdvancedSettingsSection: View {
                     
                     // Volatility Section
                     Section {
-                        Toggle("Use Volatility Shocks", isOn: $simSettings.useVolShocks)
+                        Toggle("Use Volatility Shocks", isOn: volShocksBinding)
                             .tint(.orange)
                             .foregroundColor(.white)
-                        Toggle("Use GARCH Volatility", isOn: $simSettings.useGarchVolatility)
+                        
+                        Toggle("Use GARCH Volatility", isOn: garchBinding)
                             .tint(.orange)
                             .foregroundColor(.white)
                         
@@ -236,7 +236,7 @@ struct AdvancedSettingsSection: View {
                     
                     // Regime Switching Section
                     Section {
-                        Toggle("Use Regime Switching", isOn: $simSettings.useRegimeSwitching)
+                        Toggle("Use Regime Switching", isOn: regimeSwitchingBinding)
                             .tint(.orange)
                             .foregroundColor(.white)
                         
@@ -258,8 +258,204 @@ struct AdvancedSettingsSection: View {
         .listRowBackground(Color(white: 0.15))
     }
 
+    // Example in-app purchase placeholder
     func purchaseAdvancedSettings() {
         // Replace with your StoreKit in-app purchase logic.
         advancedSettingsUnlocked = true
+    }
+}
+
+// MARK: - Computed BINDINGS for Weekly vs Monthly
+extension AdvancedSettingsSection {
+
+    // Helper to check if we’re in monthly mode
+    private var isMonthly: Bool {
+        coordinator.useMonthly
+    }
+
+    // LOCKED RANDOM SEED
+    private var lockedRandomSeedBinding: Binding<Bool> {
+        Binding(
+            get: { isMonthly ? monthlySimSettings.lockedRandomSeedMonthly : weeklySimSettings.lockedRandomSeed },
+            set: { newVal in
+                if isMonthly {
+                    monthlySimSettings.lockedRandomSeedMonthly = newVal
+                    if newVal {
+                        // Lock it
+                        let newSeed = UInt64.random(in: 0..<UInt64.max)
+                        monthlySimSettings.seedValueMonthly = newSeed
+                        monthlySimSettings.useRandomSeedMonthly = false
+                    } else {
+                        // Unlock
+                        monthlySimSettings.seedValueMonthly = 0
+                        monthlySimSettings.useRandomSeedMonthly = true
+                    }
+                } else {
+                    weeklySimSettings.lockedRandomSeed = newVal
+                    if newVal {
+                        // Lock
+                        let newSeed = UInt64.random(in: 0..<UInt64.max)
+                        weeklySimSettings.seedValue = newSeed
+                        weeklySimSettings.useRandomSeed = false
+                    } else {
+                        // Unlock
+                        weeklySimSettings.seedValue = 0
+                        weeklySimSettings.useRandomSeed = true
+                    }
+                }
+            }
+        )
+    }
+
+    // CURRENT / LAST USED SEED text
+    private var currentSeedValue: UInt64 {
+        isMonthly
+            ? monthlySimSettings.seedValueMonthly
+            : weeklySimSettings.seedValue
+    }
+    private var lastUsedSeedValue: UInt64 {
+        isMonthly
+            ? monthlySimSettings.lastUsedSeedMonthly
+            : weeklySimSettings.lastUsedSeed
+    }
+
+    // LOGNORMAL GROWTH
+    private var lognormalGrowthBinding: Binding<Bool> {
+        Binding(
+            get: { isMonthly ? monthlySimSettings.useLognormalGrowthMonthly : weeklySimSettings.useLognormalGrowth },
+            set: { newVal in
+                if isMonthly {
+                    monthlySimSettings.useLognormalGrowthMonthly = newVal
+                    // If you disable lognormal, enable annual step
+                    monthlySimSettings.useAnnualStepMonthly = !newVal
+                } else {
+                    weeklySimSettings.useLognormalGrowth = newVal
+                    weeklySimSettings.useAnnualStep = !newVal
+                }
+            }
+        )
+    }
+
+    // HISTORICAL SAMPLING
+    private var historicalSamplingBinding: Binding<Bool> {
+        Binding(
+            get: { isMonthly ? monthlySimSettings.useHistoricalSamplingMonthly : weeklySimSettings.useHistoricalSampling },
+            set: { newVal in
+                if isMonthly {
+                    monthlySimSettings.useHistoricalSamplingMonthly = newVal
+                } else {
+                    weeklySimSettings.useHistoricalSampling = newVal
+                }
+            }
+        )
+    }
+
+    private var extendedHistoricalSamplingBinding: Binding<Bool> {
+        Binding(
+            get: { isMonthly ? monthlySimSettings.useExtendedHistoricalSamplingMonthly : weeklySimSettings.useExtendedHistoricalSampling },
+            set: { newVal in
+                if isMonthly {
+                    monthlySimSettings.useExtendedHistoricalSamplingMonthly = newVal
+                } else {
+                    weeklySimSettings.useExtendedHistoricalSampling = newVal
+                }
+            }
+        )
+    }
+
+    private var lockHistoricalSamplingBinding: Binding<Bool> {
+        Binding(
+            get: { isMonthly ? monthlySimSettings.lockHistoricalSamplingMonthly : weeklySimSettings.lockHistoricalSampling },
+            set: { newVal in
+                if isMonthly {
+                    monthlySimSettings.lockHistoricalSamplingMonthly = newVal
+                } else {
+                    weeklySimSettings.lockHistoricalSampling = newVal
+                }
+            }
+        )
+    }
+
+    // AUTOCORRELATION
+    private var autoCorrelationBinding: Binding<Bool> {
+        Binding(
+            get: { isMonthly ? monthlySimSettings.useAutoCorrelationMonthly : weeklySimSettings.useAutoCorrelation },
+            set: { newVal in
+                if isMonthly {
+                    monthlySimSettings.useAutoCorrelationMonthly = newVal
+                    if !newVal { monthlySimSettings.useMeanReversionMonthly = false }
+                } else {
+                    weeklySimSettings.useAutoCorrelation = newVal
+                    if !newVal { weeklySimSettings.useMeanReversion = false }
+                }
+            }
+        )
+    }
+
+    private var autoCorrelationStrengthBinding: Binding<Double> {
+        Binding(
+            get: { isMonthly ? monthlySimSettings.autoCorrelationStrengthMonthly : weeklySimSettings.autoCorrelationStrength },
+            set: { newVal in
+                if isMonthly {
+                    monthlySimSettings.autoCorrelationStrengthMonthly = newVal
+                } else {
+                    weeklySimSettings.autoCorrelationStrength = newVal
+                }
+            }
+        )
+    }
+
+    private var meanReversionTargetBinding: Binding<Double> {
+        Binding(
+            get: { isMonthly ? monthlySimSettings.meanReversionTargetMonthly : weeklySimSettings.meanReversionTarget },
+            set: { newVal in
+                if isMonthly {
+                    monthlySimSettings.meanReversionTargetMonthly = newVal
+                } else {
+                    weeklySimSettings.meanReversionTarget = newVal
+                }
+            }
+        )
+    }
+
+    // VOLATILITY
+    private var volShocksBinding: Binding<Bool> {
+        Binding(
+            get: { isMonthly ? monthlySimSettings.useVolShocksMonthly : weeklySimSettings.useVolShocks },
+            set: { newVal in
+                if isMonthly {
+                    monthlySimSettings.useVolShocksMonthly = newVal
+                } else {
+                    weeklySimSettings.useVolShocks = newVal
+                }
+            }
+        )
+    }
+
+    private var garchBinding: Binding<Bool> {
+        Binding(
+            get: { isMonthly ? monthlySimSettings.useGarchVolatilityMonthly : weeklySimSettings.useGarchVolatility },
+            set: { newVal in
+                if isMonthly {
+                    monthlySimSettings.useGarchVolatilityMonthly = newVal
+                } else {
+                    weeklySimSettings.useGarchVolatility = newVal
+                }
+            }
+        )
+    }
+
+    // REGIME SWITCHING
+    private var regimeSwitchingBinding: Binding<Bool> {
+        Binding(
+            get: { isMonthly ? monthlySimSettings.useRegimeSwitchingMonthly : weeklySimSettings.useRegimeSwitching },
+            set: { newVal in
+                if isMonthly {
+                    monthlySimSettings.useRegimeSwitchingMonthly = newVal
+                } else {
+                    weeklySimSettings.useRegimeSwitching = newVal
+                }
+            }
+        )
     }
 }

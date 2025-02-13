@@ -64,7 +64,8 @@ class MonthlySimulationSettings: ObservableObject {
     }
     
     @Published var factorsMonthly: [String: FactorState] = [:] {
-        didSet { print("[factorsMonthly] Updated factors: \(factorsMonthly.count) factors loaded") }
+        didSet {
+        }
     }
     @Published var lockedFactorsMonthly: Set<String> = [] {
         didSet { print("[lockedFactorsMonthly] Now locked: \(lockedFactorsMonthly)") }
@@ -262,6 +263,7 @@ class MonthlySimulationSettings: ObservableObject {
 
     // MARK: - Init
     init(loadDefaults: Bool = true) {
+        print("[MonthlySimulationSettings.init] loadDefaults = \(loadDefaults)")
         if let savedIntensity = UserDefaults.standard.object(forKey: "rawFactorIntensityMonthly") as? Double {
             rawFactorIntensityMonthly = savedIntensity
         } else {

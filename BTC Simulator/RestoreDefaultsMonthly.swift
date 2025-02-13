@@ -9,11 +9,12 @@ import SwiftUI
 
 extension MonthlySimulationSettings {
     func restoreDefaultsMonthly(whenIn mode: PeriodUnit) {
-        // Only restore if the mode is not weekly
-        guard mode != .weeks else {
-            print("Skipping monthly restore because weekly mode is active")
-            return
-        }
+        // Removed the guard so this always executes:
+        // guard mode != .weeks else {
+        //     print("Skipping monthly restore because weekly mode is active")
+        //     return
+        // }
+
         print("[restoreDefaultsMonthly] Restoring all monthly defaults in one pass.")
         isRestoringDefaultsMonthly = true
         suspendUnifiedUpdates = true

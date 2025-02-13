@@ -256,7 +256,6 @@ class SimulationCoordinator: ObservableObject {
                 
                 print("coordinator.monteCarloResults after run =>")
                 for row in self.monteCarloResults.prefix(20) {
-                    print("Month \(row.week), contribUSD=\(row.contributionUSD), contribEUR=\(row.contributionEUR)")
                 }
                 
                 self.selectedPercentile = .median

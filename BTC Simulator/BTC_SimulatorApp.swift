@@ -33,20 +33,16 @@ struct BTCMonteCarloApp: App {
     // MARK: - Init
     init() {
         // 1) Read the mode from UserDefaults (instead of referencing self.isMonthlyMode).
-        let localIsMonthlyMode = UserDefaults.standard.bool(forKey: "isMonthlyMode")
+        // NOTE: We no longer use this to decide loadDefaults: false vs true.
+        let _ = UserDefaults.standard.bool(forKey: "isMonthlyMode")
 
         // 2) Create local objects.
         let localAppViewModel       = AppViewModel()
         let localInputManager       = PersistentInputManager()
         let localWeeklySimSettings  = SimulationSettings(loadDefaults: true)
 
-        // Conditionally init monthlySimSettings.
-        let localMonthlySimSettings: MonthlySimulationSettings
-        if localIsMonthlyMode {
-            localMonthlySimSettings = MonthlySimulationSettings(loadDefaults: true)
-        } else {
-            localMonthlySimSettings = MonthlySimulationSettings(loadDefaults: false)
-        }
+        // Always init monthlySimSettings with loadDefaults: true
+        let localMonthlySimSettings = MonthlySimulationSettings(loadDefaults: true)
 
         let localChartDataCache     = ChartDataCache()
         let localSimChartSelection  = SimChartSelection()
@@ -61,8 +57,9 @@ struct BTCMonteCarloApp: App {
             options.enableAppLaunchProfiling = true
         }
 
-        // 4) Register any default toggles.
+        // 4) Register any default toggles (both weekly and monthly).
         let defaultToggles: [String: Any] = [
+            // Weekly toggles
             "useLockRandomSeed": false,
             "useLognormalGrowth": true,
             "useHistoricalSampling": true,
@@ -71,7 +68,22 @@ struct BTCMonteCarloApp: App {
             "useRegimeSwitching": true,
             "useAutoCorrelation": true,
             "autoCorrelationStrength": 0.05,
-            "meanReversionTarget": 0.03
+            "meanReversionTarget": 0.03,
+
+            // Monthly toggles
+            "useLognormalGrowthMonthly": true,
+            "lockedRandomSeedMonthly": false,
+            "useRandomSeedMonthly": true,
+            "useHistoricalSamplingMonthly": true,
+            "useVolShocksMonthly": true,
+            "useGarchVolatilityMonthly": true,
+            "useRegimeSwitchingMonthly": true,
+            "useExtendedHistoricalSamplingMonthly": true,
+            "useAutoCorrelationMonthly": true,
+            "autoCorrelationStrengthMonthly": 0.05,
+            "meanReversionTargetMonthly": 0.03,
+            "useMeanReversionMonthly": true,
+            "lockHistoricalSamplingMonthly": false
         ]
         UserDefaults.standard.register(defaults: defaultToggles)
 
