@@ -30,7 +30,7 @@ struct ParameterEntryView: View {
     // Binding to let the parent know whether the keyboard is visible.
     @Binding var isKeyboardVisible: Bool
     
-    // MARK: - Local copies
+    // MARK: - Local copies of fields
     @State private var localIterations: String = "100"
     @State private var localAnnualCAGR: String = "30"
     @State private var localAnnualVolatility: String = "80"
@@ -42,8 +42,8 @@ struct ParameterEntryView: View {
     @State private var ephemeralAnnualVolatility: String = ""
     @State private var ephemeralStandardDev: String = ""
     
-    // Example advanced settings
-    @State private var advancedSettingsUnlocked: Bool = true
+    // Use the same AppStorage property that controls unlocking in the AdvancedSettingsSection
+    @AppStorage("advancedSettingsUnlocked") private var advancedSettingsUnlocked: Bool = false
     
     var body: some View {
         ZStack {
@@ -171,7 +171,7 @@ struct ParameterEntryView: View {
                             .toggleStyle(CheckboxToggleStyle())
                             .foregroundColor(.white)
                         
-                        // Updated Lock Seed toggle using a computed Binding
+                        // Lock Seed toggle now disabled if advanced settings are not unlocked
                         Toggle("Lock Seed", isOn: lockedRandomSeedBinding)
                             .toggleStyle(CheckboxToggleStyle())
                             .foregroundColor(.white)
@@ -209,7 +209,6 @@ struct ParameterEntryView: View {
                         
                         coordinator.runSimulation(
                             generateGraphs: inputManager.generateGraphs,
-                            // If you want to read the correct lock state from the same binding:
                             lockRandomSeed: lockedRandomSeedBinding.wrappedValue
                         )
                     } label: {
