@@ -389,7 +389,14 @@ class SimulationSettings: ObservableObject {
         defaults.set(useExtendedHistoricalSampling, forKey: "useExtendedHistoricalSampling")
         defaults.set(lockHistoricalSampling, forKey: "lockHistoricalSampling")
         defaults.set(currencyPreference.rawValue, forKey: "currencyPreference")
-        
+
+        // Persist tilt bar properties
+        defaults.set(defaultTilt, forKey: defaultTiltKey)
+        defaults.set(maxSwing, forKey: maxSwingKey)
+        defaults.set(hasCapturedDefault, forKey: hasCapturedDefaultKey)
+        defaults.set(tiltBarValue, forKey: tiltBarValueKey)
+
+        // Persist factor dictionary
         if let encodedFactors = try? JSONEncoder().encode(factors) {
             defaults.set(encodedFactors, forKey: "factorStates")
         }

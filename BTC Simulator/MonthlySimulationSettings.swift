@@ -65,6 +65,7 @@ class MonthlySimulationSettings: ObservableObject {
     
     @Published var factorsMonthly: [String: FactorState] = [:] {
         didSet {
+            // can do observer logic here if needed
         }
     }
     @Published var lockedFactorsMonthly: Set<String> = [] {
@@ -374,7 +375,7 @@ class MonthlySimulationSettings: ObservableObject {
            let loadedPU = PeriodUnit(rawValue: rawPU) {
             periodUnitMonthly = loadedPU
         } else {
-            periodUnitMonthly = .months  // Default changed to .months
+            periodUnitMonthly = .months  // Default to .months
         }
         print("[loadFromUserDefaultsMonthly] periodUnitMonthly loaded as \(periodUnitMonthly)")
         
@@ -426,21 +427,30 @@ class MonthlySimulationSettings: ObservableObject {
         // Store periodUnitMonthly as a raw string
         defaults.set(periodUnitMonthly.rawValue, forKey: periodUnitKeyMonthly)
         
+        // Store monthly user parameters
         defaults.set(userPeriodsMonthly,             forKey: "savedUserPeriodsMonthly")
         defaults.set(initialBTCPriceUSDMonthly,      forKey: "savedInitialBTCPriceUSDMonthly")
         defaults.set(startingBalanceMonthly,         forKey: "savedStartingBalanceMonthly")
         defaults.set(averageCostBasisMonthly,        forKey: "savedAverageCostBasisMonthly")
         
+        // Persist monthly tilt properties
+        defaults.set(defaultTiltMonthly, forKey: defaultTiltKeyMonthly)
+        defaults.set(maxSwingMonthly, forKey: maxSwingKeyMonthly)
+        defaults.set(hasCapturedDefaultMonthly, forKey: hasCapturedDefaultKeyMonthly)
+        defaults.set(tiltBarValueMonthly, forKey: tiltBarValueKeyMonthly)
+        
+        // Persist factor dictionary
         if let encodedFactors = try? JSONEncoder().encode(factorsMonthly) {
             defaults.set(encodedFactors, forKey: "factorStatesMonthly")
         }
+        
         defaults.synchronize()
     }
     
     private func saveTiltStateMonthly() {
         let defaults = UserDefaults.standard
         defaults.set(defaultTiltMonthly, forKey: defaultTiltKeyMonthly)
-        defaults.set(maxSwingMonthly, forKey: maxSwingKeyMonthly)
+        defaults.set(maxSwingMonthly,    forKey: maxSwingKeyMonthly)
         defaults.set(hasCapturedDefaultMonthly, forKey: hasCapturedDefaultKeyMonthly)
     }
     
@@ -526,7 +536,7 @@ class MonthlySimulationSettings: ObservableObject {
     func globalSliderChangedMonthly(to newGlobalValue: Double) {
         print("[globalSliderChangedMonthly] Monthly global slider moved to \(newGlobalValue)")
         rawFactorIntensityMonthly = newGlobalValue
-        // applyDictionaryFactorsToSimMonthly()
+        // applyDictionaryFactorsToSimMonthly() if needed
         saveToUserDefaultsMonthly()
     }
     
@@ -736,7 +746,7 @@ class MonthlySimulationSettings: ObservableObject {
         let adjusted = applyFactorTogglesMonthly(
             baseReturn: baseReturn,
             stepIndex: stepIndex,
-            monthlySettings: self, // self is MonthlySimulationSettings
+            monthlySettings: self,
             mempoolDataManager: mempoolDataManager,
             rng: rng
         )
@@ -749,7 +759,6 @@ class MonthlySimulationSettings: ObservableObject {
         set { toggleAllFactorsMonthly(on: newValue) }
     }
     
-    // Lock factor at min or max
     func lockFactorAtMinMonthly(_ factorName: String) {
         print("[lockFactorAtMinMonthly] Locking \(factorName) at min")
         guard var f = factorsMonthly[factorName] else { return }
