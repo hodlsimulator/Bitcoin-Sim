@@ -17,22 +17,26 @@ struct ParameterEntryView: View {
     
     // MARK: - Real values stored in your manager
     @ObservedObject var inputManager: PersistentInputManager
+    
+    // IMPORTANT: This is your weekly settings:
     @ObservedObject var simSettings: SimulationSettings
+    
+    // For monthly settings, we either bring it in as an @EnvironmentObject
+    // or get it from the Coordinator, e.g.:
+    @EnvironmentObject var monthlySimSettings: MonthlySimulationSettings
+    
     @ObservedObject var coordinator: SimulationCoordinator
     
     // Binding to let the parent know whether the keyboard is visible.
     @Binding var isKeyboardVisible: Bool
     
-    // MARK: - Local copies (the old "local" variables)
+    // MARK: - Local copies
     @State private var localIterations: String = "100"
     @State private var localAnnualCAGR: String = "30"
     @State private var localAnnualVolatility: String = "80"
     @State private var localStandardDev: String = "150"
     
     // MARK: - Ephemeral text fields
-    // These exist only while you’re editing. They’re loaded from the
-    // local variables as soon as you tap to edit, and saved back
-    // once editing is done (onSubmit or on focus change).
     @State private var ephemeralIterations: String = ""
     @State private var ephemeralAnnualCAGR: String = ""
     @State private var ephemeralAnnualVolatility: String = ""
@@ -43,8 +47,6 @@ struct ParameterEntryView: View {
     
     var body: some View {
         ZStack {
-            // Tap gesture attached to just the gradient so it won’t interfere
-            // with TextField taps.
             LinearGradient(
                 gradient: Gradient(colors: [Color.black, Color(white: 0.15), Color.black]),
                 startPoint: .topLeading,
@@ -85,11 +87,9 @@ struct ParameterEntryView: View {
                                 .foregroundColor(.black)
                                 .focused($activeField, equals: .iterations)
                                 .onTapGesture {
-                                    // Load ephemeral from local
                                     ephemeralIterations = localIterations
                                 }
                                 .onSubmit {
-                                    // Commit ephemeral to local/manager
                                     localIterations = ephemeralIterations
                                     inputManager.iterations = ephemeralIterations
                                 }
@@ -171,21 +171,12 @@ struct ParameterEntryView: View {
                             .toggleStyle(CheckboxToggleStyle())
                             .foregroundColor(.white)
                         
-                        Toggle("Lock Seed", isOn: $simSettings.lockedRandomSeed)
+                        // Updated Lock Seed toggle using a computed Binding
+                        Toggle("Lock Seed", isOn: lockedRandomSeedBinding)
                             .toggleStyle(CheckboxToggleStyle())
                             .foregroundColor(.white)
                             .disabled(!advancedSettingsUnlocked)
                             .opacity(advancedSettingsUnlocked ? 1.0 : 0.5)
-                            .onChange(of: simSettings.lockedRandomSeed, initial: false) { _, locked in
-                                if locked {
-                                    let newSeed = UInt64.random(in: 0..<UInt64.max)
-                                    simSettings.seedValue = newSeed
-                                    simSettings.useRandomSeed = false
-                                } else {
-                                    simSettings.seedValue = 0
-                                    simSettings.useRandomSeed = true
-                                }
-                            }
                     }
                 }
                 .padding(20)
@@ -218,7 +209,8 @@ struct ParameterEntryView: View {
                         
                         coordinator.runSimulation(
                             generateGraphs: inputManager.generateGraphs,
-                            lockRandomSeed: simSettings.lockedRandomSeed
+                            // If you want to read the correct lock state from the same binding:
+                            lockRandomSeed: lockedRandomSeedBinding.wrappedValue
                         )
                     } label: {
                         Text("RUN SIMULATION")
@@ -254,16 +246,48 @@ struct ParameterEntryView: View {
     
     // MARK: - Helper
     private func commitAllFields() {
-        // If a user typed something and didn't press return, commit changes.
         localIterations = ephemeralIterations.isEmpty ? localIterations : ephemeralIterations
         localAnnualCAGR = ephemeralAnnualCAGR.isEmpty ? localAnnualCAGR : ephemeralAnnualCAGR
         localAnnualVolatility = ephemeralAnnualVolatility.isEmpty ? localAnnualVolatility : ephemeralAnnualVolatility
         localStandardDev = ephemeralStandardDev.isEmpty ? localStandardDev : ephemeralStandardDev
         
-        // Then update the manager.
         inputManager.iterations = localIterations
         inputManager.annualCAGR = localAnnualCAGR
         inputManager.annualVolatility = localAnnualVolatility
         inputManager.standardDeviation = localStandardDev
+    }
+    
+    // MARK: - Computed Binding for "Lock Seed"
+    private var lockedRandomSeedBinding: Binding<Bool> {
+        Binding(
+            get: {
+                coordinator.useMonthly
+                    ? monthlySimSettings.lockedRandomSeedMonthly
+                    : simSettings.lockedRandomSeed
+            },
+            set: { newVal in
+                if coordinator.useMonthly {
+                    monthlySimSettings.lockedRandomSeedMonthly = newVal
+                    if newVal {
+                        let newSeed = UInt64.random(in: 0 ..< UInt64.max)
+                        monthlySimSettings.seedValueMonthly = newSeed
+                        monthlySimSettings.useRandomSeedMonthly = false
+                    } else {
+                        monthlySimSettings.seedValueMonthly = 0
+                        monthlySimSettings.useRandomSeedMonthly = true
+                    }
+                } else {
+                    simSettings.lockedRandomSeed = newVal
+                    if newVal {
+                        let newSeed = UInt64.random(in: 0 ..< UInt64.max)
+                        simSettings.seedValue = newSeed
+                        simSettings.useRandomSeed = false
+                    } else {
+                        simSettings.seedValue = 0
+                        simSettings.useRandomSeed = true
+                    }
+                }
+            }
+        )
     }
 }
