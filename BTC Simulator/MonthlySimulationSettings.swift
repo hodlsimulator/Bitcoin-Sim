@@ -52,6 +52,8 @@ class MonthlySimulationSettings: ObservableObject {
         "BearMarket", "MaturingMarket", "Recession"
     ]
     
+    @Published var feePercentageMonthly: Double = 0.6
+    
     @Published var suspendUnifiedUpdates: Bool = false
     @Published var chartExtremeBearishMonthly: Bool = false {
         didSet { print("[chartExtremeBearishMonthly] Changed to \(chartExtremeBearishMonthly)") }

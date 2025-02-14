@@ -85,6 +85,8 @@ class SimulationSettings: ObservableObject {
     @Published var lastRunResults: [SimulationData] = []
     @Published var allRuns: [[SimulationData]] = []
     
+    @Published var feePercentage: Double = 0.6
+    
     var isInitialized = false
     var isUpdating = false
     

@@ -55,6 +55,9 @@ struct OnboardingView: View {
     // Step 6: Single contribution
     @State private var contributionPerStep: Double = 100.0
     
+    // New: Fee percentage defaulting to 0.6 (which we interpret as 0.6%)
+    @State private var feePercentage: Double = 0.6
+    
     // Step 7: Withdrawals
     @State private var threshold1: Double = 30000
     @State private var withdraw1: Double = 0.0
@@ -95,15 +98,9 @@ struct OnboardingView: View {
     }
     
     var body: some View {
-        // 1) Decide how far to shift main content (titles/fields) for steps 0–7 vs. the final step (8)
-        //    - We set it to -30 for steps 0..7 so they move up a bit more
-        //    - On the final step, we bring them down (offset = 0) so there's more space from the bottom
         let offsetForContent: CGFloat = (currentStep == 8) ? 0 : -30
 
         ZStack {
-            // 2) Background gradient that also dismisses numberPad when you tap away.
-            //    We place the onTapGesture on the gradient so any tap outside the fields
-            //    will call hideKeyboard().
             LinearGradient(
                 gradient: Gradient(colors: [Color.black, Color(white: 0.15), Color.black]),
                 startPoint: .topLeading,
@@ -111,27 +108,21 @@ struct OnboardingView: View {
             )
             .ignoresSafeArea()
             .onTapGesture {
-                // This dismisses the numberPad
                 hideKeyboard()
             }
 
-            // 3) Main content (titles, text fields, etc.), placed in a VStack.
-            //    We apply .offset(y: offsetForContent) to shift it up or down based on the step.
             VStack(spacing: 20) {
                 Text(titleForStep(currentStep))
                     .font(.title)
                     .foregroundColor(.white)
                 
-                // Optional subtitle
                 if !subtitleForStep(currentStep).isEmpty {
                     Text(subtitleForStep(currentStep))
                         .foregroundColor(.gray)
                         .font(.callout)
-                        // Slight negative top padding to tuck it closer if needed
                         .padding(.top, -2)
                 }
                 
-                // Render different fields or text based on which step we are on
                 switch currentStep {
                 case 0:
                     step0_PeriodFrequency()
@@ -153,28 +144,21 @@ struct OnboardingView: View {
                     step8_ReviewAndFinish()
                 }
                 
-                // A bit of space below the dynamic content
                 Spacer().frame(height: 20)
             }
-            .offset(y: offsetForContent) // Moves the main content up (negative) or down
+            .offset(y: offsetForContent)
             .frame(maxWidth: .infinity)
         }
-        // 4) The Bitcoin logo pinned at the top (so it never bobs up/down).
-        //    We set top padding to 67 so it’s aligned with the back button's top padding.
         .overlay(
             OfficialBitcoinLogo()
                 .frame(width: 80, height: 80)
-                .padding(.top, 67),  // Adjust up/down if you want the logo higher/lower
+                .padding(.top, 67),
             alignment: .top
         )
-        // 5) Back button pinned top-left.
-        //    We give it similar .padding(.top, 50) (or 67 if you want exact alignment with the logo),
-        //    extra padding for a bigger tap area, and a high zIndex so it's above other overlays.
         .overlay(
             Group {
                 if currentStep > 0 {
                     Button {
-                        // Use a shorter animation to make transitions quicker
                         withAnimation(.easeOut(duration: 0.05)) {
                             currentStep -= 1
                         }
@@ -182,19 +166,17 @@ struct OnboardingView: View {
                         Image(systemName: "chevron.left")
                             .font(.title2)
                             .foregroundColor(.white)
-                            .padding(10)       // Extra padding for a larger tap area
+                            .padding(10)
                     }
                     .background(Color.clear)
-                    .contentShape(Rectangle()) // Ensure the whole area is tappable
-                    .padding(.top, 50)         // Move down from the very top
+                    .contentShape(Rectangle())
+                    .padding(.top, 50)
                     .padding(.leading, 20)
-                    .zIndex(10)               // Ensure it's above any other overlay
+                    .zIndex(10)
                 }
             },
             alignment: .topLeading
         )
-        // 6) Next/Finish button pinned at the bottom with appropriate bottom padding.
-        //    We also shorten the animation here so transitions are quicker.
         .overlay(
             Button(currentStep == 8 ? "Finish" : "Next") {
                 withAnimation(.easeOut(duration: 0.15)) {
@@ -211,9 +193,7 @@ struct OnboardingView: View {
             .zIndex(5),
             alignment: .bottom
         )
-        // 7) Keep the keyboard area safe, so it doesn't hide your fields
         .ignoresSafeArea(.keyboard, edges: .bottom)
-        // 8) If user changes from weekly to monthly, or vice versa, update totalPeriods
         .onChange(of: chosenPeriodUnit, initial: false) { _, newVal in
             if newVal == .months {
                 totalPeriods = 240
@@ -221,7 +201,6 @@ struct OnboardingView: View {
                 totalPeriods = 1040
             }
         }
-        // 9) On .task, fetch BTC price and possibly update cost basis
         .task {
             await fetchBTCPriceFromAPI()
             updateAverageCostBasisIfNeeded()
@@ -381,7 +360,7 @@ struct OnboardingView: View {
         }()
         
         return VStack(spacing: 20) {
-            if currencyPreference == .both  {
+            if currencyPreference == .both {
                 Spacer().frame(height: 20)
                 
                 Text("Are these contributions in USD or EUR?")
@@ -405,17 +384,38 @@ struct OnboardingView: View {
                     .frame(width: 160)
                 }
                 
-                HStack {
-                    Text("\(frequencyWord.capitalized) Amount:")
-                        .foregroundColor(.white)
-                    TextField(placeholderText, value: $contributionPerStep, format: .number)
-                        .keyboardType(.decimalPad)
-                        .padding(8)
-                        .background(Color.white.opacity(0.15))
-                        .cornerRadius(6)
-                        .foregroundColor(.white)
-                        .frame(width: 80)
+                VStack(spacing: 10) {
+                    // 1) Amount row
+                    HStack {
+                        Text("\(frequencyWord.capitalized) Amount:")
+                            .foregroundColor(.white)
+                            .frame(width: 120, alignment: .trailing) // Fixed width for alignment
+                        TextField(placeholderText, value: $contributionPerStep, format: .number)
+                            .keyboardType(.decimalPad)
+                            .padding(8)
+                            .background(Color.white.opacity(0.15))
+                            .cornerRadius(6)
+                            .foregroundColor(.white)
+                            .frame(width: 80)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    
+                    // 2) Fees row
+                    HStack {
+                        Text("Fees (%):")
+                            .foregroundColor(.white)
+                            .frame(width: 120, alignment: .trailing)
+                        TextField("0.6", value: $feePercentage, format: .number)
+                            .keyboardType(.decimalPad)
+                            .padding(8)
+                            .background(Color.white.opacity(0.15))
+                            .cornerRadius(6)
+                            .foregroundColor(.white)
+                            .frame(width: 80)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .center)
                 }
+                
             } else {
                 Spacer().frame(height: 20)
                 
@@ -426,19 +426,40 @@ struct OnboardingView: View {
                 Text("Enter your \(frequencyWord) contribution amount")
                     .foregroundColor(.gray)
                 
-                HStack {
-                    Text("\(frequencyWord.capitalized) Amount:")
-                        .foregroundColor(.white)
-                    TextField(placeholderText, value: $contributionPerStep, format: .number)
-                        .keyboardType(.decimalPad)
-                        .padding(8)
-                        .background(Color.white.opacity(0.15))
-                        .cornerRadius(6)
-                        .foregroundColor(.white)
-                        .frame(width: 80)
+                VStack(spacing: 10) {
+                    // 1) Amount row
+                    HStack {
+                        Text("\(frequencyWord.capitalized) Amount:")
+                            .foregroundColor(.white)
+                            .frame(width: 120, alignment: .trailing)
+                        TextField(placeholderText, value: $contributionPerStep, format: .number)
+                            .keyboardType(.decimalPad)
+                            .padding(8)
+                            .background(Color.white.opacity(0.15))
+                            .cornerRadius(6)
+                            .foregroundColor(.white)
+                            .frame(width: 80)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    
+                    // 2) Fees row
+                    HStack {
+                        Text("Fees (%):")
+                            .foregroundColor(.white)
+                            .frame(width: 120, alignment: .trailing)
+                        TextField("0.6", value: $feePercentage, format: .number)
+                            .keyboardType(.decimalPad)
+                            .padding(8)
+                            .background(Color.white.opacity(0.15))
+                            .cornerRadius(6)
+                            .foregroundColor(.white)
+                            .frame(width: 80)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .center)
                 }
             }
         }
+        .offset(y: -20) // Shift the entire view up a bit for extra space
     }
     
     // MARK: - Step 7
@@ -520,8 +541,9 @@ struct OnboardingView: View {
                     }
                 }
                 Text("Contribution: \(contributionPerStep, specifier: "%.0f")")
+                Text("Fees (%): \(feePercentage, specifier: "%.2f")")
                 
-                Text("Withdraws: \(threshold1, specifier: "%.0f")→\(withdraw1, specifier: "%.0f"), \(threshold2, specifier: "%.0f")→\(withdraw2, specifier: "%.0f")")
+                Text("Withdrawals: \(threshold1, specifier: "%.0f")→\(withdraw1, specifier: "%.0f"), \(threshold2, specifier: "%.0f")→\(withdraw2, specifier: "%.0f")")
             }
             .foregroundColor(.white)
         }
@@ -542,42 +564,41 @@ struct OnboardingView: View {
     // MARK: - applySettingsToSim
     private func applySettingsToSim() {
         if chosenPeriodUnit == .months {
-            // Update monthly defaults
             monthlySimSettings.periodUnitMonthly = .months
             monthlySimSettings.userPeriodsMonthly = totalPeriods
             monthlySimSettings.initialBTCPriceUSDMonthly = finalBTCPrice
             monthlySimSettings.startingBalanceMonthly = startingBalanceDouble
-            print("Onboarding set monthlySimSettings.startingBalanceMonthly to", monthlySimSettings.startingBalanceMonthly)
             monthlySimSettings.averageCostBasisMonthly = averageCostBasis
             monthlySimSettings.currencyPreferenceMonthly = currencyPreference
-
+            
+            // If you have a property for fees in monthlySimSettings:
+            monthlySimSettings.feePercentageMonthly = feePercentage
+            
             if currencyPreference != .both {
                 monthlySimSettings.contributionCurrencyWhenBothMonthly = currencyPreference
             }
-
             if currencyPreference == .both {
                 monthlySimSettings.startingBalanceCurrencyWhenBothMonthly = startingBalanceCurrencyForBoth
             }
-
+            
             inputManager.firstYearContribution  = String(contributionPerStep)
             inputManager.subsequentContribution = String(contributionPerStep)
             inputManager.threshold1      = threshold1
             inputManager.withdrawAmount1 = withdraw1
             inputManager.threshold2      = threshold2
             inputManager.withdrawAmount2 = withdraw2
-
+            
             monthlySimSettings.saveToUserDefaultsMonthly()
-            print("Just saved to user defaults, verifying =>", monthlySimSettings.startingBalanceMonthly)
-
+            
             simSettings.periodUnit = .months
             simSettings.userPeriods = totalPeriods
             simSettings.initialBTCPriceUSD = finalBTCPrice
             simSettings.startingBalance = startingBalanceDouble
             simSettings.averageCostBasis = averageCostBasis
             simSettings.currencyPreference = currencyPreference
-
+            
             coordinator.useMonthly = true
-
+            
         } else {
             weeklySimSettings.periodUnit = .weeks
             weeklySimSettings.userPeriods = totalPeriods
@@ -585,36 +606,36 @@ struct OnboardingView: View {
             weeklySimSettings.startingBalance    = startingBalanceDouble
             weeklySimSettings.averageCostBasis   = averageCostBasis
             weeklySimSettings.currencyPreference = currencyPreference
-            monthlySimSettings.periodUnitMonthly = .weeks
-
+            
+            // If you have a property for fees in weeklySimSettings:
+            weeklySimSettings.feePercentage = feePercentage
+            
+            monthlySimSettings.periodUnitMonthly = .weeks // Keep them aligned if needed
+            
             if currencyPreference == .both {
                 weeklySimSettings.startingBalanceCurrencyWhenBoth = startingBalanceCurrencyForBoth
             }
-
+            
             inputManager.firstYearContribution  = String(contributionPerStep)
             inputManager.subsequentContribution = String(contributionPerStep)
             inputManager.threshold1      = threshold1
             inputManager.withdrawAmount1 = withdraw1
             inputManager.threshold2      = threshold2
             inputManager.withdrawAmount2 = withdraw2
-
+            
             weeklySimSettings.saveToUserDefaults()
-
+            
             coordinator.useMonthly = false
         }
-
-        // Save shared defaults
+        
         UserDefaults.standard.set(startingBalanceDouble, forKey: "savedStartingBalance")
         UserDefaults.standard.set(averageCostBasis,      forKey: "savedAverageCostBasis")
         UserDefaults.standard.set(totalPeriods,          forKey: "savedUserPeriods")
         UserDefaults.standard.set(chosenPeriodUnit.rawValue, forKey: "savedPeriodUnit")
         UserDefaults.standard.set(finalBTCPrice,         forKey: "savedInitialBTCPriceUSD")
-
-        print("// DEBUG: applySettingsToSim => periodUnit=\(chosenPeriodUnit.rawValue)")
-        print("// DEBUG: totalPeriods=\(totalPeriods)")
-        print("// DEBUG: currencyPreference=\(currencyPreference.rawValue)")
-        print("// DEBUG: startingBalance=\(startingBalanceDouble)")
-        print("// DEBUG: contributionPerStep=\(contributionPerStep)")
+        
+        // Possibly store fee as well:
+        UserDefaults.standard.set(feePercentage,         forKey: "savedFeePercentage")
     }
     
     // MARK: - finalBTCPrice
