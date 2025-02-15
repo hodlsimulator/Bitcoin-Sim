@@ -58,7 +58,6 @@ extension MonthlySimulationSettings {
             "currencyPreferenceMonthly",
             periodUnitKeyMonthly,
             "useLognormalGrowthMonthly",
-            "lockedRandomSeedMonthly",
             "useRandomSeedMonthly",
             "useHistoricalSamplingMonthly",
             "useVolShocksMonthly",
@@ -84,7 +83,6 @@ extension MonthlySimulationSettings {
 
         // 5) Re-assign advanced toggles to fresh defaults
         useLognormalGrowthMonthly      = true
-        lockedRandomSeedMonthly        = false
         useRandomSeedMonthly           = true
         useHistoricalSamplingMonthly   = true
         useVolShocksMonthly            = true

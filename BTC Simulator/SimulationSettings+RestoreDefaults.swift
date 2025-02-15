@@ -57,7 +57,6 @@ extension SimulationSettings {
             "savedPeriodUnit",
             "useLognormalGrowth",
             "useAnnualStep",
-            "lockedRandomSeed",
             "seedValue",
             "useRandomSeed",
             "useHistoricalSampling",
@@ -108,7 +107,6 @@ extension SimulationSettings {
         // 6) Reassign weekly advanced toggles to desired “on by default” values
         useLognormalGrowth = true
         useAnnualStep      = false
-        lockedRandomSeed   = false
         seedValue          = 0
         useRandomSeed      = true
         useHistoricalSampling         = true

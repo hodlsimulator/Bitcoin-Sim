@@ -276,29 +276,36 @@ extension AdvancedSettingsSection {
     // LOCKED RANDOM SEED
     private var lockedRandomSeedBinding: Binding<Bool> {
         Binding(
-            get: { isMonthly ? monthlySimSettings.lockedRandomSeedMonthly : weeklySimSettings.lockedRandomSeed },
+            get: {
+                isMonthly
+                ? monthlySimSettings.lockedRandomSeedMonthly
+                : weeklySimSettings.lockedRandomSeed
+            },
             set: { newVal in
+                // 1) If user tries to toggle while locked, ignore
+                guard advancedSettingsUnlocked else {
+                    print("User tried to toggle lockedRandomSeed but advanced settings are not unlocked.")
+                    return
+                }
+                
+                // 2) Otherwise proceed
                 if isMonthly {
                     monthlySimSettings.lockedRandomSeedMonthly = newVal
                     if newVal {
-                        // Lock it
                         let newSeed = UInt64.random(in: 0..<UInt64.max)
                         monthlySimSettings.seedValueMonthly = newSeed
                         monthlySimSettings.useRandomSeedMonthly = false
                     } else {
-                        // Unlock
                         monthlySimSettings.seedValueMonthly = 0
                         monthlySimSettings.useRandomSeedMonthly = true
                     }
                 } else {
                     weeklySimSettings.lockedRandomSeed = newVal
                     if newVal {
-                        // Lock
                         let newSeed = UInt64.random(in: 0..<UInt64.max)
                         weeklySimSettings.seedValue = newSeed
                         weeklySimSettings.useRandomSeed = false
                     } else {
-                        // Unlock
                         weeklySimSettings.seedValue = 0
                         weeklySimSettings.useRandomSeed = true
                     }
