@@ -354,7 +354,7 @@ class SimulationSettings: ObservableObject {
                 // If you want different weekly vs monthly defaults, pick minWeekly/midWeekly here
                 let (minVal, midVal, maxVal) = (periodUnit == .weeks)
                     ? (def.minWeekly, def.midWeekly, def.maxWeekly)
-                    : (def.minMonthly, def.midMonthly, def.maxMonthly)
+                    : (def.minMonthly, def.maxMonthly, def.maxMonthly)
                 
                 let fs = FactorState(
                     name: factorName,

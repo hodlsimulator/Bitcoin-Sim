@@ -10,36 +10,15 @@ import SwiftUI
 extension SimulationSettings {
     
     // MARK: - Computed Global Slider
-    //
-    // Instead of calling getFactorIntensity() or setFactorIntensity(_:) somewhere else,
-    // you can now just do: simSettings.factorIntensity = 0.7
-    // -> This triggers syncFactorsToGlobalIntensity() automatically.
-    //
     var factorIntensity: Double {
         get {
             rawFactorIntensity
         }
         set {
             rawFactorIntensity = newValue
-            // Replicate the test app logic: whenever factorIntensity changes, sync
             syncFactorsToGlobalIntensity()
         }
     }
-    
-    // MARK: - Global Baseline
-    // Same as before, but we read factorIntensity from the new computed property above.
-    // func globalBaseline(for factor: FactorState) -> Double {
-    //    let t = factorIntensity
-    //    if t < 0.5 {
-    //        let ratio = t / 0.5
-    //        // from defaultValue down to minValue
-    //        return factor.defaultValue - (factor.defaultValue - factor.minValue) * (1.0 - ratio)
-    //    } else {
-    //        let ratio = (t - 0.5) / 0.5
-    //        // from defaultValue up to maxValue
-    //        return factor.defaultValue + (factor.maxValue - factor.defaultValue) * ratio
-    //    }
-    // }
     
     // MARK: - Sync Factors
     func syncFactorsToGlobalIntensity() {
@@ -48,22 +27,21 @@ extension SimulationSettings {
             let range = factor.maxValue - factor.minValue
             let newValue = baseline + factor.internalOffset * range
             
-            // Clamp if out of bounds
             let clamped = min(max(newValue, factor.minValue), factor.maxValue)
             if clamped != newValue {
                 factor.internalOffset = (clamped - baseline) / range
             }
-            
             factor.currentValue = clamped
             factors[name] = factor
-            
         }
     }
     
     // MARK: - Enable/Disable Individual Factor
     func setFactorEnabled(factorName: String, enabled: Bool) {
+        let oldActive = factors.values.filter { $0.isEnabled && !$0.isLocked }
+        
         guard var factor = factors[factorName] else {
-            print("[Factor Debug] setFactorEnabled(\(factorName), \(enabled)): factor not found!")
+            print("[Factor Debug] setFactorEnabled(\(factorName), \(enabled)): not found!")
             return
         }
         
@@ -73,7 +51,6 @@ extension SimulationSettings {
                 let base = globalBaseline(for: factor)
                 let range = factor.maxValue - factor.minValue
                 factor.internalOffset = (frozen - base) / range
-                
                 factor.frozenValue = nil
                 factor.wasChartForced = false
             }
@@ -96,90 +73,79 @@ extension SimulationSettings {
         }
         
         factors[factorName] = factor
-        
-        // Mark the tilt bar as manually overridden
         overrodeTiltManually = true
         
-        // If NOT toggling all factors, shift the global slider like a single slider-drag
+        // Shift the global slider to mimic manual slider movement
         if !userIsActuallyTogglingAll {
-            mimicSliderDrag(for: factorName)
+            ignoreSync = true
+            if enabled {
+                let newActiveCount = oldActive.count + 1
+                if newActiveCount > 0 {
+                    let shift = factor.internalOffset / Double(newActiveCount)
+                    rawFactorIntensity = min(max(rawFactorIntensity + shift, 0.0), 1.0)
+                }
+            } else {
+                let activeCount = oldActive.count
+                if activeCount > 0 {
+                    let shift = factor.internalOffset / Double(activeCount)
+                    rawFactorIntensity = min(max(rawFactorIntensity - shift, 0.0), 1.0)
+                }
+            }
+            ignoreSync = false
+            syncFactors()
         }
         
         applyDictionaryFactorsToSim()
     }
-
-    private func mimicSliderDrag(for factorName: String) {
-        guard var factor = factors[factorName] else { return }
-        
-        // 1) Capture old offset
-        let oldOffset = factor.internalOffset
-        
-        // 2) Recompute offset from currentValue
-        let base = globalBaseline(for: factor)
-        let range = factor.maxValue - factor.minValue
-        let clampedVal = max(factor.minValue, min(factor.currentValue, factor.maxValue))
-        factor.currentValue = clampedVal
-        let newOffset = (clampedVal - base) / range
-        factor.internalOffset = newOffset
-        
-        factors[factorName] = factor
-
-        // 3) Shift global slider by the offset delta
-        let deltaOffset = newOffset - oldOffset
-        let activeCount = factors.values.filter { $0.isEnabled && !$0.isLocked }.count
-        if activeCount > 0 {
-            let shift = deltaOffset / Double(activeCount)
-            ignoreSync = true
-            rawFactorIntensity = min(max(rawFactorIntensity + shift, 0.0), 1.0)
-            ignoreSync = false
-        }
-
-        // 4) Recalc tilt
-        recalcTiltBarValue(
-            bullishKeys: [
-                "Halving", "InstitutionalDemand", "CountryAdoption", "RegulatoryClarity",
-                "EtfApproval", "TechBreakthrough", "ScarcityEvents", "GlobalMacroHedge",
-                "StablecoinShift", "DemographicAdoption", "AltcoinFlight", "AdoptionFactor"
-            ],
-            bearishKeys: [
-                "RegClampdown", "CompetitorCoin", "SecurityBreach", "BubblePop",
-                "StablecoinMeltdown", "BlackSwan", "BearMarket", "MaturingMarket",
-                "Recession"
-            ]
-        )
-    }
-
+    
     // MARK: - Toggle All Factors
     func toggleAllFactors(on: Bool) {
+        userIsActuallyTogglingAll = true
+        
         for (name, var factor) in factors {
             if on {
-                // Re-enable
+                // Re-enable factor
                 if let frozen = factor.frozenValue {
                     factor.currentValue = frozen
                     print("[toggleAll (monthly)] Restoring factor \(name) -> \(frozen)")
-                    
                     let base = globalBaseline(for: factor)
                     let range = factor.maxValue - factor.minValue
                     factor.internalOffset = (frozen - base) / range
                     print("[toggleAll (monthly)]   New offset = \(factor.internalOffset) for factor \(name)")
-                    
                     factor.frozenValue = nil
                 }
                 factor.isEnabled = true
                 factor.isLocked = false
                 factor.wasChartForced = false
             } else {
-                // Disable
+                // Disable factor
                 factor.frozenValue = factor.currentValue
                 print("[toggleAll (monthly)] Freezing factor \(name) at \(factor.currentValue)")
-                
                 factor.isEnabled = false
                 factor.isLocked = true
             }
             factors[name] = factor
         }
         
-        // If your architecture calls sync immediately here, do it:
-        // syncFactorsToGlobalIntensity()
+        // Done toggling all, reset the flag
+        userIsActuallyTogglingAll = false
+        
+        // Optionally re-sync factors
+        syncFactorsToGlobalIntensity()
+        
+        // Recalc tilt bar so it goes back to neutral if everything is on
+        let bullishKeys: [String] = [
+            "Halving", "InstitutionalDemand", "CountryAdoption", "RegulatoryClarity",
+            "EtfApproval", "TechBreakthrough", "ScarcityEvents", "GlobalMacroHedge",
+            "StablecoinShift", "DemographicAdoption", "AltcoinFlight", "AdoptionFactor"
+        ]
+        let bearishKeys: [String] = [
+            "RegClampdown", "CompetitorCoin", "SecurityBreach", "BubblePop",
+            "StablecoinMeltdown", "BlackSwan", "BearMarket", "MaturingMarket",
+            "Recession"
+        ]
+        
+        recalcTiltBarValue(bullishKeys: bullishKeys, bearishKeys: bearishKeys)
+        applyDictionaryFactorsToSim()
     }
 }
