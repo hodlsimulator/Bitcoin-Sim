@@ -169,6 +169,28 @@ class SimulationCoordinator: ObservableObject {
         let mempoolArray = [Double](repeating: 50.0, count: 5000)
         let mempoolDataManager = MempoolDataManager(mempoolData: mempoolArray)
         
+        // -----------------------------------------------------------
+        // FIX AUTOCORR OFF/ON FOR FRESH INSTALL (step 6.5).
+        // We'll replicate the user toggling it off -> on behind the scenes.
+        // -----------------------------------------------------------
+        func fixAutocorrAtStartup() {
+            if self.useMonthly {
+                if monthlySimSettings.useAutoCorrelationMonthly {
+                    monthlySimSettings.useAutoCorrelationMonthly = false
+                    monthlySimSettings.useAutoCorrelationMonthly = true
+                    print("Replicated monthly autocorr toggle off->on behind the scenes.")
+                }
+            } else {
+                if simSettings.useAutoCorrelation {
+                    simSettings.useAutoCorrelation = false
+                    simSettings.useAutoCorrelation = true
+                    print("Replicated weekly autocorr toggle off->on behind the scenes.")
+                }
+            }
+        }
+        fixAutocorrAtStartup()
+        // -----------------------------------------------------------
+        
         // 7) Run everything in the background
         DispatchQueue.global(qos: .userInitiated).async {
             guard let total = self.inputManager.getParsedIterations(), total > 0 else {

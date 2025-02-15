@@ -19,6 +19,16 @@ extension SimulationSettings {
     }
 }
 
+/// Hacky fix: if autocorr is on at startup, toggle it off/on once.
+func fixAutocorrelationAtStartup(_ settings: SimulationSettings) {
+    // Only do this if user actually has autocorr on
+    if settings.useAutoCorrelation {
+        print("Toggling autocorr off and on behind the scenes.")
+        settings.useAutoCorrelation = false
+        settings.useAutoCorrelation = true
+    }
+}
+
 // MARK: - Global Arrays
 var historicalBTCWeeklyReturns: [Double] = []
 var sp500WeeklyReturns: [Double] = []
