@@ -75,12 +75,12 @@ struct FactorIntensitySection: View {
                             
                             // Turn OFF all bullish; lock them at MIN
                             for key in bullishKeys {
-                                monthlySimSettings.setFactorEnabledMonthly(factorName: key, enabled: false)
+                                monthlySimSettings.setFactorEnabled(factorName: key, enabled: false)
                                 monthlySimSettings.lockFactorAtMinMonthly(key)
                             }
                             // Turn ON all bearish; unlock them at MIN
                             for key in bearishKeys {
-                                monthlySimSettings.setFactorEnabledMonthly(factorName: key, enabled: true)
+                                monthlySimSettings.setFactorEnabled(factorName: key, enabled: true)
                                 monthlySimSettings.unlockFactorAndSetMinMonthly(key)
                             }
                             
@@ -197,12 +197,12 @@ struct FactorIntensitySection: View {
                             
                             // Turn OFF all bearish; lock them at MAX
                             for key in bearishKeys {
-                                monthlySimSettings.setFactorEnabledMonthly(factorName: key, enabled: false)
+                                monthlySimSettings.setFactorEnabled(factorName: key, enabled: false)
                                 monthlySimSettings.lockFactorAtMaxMonthly(key)
                             }
                             // Turn ON all bullish; unlock at MAX
                             for key in bullishKeys {
-                                monthlySimSettings.setFactorEnabledMonthly(factorName: key, enabled: true)
+                                monthlySimSettings.setFactorEnabled(factorName: key, enabled: true)
                                 monthlySimSettings.unlockFactorAndSetMaxMonthly(key)
                             }
                             

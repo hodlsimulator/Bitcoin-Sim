@@ -9,12 +9,6 @@ import SwiftUI
 
 extension MonthlySimulationSettings {
     func restoreDefaultsMonthly(whenIn mode: PeriodUnit) {
-        // Removed the guard so this always executes:
-        // guard mode != .weeks else {
-        //     print("Skipping monthly restore because weekly mode is active")
-        //     return
-        // }
-
         print("[restoreDefaultsMonthly] Restoring all monthly defaults in one pass.")
         isRestoringDefaultsMonthly = true
         suspendUnifiedUpdates = true
@@ -39,8 +33,12 @@ extension MonthlySimulationSettings {
         }
         factorsMonthly = newFactors
 
-        // 2) Reset rawFactorIntensityMonthly, chart extremes, tilt bar
+        // 2) Reset to centre. Make sure rawFactorIntensity=0.5 AND extendedGlobalValue=0.0
+        ignoreSyncMonthly = true
         rawFactorIntensityMonthly = 0.5
+        extendedGlobalValueMonthly = 0.0
+        ignoreSyncMonthly = false
+        
         chartExtremeBearishMonthly = false
         chartExtremeBullishMonthly = false
         resetTiltBarMonthly()
@@ -80,11 +78,11 @@ extension MonthlySimulationSettings {
         defaults.synchronize()
         print("[restoreDefaultsMonthly] Removed UserDefaults keys.")
 
-        // 4) Decide post-reset mode (remain monthly)
+        // 4) Remain in monthly mode
         periodUnitMonthly = .months
         print("[restoreDefaultsMonthly] periodUnitMonthly set to: \(periodUnitMonthly)")
 
-        // 5) Re-assign advanced toggles to your preferred fresh defaults
+        // 5) Re-assign advanced toggles to fresh defaults
         useLognormalGrowthMonthly      = true
         lockedRandomSeedMonthly        = false
         useRandomSeedMonthly           = true
@@ -99,26 +97,12 @@ extension MonthlySimulationSettings {
         useExtendedHistoricalSamplingMonthly = true
         lockHistoricalSamplingMonthly  = false
 
-        print("[restoreDefaultsMonthly] Advanced toggles reset:")
-        print("   useLognormalGrowthMonthly: \(useLognormalGrowthMonthly)")
-        print("   lockedRandomSeedMonthly: \(lockedRandomSeedMonthly)")
-        print("   useRandomSeedMonthly: \(useRandomSeedMonthly)")
-        print("   useHistoricalSamplingMonthly: \(useHistoricalSamplingMonthly)")
-        print("   useVolShocksMonthly: \(useVolShocksMonthly)")
-        print("   useGarchVolatilityMonthly: \(useGarchVolatilityMonthly)")
-        print("   useAutoCorrelationMonthly: \(useAutoCorrelationMonthly)")
-        print("   autoCorrelationStrengthMonthly: \(autoCorrelationStrengthMonthly)")
-        print("   meanReversionTargetMonthly: \(meanReversionTargetMonthly)")
-        print("   useMeanReversionMonthly: \(useMeanReversionMonthly)")
-        print("   useRegimeSwitchingMonthly: \(useRegimeSwitchingMonthly)")
-        print("   useExtendedHistoricalSamplingMonthly: \(useExtendedHistoricalSamplingMonthly)")
-        print("   lockHistoricalSamplingMonthly: \(lockHistoricalSamplingMonthly)")
-
-        // 6) Done with restore
+        print("[restoreDefaultsMonthly] Advanced toggles reset.")
+        
+        // 6) Done
         isRestoringDefaultsMonthly = false
         print("[restoreDefaultsMonthly] Completed monthly defaults reset.")
 
-        // Turn off suspend after a short delay:
         DispatchQueue.main.async {
             self.suspendUnifiedUpdates = false
             print("[restoreDefaultsMonthly] suspendUnifiedUpdates set to false.")
