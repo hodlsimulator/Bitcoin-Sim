@@ -10,7 +10,6 @@ import SwiftUI
 extension SimulationSettings {
     var toggleAll: Bool {
         get {
-            // 'true' if all factors are currently enabled
             factors.values.allSatisfy { $0.isEnabled }
         }
         set {
@@ -33,11 +32,12 @@ extension SimulationSettings {
                 }
             }
 
-            // Done toggling all, so let normal sync resume
+            // Done toggling all
             userIsActuallyTogglingAll = false
 
-            // Perform one final sync so everything lines up with the global slider
-            syncFactorsToGlobalIntensity()
+            // REMOVE this to avoid jumping:
+            // syncFactorsToGlobalIntensity()
+
             applyDictionaryFactorsToSim()
         }
     }

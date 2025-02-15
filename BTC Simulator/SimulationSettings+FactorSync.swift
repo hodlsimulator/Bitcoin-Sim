@@ -82,26 +82,22 @@ extension SimulationSettings {
         //    We'll fallback to 9.0 if not found in either dict.
         let lowerName = factorName.lowercased()
         let toggleAmount: Double = {
-            if let val = SimulationSettings.bullishTiltValuesWeekly[lowerName] {
+            if let val = Self.bullishTiltValuesWeekly[lowerName] {
                 return val
-            } else if let val = SimulationSettings.bearishTiltValuesWeekly[lowerName] {
+            } else if let val = Self.bearishTiltValuesWeekly[lowerName] {
                 return val
             } else {
                 return 9.0 // fallback if not found
             }
         }()
         
-        // We'll skip shifting the global tilt if:
-        //   1) We’re toggling everything at once
-        //   2) or we’re in an extreme state
-        //   3) or the global slider is forcibly pinned at 0 or 1
-        //   4) or the tilt bar is forcibly pinned at -1 or 1
+        // Decide if we skip adjusting global tilt
         let skipGlobalShift = (
             userIsActuallyTogglingAll
             || chartExtremeBearish
             || chartExtremeBullish
-            || factorIntensity == 0.0
-            || factorIntensity == 1.0
+            || factorIntensity <= 0.0
+            || factorIntensity >= 1.0
             || tiltBarValue == -1.0
             || tiltBarValue == 1.0
         )
@@ -110,12 +106,10 @@ extension SimulationSettings {
         if !enabled {
             print("[Debug] Toggling OFF \(factorName): subtracting \(toggleAmount)")
             
-            // Skip if above condition says so
             if !skipGlobalShift {
                 extendedGlobalValue -= toggleAmount
             }
             
-            // Freeze or lock the factor
             factor.frozenValue = factor.currentValue
             factor.isEnabled   = false
             factor.isLocked    = true
@@ -125,10 +119,9 @@ extension SimulationSettings {
         else {
             print("[Debug] Toggling ON \(factorName): adding \(toggleAmount)")
             
-            // If it was frozen, restore that
             if let frozen = factor.frozenValue {
                 factor.currentValue = frozen
-                factor.frozenValue = nil
+                factor.frozenValue  = nil
             }
             
             // Clear forced extremes if relevant
@@ -139,7 +132,6 @@ extension SimulationSettings {
                 chartExtremeBullish = false
             }
             
-            // Skip if above condition says so
             if !skipGlobalShift {
                 extendedGlobalValue += toggleAmount
             }
@@ -147,6 +139,11 @@ extension SimulationSettings {
             factor.isEnabled = true
             factor.isLocked  = false
             lockedFactors.remove(factorName)
+            
+            // Recalc offset so factor stays at the same numeric currentValue
+            let base  = globalBaseline(for: factor)
+            let range = factor.maxValue - factor.minValue
+            factor.internalOffset = (factor.currentValue - base) / range
         }
         
         // 6. Save updated factor state
@@ -156,7 +153,7 @@ extension SimulationSettings {
         // 7. If you're not toggling all at once, optionally sync factors
         if !userIsActuallyTogglingAll {
             ignoreSync = true
-            // syncFactors() or syncFactorsToGlobalIntensity() if needed
+            // e.g. syncFactorsToGlobalIntensity()
             ignoreSync = false
         }
         
@@ -168,38 +165,46 @@ extension SimulationSettings {
     func toggleAllFactors(on: Bool) {
         userIsActuallyTogglingAll = true
         
+        // 1) Turn each factor on/off in place
         for (name, var factor) in factors {
             if on {
-                // Re-enable factor
+                // Restore frozen
                 if let frozen = factor.frozenValue {
                     factor.currentValue = frozen
-                    print("[toggleAll (monthly)] Restoring factor \(name) -> \(frozen)")
-                    let base = globalBaseline(for: factor)
-                    let range = factor.maxValue - factor.minValue
-                    factor.internalOffset = (frozen - base) / range
-                    print("[toggleAll (monthly)]   New offset = \(factor.internalOffset) for factor \(name)")
-                    factor.frozenValue = nil
+                    factor.frozenValue  = nil
                 }
                 factor.isEnabled = true
-                factor.isLocked = false
+                factor.isLocked  = false
                 factor.wasChartForced = false
             } else {
-                // Disable factor
+                // Freeze
                 factor.frozenValue = factor.currentValue
-                print("[toggleAll (monthly)] Freezing factor \(name) at \(factor.currentValue)")
-                factor.isEnabled = false
-                factor.isLocked = true
+                factor.isEnabled   = false
+                factor.isLocked    = true
             }
             factors[name] = factor
         }
         
-        // Done toggling all, reset the flag
+        // Done toggling
         userIsActuallyTogglingAll = false
         
-        // Optionally re-sync factors
-        syncFactorsToGlobalIntensity()
+        // 2) If everything is ON, force the global slider & tilt bar to neutral
+        //    but *don't* recalc each factor's currentValue => no jump
+        if on {
+            // a) Manually centre the global slider at 0 => rawFactorIntensity = 0.5
+            extendedGlobalValue = 0.0
+            
+            // b) Re‐baseline each *enabled* factor so currentValue = baseline + offset*range
+            //    This ensures the factor doesn't shift from where it already is numerically.
+            for (fname, var factor) in factors where factor.isEnabled {
+                let base  = globalBaseline(for: factor)
+                let range = factor.maxValue - factor.minValue
+                factor.internalOffset = (factor.currentValue - base) / range
+                factors[fname] = factor
+            }
+        }
         
-        // Recalc tilt bar so it goes back to neutral if everything is on
+        // 3) Recalc tilt bar & reapply
         let bullishKeys: [String] = [
             "Halving", "InstitutionalDemand", "CountryAdoption", "RegulatoryClarity",
             "EtfApproval", "TechBreakthrough", "ScarcityEvents", "GlobalMacroHedge",
@@ -210,7 +215,6 @@ extension SimulationSettings {
             "StablecoinMeltdown", "BlackSwan", "BearMarket", "MaturingMarket",
             "Recession"
         ]
-        
         recalcTiltBarValue(bullishKeys: bullishKeys, bearishKeys: bearishKeys)
         applyDictionaryFactorsToSim()
     }

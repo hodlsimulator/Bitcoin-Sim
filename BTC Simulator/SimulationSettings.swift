@@ -268,6 +268,17 @@ class SimulationSettings: ObservableObject {
         isInitialized = true
     }
     
+    // -------------------------------------------------------------------------
+    // MARK: - NEW: Boolean to prevent full factor sync when toggling individually
+    // -------------------------------------------------------------------------
+    ///
+    /// If `true`, then changes to `extendedGlobalValue` → `rawFactorIntensity`
+    /// will NOT trigger a factor sync in `factorIntensity.didSet`.
+    ///
+    /// That way, the global slider *moves*, but other factors remain where they are.
+    ///
+    var ignoreSliderUpdateFromToggling: Bool = false
+    
     func convertSumToRaw(_ sum: Double) -> Double {
         // clamp sum to -108..+108 if needed
         let clampedSum = max(min(sum, 108.0), -108.0)
