@@ -64,85 +64,57 @@ extension SimulationSettings {
     
     // MARK: - Enable/Disable Individual Factor
     func setFactorEnabled(factorName: String, enabled: Bool) {
-        print("[Debug] weekly setFactorEnabled for \(factorName), newValue: \(enabled)")
+        guard var factor = factors[factorName] else { return }
+        if factor.isEnabled == enabled { return }
         
-        // 1. Make sure this factor exists in the dictionary
-        guard var factor = factors[factorName] else {
-            print("[Factor Debug] setFactorEnabled(\(factorName), \(enabled)): not found!")
-            return
-        }
-        
-        // 2. If there's no actual change, do nothing
-        if factor.isEnabled == enabled {
-            print("[Debug] Factor \(factorName) already enabled = \(enabled). Doing nothing.")
-            return
-        }
-        
-        // 3. Find the tilt value from your dictionaries.
-        //    We'll fallback to 9.0 if not found in either dict.
         let lowerName = factorName.lowercased()
         let toggleAmount: Double = {
             if let val = SimulationSettings.bullishTiltValuesWeekly[lowerName] {
                 return val
             } else if let val = SimulationSettings.bearishTiltValuesWeekly[lowerName] {
                 return val
-            } else {
-                return 9.0 // fallback if not found
             }
+            return 9.0
         }()
         
-        // 4. Toggling OFF => subtract the tilt value
         if !enabled {
-            print("[Debug] Toggling OFF \(factorName): subtracting \(toggleAmount)")
-            
-            extendedGlobalValue -= toggleAmount
-            
+            // Toggling OFF
+            if !userIsActuallyTogglingAll {
+                extendedGlobalValue -= toggleAmount
+            }
             factor.frozenValue = factor.currentValue
-            factor.isEnabled   = false
-            factor.isLocked    = true
+            factor.isEnabled = false
+            factor.isLocked = true
             lockedFactors.insert(factorName)
-        }
-        // 5. Toggling ON => add the tilt value
-        else {
-            print("[Debug] Toggling ON \(factorName): adding \(toggleAmount)")
-            
+        } else {
+            // Toggling ON
             if let frozen = factor.frozenValue {
                 factor.currentValue = frozen
                 factor.frozenValue = nil
-                
-                // Recalculate internalOffset to match current global slider
                 let base = globalBaseline(for: factor)
                 let range = factor.maxValue - factor.minValue
                 factor.internalOffset = (factor.currentValue - base) / range
             }
             
-            // Clear forced extremes if relevant
-            if chartExtremeBearish && factor.currentValue > factor.minValue {
-                chartExtremeBearish = false
+            if !userIsActuallyTogglingAll {
+                extendedGlobalValue += toggleAmount
             }
-            if chartExtremeBullish && factor.currentValue < factor.maxValue {
-                chartExtremeBullish = false
-            }
-            
-            extendedGlobalValue += toggleAmount
             
             factor.isEnabled = true
-            factor.isLocked  = false
+            factor.isLocked = false
             lockedFactors.remove(factorName)
         }
         
-        // 6. Save updated factor state
         factors[factorName] = factor
         overrodeTiltManually = true
-        
-        // 7. If you're not toggling all at once, optionally sync factors
+
+        // Skip the usual sync if toggling all
         if !userIsActuallyTogglingAll {
             ignoreSync = true
-            // If needed: syncFactors() or syncFactorsToGlobalIntensity()
+            // e.g. syncFactors() or syncFactorsToGlobalIntensity() if needed
             ignoreSync = false
         }
         
-        // 8. Reapply if your code structure needs it
         applyDictionaryFactorsToSim()
     }
     
