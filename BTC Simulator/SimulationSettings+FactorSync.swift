@@ -95,10 +95,8 @@ extension SimulationSettings {
         if !enabled {
             print("[Debug] Toggling OFF \(factorName): subtracting \(toggleAmount)")
             
-            // Subtract from extendedGlobalValue
             extendedGlobalValue -= toggleAmount
             
-            // Freeze or lock the factor
             factor.frozenValue = factor.currentValue
             factor.isEnabled   = false
             factor.isLocked    = true
@@ -108,10 +106,14 @@ extension SimulationSettings {
         else {
             print("[Debug] Toggling ON \(factorName): adding \(toggleAmount)")
             
-            // If it was frozen, restore that
             if let frozen = factor.frozenValue {
                 factor.currentValue = frozen
                 factor.frozenValue = nil
+                
+                // Recalculate internalOffset to match current global slider
+                let base = globalBaseline(for: factor)
+                let range = factor.maxValue - factor.minValue
+                factor.internalOffset = (factor.currentValue - base) / range
             }
             
             // Clear forced extremes if relevant
@@ -136,7 +138,7 @@ extension SimulationSettings {
         // 7. If you're not toggling all at once, optionally sync factors
         if !userIsActuallyTogglingAll {
             ignoreSync = true
-            // syncFactors() or syncFactorsToGlobalIntensity() if needed
+            // If needed: syncFactors() or syncFactorsToGlobalIntensity()
             ignoreSync = false
         }
         
