@@ -41,7 +41,10 @@ extension SimulationSettings {
             rawFactorIntensity
         }
         set {
-            rawFactorIntensity = newValue
+            // Animate whenever the global slider is updated
+            withAnimation(.easeInOut(duration: 0.4)) {
+                rawFactorIntensity = newValue
+            }
             syncFactorsToGlobalIntensity()
         }
     }
@@ -62,6 +65,12 @@ extension SimulationSettings {
         }
     }
     
+    // Utility to check if factor is Bearish
+    private func isBearishFactor(_ factorName: String) -> Bool {
+        let lower = factorName.lowercased()
+        return Self.bearishTiltValuesWeekly[lower] != nil
+    }
+    
     // MARK: - Enable/Disable Individual Factor
     func setFactorEnabled(factorName: String, enabled: Bool) {
         print("[Debug] weekly setFactorEnabled for \(factorName), newValue: \(enabled)")
@@ -78,18 +87,20 @@ extension SimulationSettings {
             return
         }
         
-        // 3. Find the tilt value from your dictionaries.
-        //    We'll fallback to 9.0 if not found in either dict.
+        // 3. Find the tilt value
         let lowerName = factorName.lowercased()
-        let toggleAmount: Double = {
+        let baseAmount: Double = {
             if let val = Self.bullishTiltValuesWeekly[lowerName] {
                 return val
             } else if let val = Self.bearishTiltValuesWeekly[lowerName] {
                 return val
             } else {
-                return 9.0 // fallback if not found
+                return 9.0 // fallback
             }
         }()
+        
+        // For Bearish factors, we invert the direction
+        let isBearish = isBearishFactor(factorName)
         
         // Decide if we skip adjusting global tilt
         let skipGlobalShift = (
@@ -102,12 +113,13 @@ extension SimulationSettings {
             || tiltBarValue == 1.0
         )
         
-        // 4. Toggling OFF => subtract the tilt value
+        // 4. Toggling OFF => for Bearish, we ADD (removing negative tilt); for Bullish, we SUBTRACT
         if !enabled {
-            print("[Debug] Toggling OFF \(factorName): subtracting \(toggleAmount)")
-            
+            print("[Debug] Toggling OFF \(factorName)")
             if !skipGlobalShift {
-                extendedGlobalValue -= toggleAmount
+                withAnimation(.easeInOut(duration: 0.4)) {
+                    extendedGlobalValue += (isBearish ? baseAmount : -baseAmount)
+                }
             }
             
             factor.frozenValue = factor.currentValue
@@ -115,10 +127,9 @@ extension SimulationSettings {
             factor.isLocked    = true
             lockedFactors.insert(factorName)
         }
-        // 5. Toggling ON => add the tilt value
+        // 5. Toggling ON => for Bearish, we SUBTRACT (adding negative tilt); for Bullish, we ADD
         else {
-            print("[Debug] Toggling ON \(factorName): adding \(toggleAmount)")
-            
+            print("[Debug] Toggling ON \(factorName)")
             if let frozen = factor.frozenValue {
                 factor.currentValue = frozen
                 factor.frozenValue  = nil
@@ -133,7 +144,9 @@ extension SimulationSettings {
             }
             
             if !skipGlobalShift {
-                extendedGlobalValue += toggleAmount
+                withAnimation(.easeInOut(duration: 0.4)) {
+                    extendedGlobalValue += (isBearish ? -baseAmount : baseAmount)
+                }
             }
             
             factor.isEnabled = true
@@ -168,7 +181,6 @@ extension SimulationSettings {
         // 1) Turn each factor on/off in place
         for (name, var factor) in factors {
             if on {
-                // Restore frozen
                 if let frozen = factor.frozenValue {
                     factor.currentValue = frozen
                     factor.frozenValue  = nil
@@ -177,7 +189,6 @@ extension SimulationSettings {
                 factor.isLocked  = false
                 factor.wasChartForced = false
             } else {
-                // Freeze
                 factor.frozenValue = factor.currentValue
                 factor.isEnabled   = false
                 factor.isLocked    = true
@@ -189,13 +200,11 @@ extension SimulationSettings {
         userIsActuallyTogglingAll = false
         
         // 2) If everything is ON, force the global slider & tilt bar to neutral
-        //    but *don't* recalc each factor's currentValue => no jump
         if on {
-            // a) Manually centre the global slider at 0 => rawFactorIntensity = 0.5
-            extendedGlobalValue = 0.0
+            withAnimation(.easeInOut(duration: 0.4)) {
+                extendedGlobalValue = 0.0
+            }
             
-            // b) Re‐baseline each *enabled* factor so currentValue = baseline + offset*range
-            //    This ensures the factor doesn't shift from where it already is numerically.
             for (fname, var factor) in factors where factor.isEnabled {
                 let base  = globalBaseline(for: factor)
                 let range = factor.maxValue - factor.minValue
