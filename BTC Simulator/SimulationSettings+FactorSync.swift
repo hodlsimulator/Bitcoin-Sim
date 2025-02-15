@@ -99,21 +99,18 @@ extension SimulationSettings {
             }
         }()
         
-        // For Bearish factors, we invert the direction
+        // For Bearish factors, invert direction
         let isBearish = isBearishFactor(factorName)
         
         // Decide if we skip adjusting global tilt
+        // Removed checks for factorIntensity and tiltBarValue
         let skipGlobalShift = (
             userIsActuallyTogglingAll
             || chartExtremeBearish
             || chartExtremeBullish
-            || factorIntensity <= 0.0
-            || factorIntensity >= 1.0
-            || tiltBarValue == -1.0
-            || tiltBarValue == 1.0
         )
         
-        // 4. Toggling OFF => for Bearish, we ADD (removing negative tilt); for Bullish, we SUBTRACT
+        // 4. Toggling OFF => Bearish => ADD, Bullish => SUBTRACT
         if !enabled {
             print("[Debug] Toggling OFF \(factorName)")
             if !skipGlobalShift {
@@ -127,7 +124,7 @@ extension SimulationSettings {
             factor.isLocked    = true
             lockedFactors.insert(factorName)
         }
-        // 5. Toggling ON => for Bearish, we SUBTRACT (adding negative tilt); for Bullish, we ADD
+        // 5. Toggling ON => Bearish => SUBTRACT, Bullish => ADD
         else {
             print("[Debug] Toggling ON \(factorName)")
             if let frozen = factor.frozenValue {
@@ -153,7 +150,7 @@ extension SimulationSettings {
             factor.isLocked  = false
             lockedFactors.remove(factorName)
             
-            // Recalc offset so factor stays at the same numeric currentValue
+            // Recalc offset so factor stays at same numeric currentValue
             let base  = globalBaseline(for: factor)
             let range = factor.maxValue - factor.minValue
             factor.internalOffset = (factor.currentValue - base) / range
@@ -199,7 +196,7 @@ extension SimulationSettings {
         // Done toggling
         userIsActuallyTogglingAll = false
         
-        // 2) If everything is ON, force the global slider & tilt bar to neutral
+        // 2) If everything is ON, force global slider & tilt bar to neutral
         if on {
             withAnimation(.easeInOut(duration: 0.4)) {
                 extendedGlobalValue = 0.0
