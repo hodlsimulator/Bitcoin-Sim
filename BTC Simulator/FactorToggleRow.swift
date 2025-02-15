@@ -45,7 +45,7 @@ struct FactorToggleRow: View {
             get: { factor.isEnabled },
             set: { newVal in
                 print("Toggle set for \(factorName): \(newVal)")
-                setFactorEnabled(newVal)
+                updateFactorToggle(newVal)
                 onFactorChange()
             }
         )
@@ -147,7 +147,8 @@ struct FactorToggleRow: View {
         }
     }
     
-    private func setFactorEnabled(_ enabled: Bool) {
+    private func updateFactorToggle(_ enabled: Bool) {
+        print("[Debug] updateFactorToggle: bridging to setFactorEnabled(\(factorName), \(enabled))")
         if monthlySimSettings.periodUnitMonthly == .months {
             monthlySimSettings.setFactorEnabled(factorName: factorName, enabled: enabled)
         } else {

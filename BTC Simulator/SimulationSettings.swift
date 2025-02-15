@@ -31,14 +31,18 @@ class SimulationSettings: ObservableObject {
     /// Global slider controlling the baseline for factors.
     /// When updated manually, its didSet calls syncFactors().
     @Published var rawFactorIntensity: Double {
-        didSet {
-            print("[rawFactorIntensity didSet (weekly)] rawFactorIntensity changed to \(rawFactorIntensity)")
-            UserDefaults.standard.set(rawFactorIntensity, forKey: "rawFactorIntensity")
-            if !ignoreSync {
-                syncFactors()
+            didSet {
+                let sumFromRaw = convertRawToSum(rawFactorIntensity)
+                if abs(sumFromRaw - extendedGlobalValue) > 1e-9 {
+                    ignoreSync = true
+                    extendedGlobalValue = sumFromRaw
+                    ignoreSync = false
+                }
+                if !ignoreSync {
+                    syncFactors()
+                }
             }
         }
-    }
     
     /// When true, changes to rawFactorIntensity do not trigger a full sync.
     var ignoreSync: Bool = false
@@ -78,6 +82,24 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
+    
+    @Published var extendedGlobalValue: Double = 0.0 {
+            didSet {
+                // 1) Clamp to -108..+108 if needed
+                if extendedGlobalValue < -108.0 { extendedGlobalValue = -108.0 }
+                if extendedGlobalValue > 108.0  { extendedGlobalValue = 108.0 }
+                
+                // 2) Convert sum to [0..1]
+                let newRaw = convertSumToRaw(extendedGlobalValue)
+                
+                // 3) Only update rawFactorIntensity if it changed
+                if abs(newRaw - rawFactorIntensity) > 1e-9 {
+                    ignoreSync = true
+                    rawFactorIntensity = newRaw
+                    ignoreSync = false
+                }
+            }
+        }
     
     @Published var contributionCurrencyWhenBoth: PreferredCurrency = .eur
     @Published var startingBalanceCurrencyWhenBoth: PreferredCurrency = .usd
@@ -244,6 +266,18 @@ class SimulationSettings: ObservableObject {
         }
         
         isInitialized = true
+    }
+    
+    func convertSumToRaw(_ sum: Double) -> Double {
+        // clamp sum to -108..+108 if needed
+        let clampedSum = max(min(sum, 108.0), -108.0)
+        // map -108..+108 => 0..1
+        return (clampedSum + 108.0) / 216.0
+    }
+
+    func convertRawToSum(_ raw: Double) -> Double {
+        // map 0..1 back to -108..+108
+        return (raw * 216.0) - 108.0
     }
     
     // MARK: - Tilt Bar Reset
@@ -463,20 +497,31 @@ class SimulationSettings: ObservableObject {
         factor.currentValue = clampedVal
         let newOffset = (clampedVal - baseline) / range
         factor.internalOffset = newOffset
-        
         factors[factorName] = factor
         
         let deltaOffset = newOffset - oldOffset
         let activeCount = factors.values.filter { $0.isEnabled && !$0.isLocked }.count
         if activeCount > 0 {
-            let shift = deltaOffset / Double(activeCount)
-            print("[userDidDragFactorSlider (weekly)] Adjusting global slider by shift: \(shift)")
-            ignoreSync = true
-            rawFactorIntensity += shift
-            rawFactorIntensity = min(max(rawFactorIntensity, 0), 1)
-            DispatchQueue.main.async {
-                self.ignoreSync = false
-            }
+            ignoreSync = true  // so we don’t trigger extra sync loops
+            let shiftIn0to1 = deltaOffset / Double(activeCount)
+            
+            // Scale shift for extended range
+            let shiftInMinus108to108 = shiftIn0to1 * 108.0
+            
+            print(
+                """
+                [Debug] userDidDragFactorSlider:
+                  deltaOffset =     \(deltaOffset)
+                  shiftIn0to1 = \(shiftIn0to1)
+                  shiftInMinus108to108 = \(shiftInMinus108to108)
+                """
+            )
+            
+            // Adjust extendedGlobalValue by that scaled amount
+            extendedGlobalValue += shiftInMinus108to108
+            
+            // Done with the manual bridging step, re-enable sync
+            ignoreSync = false
         }
         
         recalcTiltBarValue(bullishKeys: bullishKeys, bearishKeys: bearishKeys)
@@ -597,20 +642,19 @@ class SimulationSettings: ObservableObject {
     func recalcGlobalSliderFromFactors() {
         let activeFactors = factors.values.filter { $0.isEnabled && !$0.isLocked }
         guard !activeFactors.isEmpty else {
-            print("[recalcGlobalSliderFromFactors (weekly)] No active factors; resetting global slider to 0.5")
-            ignoreSync = true
-            rawFactorIntensity = 0.5
-            ignoreSync = false
+            print("[recalcGlobalSliderFromFactors] No active factors; setting extendedGlobalValue = 0 => rawFactorIntensity=0.5")
+            // extendedGlobalValue = 0.0  // bridging property will convert that to rawFactorIntensity=0.5
             return
         }
         let sumOffsets = activeFactors.reduce(0.0) { $0 + $1.internalOffset }
         let avgOffset = sumOffsets / Double(activeFactors.count)
-        var newIntensity = 0.5 + avgOffset
-        newIntensity = max(0.0, min(1.0, newIntensity))
-        print("[recalcGlobalSliderFromFactors (weekly)] New global slider intensity calculated: \(newIntensity)")
-        ignoreSync = true
-        rawFactorIntensity = newIntensity
-        ignoreSync = false
+        
+        // If you interpret avgOffset in [-1..+1], then to map into [-108..+108]:
+        let newExtended = avgOffset * 108.0
+        
+        print("[recalcGlobalSliderFromFactors] Setting extendedGlobalValue = \(newExtended)")
+        extendedGlobalValue = newExtended
+        // bridging logic in extendedGlobalValue.didSet => rawFactorIntensity
     }
 }
 

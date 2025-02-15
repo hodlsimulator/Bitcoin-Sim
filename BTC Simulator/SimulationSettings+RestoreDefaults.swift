@@ -33,7 +33,10 @@ extension SimulationSettings {
         factors = newFactors
 
         // 2) Reset intensity, tilt bar, and chart extremes
-        rawFactorIntensity = 0.5
+        ignoreSync = true
+        extendedGlobalValue = 0.0 // This corresponds to 0.5 in rawFactorIntensity
+        ignoreSync = false
+        
         chartExtremeBearish = false
         chartExtremeBullish = false
         resetTiltBar()
