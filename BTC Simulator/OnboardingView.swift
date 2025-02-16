@@ -348,28 +348,30 @@ extension OnboardingView {
     }
     
     func applySettingsToSim() {
-        // Your logic
         if chosenPeriodUnit == .months {
-            monthlySimSettings.periodUnitMonthly        = .months
-            monthlySimSettings.userPeriodsMonthly       = totalPeriods
+            monthlySimSettings.periodUnitMonthly         = .months
+            monthlySimSettings.userPeriodsMonthly        = totalPeriods
             monthlySimSettings.initialBTCPriceUSDMonthly = finalBTCPrice
-            monthlySimSettings.startingBalanceMonthly   = startingBalanceDouble
-            monthlySimSettings.averageCostBasisMonthly  = averageCostBasis
+            monthlySimSettings.startingBalanceMonthly    = startingBalanceDouble
+            monthlySimSettings.averageCostBasisMonthly   = averageCostBasis
             monthlySimSettings.currencyPreferenceMonthly = currencyPreference
-            monthlySimSettings.feePercentageMonthly     = feePercentage
-            
+            monthlySimSettings.feePercentageMonthly      = feePercentage
+
             inputManager.firstYearContribution  = String(contributionPerStep)
             inputManager.subsequentContribution = String(contributionPerStep)
             inputManager.threshold1             = threshold1
             inputManager.withdrawAmount1        = withdraw1
             inputManager.threshold2             = threshold2
             inputManager.withdrawAmount2        = withdraw2
-            
+
             monthlySimSettings.saveToUserDefaultsMonthly()
             simSettings.periodUnit = .months
             coordinator.useMonthly = true
-            
+
         } else {
+            // Force monthlySimSettings to .weeks so it won't linger in monthly mode
+            monthlySimSettings.periodUnitMonthly = .weeks
+
             weeklySimSettings.periodUnit         = .weeks
             weeklySimSettings.userPeriods        = totalPeriods
             weeklySimSettings.initialBTCPriceUSD = finalBTCPrice
@@ -377,19 +379,19 @@ extension OnboardingView {
             weeklySimSettings.averageCostBasis   = averageCostBasis
             weeklySimSettings.currencyPreference = currencyPreference
             weeklySimSettings.feePercentage      = feePercentage
-            
-            inputManager.firstYearContribution  = String(contributionPerStep)
-            inputManager.subsequentContribution = String(contributionPerStep)
-            inputManager.threshold1             = threshold1
-            inputManager.withdrawAmount1        = withdraw1
-            inputManager.threshold2             = threshold2
-            inputManager.withdrawAmount2        = withdraw2
-            
+
+            inputManager.firstYearContribution   = String(contributionPerStep)
+            inputManager.subsequentContribution  = String(contributionPerStep)
+            inputManager.threshold1              = threshold1
+            inputManager.withdrawAmount1         = withdraw1
+            inputManager.threshold2              = threshold2
+            inputManager.withdrawAmount2         = withdraw2
+
             weeklySimSettings.saveToUserDefaults()
             simSettings.periodUnit = .weeks
             coordinator.useMonthly = false
         }
-        
+
         UserDefaults.standard.set(startingBalanceDouble,      forKey: "savedStartingBalance")
         UserDefaults.standard.set(averageCostBasis,           forKey: "savedAverageCostBasis")
         UserDefaults.standard.set(totalPeriods,               forKey: "savedUserPeriods")
