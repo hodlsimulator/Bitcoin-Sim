@@ -114,72 +114,75 @@ struct LoadingOverlayView: View {
     
     // MARK: - Landscape Overlay (Pinned to bottom, no spinner if desired)
     private var landscapeOverlay: some View {
-        VStack(spacing: 16) {
-            
-            // Cancel button at top
-            HStack {
-                Spacer()
-                if coordinator.isLoading && !coordinator.isChartBuilding {
-                    Button {
-                        coordinator.isCancelled = true
-                        coordinator.isLoading = false
-                    } label: {
-                        Image(systemName: "xmark")
-                            .foregroundColor(.white)
-                            .padding()
+        ZStack(alignment: .bottom) {
+            // Transparent background just to keep alignment references
+            Color.clear.ignoresSafeArea()
+
+            // Main content pinned above the bottom so there's room for tips
+            VStack(spacing: 16) {
+                // Top row: Cancel button
+                HStack {
+                    Spacer()
+                    if coordinator.isLoading && !coordinator.isChartBuilding {
+                        Button {
+                            coordinator.isCancelled = true
+                            coordinator.isLoading = false
+                        } label: {
+                            Image(systemName: "xmark")
+                                .foregroundColor(.white)
+                                .padding()
+                        }
                     }
                 }
-            }
-            
-            Spacer()  // push content to bottom
-            
-            // If a simulation is running
-            if coordinator.isLoading {
-                // Hide the spinner in landscape (or remove this check if you do want it)
-                // InteractiveBitcoinSymbol3DSpinner()
                 
-                VStack(spacing: 10) {
-                    Text("Simulating: \(coordinator.completedIterations) / \(coordinator.totalIterations)")
-                        .font(.body.monospacedDigit())
-                        .foregroundColor(.white)
+                Spacer()  // pushes progress or chart-building text closer to the bottom
+                
+                // If a simulation is running
+                if coordinator.isLoading {
+                    // (Hide spinner in landscape if you like)
+                    VStack(spacing: 10) {
+                        Text("Simulating: \(coordinator.completedIterations) / \(coordinator.totalIterations)")
+                            .font(.body.monospacedDigit())
+                            .foregroundColor(.white)
+
+                        ProgressView(value: Double(coordinator.completedIterations),
+                                     total: Double(coordinator.totalIterations))
+                            .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
+                            .scaleEffect(x: 1, y: 2, anchor: .center)
+                            .frame(width: 200)
+                    }
                     
-                    ProgressView(value: Double(coordinator.completedIterations),
-                                 total: Double(coordinator.totalIterations))
-                    .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
-                    .scaleEffect(x: 1, y: 2, anchor: .center)
-                    .frame(width: 200)
+                // If charts are being built
+                } else if coordinator.isChartBuilding {
+                    VStack(spacing: 12) {
+                        Text("Generating Charts…")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .padding(.bottom, 10)
+
+                        ProgressView()
+                            .progressViewStyle(
+                                CircularProgressViewStyle(tint: Color(red: 189/255, green: 213/255, blue: 234/255))
+                            )
+                            .scaleEffect(2.0)
+                    }
                 }
                 
-            // If charts are being built
-            } else if coordinator.isChartBuilding {
-                VStack(spacing: 12) {
-                    Text("Generating Charts…")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .padding(.bottom, 10)
-                    
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(
-                            tint: Color(red: 189/255, green: 213/255, blue: 234/255)
-                        ))
-                        .scaleEffect(2.0)
-                }
+                // Add some space to ensure tips appear below
+                Spacer().frame(height: 50)
             }
-            
-            // Show tips if we have them
+            .padding()  // left/right padding
+
+            // The tip pinned at the very bottom
             if showTip && (coordinator.isLoading || coordinator.isChartBuilding) {
                 Text(currentTip)
                     .foregroundColor(.white)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: 300)
                     .transition(.opacity)
-                    .padding(.top, 16)
+                    .padding(.bottom, 20)  // spacing from screen bottom
             }
-            
-            Spacer().frame(height: 30)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 16)
     }
     
     // MARK: - Timer logic (same as before)
