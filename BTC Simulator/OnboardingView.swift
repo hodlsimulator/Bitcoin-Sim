@@ -8,7 +8,7 @@
 import SwiftUI
 import UIKit
 
-// MARK: - Enums (if not declared elsewhere)
+// MARK: - Enums (if not elsewhere)
 enum PeriodUnit: String, CaseIterable, Identifiable {
     case weeks
     case months
@@ -31,7 +31,6 @@ struct OnboardingView: View {
     @EnvironmentObject var coordinator: SimulationCoordinator
     @EnvironmentObject var simSettings: SimulationSettings
     
-    // Binding
     @Binding var didFinishOnboarding: Bool
     
     // Steps 0..8
@@ -67,7 +66,7 @@ struct OnboardingView: View {
     @State var threshold2: Double = 60000
     @State var withdraw2: Double = 0.0
     
-    // Layout constants
+    // Layout
     let bottomPaddingNext: CGFloat       = 260
     let bottomPaddingFinish: CGFloat     = 150
     let bottomPaddingFinishBoth: CGFloat = 110
@@ -83,7 +82,7 @@ struct OnboardingView: View {
         return nf
     }()
     
-    // Keep track of device orientation for smoother transitions
+    // We track device orientation, but let iOS handle rotation automatically
     @State private var deviceOrientation: UIDeviceOrientation = UIDevice.current.orientation
     
     // MARK: - Computed
@@ -103,21 +102,22 @@ struct OnboardingView: View {
         return 58000
     }
     
-    // Check orientation using our deviceOrientation state (for smooth transitions)
+    // We'll consider deviceOrientation just in case we want it for logic,
+    // but iOS handles rotation for us (no manual rotationEffect).
     var isLandscape: Bool {
         if deviceOrientation.isValidInterfaceOrientation {
             return deviceOrientation.isLandscape
         } else {
-            // Fallback if orientation is "unknown"
             return UIScreen.main.bounds.width > UIScreen.main.bounds.height
         }
     }
     
-    // Body
     var body: some View {
-        // Offset if not final step
+        // The offset used to shift content up a bit for the first 8 steps
         let offsetForContent: CGFloat = (currentStep == 8) ? 0 : -30
         
+        // Decide how far from the bottom the Next/Finish button is in portrait
+        // (or used if in portrait?). The user’s code also uses it in portrait logic.
         let bottomPaddingForStep: CGFloat = {
             if currentStep != 8 {
                 return bottomPaddingNext
@@ -136,9 +136,11 @@ struct OnboardingView: View {
                 endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
-            .onTapGesture { hideKeyboard() }
+            .onTapGesture {
+                hideKeyboard()
+            }
             
-            // Main content
+            // Main step content
             VStack(spacing: 20) {
                 Text(titleForStep(currentStep))
                     .font(.title)
@@ -151,7 +153,7 @@ struct OnboardingView: View {
                         .padding(.top, -2)
                 }
                 
-                // Step subviews (defined in OnboardingSteps.swift)
+                // Show the current step subview
                 switch currentStep {
                 case 0:
                     step0_PeriodFrequency()
@@ -175,18 +177,31 @@ struct OnboardingView: View {
                 
                 Spacer().frame(height: 20)
             }
+            // Shift entire step content up a bit if not final step
             .offset(y: offsetForContent)
             .frame(maxWidth: .infinity)
         }
-        // Portrait overlays
-        .overlay(portraitLogoOverlay, alignment: .top)
-        .overlay(portraitBackButtonOverlay, alignment: .topLeading)
-        .overlay(portraitNextOverlay(bottomPaddingForStep), alignment: .bottom)
+        // Overlays for *portrait* only, as your original code
+        // We do NOT rotate them ourselves; iOS auto-rotates them.
+        .overlay(
+            portraitLogoOverlay,
+            alignment: .top
+        )
+        .overlay(
+            portraitBackButtonOverlay,
+            alignment: .topLeading
+        )
+        .overlay(
+            portraitNextOverlay(bottomPaddingForStep),
+            alignment: .bottom
+        )
         
-        // Landscape overlay
-        .overlay(landscapeOverlay)
+        // Overlays for *landscape* only
+        .overlay(
+            landscapeOverlay
+        )
         
-        // If changing weeks -> months, update total periods
+        // If user picks weeks->months or vice versa
         .onChange(of: chosenPeriodUnit, initial: false) { _, newVal in
             if newVal == .months {
                 totalPeriods = 240
@@ -194,17 +209,18 @@ struct OnboardingView: View {
                 totalPeriods = 1040
             }
         }
-        
-        // Listen for orientation changes, animate the update
+        // Listen for orientation changes, but do NOT forcibly rotate anything
         .onReceive(NotificationCenter.default.publisher(for: UIDevice.orientationDidChangeNotification)) { _ in
-            withAnimation(.easeInOut(duration: 0.35)) {
-                deviceOrientation = UIDevice.current.orientation
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                let newOrientation = UIDevice.current.orientation
+                guard newOrientation.isValidInterfaceOrientation else { return }
+                // We just store it, no manual rotation
+                deviceOrientation = newOrientation
             }
         }
-        
         .ignoresSafeArea(.keyboard, edges: .bottom)
         .task {
-            // Attempt to fetch BTC Price
+            // fetch BTC price
             await fetchBTCPriceFromAPI()
             updateAverageCostBasisIfNeeded()
         }
@@ -215,15 +231,19 @@ struct OnboardingView: View {
 extension OnboardingView {
     @ViewBuilder
     var portraitLogoOverlay: some View {
+        // Show only if not in landscape
         if !isLandscape {
             OfficialBitcoinLogo()
                 .frame(width: 80, height: 80)
-                .padding(.top, 67) // your original
+                // If you want to move the logo left, or up/down, tweak these paddings:
+                // Right now it's top-centred, .padding(.top, 67).
+                .padding(.top, 67)
         }
     }
     
     @ViewBuilder
     var portraitBackButtonOverlay: some View {
+        // Show only in portrait if currentStep > 0
         if !isLandscape, currentStep > 0 {
             Button {
                 withAnimation(.easeOut(duration: 0.05)) {
@@ -235,13 +255,15 @@ extension OnboardingView {
                     .foregroundColor(.white)
                     .padding(10)
             }
+            // If you want to move it further left or up, adjust .padding here:
             .padding(.top, 50)
             .padding(.leading, 20)
         }
     }
     
     @ViewBuilder
-    func portraitNextOverlay(_ bottomPadding: CGFloat) -> some View {
+    func portraitNextOverlay(_ bottomPaddingForStep: CGFloat) -> some View {
+        // Show only in portrait
         if !isLandscape {
             Button(currentStep == 8 ? "Finish" : "Next") {
                 withAnimation(.easeOut(duration: 0.15)) {
@@ -254,18 +276,23 @@ extension OnboardingView {
             .background(Color.orange)
             .cornerRadius(6)
             .shadow(color: .black.opacity(0.3), radius: 4, x: 2, y: 2)
-            .padding(.bottom, bottomPadding)
+            // If you want the Next button to come *down* a bit, reduce the
+            // bottom padding or add a negative offset. For example:
+            .padding(.bottom, bottomPaddingForStep - 0)
+            // ^ For example, you could change "- 0" to "- 20" or remove it
+            // altogether to place the button lower in portrait.
         }
     }
 }
 
-// MARK: - Landscape Overlay
+// MARK: - Landscape Overlays
 extension OnboardingView {
     @ViewBuilder
     var landscapeOverlay: some View {
+        // Show only if in landscape
         if isLandscape {
             ZStack {
-                // Back button top-left
+                // If not on step0, show a back button top-left
                 if currentStep > 0 {
                     Button {
                         withAnimation(.easeOut(duration: 0.05)) {
@@ -282,13 +309,15 @@ extension OnboardingView {
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 }
                 
-                // Bitcoin logo near left, but not hugging edge
+                // The logo on the left in landscape. If you want it further left,
+                // increase .padding(.leading). If you want it further up or down,
+                // add .padding(.top) or .offset.
                 OfficialBitcoinLogo()
                     .frame(width: 80, height: 80)
-                    .padding(.leading, 50) // adjust as needed
+                    .padding(.leading, 50)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
                 
-                // Next/Finish near right, but not hugging edge
+                // Next/Finish on the right in landscape
                 Button(currentStep == 8 ? "Finish" : "Next") {
                     withAnimation(.easeOut(duration: 0.15)) {
                         onNextTapped()
@@ -300,14 +329,14 @@ extension OnboardingView {
                 .background(Color.orange)
                 .cornerRadius(6)
                 .shadow(color: .black.opacity(0.3), radius: 4, x: 2, y: 2)
-                .padding(.trailing, 50) // adjust as needed
+                .padding(.trailing, 50)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
             }
         }
     }
 }
 
-// MARK: - Functions
+// MARK: - Helpers
 extension OnboardingView {
     func onNextTapped() {
         if currentStep == 8 {
@@ -319,14 +348,15 @@ extension OnboardingView {
     }
     
     func applySettingsToSim() {
+        // Your logic
         if chosenPeriodUnit == .months {
-            monthlySimSettings.periodUnitMonthly         = .months
-            monthlySimSettings.userPeriodsMonthly        = totalPeriods
+            monthlySimSettings.periodUnitMonthly        = .months
+            monthlySimSettings.userPeriodsMonthly       = totalPeriods
             monthlySimSettings.initialBTCPriceUSDMonthly = finalBTCPrice
-            monthlySimSettings.startingBalanceMonthly    = startingBalanceDouble
-            monthlySimSettings.averageCostBasisMonthly   = averageCostBasis
+            monthlySimSettings.startingBalanceMonthly   = startingBalanceDouble
+            monthlySimSettings.averageCostBasisMonthly  = averageCostBasis
             monthlySimSettings.currencyPreferenceMonthly = currencyPreference
-            monthlySimSettings.feePercentageMonthly      = feePercentage
+            monthlySimSettings.feePercentageMonthly     = feePercentage
             
             inputManager.firstYearContribution  = String(contributionPerStep)
             inputManager.subsequentContribution = String(contributionPerStep)
@@ -360,7 +390,6 @@ extension OnboardingView {
             coordinator.useMonthly = false
         }
         
-        // Example user defaults
         UserDefaults.standard.set(startingBalanceDouble,      forKey: "savedStartingBalance")
         UserDefaults.standard.set(averageCostBasis,           forKey: "savedAverageCostBasis")
         UserDefaults.standard.set(totalPeriods,               forKey: "savedUserPeriods")
@@ -413,20 +442,13 @@ extension OnboardingView {
     
     func subtitleForStep(_ step: Int) -> String {
         switch step {
-        case 0:
-            return "Pick weekly or monthly"
-        case 1:
-            return "How many \(chosenPeriodUnit.rawValue)?"
-        case 2:
-            return "USD, EUR, or Both?"
-        case 4:
-            return "What did you pay for BTC before?"
-        case 5:
-            return "Fetch or type current BTC price"
-        case 7:
-            return "Set your withdrawal triggers"
-        default:
-            return ""
+        case 0: return "Pick weekly or monthly"
+        case 1: return "How many \(chosenPeriodUnit.rawValue)?"
+        case 2: return "USD, EUR, or Both?"
+        case 4: return "What did you pay for BTC before?"
+        case 5: return "Fetch or type current BTC price"
+        case 7: return "Set your withdrawal triggers"
+        default: return ""
         }
     }
 }
