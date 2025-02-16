@@ -41,7 +41,7 @@ class SimulationCoordinator: ObservableObject {
         
     @Published var simChartSelection: SimChartSelection
 
-    // NEW: We'll store the fitted GarchModel here if we calibrate it.
+    // We'll store the fitted GarchModel here if we calibrate it.
     private var fittedGarchModel: GarchModel? = nil
 
     // Historical returns storage
@@ -399,7 +399,7 @@ class SimulationCoordinator: ObservableObject {
                 let model = adamCalibrator.calibrate(
                     returns: historicalBTCMonthlyReturns,
                     iterations: 3000,
-                    baseLR: 1e-3 // you can tweak these as you like
+                    baseLR: 1e-3 // tweak as needed
                 )
                 fittedGarchModel = model
                 print("GARCH (Adam) Calibrated (Monthly): (ω, α, β) =",

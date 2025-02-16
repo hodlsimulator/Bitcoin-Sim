@@ -43,8 +43,8 @@ extension MonthlySimulationSettings {
         chartExtremeBullishMonthly = false
         resetTiltBarMonthly()
 
-        // 3) Remove the relevant UserDefaults keys
-        let keysToRemove = [
+        // 3) Remove the relevant UserDefaults keys, *except* skip seed-related keys if locked
+        var keysToRemove = [
             "factorStatesMonthly",
             "rawFactorIntensityMonthly",
             defaultTiltKeyMonthly,
@@ -58,7 +58,7 @@ extension MonthlySimulationSettings {
             "currencyPreferenceMonthly",
             periodUnitKeyMonthly,
             "useLognormalGrowthMonthly",
-            "useRandomSeedMonthly",
+            // skip removing seedValueMonthly, lockedRandomSeedMonthly, useRandomSeedMonthly if locked
             "useHistoricalSamplingMonthly",
             "useVolShocksMonthly",
             "useGarchVolatilityMonthly",
@@ -70,6 +70,12 @@ extension MonthlySimulationSettings {
             "useExtendedHistoricalSamplingMonthly",
             "lockHistoricalSamplingMonthly"
         ]
+        
+        // If NOT locked, then remove seed-related keys so we revert to random
+        if !lockedRandomSeedMonthly {
+            keysToRemove.append(contentsOf: ["seedValueMonthly", "lockedRandomSeedMonthly", "useRandomSeedMonthly"])
+        }
+
         let defaults = UserDefaults.standard
         for key in keysToRemove {
             defaults.removeObject(forKey: key)
@@ -83,17 +89,26 @@ extension MonthlySimulationSettings {
 
         // 5) Re-assign advanced toggles to fresh defaults
         useLognormalGrowthMonthly      = true
-        useRandomSeedMonthly           = true
+
+        // If not locked, revert to seed=0 and random seed
+        // If locked, skip changing the seed and force useRandomSeedMonthly = false
+        if !lockedRandomSeedMonthly {
+            seedValueMonthly    = 0
+            useRandomSeedMonthly = true
+        } else {
+            useRandomSeedMonthly = false
+        }
+
         useHistoricalSamplingMonthly   = true
-        useVolShocksMonthly            = true
-        useGarchVolatilityMonthly      = true
-        useAutoCorrelationMonthly      = true
+        useVolShocksMonthly           = true
+        useGarchVolatilityMonthly     = true
+        useAutoCorrelationMonthly     = true
         autoCorrelationStrengthMonthly = 0.05
-        meanReversionTargetMonthly     = 0.03
-        useMeanReversionMonthly        = true
-        useRegimeSwitchingMonthly      = true
+        meanReversionTargetMonthly    = 0.03
+        useMeanReversionMonthly       = true
+        useRegimeSwitchingMonthly     = true
         useExtendedHistoricalSamplingMonthly = true
-        lockHistoricalSamplingMonthly  = false
+        lockHistoricalSamplingMonthly = false
 
         print("[restoreDefaultsMonthly] Advanced toggles reset.")
         
@@ -109,3 +124,4 @@ extension MonthlySimulationSettings {
         self.saveToUserDefaultsMonthly()
     }
 }
+    

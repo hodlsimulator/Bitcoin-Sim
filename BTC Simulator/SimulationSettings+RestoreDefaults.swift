@@ -41,8 +41,8 @@ extension SimulationSettings {
         chartExtremeBullish = false
         resetTiltBar()
 
-        // 3) Remove user defaults
-        let keysToRemove = [
+        // 3) Remove user defaults keys, **but** if lockedRandomSeed == true, skip removing
+        var keysToRemove = [
             "factorStates",
             "rawFactorIntensity",
             "defaultTilt",
@@ -57,8 +57,8 @@ extension SimulationSettings {
             "savedPeriodUnit",
             "useLognormalGrowth",
             "useAnnualStep",
-            "seedValue",
-            "useRandomSeed",
+            // "seedValue",           // We'll conditionally remove below
+            // "useRandomSeed",       // We'll conditionally remove below
             "useHistoricalSampling",
             "useExtendedHistoricalSampling",
             "useVolShocks",
@@ -69,7 +69,14 @@ extension SimulationSettings {
             "useMeanReversion",
             "useRegimeSwitching",
             "lockHistoricalSampling"
+            // "lockedRandomSeed"     // We'll conditionally remove below
         ]
+        
+        // If we're NOT locked, remove seed-related keys too (so it goes back to "random" by default)
+        if !lockedRandomSeed {
+            keysToRemove.append(contentsOf: ["seedValue", "lockedRandomSeed", "useRandomSeed"])
+        }
+
         let defaults = UserDefaults.standard
         for key in keysToRemove {
             defaults.removeObject(forKey: key)
@@ -107,8 +114,17 @@ extension SimulationSettings {
         // 6) Reassign weekly advanced toggles to desired “on by default” values
         useLognormalGrowth = true
         useAnnualStep      = false
-        seedValue          = 0
-        useRandomSeed      = true
+
+        // If we are not locked, revert to seed=0 / random seed
+        // If locked, skip changing the seed or forcing random seed
+        if !lockedRandomSeed {
+            seedValue     = 0
+            useRandomSeed = true
+        } else {
+            // If locked, ensure we actually use the locked seed
+            useRandomSeed = false
+        }
+
         useHistoricalSampling         = true
         useExtendedHistoricalSampling = true
         useVolShocks       = true
