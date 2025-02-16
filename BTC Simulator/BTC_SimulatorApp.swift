@@ -7,19 +7,6 @@
 
 import SwiftUI
 import Sentry
-import UIKit  // <-- Needed for orientation
-
-// 1) Add an AppDelegate that locks orientation
-class AppDelegate: NSObject, UIApplicationDelegate {
-    // By default, allow all orientations
-    static var orientationLock = UIInterfaceOrientationMask.all
-
-    // This gets called whenever iOS decides which orientations are allowed
-    func application(_ application: UIApplication,
-                     supportedInterfaceOrientationsFor window: UIWindow?) -> UIInterfaceOrientationMask {
-        AppDelegate.orientationLock
-    }
-}
 
 class SimChartSelection: ObservableObject {
     @Published var selectedChart: ChartType = .btcPrice
@@ -27,9 +14,6 @@ class SimChartSelection: ObservableObject {
 
 @main
 struct BTCMonteCarloApp: App {
-    // 2) Hook the AppDelegate in
-    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    
     @Environment(\.scenePhase) private var scenePhase
     
     @AppStorage("hasOnboarded") private var didFinishOnboarding = false

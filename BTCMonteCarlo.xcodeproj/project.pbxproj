@@ -58,6 +58,7 @@
 		E191AD632D1B0C9400020DBE /* CSVLoaderSP500.swift in Sources */ = {isa = PBXBuildFile; fileRef = E191AD622D1B0C9100020DBE /* CSVLoaderSP500.swift */; };
 		E191AD652D1B0D5700020DBE /* CSVParsingUtilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = E191AD642D1B0D5200020DBE /* CSVParsingUtilities.swift */; };
 		E191AD672D1B764400020DBE /* CSVLoaderBTC.swift in Sources */ = {isa = PBXBuildFile; fileRef = E191AD662D1B763E00020DBE /* CSVLoaderBTC.swift */; };
+		E1942C8D2D6183DE00F5B9A1 /* SimulationResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1942C8C2D6183DB00F5B9A1 /* SimulationResultsView.swift */; };
 		E19D10E72D3ED96200E3A55E /* GARCHHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = E19D10E62D3ED96000E3A55E /* GARCHHelper.swift */; };
 		E19D10EB2D3EF69300E3A55E /* MempoolDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E19D10EA2D3EF69200E3A55E /* MempoolDataManager.swift */; };
 		E19D10ED2D40279600E3A55E /* SimulationSettings+Defaults.swift in Sources */ = {isa = PBXBuildFile; fileRef = E19D10EC2D40279200E3A55E /* SimulationSettings+Defaults.swift */; };
@@ -167,6 +168,7 @@
 		E191AD622D1B0C9100020DBE /* CSVLoaderSP500.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVLoaderSP500.swift; sourceTree = "<group>"; };
 		E191AD642D1B0D5200020DBE /* CSVParsingUtilities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVParsingUtilities.swift; sourceTree = "<group>"; };
 		E191AD662D1B763E00020DBE /* CSVLoaderBTC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVLoaderBTC.swift; sourceTree = "<group>"; };
+		E1942C8C2D6183DB00F5B9A1 /* SimulationResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulationResultsView.swift; sourceTree = "<group>"; };
 		E19D10E62D3ED96000E3A55E /* GARCHHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GARCHHelper.swift; sourceTree = "<group>"; };
 		E19D10EA2D3EF69200E3A55E /* MempoolDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MempoolDataManager.swift; sourceTree = "<group>"; };
 		E19D10EC2D40279200E3A55E /* SimulationSettings+Defaults.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SimulationSettings+Defaults.swift"; sourceTree = "<group>"; };
@@ -317,6 +319,7 @@
 				E1B7B0A62D4753CC00B60EC6 /* ShiftFactors.swift */,
 				E17B2F212D26A9F000ECE087 /* SimulationCoordinator.swift */,
 				E166A8AF2CF855C20003F518 /* SimulationData.swift */,
+				E1942C8C2D6183DB00F5B9A1 /* SimulationResultsView.swift */,
 				E1883F392D1DD94C007AA90B /* SimulationSettings.swift */,
 				E19D10F62D40D8C000E3A55E /* SimulationSettings+BearishFactors.swift */,
 				E19D10F42D40D10C00E3A55E /* SimulationSettings+BullishFactors.swift */,
@@ -494,6 +497,7 @@
 				E1883F482D1E8E21007AA90B /* AboutView.swift in Sources */,
 				E112E3742D58B2EB00167E92 /* ConsentView.swift in Sources */,
 				E15DDF492D5AD0F100CDD30A /* MonthlySimulationSettings+FactorSync.swift in Sources */,
+				E1942C8D2D6183DE00F5B9A1 /* SimulationResultsView.swift in Sources */,
 				E17B2F282D27505300ECE087 /* LandscapePlaceholderView.swift in Sources */,
 				E166A8B22CF85B2B0003F518 /* ContentView.swift in Sources */,
 				E19D10EB2D3EF69300E3A55E /* MempoolDataManager.swift in Sources */,
