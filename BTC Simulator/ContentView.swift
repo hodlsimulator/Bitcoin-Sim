@@ -1,42 +1,3 @@
-/*
------------------------------------------------------------
-                CONTENT VIEW
-                   BTC MONTE CARLO
-                 (HODL SIMULATOR)
------------------------------------------------------------
-Description:
- This file implements the main user interface for the HODL Simulator. It combines multiple components to:
- • Allow users to configure simulation parameters via an interactive input form.
- • Coordinate navigation between settings, about, and histogram/chart detail screens.
- • Integrate persistent input management, chart data caching, and simulation coordination.
- • Provide custom data formatting (e.g., currency and power-of-ten suffixes) for numerical values.
- • Display high-level outcomes and a transition button for viewing detailed results in a separate
-   SimulationResultsView file.
-
-Key Components:
- • PersistentInputManager:
-   - Manages user inputs and persists simulation parameters using UserDefaults.
- • ChartDataCache:
-   - Caches simulation run data and chart snapshots for efficient rendering.
- • ContentView:
-   - Acts as the main entry point, toggling between the parameter input screen and high-level results.
-   - Provides a transition to the new SimulationResultsView, which displays the detailed simulation data.
- • Navigation & Interaction:
-   - Supports navigation to Settings, About, and additional views with bottom icons and transition buttons.
- • Data Formatting:
-   - Provides extensions for formatting numeric values for display in the simulation results.
-
-Usage:
- When the app launches, ContentView displays the configuration form for simulation parameters. After
- running a simulation, the view transitions to a concise results summary. Users can tap to navigate
- to SimulationResultsView, where interactive charts and detailed summaries make it easy to explore
- various outcomes in depth.
-
------------------------------------------------------------
-Created on 20/11/2024.
------------------------------------------------------------
-*/
-
 import SwiftUI
 import PDFKit
 import UniformTypeIdentifiers
@@ -383,7 +344,7 @@ struct ContentView: View {
                     }
                 }
                 else {
-                    // We've extracted the simulation results view into a separate file
+                    // If we've moved results to a separate file
                     SimulationResultsView(
                         lastViewedPage: $lastViewedPage,
                         lastViewedWeek: $lastViewedWeek,
@@ -397,16 +358,18 @@ struct ContentView: View {
                     )
                 }
 
-                // If the user has some results but hasn't navigated to them yet:
+                // If the user has results but hasn't navigated to them yet
                 if !coordinator.isSimulationRun &&
                     !coordinator.monteCarloResults.isEmpty &&
                     !coordinator.isChartBuilding {
                     transitionToResultsButton
                 }
 
-                // Loading overlay if sim or chart building is in progress
+                // Here we replace the old inline overlay with our new view:
                 if coordinator.isLoading || coordinator.isChartBuilding {
-                    loadingOverlayCombined
+                    LoadingOverlayView()
+                        .environmentObject(coordinator)
+                        .environmentObject(simSettings) // so the tips can be filtered
                 }
             }
             .navigationDestination(isPresented: $showSettings) {
@@ -463,7 +426,7 @@ struct ContentView: View {
             }
         }
     }
-
+    
     // MARK: - Parameter Entry Screen
     private var parametersScreen: some View {
         ParameterEntryView(
@@ -535,68 +498,7 @@ struct ContentView: View {
             Spacer()
         }
     }
-
-    // MARK: - Loading Overlay
-    private var loadingOverlayCombined: some View {
-        ZStack {
-            Color.black.opacity(0.6).ignoresSafeArea()
-            VStack(spacing: 0) {
-                Spacer().frame(height: 250)
-
-                HStack {
-                    Spacer()
-                    if coordinator.isLoading && !coordinator.isChartBuilding {
-                        Button(action: {
-                            coordinator.isCancelled = true
-                            coordinator.isLoading = false
-                        }) {
-                            Image(systemName: "xmark")
-                                .foregroundColor(.white)
-                                .padding()
-                        }
-                        .padding(.trailing, 20)
-                    }
-                }
-                .offset(y: 220)
-
-                if coordinator.isLoading {
-                    InteractiveBitcoinSymbol3DSpinner()
-                        .padding(.bottom, 30)
-
-                    VStack(spacing: 17) {
-                        Text("Simulating: \(coordinator.completedIterations) / \(coordinator.totalIterations)")
-                            .font(.body.monospacedDigit())
-                            .foregroundColor(.white)
-
-                        ProgressView(value: Double(coordinator.completedIterations),
-                                     total: Double(coordinator.totalIterations))
-                        .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
-                        .scaleEffect(x: 1, y: 2, anchor: .center)
-                        .frame(width: 200)
-                    }
-                    .padding(.bottom, 20)
-                }
-                else if coordinator.isChartBuilding {
-                    VStack(spacing: 12) {
-                        Text("Generating Charts…")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .padding(.bottom, 20)
-
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: Color(red: 189/255, green: 213/255, blue: 234/255)))
-                            .scaleEffect(2.0)
-                    }
-                    .offset(y: 270)
-
-                    Spacer().frame(height: 30)
-                }
-
-                Spacer()
-            }
-        }
-    }
-
+    
     // MARK: - columns
     private var columns: [(String, PartialKeyPath<SimulationData>)] {
         switch simSettings.currencyPreference {
