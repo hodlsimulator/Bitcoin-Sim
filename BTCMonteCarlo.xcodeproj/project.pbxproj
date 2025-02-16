@@ -59,6 +59,7 @@
 		E191AD652D1B0D5700020DBE /* CSVParsingUtilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = E191AD642D1B0D5200020DBE /* CSVParsingUtilities.swift */; };
 		E191AD672D1B764400020DBE /* CSVLoaderBTC.swift in Sources */ = {isa = PBXBuildFile; fileRef = E191AD662D1B763E00020DBE /* CSVLoaderBTC.swift */; };
 		E1942C8D2D6183DE00F5B9A1 /* SimulationResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1942C8C2D6183DB00F5B9A1 /* SimulationResultsView.swift */; };
+		E1942C8F2D61C50A00F5B9A1 /* OnboardingSteps.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1942C8E2D61C50800F5B9A1 /* OnboardingSteps.swift */; };
 		E19D10E72D3ED96200E3A55E /* GARCHHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = E19D10E62D3ED96000E3A55E /* GARCHHelper.swift */; };
 		E19D10EB2D3EF69300E3A55E /* MempoolDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E19D10EA2D3EF69200E3A55E /* MempoolDataManager.swift */; };
 		E19D10ED2D40279600E3A55E /* SimulationSettings+Defaults.swift in Sources */ = {isa = PBXBuildFile; fileRef = E19D10EC2D40279200E3A55E /* SimulationSettings+Defaults.swift */; };
@@ -169,6 +170,7 @@
 		E191AD642D1B0D5200020DBE /* CSVParsingUtilities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVParsingUtilities.swift; sourceTree = "<group>"; };
 		E191AD662D1B763E00020DBE /* CSVLoaderBTC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVLoaderBTC.swift; sourceTree = "<group>"; };
 		E1942C8C2D6183DB00F5B9A1 /* SimulationResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulationResultsView.swift; sourceTree = "<group>"; };
+		E1942C8E2D61C50800F5B9A1 /* OnboardingSteps.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingSteps.swift; sourceTree = "<group>"; };
 		E19D10E62D3ED96000E3A55E /* GARCHHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GARCHHelper.swift; sourceTree = "<group>"; };
 		E19D10EA2D3EF69200E3A55E /* MempoolDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MempoolDataManager.swift; sourceTree = "<group>"; };
 		E19D10EC2D40279200E3A55E /* SimulationSettings+Defaults.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SimulationSettings+Defaults.swift"; sourceTree = "<group>"; };
@@ -304,6 +306,7 @@
 				E15DDF482D5AD0EC00CDD30A /* MonthlySimulationSettings+FactorSync.swift */,
 				E19D11412D42F9E500E3A55E /* NetDeposit.swift */,
 				E1883F4F2D1FCEB9007AA90B /* OnboardingView.swift */,
+				E1942C8E2D61C50800F5B9A1 /* OnboardingSteps.swift */,
 				E17B2F7F2D2800D100ECE087 /* OrientationObserver.swift */,
 				E1F1CB652D4F31B9003DB24F /* ParallelSimulationRunner.swift */,
 				E15DDF4E2D5B3AC000CDD30A /* ParameterEntryView.swift */,
@@ -551,6 +554,7 @@
 				E1E31C512D438DD900ED22E6 /* GarchCalibrator.swift in Sources */,
 				E1F1CB622D4F081D003DB24F /* HalvingHistoricalManager.swift in Sources */,
 				E1883F3E2D1E0D7A007AA90B /* ActiveField.swift in Sources */,
+				E1942C8F2D61C50A00F5B9A1 /* OnboardingSteps.swift in Sources */,
 				E19D10F52D40D10E00E3A55E /* SimulationSettings+BullishFactors.swift in Sources */,
 				E1A1E52B2D2E3975008F7658 /* InteractiveBitcoinSymbol3DSpinner.swift in Sources */,
 				E1B7B0A12D44FD3600B60EC6 /* BigNumberExtensions.swift in Sources */,

@@ -6,7 +6,9 @@
 //
 
 import SwiftUI
+import UIKit
 
+// MARK: - Enums (if not declared elsewhere)
 enum PeriodUnit: String, CaseIterable, Identifiable {
     case weeks
     case months
@@ -20,68 +22,58 @@ enum PreferredCurrency: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 }
 
+// MARK: - Main View
 struct OnboardingView: View {
-    @EnvironmentObject var weeklySimSettings: SimulationSettings          // weekly logic
-    @EnvironmentObject var monthlySimSettings: MonthlySimulationSettings // monthly logic
+    // Environment Objects
+    @EnvironmentObject var weeklySimSettings: SimulationSettings
+    @EnvironmentObject var monthlySimSettings: MonthlySimulationSettings
     @EnvironmentObject var inputManager: PersistentInputManager
     @EnvironmentObject var coordinator: SimulationCoordinator
     @EnvironmentObject var simSettings: SimulationSettings
     
+    // Binding
     @Binding var didFinishOnboarding: Bool
     
-    // MARK: - Steps 0..8
-    @State private var currentStep: Int = 0
+    // Steps 0..8
+    @State var currentStep: Int = 0
     
-    // Step 0: Weekly or Monthly
-    @State private var chosenPeriodUnit: PeriodUnit = .weeks
+    // Step 0
+    @State var chosenPeriodUnit: PeriodUnit = .weeks
     
-    // Step 1: How many total periods
-    @State private var totalPeriods: Int = 1040
+    // Step 1
+    @State var totalPeriods: Int = 1040
     
-    // Step 2: Which currency
-    @State private var currencyPreference: PreferredCurrency = .usd
+    // Step 2
+    @State var currencyPreference: PreferredCurrency = .usd
     
-    // Step 3: Starting Balance as a String
-    @State private var startingBalanceText: String = "1,000"
-    @State private var startingBalanceCurrencyForBoth: PreferredCurrency = .usd
+    // Step 3
+    @State var startingBalanceText: String = "1,000"
+    @State var startingBalanceCurrencyForBoth: PreferredCurrency = .usd
     
-    // Step 4: Average BTC Purchase Price
-    @State private var averageCostBasis: Double = 58000
+    // Step 4
+    @State var averageCostBasis: Double = 58000
     
-    // Step 5: BTC Price
-    @State private var fetchedBTCPrice: String = "N/A"
-    @State private var userBTCPrice: String = ""
+    // Step 5
+    @State var fetchedBTCPrice: String = "N/A"
+    @State var userBTCPrice: String = ""
     
-    // Step 6: Single contribution
-    @State private var contributionPerStep: Double = 100.0
+    // Step 6
+    @State var contributionPerStep: Double = 100.0
+    @State var feePercentage: Double = 0.6
     
-    // New: Fee percentage defaulting to 0.6 (which we interpret as 0.6%)
-    @State private var feePercentage: Double = 0.6
+    // Step 7
+    @State var threshold1: Double = 30000
+    @State var withdraw1: Double = 0.0
+    @State var threshold2: Double = 60000
+    @State var withdraw2: Double = 0.0
     
-    // Step 7: Withdrawals
-    @State private var threshold1: Double = 30000
-    @State private var withdraw1: Double = 0.0
-    @State private var threshold2: Double = 60000
-    @State private var withdraw2: Double = 0.0
+    // Layout constants
+    let bottomPaddingNext: CGFloat       = 260
+    let bottomPaddingFinish: CGFloat     = 150
+    let bottomPaddingFinishBoth: CGFloat = 110
     
-    private let bottomPaddingNext: CGFloat       = 260
-    private let bottomPaddingFinish: CGFloat     = 150
-    private let bottomPaddingFinishBoth: CGFloat = 110
-    
-    private var bottomPaddingForStep: CGFloat {
-        if currentStep != 8 {
-            return bottomPaddingNext
-        } else {
-            if currencyPreference == .both {
-                return bottomPaddingFinishBoth
-            } else {
-                return bottomPaddingFinish
-            }
-        }
-    }
-    
-    // A simple formatter to re‐format “live”
-    private let currencyFormatter: NumberFormatter = {
+    // A formatter for re-formatting
+    let currencyFormatter: NumberFormatter = {
         let nf = NumberFormatter()
         nf.numberStyle = .decimal
         nf.usesGroupingSeparator = true
@@ -91,26 +83,62 @@ struct OnboardingView: View {
         return nf
     }()
     
-    // Convert the user’s typed string into a Double. If parsing fails, treat as zero.
-    private var startingBalanceDouble: Double {
-        let digitsOnly = startingBalanceText.replacingOccurrences(of: "[^0-9.]", with: "", options: .regularExpression)
+    // Keep track of device orientation for smoother transitions
+    @State private var deviceOrientation: UIDeviceOrientation = UIDevice.current.orientation
+    
+    // MARK: - Computed
+    var startingBalanceDouble: Double {
+        let digitsOnly = startingBalanceText
+            .replacingOccurrences(of: "[^0-9.]", with: "", options: .regularExpression)
         return Double(digitsOnly) ?? 0
     }
     
+    var finalBTCPrice: Double {
+        if let typedVal = Double(userBTCPrice), typedVal > 0 {
+            return typedVal
+        }
+        if let fetchedVal = Double(fetchedBTCPrice), fetchedVal > 0 {
+            return fetchedVal
+        }
+        return 58000
+    }
+    
+    // Check orientation using our deviceOrientation state (for smooth transitions)
+    var isLandscape: Bool {
+        if deviceOrientation.isValidInterfaceOrientation {
+            return deviceOrientation.isLandscape
+        } else {
+            // Fallback if orientation is "unknown"
+            return UIScreen.main.bounds.width > UIScreen.main.bounds.height
+        }
+    }
+    
+    // Body
     var body: some View {
+        // Offset if not final step
         let offsetForContent: CGFloat = (currentStep == 8) ? 0 : -30
-
+        
+        let bottomPaddingForStep: CGFloat = {
+            if currentStep != 8 {
+                return bottomPaddingNext
+            } else {
+                return (currencyPreference == .both)
+                    ? bottomPaddingFinishBoth
+                    : bottomPaddingFinish
+            }
+        }()
+        
         ZStack {
+            // Background gradient
             LinearGradient(
                 gradient: Gradient(colors: [Color.black, Color(white: 0.15), Color.black]),
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
-            .onTapGesture {
-                hideKeyboard()
-            }
-
+            .onTapGesture { hideKeyboard() }
+            
+            // Main content
             VStack(spacing: 20) {
                 Text(titleForStep(currentStep))
                     .font(.title)
@@ -123,6 +151,7 @@ struct OnboardingView: View {
                         .padding(.top, -2)
                 }
                 
+                // Step subviews (defined in OnboardingSteps.swift)
                 switch currentStep {
                 case 0:
                     step0_PeriodFrequency()
@@ -149,35 +178,71 @@ struct OnboardingView: View {
             .offset(y: offsetForContent)
             .frame(maxWidth: .infinity)
         }
-        .overlay(
+        // Portrait overlays
+        .overlay(portraitLogoOverlay, alignment: .top)
+        .overlay(portraitBackButtonOverlay, alignment: .topLeading)
+        .overlay(portraitNextOverlay(bottomPaddingForStep), alignment: .bottom)
+        
+        // Landscape overlay
+        .overlay(landscapeOverlay)
+        
+        // If changing weeks -> months, update total periods
+        .onChange(of: chosenPeriodUnit, initial: false) { _, newVal in
+            if newVal == .months {
+                totalPeriods = 240
+            } else {
+                totalPeriods = 1040
+            }
+        }
+        
+        // Listen for orientation changes, animate the update
+        .onReceive(NotificationCenter.default.publisher(for: UIDevice.orientationDidChangeNotification)) { _ in
+            withAnimation(.easeInOut(duration: 0.35)) {
+                deviceOrientation = UIDevice.current.orientation
+            }
+        }
+        
+        .ignoresSafeArea(.keyboard, edges: .bottom)
+        .task {
+            // Attempt to fetch BTC Price
+            await fetchBTCPriceFromAPI()
+            updateAverageCostBasisIfNeeded()
+        }
+    }
+}
+
+// MARK: - Portrait Overlays
+extension OnboardingView {
+    @ViewBuilder
+    var portraitLogoOverlay: some View {
+        if !isLandscape {
             OfficialBitcoinLogo()
                 .frame(width: 80, height: 80)
-                .padding(.top, 67),
-            alignment: .top
-        )
-        .overlay(
-            Group {
-                if currentStep > 0 {
-                    Button {
-                        withAnimation(.easeOut(duration: 0.05)) {
-                            currentStep -= 1
-                        }
-                    } label: {
-                        Image(systemName: "chevron.left")
-                            .font(.title2)
-                            .foregroundColor(.white)
-                            .padding(10)
-                    }
-                    .background(Color.clear)
-                    .contentShape(Rectangle())
-                    .padding(.top, 50)
-                    .padding(.leading, 20)
-                    .zIndex(10)
+                .padding(.top, 67) // your original
+        }
+    }
+    
+    @ViewBuilder
+    var portraitBackButtonOverlay: some View {
+        if !isLandscape, currentStep > 0 {
+            Button {
+                withAnimation(.easeOut(duration: 0.05)) {
+                    currentStep -= 1
                 }
-            },
-            alignment: .topLeading
-        )
-        .overlay(
+            } label: {
+                Image(systemName: "chevron.left")
+                    .font(.title2)
+                    .foregroundColor(.white)
+                    .padding(10)
+            }
+            .padding(.top, 50)
+            .padding(.leading, 20)
+        }
+    }
+    
+    @ViewBuilder
+    func portraitNextOverlay(_ bottomPadding: CGFloat) -> some View {
+        if !isLandscape {
             Button(currentStep == 8 ? "Finish" : "Next") {
                 withAnimation(.easeOut(duration: 0.15)) {
                     onNextTapped()
@@ -189,468 +254,122 @@ struct OnboardingView: View {
             .background(Color.orange)
             .cornerRadius(6)
             .shadow(color: .black.opacity(0.3), radius: 4, x: 2, y: 2)
-            .padding(.bottom, bottomPaddingForStep)
-            .zIndex(5),
-            alignment: .bottom
-        )
-        .ignoresSafeArea(.keyboard, edges: .bottom)
-        .onChange(of: chosenPeriodUnit, initial: false) { _, newVal in
-            if newVal == .months {
-                totalPeriods = 240
-            } else {
-                totalPeriods = 1040
-            }
-        }
-        .task {
-            await fetchBTCPriceFromAPI()
-            updateAverageCostBasisIfNeeded()
+            .padding(.bottom, bottomPadding)
         }
     }
+}
 
-    // MARK: - Step 0
-    private func step0_PeriodFrequency() -> some View {
-        VStack(spacing: 20) {
-            Text("Choose Weekly or Monthly")
-                .foregroundColor(.white)
-            Picker("Freq", selection: $chosenPeriodUnit) {
-                ForEach(PeriodUnit.allCases) { unit in
-                    Text(unit.rawValue.capitalized).tag(unit)
-                }
-            }
-            .pickerStyle(.segmented)
-            .frame(width: 200)
-        }
-    }
-
-    // MARK: - Step 1
-    private func step1_TotalPeriods() -> some View {
-        VStack(spacing: 16) {
-            Text(chosenPeriodUnit == .weeks ? "How many weeks?" : "How many months?")
-                .foregroundColor(.white)
-            
-            TextField("e.g. 1040", value: $totalPeriods, format: .number)
-                .keyboardType(.numberPad)
-                .padding()
-                .background(Color.white.opacity(0.15))
-                .cornerRadius(6)
-                .foregroundColor(.white)
-                .frame(width: 150)
-                .multilineTextAlignment(.center)
-        }
-    }
-
-    // MARK: - Step 2
-    private func step2_PickCurrency() -> some View {
-        VStack(spacing: 20) {
-            Text("Which currency do you want to display?")
-                .foregroundColor(.white)
-            
-            Picker("Currency", selection: $currencyPreference) {
-                Text("USD").tag(PreferredCurrency.usd)
-                Text("EUR").tag(PreferredCurrency.eur)
-                Text("Both").tag(PreferredCurrency.both)
-            }
-            .pickerStyle(.segmented)
-            .frame(width: 300)
-        }
-    }
-
-    // MARK: - Step 3
-    private func step3_StartingBalance() -> some View {
-        VStack(spacing: 20) {
-            if currencyPreference == .both {
-                Text("Starting Balance")
-                    .foregroundColor(.white)
-                    .font(.headline)
-                
-                Text("Are you entering your balance in USD or EUR?")
-                    .foregroundColor(.white)
-                
-                Picker("StartingBalCurrency", selection: $startingBalanceCurrencyForBoth) {
-                    Text("USD").tag(PreferredCurrency.usd)
-                    Text("EUR").tag(PreferredCurrency.eur)
-                }
-                .pickerStyle(.segmented)
-                .frame(width: 160)
-            } else {
-                Text("Enter your starting balance in \(currencyPreference.rawValue.uppercased())")
-                    .foregroundColor(.white)
-                    .font(.headline)
-            }
-            
-            TextField("e.g. 1,000", text: $startingBalanceText)
-                .keyboardType(.decimalPad)
-                .padding(8)
-                .background(Color.white.opacity(0.15))
-                .cornerRadius(6)
-                .foregroundColor(.white)
-                .frame(width: 200)
-                .multilineTextAlignment(.center)
-                .onChange(of: startingBalanceText, initial: false) { _, newValue in
-                    let digitsOnly = newValue.replacingOccurrences(of: "[^0-9.]", with: "", options: .regularExpression)
-                    if let doubleVal = Double(digitsOnly) {
-                        if let formatted = currencyFormatter.string(from: NSNumber(value: doubleVal)) {
-                            if formatted != startingBalanceText {
-                                startingBalanceText = formatted
-                            }
+// MARK: - Landscape Overlay
+extension OnboardingView {
+    @ViewBuilder
+    var landscapeOverlay: some View {
+        if isLandscape {
+            ZStack {
+                // Back button top-left
+                if currentStep > 0 {
+                    Button {
+                        withAnimation(.easeOut(duration: 0.05)) {
+                            currentStep -= 1
                         }
-                    } else {
-                        if newValue != "" {
-                            startingBalanceText = ""
-                        }
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.title2)
+                            .foregroundColor(.white)
+                            .padding(10)
+                    }
+                    .padding(.top, 50)
+                    .padding(.leading, 20)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                }
+                
+                // Bitcoin logo near left, but not hugging edge
+                OfficialBitcoinLogo()
+                    .frame(width: 80, height: 80)
+                    .padding(.leading, 50) // adjust as needed
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                
+                // Next/Finish near right, but not hugging edge
+                Button(currentStep == 8 ? "Finish" : "Next") {
+                    withAnimation(.easeOut(duration: 0.15)) {
+                        onNextTapped()
                     }
                 }
-        }
-    }
-    
-    // MARK: - Step 4
-    private func step4_AverageCostBasis() -> some View {
-        VStack(spacing: 20) {
-            let currencyLabelForCostBasis = (currencyPreference == .eur) ? "EUR" : "USD"
-            
-            Text("Enter your average BTC purchase price")
                 .foregroundColor(.white)
-            
-            TextField("e.g. 58000.0", value: $averageCostBasis, format: .number)
-                .keyboardType(.decimalPad)
-                .padding()
-                .background(Color.white.opacity(0.15))
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+                .background(Color.orange)
                 .cornerRadius(6)
-                .foregroundColor(.white)
-                .frame(width: 200)
-                .multilineTextAlignment(.center)
-            
-            Text("(in \(currencyLabelForCostBasis))")
-                .foregroundColor(.gray)
-        }
-    }
-    
-    // MARK: - Step 5
-    private func step5_BTCPriceInput() -> some View {
-        VStack(spacing: 16) {
-            let currencyLabelForBTCPrice = (currencyPreference == .eur) ? "EUR" : "USD"
-            
-            Text("Fetched BTC Price (\(currencyLabelForBTCPrice)): \(fetchedBTCPrice)")
-                .foregroundColor(.white)
-            
-            Text("Or type your own:")
-                .foregroundColor(.white)
-            
-            TextField("e.g. 58000", text: $userBTCPrice)
-                .keyboardType(.decimalPad)
-                .padding()
-                .background(Color.white.opacity(0.15))
-                .cornerRadius(6)
-                .foregroundColor(.white)
-                .frame(width: 200)
-                .multilineTextAlignment(.center)
-        }
-    }
-    
-    // MARK: - Step 6
-    private func step6_Contributions() -> some View {
-        let frequencyWord = (chosenPeriodUnit == .weeks) ? "weekly" : "monthly"
-        
-        let placeholderText: String = {
-            switch currencyPreference {
-            case .usd:  return "$100.0"
-            case .eur:  return "€100.0"
-            case .both: return "100.0"
-            }
-        }()
-        
-        return VStack(spacing: 20) {
-            if currencyPreference == .both {
-                Spacer().frame(height: 20)
-                
-                Text("Are these contributions in USD or EUR?")
-                    .foregroundColor(.white)
-                
-                if chosenPeriodUnit == .months {
-                    Picker("ContribCurrency",
-                           selection: $monthlySimSettings.contributionCurrencyWhenBothMonthly) {
-                        Text("USD").tag(PreferredCurrency.usd)
-                        Text("EUR").tag(PreferredCurrency.eur)
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(width: 160)
-                } else {
-                    Picker("ContribCurrency",
-                           selection: $weeklySimSettings.contributionCurrencyWhenBoth) {
-                        Text("USD").tag(PreferredCurrency.usd)
-                        Text("EUR").tag(PreferredCurrency.eur)
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(width: 160)
-                }
-                
-                VStack(spacing: 10) {
-                    // 1) Amount row
-                    HStack {
-                        Text("\(frequencyWord.capitalized) Amount:")
-                            .foregroundColor(.white)
-                            .frame(width: 120, alignment: .trailing) // Fixed width for alignment
-                        TextField(placeholderText, value: $contributionPerStep, format: .number)
-                            .keyboardType(.decimalPad)
-                            .padding(8)
-                            .background(Color.white.opacity(0.15))
-                            .cornerRadius(6)
-                            .foregroundColor(.white)
-                            .frame(width: 80)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    
-                    // 2) Fees row
-                    HStack {
-                        Text("Fees (%):")
-                            .foregroundColor(.white)
-                            .frame(width: 120, alignment: .trailing)
-                        TextField("0.6", value: $feePercentage, format: .number)
-                            .keyboardType(.decimalPad)
-                            .padding(8)
-                            .background(Color.white.opacity(0.15))
-                            .cornerRadius(6)
-                            .foregroundColor(.white)
-                            .frame(width: 80)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .center)
-                }
-                
-            } else {
-                Spacer().frame(height: 20)
-                
-                Text("Contribution Setup")
-                    .foregroundColor(.white)
-                    .font(.headline)
-                
-                Text("Enter your \(frequencyWord) contribution amount")
-                    .foregroundColor(.gray)
-                
-                VStack(spacing: 10) {
-                    // 1) Amount row
-                    HStack {
-                        Text("\(frequencyWord.capitalized) Amount:")
-                            .foregroundColor(.white)
-                            .frame(width: 120, alignment: .trailing)
-                        TextField(placeholderText, value: $contributionPerStep, format: .number)
-                            .keyboardType(.decimalPad)
-                            .padding(8)
-                            .background(Color.white.opacity(0.15))
-                            .cornerRadius(6)
-                            .foregroundColor(.white)
-                            .frame(width: 80)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    
-                    // 2) Fees row
-                    HStack {
-                        Text("Fees (%):")
-                            .foregroundColor(.white)
-                            .frame(width: 120, alignment: .trailing)
-                        TextField("0.6", value: $feePercentage, format: .number)
-                            .keyboardType(.decimalPad)
-                            .padding(8)
-                            .background(Color.white.opacity(0.15))
-                            .cornerRadius(6)
-                            .foregroundColor(.white)
-                            .frame(width: 80)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .center)
-                }
-            }
-        }
-        .offset(y: -20) // Shift the entire view up a bit for extra space
-    }
-    
-    // MARK: - Step 7
-    private func step7_Withdrawals() -> some View {
-        VStack(spacing: 16) {
-            Text("Withdrawal Rules")
-                .foregroundColor(.white)
-                .font(.headline)
-            
-            HStack {
-                TextField("Threshold1", value: $threshold1, format: .number)
-                    .keyboardType(.decimalPad)
-                    .padding(8)
-                    .background(Color.white.opacity(0.15))
-                    .cornerRadius(6)
-                    .foregroundColor(.white)
-                    .frame(width: 100)
-                
-                Text("→ withdraw:")
-                    .foregroundColor(.white)
-                
-                TextField("0.0", value: $withdraw1, format: .number)
-                    .keyboardType(.decimalPad)
-                    .padding(8)
-                    .background(Color.white.opacity(0.15))
-                    .cornerRadius(6)
-                    .foregroundColor(.white)
-                    .frame(width: 80)
-            }
-            
-            HStack {
-                TextField("Threshold2", value: $threshold2, format: .number)
-                    .keyboardType(.decimalPad)
-                    .padding(8)
-                    .background(Color.white.opacity(0.15))
-                    .cornerRadius(6)
-                    .foregroundColor(.white)
-                    .frame(width: 100)
-                
-                Text("→ withdraw:")
-                    .foregroundColor(.white)
-                
-                TextField("0.0", value: $withdraw2, format: .number)
-                    .keyboardType(.decimalPad)
-                    .padding(8)
-                    .background(Color.white.opacity(0.15))
-                    .cornerRadius(6)
-                    .foregroundColor(.white)
-                    .frame(width: 80)
+                .shadow(color: .black.opacity(0.3), radius: 4, x: 2, y: 2)
+                .padding(.trailing, 50) // adjust as needed
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
             }
         }
     }
-    
-    // MARK: - Step 8
-    private func step8_ReviewAndFinish() -> some View {
-        VStack(spacing: 16) {
-            Text("Review & Confirm")
-                .foregroundColor(.white)
-                .font(.headline)
-            
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Frequency: \(chosenPeriodUnit.rawValue.capitalized)")
-                Text("Periods: \(totalPeriods)")
-                Text("Pref. Currency: \(currencyPreference.rawValue)")
-                
-                if currencyPreference == .both {
-                    Text("Starting Bal typed in: \(startingBalanceCurrencyForBoth.rawValue)")
-                }
-                Text("Starting Bal: \(startingBalanceDouble, specifier: "%.2f")")
-                
-                Text("Avg. Cost Basis: \(averageCostBasis, specifier: "%.2f") \(currencyPreference == .eur ? "EUR" : "USD")")
-                Text("BTC Price: \(finalBTCPrice, specifier: "%.2f") \(currencyPreference == .eur ? "EUR" : "USD")")
-                
-                if currencyPreference == .both {
-                    if chosenPeriodUnit == .months {
-                        Text("Contrib typed in: \(monthlySimSettings.contributionCurrencyWhenBothMonthly.rawValue)")
-                    } else {
-                        Text("Contrib typed in: \(weeklySimSettings.contributionCurrencyWhenBoth.rawValue)")
-                    }
-                }
-                Text("Contribution: \(contributionPerStep, specifier: "%.0f")")
-                Text("Fees (%): \(feePercentage, specifier: "%.2f")")
-                
-                Text("Withdrawals: \(threshold1, specifier: "%.0f")→\(withdraw1, specifier: "%.0f"), \(threshold2, specifier: "%.0f")→\(withdraw2, specifier: "%.0f")")
-            }
-            .foregroundColor(.white)
-        }
-    }
-    
-    // MARK: - onNextTapped
-    private func onNextTapped() {
+}
+
+// MARK: - Functions
+extension OnboardingView {
+    func onNextTapped() {
         if currentStep == 8 {
             applySettingsToSim()
             didFinishOnboarding = true
         } else {
-            withAnimation {
-                currentStep += 1
-            }
+            currentStep += 1
         }
     }
     
-    // MARK: - applySettingsToSim
-    private func applySettingsToSim() {
+    func applySettingsToSim() {
         if chosenPeriodUnit == .months {
-            monthlySimSettings.periodUnitMonthly = .months
-            monthlySimSettings.userPeriodsMonthly = totalPeriods
+            monthlySimSettings.periodUnitMonthly         = .months
+            monthlySimSettings.userPeriodsMonthly        = totalPeriods
             monthlySimSettings.initialBTCPriceUSDMonthly = finalBTCPrice
-            monthlySimSettings.startingBalanceMonthly = startingBalanceDouble
-            monthlySimSettings.averageCostBasisMonthly = averageCostBasis
+            monthlySimSettings.startingBalanceMonthly    = startingBalanceDouble
+            monthlySimSettings.averageCostBasisMonthly   = averageCostBasis
             monthlySimSettings.currencyPreferenceMonthly = currencyPreference
-            
-            // If you have a property for fees in monthlySimSettings:
-            monthlySimSettings.feePercentageMonthly = feePercentage
-            
-            if currencyPreference != .both {
-                monthlySimSettings.contributionCurrencyWhenBothMonthly = currencyPreference
-            }
-            if currencyPreference == .both {
-                monthlySimSettings.startingBalanceCurrencyWhenBothMonthly = startingBalanceCurrencyForBoth
-            }
+            monthlySimSettings.feePercentageMonthly      = feePercentage
             
             inputManager.firstYearContribution  = String(contributionPerStep)
             inputManager.subsequentContribution = String(contributionPerStep)
-            inputManager.threshold1      = threshold1
-            inputManager.withdrawAmount1 = withdraw1
-            inputManager.threshold2      = threshold2
-            inputManager.withdrawAmount2 = withdraw2
+            inputManager.threshold1             = threshold1
+            inputManager.withdrawAmount1        = withdraw1
+            inputManager.threshold2             = threshold2
+            inputManager.withdrawAmount2        = withdraw2
             
             monthlySimSettings.saveToUserDefaultsMonthly()
-            
             simSettings.periodUnit = .months
-            simSettings.userPeriods = totalPeriods
-            simSettings.initialBTCPriceUSD = finalBTCPrice
-            simSettings.startingBalance = startingBalanceDouble
-            simSettings.averageCostBasis = averageCostBasis
-            simSettings.currencyPreference = currencyPreference
-            
             coordinator.useMonthly = true
             
         } else {
-            weeklySimSettings.periodUnit = .weeks
-            weeklySimSettings.userPeriods = totalPeriods
+            weeklySimSettings.periodUnit         = .weeks
+            weeklySimSettings.userPeriods        = totalPeriods
             weeklySimSettings.initialBTCPriceUSD = finalBTCPrice
             weeklySimSettings.startingBalance    = startingBalanceDouble
             weeklySimSettings.averageCostBasis   = averageCostBasis
             weeklySimSettings.currencyPreference = currencyPreference
-            
-            // If you have a property for fees in weeklySimSettings:
-            weeklySimSettings.feePercentage = feePercentage
-            
-            monthlySimSettings.periodUnitMonthly = .weeks // Keep them aligned if needed
-            
-            if currencyPreference == .both {
-                weeklySimSettings.startingBalanceCurrencyWhenBoth = startingBalanceCurrencyForBoth
-            }
+            weeklySimSettings.feePercentage      = feePercentage
             
             inputManager.firstYearContribution  = String(contributionPerStep)
             inputManager.subsequentContribution = String(contributionPerStep)
-            inputManager.threshold1      = threshold1
-            inputManager.withdrawAmount1 = withdraw1
-            inputManager.threshold2      = threshold2
-            inputManager.withdrawAmount2 = withdraw2
+            inputManager.threshold1             = threshold1
+            inputManager.withdrawAmount1        = withdraw1
+            inputManager.threshold2             = threshold2
+            inputManager.withdrawAmount2        = withdraw2
             
             weeklySimSettings.saveToUserDefaults()
-            
+            simSettings.periodUnit = .weeks
             coordinator.useMonthly = false
         }
         
-        UserDefaults.standard.set(startingBalanceDouble, forKey: "savedStartingBalance")
-        UserDefaults.standard.set(averageCostBasis,      forKey: "savedAverageCostBasis")
-        UserDefaults.standard.set(totalPeriods,          forKey: "savedUserPeriods")
-        UserDefaults.standard.set(chosenPeriodUnit.rawValue, forKey: "savedPeriodUnit")
-        UserDefaults.standard.set(finalBTCPrice,         forKey: "savedInitialBTCPriceUSD")
-        
-        // Possibly store fee as well:
-        UserDefaults.standard.set(feePercentage,         forKey: "savedFeePercentage")
+        // Example user defaults
+        UserDefaults.standard.set(startingBalanceDouble,      forKey: "savedStartingBalance")
+        UserDefaults.standard.set(averageCostBasis,           forKey: "savedAverageCostBasis")
+        UserDefaults.standard.set(totalPeriods,               forKey: "savedUserPeriods")
+        UserDefaults.standard.set(chosenPeriodUnit.rawValue,  forKey: "savedPeriodUnit")
+        UserDefaults.standard.set(finalBTCPrice,              forKey: "savedInitialBTCPriceUSD")
+        UserDefaults.standard.set(feePercentage,              forKey: "savedFeePercentage")
     }
     
-    // MARK: - finalBTCPrice
-    private var finalBTCPrice: Double {
-        if let typedVal = Double(userBTCPrice), typedVal > 0 {
-            return typedVal
-        }
-        if let fetchedVal = Double(fetchedBTCPrice), fetchedVal > 0 {
-            return fetchedVal
-        }
-        return 58000
-    }
-    
-    // MARK: - Networking
-    private func fetchBTCPriceFromAPI() async {
+    func fetchBTCPriceFromAPI() async {
         let currencyToFetch = (currencyPreference == .eur) ? "eur" : "usd"
         let urlString = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=\(currencyToFetch)"
         
@@ -662,7 +381,6 @@ struct OnboardingView: View {
                 let bitcoin: [String: Double]
             }
             let decoded = try JSONDecoder().decode(SimplePriceResponse.self, from: data)
-            
             if let price = decoded.bitcoin[currencyToFetch] {
                 fetchedBTCPrice = String(format: "%.2f", price)
             } else {
@@ -673,13 +391,13 @@ struct OnboardingView: View {
         }
     }
     
-    private func updateAverageCostBasisIfNeeded() {
-        guard averageCostBasis == 58000, let fetchedVal = Double(fetchedBTCPrice) else { return }
+    func updateAverageCostBasisIfNeeded() {
+        guard averageCostBasis == 58000,
+              let fetchedVal = Double(fetchedBTCPrice) else { return }
         averageCostBasis = fetchedVal
     }
     
-    // MARK: - Titles
-    private func titleForStep(_ step: Int) -> String {
+    func titleForStep(_ step: Int) -> String {
         switch step {
         case 0: return "Frequency"
         case 1: return "Total Periods"
@@ -693,28 +411,34 @@ struct OnboardingView: View {
         }
     }
     
-    // MARK: - Subtitles
-    private func subtitleForStep(_ step: Int) -> String {
+    func subtitleForStep(_ step: Int) -> String {
         switch step {
-        case 0: return "Pick weekly or monthly"
-        case 1: return "How many \(chosenPeriodUnit.rawValue)?"
-        case 2: return "USD, EUR, or Both?"
-        case 3: return ""
-        case 4: return "What did you pay for BTC before?"
-        case 5: return "Fetch or type current BTC price"
-        case 6: return ""
-        case 7: return "Set your withdrawal triggers"
-        default: return "Confirm your setup"
+        case 0:
+            return "Pick weekly or monthly"
+        case 1:
+            return "How many \(chosenPeriodUnit.rawValue)?"
+        case 2:
+            return "USD, EUR, or Both?"
+        case 4:
+            return "What did you pay for BTC before?"
+        case 5:
+            return "Fetch or type current BTC price"
+        case 7:
+            return "Set your withdrawal triggers"
+        default:
+            return ""
         }
     }
 }
 
-// MARK: - Hide Keyboard Helper
+// MARK: - Hide Keyboard
 extension View {
     func hideKeyboard() {
         UIApplication.shared.sendAction(
             #selector(UIResponder.resignFirstResponder),
-            to: nil, from: nil, for: nil
+            to: nil,
+            from: nil,
+            for: nil
         )
     }
 }
