@@ -302,16 +302,18 @@ struct ParameterEntryView: View {
                             stdDevField
                         }
                         // Toggles
-                        HStack(spacing: 32) {
-                            Toggle("Charts", isOn: $inputManager.generateGraphs)
-                                .toggleStyle(CheckboxToggleStyle())
-                                .foregroundColor(.white)
-                            
-                            Toggle("Lock Seed", isOn: lockedRandomSeedBinding)
-                                .toggleStyle(CheckboxToggleStyle())
-                                .foregroundColor(.white)
-                                .disabled(!advancedSettingsUnlocked)
-                                .opacity(advancedSettingsUnlocked ? 1.0 : 0.5)
+                        if !(coordinator.isLoading || coordinator.isChartBuilding) {
+                            HStack(spacing: 32) {
+                                Toggle("Charts", isOn: $inputManager.generateGraphs)
+                                    .toggleStyle(CheckboxToggleStyle())
+                                    .foregroundColor(.white)
+                                
+                                Toggle("Lock Seed", isOn: lockedRandomSeedBinding)
+                                    .toggleStyle(CheckboxToggleStyle())
+                                    .foregroundColor(.white)
+                                    .disabled(!advancedSettingsUnlocked)
+                                    .opacity(advancedSettingsUnlocked ? 1.0 : 0.5)
+                            }
                         }
                         
                         // The button
