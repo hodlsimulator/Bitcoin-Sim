@@ -5,48 +5,73 @@
 //  Created by . . on 26/12/2024.
 //
 
-import Foundation
 import SwiftUI
 
 struct ParametersFormView: View {
-    @FocusState var activeField: ActiveField?
+    @FocusState private var activeField: ActiveField?
+    
     @ObservedObject var inputManager: InputManager
     let runSimulation: () -> Void
     @Binding var lastViewedWeek: Int
     @Binding var lastViewedPage: Int
     
+    enum ActiveField: Hashable {
+        case iterations
+        case annualCAGR
+        case annualVolatility
+    }
+
     var body: some View {
         VStack {
             Spacer().frame(height: 80)
             
             Form {
                 Section(header: Text("SIMULATION PARAMETERS").foregroundColor(.white)) {
+                    
+                    // Iterations
                     HStack {
-                        Text("Iterations")
-                            .foregroundColor(.white)
+                        Text("Iterations").foregroundColor(.white)
                         TextField("100", text: $inputManager.iterations)
                             .keyboardType(.numberPad)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
                             .foregroundColor(.white)
+                            .submitLabel(.next)
                             .focused($activeField, equals: .iterations)
+                            .onSubmit {
+                                activeField = .annualCAGR
+                            }
                     }
+                    
+                    // Annual CAGR
                     HStack {
-                        Text("Annual CAGR (%)")
-                            .foregroundColor(.white)
+                        Text("Annual CAGR (%)").foregroundColor(.white)
                         TextField("30", text: $inputManager.annualCAGR)
                             .keyboardType(.decimalPad)
-                            .onChange(of: inputManager.annualCAGR, initial: false) { _, newVal in
-                                print("User typed new CAGR value: \(newVal)")
-                            }
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
                             .foregroundColor(.white)
+                            .submitLabel(.next)
                             .focused($activeField, equals: .annualCAGR)
+                            .onSubmit {
+                                activeField = .annualVolatility
+                            }
+                            .onChange(of: inputManager.annualCAGR, initial: false) { _, newVal in
+                                // Real-time logging or updating
+                                print("New CAGR value: \(newVal)")
+                            }
                     }
+                    
+                    // Annual Volatility
                     HStack {
-                        Text("Annual Volatility (%)")
-                            .foregroundColor(.white)
+                        Text("Annual Volatility (%)").foregroundColor(.white)
                         TextField("80", text: $inputManager.annualVolatility)
                             .keyboardType(.decimalPad)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
                             .foregroundColor(.white)
+                            .submitLabel(.done)
                             .focused($activeField, equals: .annualVolatility)
+                            .onSubmit {
+                                activeField = nil  // Dismiss keyboard
+                            }
                     }
                 }
                 .listRowBackground(Color(white: 0.15))
@@ -77,3 +102,4 @@ struct ParametersFormView: View {
         }
     }
 }
+        
