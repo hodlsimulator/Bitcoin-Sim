@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit  // Needed for orientation
 
 struct ParametersFormView: View {
     @FocusState private var activeField: ActiveField?
@@ -30,7 +31,9 @@ struct ParametersFormView: View {
                     
                     // Iterations
                     HStack {
-                        Text("Iterations").foregroundColor(.white)
+                        Text("Iterations")
+                            .foregroundColor(.white)
+                        
                         TextField("100", text: $inputManager.iterations)
                             .keyboardType(.numberPad)
                             .textFieldStyle(RoundedBorderTextFieldStyle())
@@ -44,7 +47,9 @@ struct ParametersFormView: View {
                     
                     // Annual CAGR
                     HStack {
-                        Text("Annual CAGR (%)").foregroundColor(.white)
+                        Text("Annual CAGR (%)")
+                            .foregroundColor(.white)
+                        
                         TextField("30", text: $inputManager.annualCAGR)
                             .keyboardType(.decimalPad)
                             .textFieldStyle(RoundedBorderTextFieldStyle())
@@ -62,7 +67,9 @@ struct ParametersFormView: View {
                     
                     // Annual Volatility
                     HStack {
-                        Text("Annual Volatility (%)").foregroundColor(.white)
+                        Text("Annual Volatility (%)")
+                            .foregroundColor(.white)
+                        
                         TextField("80", text: $inputManager.annualVolatility)
                             .keyboardType(.decimalPad)
                             .textFieldStyle(RoundedBorderTextFieldStyle())
@@ -100,6 +107,15 @@ struct ParametersFormView: View {
             .background(Color(white: 0.12))
             .listStyle(GroupedListStyle())
         }
+        .onAppear {
+            // Lock orientation to portrait
+            AppDelegate.orientationLock = .portrait
+            UIDevice.current.setValue(UIInterfaceOrientation.portrait.rawValue, forKey: "orientation")
+        }
+        .onDisappear {
+            // Allow all orientations again
+            AppDelegate.orientationLock = .all
+            UIDevice.current.setValue(UIInterfaceOrientation.unknown.rawValue, forKey: "orientation")
+        }
     }
 }
-        

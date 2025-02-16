@@ -6,43 +6,34 @@
 //
 
 import SwiftUI
+import UIKit // Needed to force device orientation programmatically
 
 struct ParameterEntryView: View {
-    // MARK: - Focus
     enum ActiveField {
         case iterations, annualCAGR, annualVolatility, standardDeviation
     }
     
     @FocusState private var activeField: ActiveField?
     
-    // MARK: - Real values stored in your manager
     @ObservedObject var inputManager: PersistentInputManager
-    
-    // IMPORTANT: This is your weekly settings:
     @ObservedObject var simSettings: SimulationSettings
-    
-    // For monthly settings, we either bring it in as an @EnvironmentObject
-    // or get it from the Coordinator, e.g.:
     @EnvironmentObject var monthlySimSettings: MonthlySimulationSettings
-    
     @ObservedObject var coordinator: SimulationCoordinator
     
-    // Binding to let the parent know whether the keyboard is visible.
     @Binding var isKeyboardVisible: Bool
     
-    // MARK: - Local copies of fields
+    // Local copies
     @State private var localIterations: String = "100"
     @State private var localAnnualCAGR: String = "30"
     @State private var localAnnualVolatility: String = "80"
     @State private var localStandardDev: String = "150"
     
-    // MARK: - Ephemeral text fields
+    // Ephemeral fields
     @State private var ephemeralIterations: String = ""
     @State private var ephemeralAnnualCAGR: String = ""
     @State private var ephemeralAnnualVolatility: String = ""
     @State private var ephemeralStandardDev: String = ""
     
-    // Use the same AppStorage property that controls unlocking in the AdvancedSettingsSection
     @AppStorage("advancedSettingsUnlocked") private var advancedSettingsUnlocked: Bool = false
     
     var body: some View {
@@ -71,7 +62,7 @@ struct ParameterEntryView: View {
                     .foregroundColor(.gray)
                 
                 VStack(spacing: 20) {
-                    // MARK: - Row 1 (Iterations & CAGR)
+                    // Row 1 (Iterations & CAGR)
                     HStack(spacing: 24) {
                         // Iterations
                         VStack(spacing: 4) {
@@ -118,7 +109,7 @@ struct ParameterEntryView: View {
                         }
                     }
                     
-                    // MARK: - Row 2 (Vol & StdDev)
+                    // Row 2 (Vol & StdDev)
                     HStack(spacing: 24) {
                         // Vol
                         VStack(spacing: 4) {
@@ -165,13 +156,12 @@ struct ParameterEntryView: View {
                         }
                     }
                     
-                    // MARK: - Row 3 (Toggles)
+                    // Row 3 (Toggles)
                     HStack(spacing: 32) {
                         Toggle("Charts", isOn: $inputManager.generateGraphs)
                             .toggleStyle(CheckboxToggleStyle())
                             .foregroundColor(.white)
                         
-                        // Lock Seed toggle now disabled if advanced settings are not unlocked
                         Toggle("Lock Seed", isOn: lockedRandomSeedBinding)
                             .toggleStyle(CheckboxToggleStyle())
                             .foregroundColor(.white)
@@ -188,8 +178,7 @@ struct ParameterEntryView: View {
                 .padding(.horizontal, 30)
                 
                 if coordinator.isLoading || coordinator.isChartBuilding {
-                    // Just a placeholder for spacing.
-                    Text(" ")
+                    Text(" ") // Placeholder
                         .font(.callout)
                         .foregroundColor(.clear)
                         .padding(.horizontal, 32)
@@ -201,7 +190,6 @@ struct ParameterEntryView: View {
                     Spacer()
                 } else {
                     Button {
-                        // Commit anything typed if user forgot to hit return.
                         commitAllFields()
                         activeField = nil
                         coordinator.isLoading = true
@@ -225,12 +213,16 @@ struct ParameterEntryView: View {
                 }
             }
         }
-        // Update keyboard visibility based on whether a field is active.
+        // Update keyboard visibility
         .onChange(of: activeField) { newActive in
             isKeyboardVisible = (newActive != nil)
         }
         .onAppear {
-            // Pre-fill the fields with persisted/default values.
+            // Lock orientation to portrait
+            AppDelegate.orientationLock = .portrait
+            UIDevice.current.setValue(UIInterfaceOrientation.portrait.rawValue, forKey: "orientation")
+            
+            // Pre-fill from persisted/default values
             localIterations = inputManager.iterations
             localAnnualCAGR = inputManager.annualCAGR
             localAnnualVolatility = inputManager.annualVolatility
@@ -241,9 +233,13 @@ struct ParameterEntryView: View {
             ephemeralAnnualVolatility = localAnnualVolatility
             ephemeralStandardDev = localStandardDev
         }
+        .onDisappear {
+            // Allow all orientations again
+            AppDelegate.orientationLock = .all
+            UIDevice.current.setValue(UIInterfaceOrientation.unknown.rawValue, forKey: "orientation")
+        }
     }
     
-    // MARK: - Helper
     private func commitAllFields() {
         localIterations = ephemeralIterations.isEmpty ? localIterations : ephemeralIterations
         localAnnualCAGR = ephemeralAnnualCAGR.isEmpty ? localAnnualCAGR : ephemeralAnnualCAGR
@@ -256,7 +252,7 @@ struct ParameterEntryView: View {
         inputManager.standardDeviation = localStandardDev
     }
     
-    // MARK: - Computed Binding for "Lock Seed"
+    // Computed Binding for "Lock Seed"
     private var lockedRandomSeedBinding: Binding<Bool> {
         Binding(
             get: {
