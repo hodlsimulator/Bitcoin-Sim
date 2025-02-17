@@ -58,7 +58,7 @@ struct SimulationResultsPortraitView: View {
                         Text("Simulation Results")
                             .foregroundColor(.white)
                             .font(.headline)
-                            .padding(.trailing, 10)
+                            .padding(.trailing, 0)
                         
                         Spacer()
                         
@@ -70,6 +70,7 @@ struct SimulationResultsPortraitView: View {
                                 .foregroundColor(inputManager.generateGraphs ? .white : .gray)
                                 .imageScale(.large)
                                 .frame(width: 40, height: 40)
+                                .padding(.trailing, 20)
                         }
                         .disabled(!inputManager.generateGraphs)
                         .padding(.trailing, 42) // Was 42
@@ -88,7 +89,7 @@ struct SimulationResultsPortraitView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.leading, -32)
                     
-                    // Header row
+                    // MARK: Header row
                     HStack(spacing: 0) {
                         Text(simSettings.periodUnit == .weeks ? "Week" : "Month")
                             .frame(width: 60, alignment: .leading)
@@ -101,7 +102,7 @@ struct SimulationResultsPortraitView: View {
                         ZStack {
                             Text(columns[currentPage].0)
                                 .font(.headline)
-                                .padding(.leading, 100)
+                                .padding(.leading, 80)
                                 .padding(.vertical, 8)
                                 .background(Color.black)
                                 .foregroundColor(.orange)
@@ -133,7 +134,7 @@ struct SimulationResultsPortraitView: View {
                     }
                     .background(Color.black)
                     
-                    // Main scrollable table
+                    // MARK: Main scrollable table
                     ScrollView(.vertical, showsIndicators: !hideScrollIndicators) {
                         
                         let displayedResults = coordinator.monteCarloResults
@@ -148,7 +149,7 @@ struct SimulationResultsPortraitView: View {
                                     
                                     Text("\(result.week)")
                                         .frame(width: 70, alignment: .leading)
-                                        .padding(.leading, 10)
+                                        .padding(.leading, 20)
                                         .padding(.vertical, 12)
                                         .padding(.horizontal, 8)
                                         .background(rowBackground)
