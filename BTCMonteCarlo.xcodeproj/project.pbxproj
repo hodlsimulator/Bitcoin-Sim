@@ -61,6 +61,8 @@
 		E1942C8D2D6183DE00F5B9A1 /* SimulationResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1942C8C2D6183DB00F5B9A1 /* SimulationResultsView.swift */; };
 		E1942C8F2D61C50A00F5B9A1 /* OnboardingSteps.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1942C8E2D61C50800F5B9A1 /* OnboardingSteps.swift */; };
 		E1942C912D628F2600F5B9A1 /* LoadingOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1942C902D628F2400F5B9A1 /* LoadingOverlayView.swift */; };
+		E1942C932D62FA0400F5B9A1 /* SimulationResultsPortraitView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1942C922D62FA0200F5B9A1 /* SimulationResultsPortraitView.swift */; };
+		E1942C952D62FA3A00F5B9A1 /* SimulationResultsLandscapeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1942C942D62FA3600F5B9A1 /* SimulationResultsLandscapeView.swift */; };
 		E19D10E72D3ED96200E3A55E /* GARCHHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = E19D10E62D3ED96000E3A55E /* GARCHHelper.swift */; };
 		E19D10EB2D3EF69300E3A55E /* MempoolDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E19D10EA2D3EF69200E3A55E /* MempoolDataManager.swift */; };
 		E19D10ED2D40279600E3A55E /* SimulationSettings+Defaults.swift in Sources */ = {isa = PBXBuildFile; fileRef = E19D10EC2D40279200E3A55E /* SimulationSettings+Defaults.swift */; };
@@ -173,6 +175,8 @@
 		E1942C8C2D6183DB00F5B9A1 /* SimulationResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulationResultsView.swift; sourceTree = "<group>"; };
 		E1942C8E2D61C50800F5B9A1 /* OnboardingSteps.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingSteps.swift; sourceTree = "<group>"; };
 		E1942C902D628F2400F5B9A1 /* LoadingOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadingOverlayView.swift; sourceTree = "<group>"; };
+		E1942C922D62FA0200F5B9A1 /* SimulationResultsPortraitView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulationResultsPortraitView.swift; sourceTree = "<group>"; };
+		E1942C942D62FA3600F5B9A1 /* SimulationResultsLandscapeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulationResultsLandscapeView.swift; sourceTree = "<group>"; };
 		E19D10E62D3ED96000E3A55E /* GARCHHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GARCHHelper.swift; sourceTree = "<group>"; };
 		E19D10EA2D3EF69200E3A55E /* MempoolDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MempoolDataManager.swift; sourceTree = "<group>"; };
 		E19D10EC2D40279200E3A55E /* SimulationSettings+Defaults.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SimulationSettings+Defaults.swift"; sourceTree = "<group>"; };
@@ -325,6 +329,8 @@
 				E1B7B0A62D4753CC00B60EC6 /* ShiftFactors.swift */,
 				E17B2F212D26A9F000ECE087 /* SimulationCoordinator.swift */,
 				E166A8AF2CF855C20003F518 /* SimulationData.swift */,
+				E1942C942D62FA3600F5B9A1 /* SimulationResultsLandscapeView.swift */,
+				E1942C922D62FA0200F5B9A1 /* SimulationResultsPortraitView.swift */,
 				E1942C8C2D6183DB00F5B9A1 /* SimulationResultsView.swift */,
 				E1883F392D1DD94C007AA90B /* SimulationSettings.swift */,
 				E19D10F62D40D8C000E3A55E /* SimulationSettings+BearishFactors.swift */,
@@ -534,6 +540,8 @@
 				E1B7B0AB2D4759D800B60EC6 /* SettingsWatchers.swift in Sources */,
 				E1F1CB642D4F2F0E003DB24F /* HistoricalDataCache.swift in Sources */,
 				E19D10E72D3ED96200E3A55E /* GARCHHelper.swift in Sources */,
+				E1942C932D62FA0400F5B9A1 /* SimulationResultsPortraitView.swift in Sources */,
+				E1942C952D62FA3A00F5B9A1 /* SimulationResultsLandscapeView.swift in Sources */,
 				E1B7B09D2D44E0D000B60EC6 /* BullishFactorsSection.swift in Sources */,
 				E19D10EF2D40290A00E3A55E /* SimulationSettings+RestoreDefaults.swift in Sources */,
 				E1883F3C2D1DDC78007AA90B /* ParametersFormView.swift in Sources */,
