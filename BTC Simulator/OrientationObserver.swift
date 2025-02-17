@@ -35,3 +35,9 @@ class OrientationObserver: ObservableObject {
         }
     }
 }
+
+extension UIDeviceOrientation {
+    var isValidInterfaceOrientation: Bool {
+        self != .unknown && self != .faceUp && self != .faceDown
+    }
+}
