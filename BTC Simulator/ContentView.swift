@@ -1,3 +1,10 @@
+//
+//  ContentView.swift
+//  BTCMonteCarlo
+//
+//  Created by . . on 20/11/2024.
+//
+
 import SwiftUI
 import PDFKit
 import UniformTypeIdentifiers
@@ -6,105 +13,68 @@ import UIKit
 
 // MARK: - PersistentInputManager
 class PersistentInputManager: ObservableObject {
-    
     @Published var generateGraphs: Bool {
         didSet {
             UserDefaults.standard.set(generateGraphs, forKey: "generateGraphs")
         }
     }
-
-    @Published var firstYearContribution: String {
-        didSet {
-            UserDefaults.standard.set(firstYearContribution, forKey: "firstYearContribution")
-        }
-    }
-    @Published var subsequentContribution: String {
-        didSet {
-            UserDefaults.standard.set(subsequentContribution, forKey: "subsequentContribution")
-        }
-    }
-    @Published var iterations: String {
-        didSet {
-            UserDefaults.standard.set(iterations, forKey: "iterations")
-        }
-    }
-    @Published var annualCAGR: String {
-        didSet {
-            UserDefaults.standard.set(annualCAGR, forKey: "annualCAGR")
-        }
-    }
-    @Published var annualVolatility: String {
-        didSet {
-            UserDefaults.standard.set(annualVolatility, forKey: "annualVolatility")
-        }
-    }
-    @Published var standardDeviation: String {
-        didSet {
-            UserDefaults.standard.set(standardDeviation, forKey: "standardDeviation")
-        }
-    }
-    @Published var selectedWeek: String {
-        didSet {
-            UserDefaults.standard.set(selectedWeek, forKey: "selectedWeek")
-        }
-    }
-    @Published var btcPriceMinInput: String {
-        didSet {
-            UserDefaults.standard.set(btcPriceMinInput, forKey: "btcPriceMinInput")
-        }
-    }
-    @Published var btcPriceMaxInput: String {
-        didSet {
-            UserDefaults.standard.set(btcPriceMaxInput, forKey: "btcPriceMaxInput")
-        }
-    }
-    @Published var portfolioValueMinInput: String {
-        didSet {
-            UserDefaults.standard.set(portfolioValueMinInput, forKey: "portfolioValueMinInput")
-        }
-    }
-    @Published var portfolioValueMaxInput: String {
-        didSet {
-            UserDefaults.standard.set(portfolioValueMaxInput, forKey: "portfolioValueMaxInput")
-        }
-    }
-    @Published var btcHoldingsMinInput: String {
-        didSet {
-            UserDefaults.standard.set(btcHoldingsMinInput, forKey: "btcHoldingsMinInput")
-        }
-    }
-    @Published var btcHoldingsMaxInput: String {
-        didSet {
-            UserDefaults.standard.set(btcHoldingsMaxInput, forKey: "btcHoldingsMaxInput")
-        }
-    }
-    @Published var btcGrowthRate: String {
-        didSet {
-            UserDefaults.standard.set(btcGrowthRate, forKey: "btcGrowthRate")
-        }
-    }
+    
+    @Published var firstYearContribution: String { didSet {
+        UserDefaults.standard.set(firstYearContribution, forKey: "firstYearContribution")
+    }}
+    @Published var subsequentContribution: String { didSet {
+        UserDefaults.standard.set(subsequentContribution, forKey: "subsequentContribution")
+    }}
+    @Published var iterations: String { didSet {
+        UserDefaults.standard.set(iterations, forKey: "iterations")
+    }}
+    @Published var annualCAGR: String { didSet {
+        UserDefaults.standard.set(annualCAGR, forKey: "annualCAGR")
+    }}
+    @Published var annualVolatility: String { didSet {
+        UserDefaults.standard.set(annualVolatility, forKey: "annualVolatility")
+    }}
+    @Published var standardDeviation: String { didSet {
+        UserDefaults.standard.set(standardDeviation, forKey: "standardDeviation")
+    }}
+    @Published var selectedWeek: String { didSet {
+        UserDefaults.standard.set(selectedWeek, forKey: "selectedWeek")
+    }}
+    @Published var btcPriceMinInput: String { didSet {
+        UserDefaults.standard.set(btcPriceMinInput, forKey: "btcPriceMinInput")
+    }}
+    @Published var btcPriceMaxInput: String { didSet {
+        UserDefaults.standard.set(btcPriceMaxInput, forKey: "btcPriceMaxInput")
+    }}
+    @Published var portfolioValueMinInput: String { didSet {
+        UserDefaults.standard.set(portfolioValueMinInput, forKey: "portfolioValueMinInput")
+    }}
+    @Published var portfolioValueMaxInput: String { didSet {
+        UserDefaults.standard.set(portfolioValueMaxInput, forKey: "portfolioValueMaxInput")
+    }}
+    @Published var btcHoldingsMinInput: String { didSet {
+        UserDefaults.standard.set(btcHoldingsMinInput, forKey: "btcHoldingsMinInput")
+    }}
+    @Published var btcHoldingsMaxInput: String { didSet {
+        UserDefaults.standard.set(btcHoldingsMaxInput, forKey: "btcHoldingsMaxInput")
+    }}
+    @Published var btcGrowthRate: String { didSet {
+        UserDefaults.standard.set(btcGrowthRate, forKey: "btcGrowthRate")
+    }}
     
     // Doubles
-    @Published var threshold1: Double {
-        didSet {
-            UserDefaults.standard.set(threshold1, forKey: "threshold1")
-        }
-    }
-    @Published var withdrawAmount1: Double {
-        didSet {
-            UserDefaults.standard.set(withdrawAmount1, forKey: "withdrawAmount1")
-        }
-    }
-    @Published var threshold2: Double {
-        didSet {
-            UserDefaults.standard.set(threshold2, forKey: "threshold2")
-        }
-    }
-    @Published var withdrawAmount2: Double {
-        didSet {
-            UserDefaults.standard.set(withdrawAmount2, forKey: "withdrawAmount2")
-        }
-    }
+    @Published var threshold1: Double { didSet {
+        UserDefaults.standard.set(threshold1, forKey: "threshold1")
+    }}
+    @Published var withdrawAmount1: Double { didSet {
+        UserDefaults.standard.set(withdrawAmount1, forKey: "withdrawAmount1")
+    }}
+    @Published var threshold2: Double { didSet {
+        UserDefaults.standard.set(threshold2, forKey: "threshold2")
+    }}
+    @Published var withdrawAmount2: Double { didSet {
+        UserDefaults.standard.set(withdrawAmount2, forKey: "withdrawAmount2")
+    }}
     
     init() {
         if UserDefaults.standard.object(forKey: "generateGraphs") == nil {
@@ -113,20 +83,20 @@ class PersistentInputManager: ObservableObject {
             self.generateGraphs = UserDefaults.standard.bool(forKey: "generateGraphs")
         }
         
-        self.firstYearContribution = UserDefaults.standard.string(forKey: "firstYearContribution") ?? "100"
-        self.subsequentContribution = UserDefaults.standard.string(forKey: "subsequentContribution") ?? "100"
-        self.iterations = UserDefaults.standard.string(forKey: "iterations") ?? "100"
-        self.annualCAGR = UserDefaults.standard.string(forKey: "annualCAGR") ?? "30"
-        self.annualVolatility = UserDefaults.standard.string(forKey: "annualVolatility") ?? "80"
-        self.standardDeviation = UserDefaults.standard.string(forKey: "standardDeviation") ?? "150"
-        self.selectedWeek = UserDefaults.standard.string(forKey: "selectedWeek") ?? "1"
-        self.btcPriceMinInput = UserDefaults.standard.string(forKey: "btcPriceMinInput") ?? ""
-        self.btcPriceMaxInput = UserDefaults.standard.string(forKey: "btcPriceMaxInput") ?? ""
-        self.portfolioValueMinInput = UserDefaults.standard.string(forKey: "portfolioValueMinInput") ?? ""
-        self.portfolioValueMaxInput = UserDefaults.standard.string(forKey: "portfolioValueMaxInput") ?? ""
-        self.btcHoldingsMinInput = UserDefaults.standard.string(forKey: "btcHoldingsMinInput") ?? ""
-        self.btcHoldingsMaxInput = UserDefaults.standard.string(forKey: "btcHoldingsMaxInput") ?? ""
-        self.btcGrowthRate = UserDefaults.standard.string(forKey: "btcGrowthRate") ?? "0.005"
+        self.firstYearContribution    = UserDefaults.standard.string(forKey: "firstYearContribution") ?? "100"
+        self.subsequentContribution   = UserDefaults.standard.string(forKey: "subsequentContribution") ?? "100"
+        self.iterations              = UserDefaults.standard.string(forKey: "iterations") ?? "100"
+        self.annualCAGR              = UserDefaults.standard.string(forKey: "annualCAGR") ?? "30"
+        self.annualVolatility        = UserDefaults.standard.string(forKey: "annualVolatility") ?? "80"
+        self.standardDeviation       = UserDefaults.standard.string(forKey: "standardDeviation") ?? "150"
+        self.selectedWeek            = UserDefaults.standard.string(forKey: "selectedWeek") ?? "1"
+        self.btcPriceMinInput        = UserDefaults.standard.string(forKey: "btcPriceMinInput") ?? ""
+        self.btcPriceMaxInput        = UserDefaults.standard.string(forKey: "btcPriceMaxInput") ?? ""
+        self.portfolioValueMinInput  = UserDefaults.standard.string(forKey: "portfolioValueMinInput") ?? ""
+        self.portfolioValueMaxInput  = UserDefaults.standard.string(forKey: "portfolioValueMaxInput") ?? ""
+        self.btcHoldingsMinInput     = UserDefaults.standard.string(forKey: "btcHoldingsMinInput") ?? ""
+        self.btcHoldingsMaxInput     = UserDefaults.standard.string(forKey: "btcHoldingsMaxInput") ?? ""
+        self.btcGrowthRate           = UserDefaults.standard.string(forKey: "btcGrowthRate") ?? "0.005"
         
         let storedT1 = UserDefaults.standard.double(forKey: "threshold1")
         self.threshold1 = (storedT1 != 0.0) ? storedT1 : 30000.0
@@ -156,7 +126,6 @@ class PersistentInputManager: ObservableObject {
         UserDefaults.standard.set(btcHoldingsMinInput, forKey: "btcHoldingsMinInput")
         UserDefaults.standard.set(btcHoldingsMaxInput, forKey: "btcHoldingsMaxInput")
         UserDefaults.standard.set(btcGrowthRate, forKey: "btcGrowthRate")
-
         UserDefaults.standard.set(threshold1, forKey: "threshold1")
         UserDefaults.standard.set(withdrawAmount1, forKey: "withdrawAmount1")
         UserDefaults.standard.set(threshold2, forKey: "threshold2")
@@ -175,7 +144,6 @@ class PersistentInputManager: ObservableObject {
         Int(iterations.replacingOccurrences(of: ",", with: ""))
     }
 
-    /// Clamps annualCAGR to 1000 if user typed something above that.
     func getParsedAnnualCAGR() -> Double {
         let rawValue = annualCAGR.replacingOccurrences(of: ",", with: "")
         guard let parsedValue = Double(rawValue) else {
@@ -209,33 +177,24 @@ extension Double {
 
 // MARK: - Suffix Logic
 extension Double {
-    /// For large numeric values using the short scale up to 10^30 (nonillion)
     func formattedWithPowerOfTenSuffix() -> String {
         guard self != 0 else { return "0" }
-
         let sign = self < 0 ? "-" : ""
         let absVal = abs(self)
         let exponent = Int(floor(log10(absVal)))
-
-        // Under 1,000 => just format normally
         if exponent < 3 {
             return sign + normalNumberFormat(absVal)
         }
-
-        // If exponent is above 30 => fallback
         if exponent > 30 {
             return "\(sign)\(String(format: "%.2f", absVal))"
         }
-
-        // Otherwise, find 'leading number' and suffix:
         let leadingNumber = absVal / pow(10, Double(exponent))
         let suffix = formatPowerOfTenLabel(exponent)
         return "\(sign)\(String(format: "%.2f", leadingNumber))\(suffix)"
     }
 }
 
-/// Helper for standard comma formatting
-private func normalNumberFormat(_ value: Double) -> String {
+fileprivate func normalNumberFormat(_ value: Double) -> String {
     let formatter = NumberFormatter()
     formatter.numberStyle = .decimal
     formatter.maximumFractionDigits = 2
@@ -252,14 +211,12 @@ fileprivate enum ChartLoadingState {
 // MARK: - ChartDataCache
 class ChartDataCache: ObservableObject {
     let id = UUID()
-
     @Published var allRuns: [SimulationRun]? = nil
     @Published var portfolioRuns: [SimulationRun]? = nil
     @Published var bestFitRun: [SimulationRun]? = nil
     @Published var bestFitPortfolioRun: [SimulationRun]? = nil
     @Published var storedInputsHash: Int? = nil
 
-    // iOS snapshots
     @Published var chartSnapshot: UIImage? = nil
     @Published var chartSnapshotLandscape: UIImage? = nil
     @Published var portfolioChartSnapshot: UIImage? = nil
@@ -272,20 +229,18 @@ class ChartDataCache: ObservableObject {
 
 // MARK: - ContentView
 struct ContentView: View {
-    
-    // Keeping old values for possible chart invalidation
+
+    // Some local states for text, etc.
     @State private var oldIterationsValue: String = ""
     @State private var oldAnnualCAGRValue: String = ""
     @State private var oldAnnualVolatilityValue: String = ""
     @State private var oldStandardDevValue: String = ""
 
-    // Local text states (avoid direct binding to inputManager)
     @State private var localIterations: String = ""
     @State private var localAnnualCAGR: String = ""
     @State private var localAnnualVolatility: String = ""
     @State private var localStandardDev: String = ""
 
-    // Focus for text fields
     @FocusState private var activeField: ActiveField?
 
     @State private var isAtBottom: Bool = false
@@ -307,7 +262,7 @@ struct ContentView: View {
 
     @AppStorage("advancedSettingsUnlocked") private var advancedSettingsUnlocked: Bool = false
 
-    // Toggle for showing sub-views
+    // Some toggles for subviews
     @State private var showSettings = false
     @State private var showAbout = false
     @State private var showHistograms = false
@@ -324,7 +279,9 @@ struct ContentView: View {
     @State private var showSnapshotView = false
     @State private var showSnapshotsDebug = false
 
-    // Environment Objects
+    @State private var showPinnedColumns = false
+
+    // MARK: - Environment Objects
     @EnvironmentObject var simSettings: SimulationSettings
     @EnvironmentObject var monthlySimSettings: MonthlySimulationSettings
     @EnvironmentObject var inputManager: PersistentInputManager
@@ -334,44 +291,21 @@ struct ContentView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // If not yet showing simulation results
-                if !coordinator.isSimulationRun {
-                    parametersScreen
+                // Always show the parameter entry or loading overlay, no old pinned table
+                parametersScreen
 
-                    // Bottom icons (Settings/About)
-                    if !coordinator.isLoading && !coordinator.isChartBuilding && !isKeyboardVisible {
-                        bottomIcons
-                    }
-                }
-                else {
-                    // If we've moved results to a separate file
-                    SimulationResultsView(
-                        lastViewedPage: $lastViewedPage,
-                        lastViewedWeek: $lastViewedWeek,
-                        isAtBottom: $isAtBottom,
-                        showHistograms: $showHistograms,
-                        scrollToBottom: $scrollToBottom,
-                        lastScrollTime: $lastScrollTime,
-                        contentScrollProxy: $contentScrollProxy,
-                        currentPage: $currentPage,
-                        hideScrollIndicators: $hideScrollIndicators
-                    )
+                // If you want bottom icons
+                if !coordinator.isLoading && !coordinator.isChartBuilding && !isKeyboardVisible {
+                    bottomIcons
                 }
 
-                // If the user has results but hasn't navigated to them yet
-                if !coordinator.isSimulationRun &&
-                    !coordinator.monteCarloResults.isEmpty &&
-                    !coordinator.isChartBuilding {
-                    transitionToResultsButton
-                }
-
-                // Here we replace the old inline overlay with our new view:
                 if coordinator.isLoading || coordinator.isChartBuilding {
                     LoadingOverlayView()
                         .environmentObject(coordinator)
-                        .environmentObject(simSettings) // so the tips can be filtered
+                        .environmentObject(simSettings)
                 }
             }
+            // Standard Navigation Destinations
             .navigationDestination(isPresented: $showSettings) {
                 SettingsView()
                     .environmentObject(simSettings)
@@ -382,34 +316,6 @@ struct ContentView: View {
             }
             .navigationDestination(isPresented: $showAbout) {
                 AboutView()
-            }
-            .onAppear {
-                // Load local text fields with persisted values
-                localIterations = inputManager.iterations
-                localAnnualCAGR = inputManager.annualCAGR
-                localAnnualVolatility = inputManager.annualVolatility
-                localStandardDev = inputManager.standardDeviation
-
-                // Restore user’s last viewed column/week
-                if UserDefaults.standard.object(forKey: "lastViewedPage") == nil {
-                    if let btcPriceIndex = columns.firstIndex(where: { $0.0.contains("BTC Price") }) {
-                        currentPage = btcPriceIndex
-                        lastViewedPage = btcPriceIndex
-                    }
-                } else {
-                    let savedWeek = UserDefaults.standard.integer(forKey: "lastViewedWeek")
-                    if savedWeek != 0 {
-                        lastViewedWeek = savedWeek
-                    }
-                    let savedPage = UserDefaults.standard.integer(forKey: "lastViewedPage")
-                    if savedPage < columns.count {
-                        lastViewedPage = savedPage
-                        currentPage = savedPage
-                    } else if let usdIndex = columns.firstIndex(where: { $0.0.contains("BTC Price") }) {
-                        currentPage = usdIndex
-                        lastViewedPage = usdIndex
-                    }
-                }
             }
             .navigationDestination(isPresented: $showHistograms) {
                 ForceReflowView {
@@ -424,20 +330,49 @@ struct ContentView: View {
                     }
                 }
             }
+            // NEW: The bridging approach.
+            // Once showPinnedColumns = true, we navigate to pinned columns.
+            .navigationDestination(isPresented: $showPinnedColumns) {
+                PinnedColumnBridgeRepresentable()
+                    .environmentObject(coordinator)
+                    .environmentObject(inputManager)
+                    .environmentObject(monthlySimSettings)
+                    .environmentObject(simSettings)
+            }
+            .onAppear {
+                // Load local text fields from inputManager
+                localIterations       = inputManager.iterations
+                localAnnualCAGR       = inputManager.annualCAGR
+                localAnnualVolatility = inputManager.annualVolatility
+                localStandardDev      = inputManager.standardDeviation
+            }
         }
     }
-    
-    // MARK: - Parameter Entry Screen
+
+    // Your parameter entry subview
     private var parametersScreen: some View {
         ParameterEntryView(
             inputManager: inputManager,
             simSettings: simSettings,
             coordinator: coordinator,
-            isKeyboardVisible: $isKeyboardVisible
+            isKeyboardVisible: $isKeyboardVisible,
+            showPinnedColumns: $showPinnedColumns
         )
+        .onChange(of: coordinator.isLoading) { newVal in
+            // Just for debugging
+            print("DEBUG: coordinator.isLoading changed to \(newVal)")
+        }
+        // We pass a callback or we can just watch if we want
+        .onChange(of: coordinator.isChartBuilding) { newVal in
+            print("DEBUG: coordinator.isChartBuilding changed to \(newVal)")
+        }
+        // If you want, you can also watch a param from ParameterEntryView
+        // that sets 'showPinnedColumns = true' after runSimulation.
+        // For that, you'd pass a binding from ContentView to ParameterEntryView.
     }
 
-    // MARK: - Bottom Icons (Settings/About)
+
+    // If you still want the gear + info icons at bottom:
     @ViewBuilder
     private var bottomIcons: some View {
         if !coordinator.isLoading && !coordinator.isChartBuilding {
@@ -467,7 +402,8 @@ struct ContentView: View {
         }
     }
 
-    // MARK: - Transition Button
+    // If you want to keep references, comment out old code:
+    /*
     private var transitionToResultsButton: some View {
         VStack {
             HStack {
@@ -475,19 +411,7 @@ struct ContentView: View {
                 Button(action: {
                     coordinator.isSimulationRun = true
                     currentPage = lastViewedPage
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        if let scrollProxy = contentScrollProxy {
-                            let savedWeek = UserDefaults.standard.integer(forKey: "lastViewedWeek")
-                            if savedWeek != 0 {
-                                lastViewedWeek = savedWeek
-                            }
-                            if let target = coordinator.monteCarloResults.first(where: { $0.week == lastViewedWeek }) {
-                                withAnimation {
-                                    scrollProxy.scrollTo("week-\(target.week)", anchor: .top)
-                                }
-                            }
-                        }
-                    }
+                    // old pinned columns logic
                 }) {
                     Image(systemName: "chevron.right")
                         .foregroundColor(.white)
@@ -498,8 +422,9 @@ struct ContentView: View {
             Spacer()
         }
     }
-    
-    // MARK: - columns
+    */
+
+    // Example columns if needed for something else
     private var columns: [(String, PartialKeyPath<SimulationData>)] {
         switch simSettings.currencyPreference {
         case .usd:

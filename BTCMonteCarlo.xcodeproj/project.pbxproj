@@ -58,11 +58,15 @@
 		E191AD632D1B0C9400020DBE /* CSVLoaderSP500.swift in Sources */ = {isa = PBXBuildFile; fileRef = E191AD622D1B0C9100020DBE /* CSVLoaderSP500.swift */; };
 		E191AD652D1B0D5700020DBE /* CSVParsingUtilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = E191AD642D1B0D5200020DBE /* CSVParsingUtilities.swift */; };
 		E191AD672D1B764400020DBE /* CSVLoaderBTC.swift in Sources */ = {isa = PBXBuildFile; fileRef = E191AD662D1B763E00020DBE /* CSVLoaderBTC.swift */; };
-		E1942C8D2D6183DE00F5B9A1 /* SimulationResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1942C8C2D6183DB00F5B9A1 /* SimulationResultsView.swift */; };
 		E1942C8F2D61C50A00F5B9A1 /* OnboardingSteps.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1942C8E2D61C50800F5B9A1 /* OnboardingSteps.swift */; };
 		E1942C912D628F2600F5B9A1 /* LoadingOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1942C902D628F2400F5B9A1 /* LoadingOverlayView.swift */; };
-		E1942C932D62FA0400F5B9A1 /* SimulationResultsPortraitView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1942C922D62FA0200F5B9A1 /* SimulationResultsPortraitView.swift */; };
-		E1942C952D62FA3A00F5B9A1 /* SimulationResultsLandscapeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1942C942D62FA3600F5B9A1 /* SimulationResultsLandscapeView.swift */; };
+		E1942C972D63FD0C00F5B9A1 /* PinnedColumnTablesRepresentable.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1942C962D63FD0900F5B9A1 /* PinnedColumnTablesRepresentable.swift */; };
+		E1942C992D63FD6200F5B9A1 /* PinnedColumnTablesViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1942C982D63FD5E00F5B9A1 /* PinnedColumnTablesViewController.swift */; };
+		E1942C9B2D63FD7500F5B9A1 /* PinnedColumnCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1942C9A2D63FD7300F5B9A1 /* PinnedColumnCell.swift */; };
+		E1942C9D2D63FD9200F5B9A1 /* ColumnsCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1942C9C2D63FD9000F5B9A1 /* ColumnsCell.swift */; };
+		E1942C9F2D63FDB100F5B9A1 /* SomeParentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1942C9E2D63FDAF00F5B9A1 /* SomeParentView.swift */; };
+		E1942CA12D64331C00F5B9A1 /* PinnedColumnBridgeRepresentable.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1942CA02D64331900F5B9A1 /* PinnedColumnBridgeRepresentable.swift */; };
+		E1942CA32D64334D00F5B9A1 /* PinnedColumnBridgeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1942CA22D64334B00F5B9A1 /* PinnedColumnBridgeViewController.swift */; };
 		E19D10E72D3ED96200E3A55E /* GARCHHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = E19D10E62D3ED96000E3A55E /* GARCHHelper.swift */; };
 		E19D10EB2D3EF69300E3A55E /* MempoolDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E19D10EA2D3EF69200E3A55E /* MempoolDataManager.swift */; };
 		E19D10ED2D40279600E3A55E /* SimulationSettings+Defaults.swift in Sources */ = {isa = PBXBuildFile; fileRef = E19D10EC2D40279200E3A55E /* SimulationSettings+Defaults.swift */; };
@@ -172,11 +176,15 @@
 		E191AD622D1B0C9100020DBE /* CSVLoaderSP500.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVLoaderSP500.swift; sourceTree = "<group>"; };
 		E191AD642D1B0D5200020DBE /* CSVParsingUtilities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVParsingUtilities.swift; sourceTree = "<group>"; };
 		E191AD662D1B763E00020DBE /* CSVLoaderBTC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVLoaderBTC.swift; sourceTree = "<group>"; };
-		E1942C8C2D6183DB00F5B9A1 /* SimulationResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulationResultsView.swift; sourceTree = "<group>"; };
 		E1942C8E2D61C50800F5B9A1 /* OnboardingSteps.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingSteps.swift; sourceTree = "<group>"; };
 		E1942C902D628F2400F5B9A1 /* LoadingOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadingOverlayView.swift; sourceTree = "<group>"; };
-		E1942C922D62FA0200F5B9A1 /* SimulationResultsPortraitView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulationResultsPortraitView.swift; sourceTree = "<group>"; };
-		E1942C942D62FA3600F5B9A1 /* SimulationResultsLandscapeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulationResultsLandscapeView.swift; sourceTree = "<group>"; };
+		E1942C962D63FD0900F5B9A1 /* PinnedColumnTablesRepresentable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinnedColumnTablesRepresentable.swift; sourceTree = "<group>"; };
+		E1942C982D63FD5E00F5B9A1 /* PinnedColumnTablesViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinnedColumnTablesViewController.swift; sourceTree = "<group>"; };
+		E1942C9A2D63FD7300F5B9A1 /* PinnedColumnCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinnedColumnCell.swift; sourceTree = "<group>"; };
+		E1942C9C2D63FD9000F5B9A1 /* ColumnsCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColumnsCell.swift; sourceTree = "<group>"; };
+		E1942C9E2D63FDAF00F5B9A1 /* SomeParentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SomeParentView.swift; sourceTree = "<group>"; };
+		E1942CA02D64331900F5B9A1 /* PinnedColumnBridgeRepresentable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinnedColumnBridgeRepresentable.swift; sourceTree = "<group>"; };
+		E1942CA22D64334B00F5B9A1 /* PinnedColumnBridgeViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinnedColumnBridgeViewController.swift; sourceTree = "<group>"; };
 		E19D10E62D3ED96000E3A55E /* GARCHHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GARCHHelper.swift; sourceTree = "<group>"; };
 		E19D10EA2D3EF69200E3A55E /* MempoolDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MempoolDataManager.swift; sourceTree = "<group>"; };
 		E19D10EC2D40279200E3A55E /* SimulationSettings+Defaults.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SimulationSettings+Defaults.swift"; sourceTree = "<group>"; };
@@ -279,6 +287,7 @@
 				E1CFF0262D30D07800D9D044 /* ChartBuilders.swift */,
 				E18C2BE02D259245006E7438 /* ChartSnapshotView.swift */,
 				E1A1E5282D2E38F9008F7658 /* CheckboxToggleStyle.swift */,
+				E1942C9C2D63FD9000F5B9A1 /* ColumnsCell.swift */,
 				E112E3732D58B2E700167E92 /* ConsentView.swift */,
 				E166A8B82CF955E80003F518 /* ContentOffsetScrollView.swift */,
 				E166A8B12CF85B2B0003F518 /* ContentView.swift */,
@@ -318,6 +327,11 @@
 				E1F1CB652D4F31B9003DB24F /* ParallelSimulationRunner.swift */,
 				E15DDF4E2D5B3AC000CDD30A /* ParameterEntryView.swift */,
 				E1883F3B2D1DDC75007AA90B /* ParametersFormView.swift */,
+				E1942CA02D64331900F5B9A1 /* PinnedColumnBridgeRepresentable.swift */,
+				E1942CA22D64334B00F5B9A1 /* PinnedColumnBridgeViewController.swift */,
+				E1942C9A2D63FD7300F5B9A1 /* PinnedColumnCell.swift */,
+				E1942C962D63FD0900F5B9A1 /* PinnedColumnTablesRepresentable.swift */,
+				E1942C982D63FD5E00F5B9A1 /* PinnedColumnTablesViewController.swift */,
 				E1A1E51E2D2A7362008F7658 /* PortfolioChartView.swift */,
 				E15DDF4A2D5AE1EF00CDD30A /* RestoreDefaultsMonthly.swift */,
 				E19D11432D42FA6600E3A55E /* RNGHelpers.swift */,
@@ -329,9 +343,6 @@
 				E1B7B0A62D4753CC00B60EC6 /* ShiftFactors.swift */,
 				E17B2F212D26A9F000ECE087 /* SimulationCoordinator.swift */,
 				E166A8AF2CF855C20003F518 /* SimulationData.swift */,
-				E1942C942D62FA3600F5B9A1 /* SimulationResultsLandscapeView.swift */,
-				E1942C922D62FA0200F5B9A1 /* SimulationResultsPortraitView.swift */,
-				E1942C8C2D6183DB00F5B9A1 /* SimulationResultsView.swift */,
 				E1883F392D1DD94C007AA90B /* SimulationSettings.swift */,
 				E19D10F62D40D8C000E3A55E /* SimulationSettings+BearishFactors.swift */,
 				E19D10F42D40D10C00E3A55E /* SimulationSettings+BullishFactors.swift */,
@@ -345,6 +356,7 @@
 				E14D23F42D374258007CC11A /* SimulationSummaryCardView.swift */,
 				E1F1CB672D4F3366003DB24F /* SimulationUtilities.swift */,
 				E1A1E52C2D2E39E3008F7658 /* SnapshotExtensions.swift */,
+				E1942C9E2D63FDAF00F5B9A1 /* SomeParentView.swift */,
 				E1A1E5262D2E371B008F7658 /* TipsData.swift */,
 				E1B7B0A42D47532B00B60EC6 /* UIComponents.swift */,
 				E19D113B2D42F81A00E3A55E /* UtilityExtensions.swift */,
@@ -509,17 +521,18 @@
 				E1883F482D1E8E21007AA90B /* AboutView.swift in Sources */,
 				E112E3742D58B2EB00167E92 /* ConsentView.swift in Sources */,
 				E15DDF492D5AD0F100CDD30A /* MonthlySimulationSettings+FactorSync.swift in Sources */,
-				E1942C8D2D6183DE00F5B9A1 /* SimulationResultsView.swift in Sources */,
 				E17B2F282D27505300ECE087 /* LandscapePlaceholderView.swift in Sources */,
 				E166A8B22CF85B2B0003F518 /* ContentView.swift in Sources */,
 				E19D10EB2D3EF69300E3A55E /* MempoolDataManager.swift in Sources */,
 				E1C543B82D224D23005E416D /* MonteCarloResultsView.swift in Sources */,
+				E1942C9B2D63FD7500F5B9A1 /* PinnedColumnCell.swift in Sources */,
 				E1C543BA2D2283A2005E416D /* YearlyPercentileData.swift in Sources */,
 				E1883F502D1FCEBD007AA90B /* OnboardingView.swift in Sources */,
 				E19D11442D42FA6800E3A55E /* RNGHelpers.swift in Sources */,
 				E14344DA2D53553D00225A49 /* SimulationSettings+FactorSync.swift in Sources */,
 				E112E3762D58B73A00167E92 /* MailView.swift in Sources */,
 				E1A1E52F2D2E3A40008F7658 /* RowOffsetHelpers.swift in Sources */,
+				E1942C9F2D63FDB100F5B9A1 /* SomeParentView.swift in Sources */,
 				E17B2F802D2800D400ECE087 /* OrientationObserver.swift in Sources */,
 				E19D113C2D42F81C00E3A55E /* UtilityExtensions.swift in Sources */,
 				E19D113A2D42F75000E3A55E /* MarketRegime.swift in Sources */,
@@ -540,8 +553,6 @@
 				E1B7B0AB2D4759D800B60EC6 /* SettingsWatchers.swift in Sources */,
 				E1F1CB642D4F2F0E003DB24F /* HistoricalDataCache.swift in Sources */,
 				E19D10E72D3ED96200E3A55E /* GARCHHelper.swift in Sources */,
-				E1942C932D62FA0400F5B9A1 /* SimulationResultsPortraitView.swift in Sources */,
-				E1942C952D62FA3A00F5B9A1 /* SimulationResultsLandscapeView.swift in Sources */,
 				E1B7B09D2D44E0D000B60EC6 /* BullishFactorsSection.swift in Sources */,
 				E19D10EF2D40290A00E3A55E /* SimulationSettings+RestoreDefaults.swift in Sources */,
 				E1883F3C2D1DDC78007AA90B /* ParametersFormView.swift in Sources */,
@@ -564,10 +575,13 @@
 				E1B7B0A72D4753CF00B60EC6 /* ShiftFactors.swift in Sources */,
 				E14D240B2D3A698A007CC11A /* SimulationSettingsInit.swift in Sources */,
 				E1E31C512D438DD900ED22E6 /* GarchCalibrator.swift in Sources */,
+				E1942CA32D64334D00F5B9A1 /* PinnedColumnBridgeViewController.swift in Sources */,
 				E1F1CB622D4F081D003DB24F /* HalvingHistoricalManager.swift in Sources */,
 				E1883F3E2D1E0D7A007AA90B /* ActiveField.swift in Sources */,
+				E1942C992D63FD6200F5B9A1 /* PinnedColumnTablesViewController.swift in Sources */,
 				E1942C8F2D61C50A00F5B9A1 /* OnboardingSteps.swift in Sources */,
 				E19D10F52D40D10E00E3A55E /* SimulationSettings+BullishFactors.swift in Sources */,
+				E1942C972D63FD0C00F5B9A1 /* PinnedColumnTablesRepresentable.swift in Sources */,
 				E1A1E52B2D2E3975008F7658 /* InteractiveBitcoinSymbol3DSpinner.swift in Sources */,
 				E1B7B0A12D44FD3600B60EC6 /* BigNumberExtensions.swift in Sources */,
 				E1E31C4D2D433DB800ED22E6 /* BlockBootstrapSimulator.swift in Sources */,
@@ -576,9 +590,11 @@
 				E14D24092D3A677F007CC11A /* SettingsPrinter.swift in Sources */,
 				E1883F422D1E43DB007AA90B /* VisualEffectBlur.swift in Sources */,
 				E166A8AE2CF855BF0003F518 /* MonteCarloSimulator.swift in Sources */,
+				E1942CA12D64331C00F5B9A1 /* PinnedColumnBridgeRepresentable.swift in Sources */,
 				E1CFF0272D30D07A00D9D044 /* ChartBuilders.swift in Sources */,
 				E1883F382D1DD4C8007AA90B /* SettingsView.swift in Sources */,
 				E1B7B0A52D47532D00B60EC6 /* UIComponents.swift in Sources */,
+				E1942C9D2D63FD9200F5B9A1 /* ColumnsCell.swift in Sources */,
 				E15DDF472D5A5A3A00CDD30A /* MonthlySimulationSettings.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

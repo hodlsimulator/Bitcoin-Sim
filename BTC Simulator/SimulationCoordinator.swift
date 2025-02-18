@@ -15,7 +15,7 @@ enum PercentileChoice {
 class SimulationCoordinator: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var isChartBuilding: Bool = false
-    @Published var isSimulationRun: Bool = false
+    // @Published var isSimulationRun: Bool = false
     @Published var isCancelled: Bool = false
     
     @Published var monteCarloResults: [SimulationData] = []
@@ -333,7 +333,7 @@ class SimulationCoordinator: ObservableObject {
                 // If user doesn’t want graphs, skip chart building
                 if !generateGraphs {
                     self.isChartBuilding = false
-                    self.isSimulationRun = true
+                    // self.isSimulationRun = true
                     return
                 }
                 
@@ -376,7 +376,7 @@ class SimulationCoordinator: ObservableObject {
                             self.simChartSelection.selectedChart = oldSelection
                             
                             self.isChartBuilding = false
-                            self.isSimulationRun = true
+                            // self.isSimulationRun = true
                         }
                     }
                 }
