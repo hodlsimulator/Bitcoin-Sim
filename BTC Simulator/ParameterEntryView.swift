@@ -23,7 +23,8 @@ struct ParameterEntryView: View {
 
     // Binding to let the parent know whether the keyboard is visible.
     @Binding var isKeyboardVisible: Bool
-    
+
+    // Binding that triggers navigation to pinned columns when set to true.
     @Binding var showPinnedColumns: Bool
 
     // Local copies
@@ -41,36 +42,53 @@ struct ParameterEntryView: View {
     // If advanced settings are locked
     @AppStorage("advancedSettingsUnlocked") private var advancedSettingsUnlocked: Bool = false
 
-    // We'll keep this if the parent wants to do navigation upon "Run Simulation."
+    // We’ll keep this if the parent wants to do navigation after "Run Simulation."
     @State private var navigateToPinnedColumns = false
 
     var body: some View {
-        GeometryReader { geo in
-            let isLandscape = geo.size.width > geo.size.height
+        // A ZStack that aligns content to the top-right
+        ZStack(alignment: .topTrailing) {
+            // 1) The main content
+            GeometryReader { geo in
+                let isLandscape = geo.size.width > geo.size.height
 
-            if !isLandscape {
-                originalPortraitLayout
-            } else {
-                landscapeLayout
+                if !isLandscape {
+                    originalPortraitLayout
+                } else {
+                    landscapeLayout
+                }
+            }
+            .onChange(of: activeField) { newActive in
+                isKeyboardVisible = (newActive != nil)
+            }
+            .onAppear {
+                localIterations       = inputManager.iterations
+                localAnnualCAGR       = inputManager.annualCAGR
+                localAnnualVolatility = inputManager.annualVolatility
+                localStandardDev      = inputManager.standardDeviation
+
+                ephemeralIterations       = localIterations
+                ephemeralAnnualCAGR       = localAnnualCAGR
+                ephemeralAnnualVolatility = localAnnualVolatility
+                ephemeralStandardDev      = localStandardDev
+            }
+
+            // 2) The forward chevron if there's at least 1 simulation result
+            if !coordinator.monteCarloResults.isEmpty {
+                Button {
+                    // Tapping this sets showPinnedColumns -> triggers navigation in ContentView
+                    showPinnedColumns = true
+                } label: {
+                    Image(systemName: "chevron.right")
+                        .font(.title)          // bigger icon
+                        .foregroundColor(.white)
+                        .padding()
+                }
+                // Some spacing so it appears just below the nav bar
+                .padding(.top, 8)
+                .padding(.trailing, 16)
             }
         }
-        .onChange(of: activeField) { newActive in
-            isKeyboardVisible = (newActive != nil)
-        }
-        .onAppear {
-            localIterations       = inputManager.iterations
-            localAnnualCAGR       = inputManager.annualCAGR
-            localAnnualVolatility = inputManager.annualVolatility
-            localStandardDev      = inputManager.standardDeviation
-
-            ephemeralIterations       = localIterations
-            ephemeralAnnualCAGR       = localAnnualCAGR
-            ephemeralAnnualVolatility = localAnnualVolatility
-            ephemeralStandardDev      = localStandardDev
-        }
-        // NOTE: We removed the nested NavigationStack and the .navigationDestination calls
-        // so that the PARENT (e.g. ContentView) can handle navigation or sheets.
-        // If you want to push to bridging from here, the parent can watch `navigateToPinnedColumns`.
     }
 
     // MARK: - The unmodified portrait layout
@@ -134,8 +152,7 @@ struct ParameterEntryView: View {
 
                 // The Run Simulation Button
                 if coordinator.isLoading || coordinator.isChartBuilding {
-                    // Just a placeholder for spacing
-                    Text(" ")
+                    Text(" ") // placeholder
                         .font(.callout)
                         .foregroundColor(.clear)
                         .padding(.horizontal, 32)
@@ -155,7 +172,6 @@ struct ParameterEntryView: View {
                             generateGraphs: inputManager.generateGraphs,
                             lockRandomSeed: lockedRandomSeedBinding.wrappedValue
                         )
-
                     } label: {
                         Text("RUN SIMULATION")
                             .foregroundColor(.white)
@@ -245,10 +261,6 @@ struct ParameterEntryView: View {
                                     generateGraphs: inputManager.generateGraphs,
                                     lockRandomSeed: lockedRandomSeedBinding.wrappedValue
                                 )
-
-                                // Also set a flag so the PARENT decides to navigate:
-                                navigateToPinnedColumns = true
-
                             } label: {
                                 Text("RUN SIMULATION")
                                     .foregroundColor(.white)
