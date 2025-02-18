@@ -2,41 +2,46 @@
 //  PinnedColumnBridgeRepresentable.swift
 //  BTCMonteCarlo
 //
-//  Created by . . on 18/02/2025.
+//  Created by Conor on 18/02/2025.
 //
 
 import SwiftUI
+import UIKit
 
-/// A SwiftUI wrapper around a custom UIKit UIViewController.
-/// This is where we’ll eventually display the pinned column layout.
+/// A SwiftUI wrapper that hosts the UIKit-based PinnedColumnBridgeViewController.
+/// This struct passes environment objects into the UIKit controller.
 struct PinnedColumnBridgeRepresentable: UIViewControllerRepresentable {
     
-    // In the future, we’ll pass in all the data/objects we need
-    // e.g. summary data, row memory, coordinator, etc.
-    // For now, just a placeholder:
+    // EnvironmentObjects we want to make accessible in the UIViewController.
+    @EnvironmentObject var coordinator: SimulationCoordinator
+    @EnvironmentObject var inputManager: PersistentInputManager
+    @EnvironmentObject var monthlySimSettings: MonthlySimulationSettings
+    @EnvironmentObject var simSettings: SimulationSettings
+
+    // MARK: - UIViewControllerRepresentable Requirements
     
-    // MARK: - Make Coordinator
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
     }
     
-    // MARK: - Make UIViewController
     func makeUIViewController(context: Context) -> PinnedColumnBridgeViewController {
         let vc = PinnedColumnBridgeViewController()
-        // If we need to pass any references, we can do it here, e.g:
-        // vc.coordinator = self.coordinator
+        // Give the VC a reference to this representable so it can access environment objects.
+        vc.representable = self
         return vc
     }
     
-    // MARK: - Update UIViewController
     func updateUIViewController(_ uiViewController: PinnedColumnBridgeViewController,
                                 context: Context) {
-        // In the future, we’ll update the UI if SwiftUI changes something
+        // Keep the representable in sync if needed
+        uiViewController.representable = self
     }
     
-    // MARK: - Coordinator Class
+    // MARK: - Coordinator
+    
     class Coordinator: NSObject {
-        let parent: PinnedColumnBridgeRepresentable
+        var parent: PinnedColumnBridgeRepresentable
+        
         init(_ parent: PinnedColumnBridgeRepresentable) {
             self.parent = parent
         }
