@@ -67,6 +67,7 @@ class SimulationCoordinator: ObservableObject {
     }
     
     func runSimulation(generateGraphs: Bool, lockRandomSeed: Bool) {
+        print("Coordinator ID in runSimulation =>", ObjectIdentifier(self))
         // 1) Apply any dictionary-based factor tweaks
         simSettings.applyDictionaryFactorsToSim()
         

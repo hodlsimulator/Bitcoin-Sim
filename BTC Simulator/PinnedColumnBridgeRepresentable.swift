@@ -21,7 +21,7 @@ struct PinnedColumnBridgeRepresentable: View {
     @EnvironmentObject var inputManager: PersistentInputManager
     @EnvironmentObject var monthlySimSettings: MonthlySimulationSettings
     @EnvironmentObject var simSettings: SimulationSettings
-    
+
     // MARK: - Body
     var body: some View {
         BridgeContainer(
@@ -30,13 +30,13 @@ struct PinnedColumnBridgeRepresentable: View {
             monthlySimSettings: monthlySimSettings,
             simSettings: simSettings
         )
-        // Keep the default SwiftUI back button on the left
-        // by NOT calling .navigationBarBackButtonHidden(true).
-        // Provide a chart icon on the right:
+        .onAppear {
+            print("PinnedColumnBridgeRepresentable onAppear => coordinator ID:",
+                  ObjectIdentifier(coordinator))
+        }
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
-                    // Do something (show chart screen, etc.)
                     print("Chart icon tapped!")
                 } label: {
                     Image(systemName: "chart.line.uptrend.xyaxis")
