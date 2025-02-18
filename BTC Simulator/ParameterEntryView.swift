@@ -156,10 +156,6 @@ struct ParameterEntryView: View {
                             lockRandomSeed: lockedRandomSeedBinding.wrappedValue
                         )
 
-                        // If you want to notify the parent that it should navigate:
-                        navigateToPinnedColumns = true
-                        showPinnedColumns = true
-
                     } label: {
                         Text("RUN SIMULATION")
                             .foregroundColor(.white)

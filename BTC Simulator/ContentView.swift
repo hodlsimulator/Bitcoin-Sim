@@ -339,6 +339,12 @@ struct ContentView: View {
                     .environmentObject(monthlySimSettings)
                     .environmentObject(simSettings)
             }
+            .onChange(of: coordinator.isLoading) { _ in
+                navigateIfNeeded()
+            }
+            .onChange(of: coordinator.isChartBuilding) { _ in
+                navigateIfNeeded()
+            }
             .onAppear {
                 // Load local text fields from inputManager
                 localIterations       = inputManager.iterations
@@ -346,6 +352,12 @@ struct ContentView: View {
                 localAnnualVolatility = inputManager.annualVolatility
                 localStandardDev      = inputManager.standardDeviation
             }
+        }
+    }
+
+    private func navigateIfNeeded() {
+        if !coordinator.isLoading && !coordinator.isChartBuilding {
+            showPinnedColumns = true
         }
     }
 
