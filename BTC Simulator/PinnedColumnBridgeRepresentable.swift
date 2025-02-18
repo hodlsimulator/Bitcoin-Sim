@@ -8,42 +8,80 @@
 import SwiftUI
 import UIKit
 
-/// A SwiftUI wrapper that hosts the UIKit-based PinnedColumnBridgeViewController.
-/// This struct passes environment objects into the UIKit controller.
-struct PinnedColumnBridgeRepresentable: UIViewControllerRepresentable {
+/// 1) A SwiftUI "parent" struct that appears as a View in navigation.
+///    It shows a toolbar item with a chart icon on the right side,
+///    while letting SwiftUI's default back button (chevron.left) appear on the left.
+/// 2) It internally uses `BridgeContainer`, which is a UIViewControllerRepresentable
+///    that actually creates and updates the UIKit `PinnedColumnBridgeViewController`.
+///
+struct PinnedColumnBridgeRepresentable: View {
     
-    // EnvironmentObjects we want to make accessible in the UIViewController.
+    // MARK: - Environment Objects
     @EnvironmentObject var coordinator: SimulationCoordinator
     @EnvironmentObject var inputManager: PersistentInputManager
     @EnvironmentObject var monthlySimSettings: MonthlySimulationSettings
     @EnvironmentObject var simSettings: SimulationSettings
-
-    // MARK: - UIViewControllerRepresentable Requirements
     
-    func makeCoordinator() -> Coordinator {
-        Coordinator(self)
+    // MARK: - Body
+    var body: some View {
+        BridgeContainer(
+            coordinator: coordinator,
+            inputManager: inputManager,
+            monthlySimSettings: monthlySimSettings,
+            simSettings: simSettings
+        )
+        // Keep the default SwiftUI back button on the left
+        // by NOT calling .navigationBarBackButtonHidden(true).
+        // Provide a chart icon on the right:
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    // Do something (show chart screen, etc.)
+                    print("Chart icon tapped!")
+                } label: {
+                    Image(systemName: "chart.line.uptrend.xyaxis")
+                        .foregroundColor(.white)
+                }
+            }
+        }
     }
     
-    func makeUIViewController(context: Context) -> PinnedColumnBridgeViewController {
-        let vc = PinnedColumnBridgeViewController()
-        // Give the VC a reference to this representable so it can access environment objects.
-        vc.representable = self
-        return vc
-    }
-    
-    func updateUIViewController(_ uiViewController: PinnedColumnBridgeViewController,
-                                context: Context) {
-        // Keep the representable in sync if needed
-        uiViewController.representable = self
-    }
-    
-    // MARK: - Coordinator
-    
-    class Coordinator: NSObject {
-        var parent: PinnedColumnBridgeRepresentable
+    // MARK: - Nested BridgeContainer
+    /// This internal struct is the actual UIViewControllerRepresentable
+    /// that creates/updates `PinnedColumnBridgeViewController`.
+    struct BridgeContainer: UIViewControllerRepresentable {
         
-        init(_ parent: PinnedColumnBridgeRepresentable) {
-            self.parent = parent
+        // Pass references down to the UIKit VC if needed
+        let coordinator: SimulationCoordinator
+        let inputManager: PersistentInputManager
+        let monthlySimSettings: MonthlySimulationSettings
+        let simSettings: SimulationSettings
+        
+        // MARK: - Make Coordinator
+        func makeCoordinator() -> Coordinator {
+            Coordinator(self)
+        }
+        
+        // MARK: - Make UIViewController
+        func makeUIViewController(context: Context) -> PinnedColumnBridgeViewController {
+            let vc = PinnedColumnBridgeViewController()
+            // Provide them with a reference to this container
+            vc.representableContainer = self
+            return vc
+        }
+        
+        // MARK: - Update UIViewController
+        func updateUIViewController(_ uiViewController: PinnedColumnBridgeViewController,
+                                    context: Context) {
+            uiViewController.representableContainer = self
+        }
+        
+        // MARK: - Coordinator
+        class Coordinator: NSObject {
+            var parent: BridgeContainer
+            init(_ parent: BridgeContainer) {
+                self.parent = parent
+            }
         }
     }
 }
