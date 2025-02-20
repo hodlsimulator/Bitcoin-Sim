@@ -16,7 +16,6 @@ class PinnedColumnBridgeViewController: UIViewController {
     private let summaryCardContainer = UIView()
     private let pinnedTablePlaceholder = UIView()
     private let pinnedColumnTablesVC = PinnedColumnTablesViewController()
-    private var topBarHeightConstraint: NSLayoutConstraint?
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -39,7 +38,7 @@ class PinnedColumnBridgeViewController: UIViewController {
             backButton.centerYAnchor.constraint(equalTo: topBar.centerYAnchor)
         ])
 
-        // We’ll set the topBar’s height to ~70 for notch clearance
+        // We'll set the topBar’s height to ~70 for notch clearance
         let topBarHeight: CGFloat = 70
 
         // A vertical stack that contains [topBar, summaryCardContainer + pinnedTablePlaceholder]
@@ -49,6 +48,7 @@ class PinnedColumnBridgeViewController: UIViewController {
         containerStack.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(containerStack)
 
+        // Fill the entire screen (no letterboxing)
         NSLayoutConstraint.activate([
             containerStack.topAnchor.constraint(equalTo: view.topAnchor),
             containerStack.bottomAnchor.constraint(equalTo: view.bottomAnchor),
@@ -101,28 +101,27 @@ class PinnedColumnBridgeViewController: UIViewController {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        
-        // Hide the *system* nav bar so it doesn't show behind our custom bar.
+        // We'll also hide the system nav bar here:
         navigationController?.setNavigationBarHidden(true, animated: false)
 
         refreshSummaryCard()
         populatePinnedTable()
     }
-    
+
+    // IMPORTANT: SwiftUI might re-show it after viewWillAppear, so hide it again:
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        navigationController?.setNavigationBarHidden(true, animated: false)
+    }
+
     @objc private func handleBackButton() {
         // Pop or dismiss. e.g. pop if in a nav stack:
         navigationController?.popViewController(animated: true)
     }
 
-    @objc private func handleChartButton() {
-        print("Chart icon tapped!")
-        // Possibly push a chart screen or show a sheet
-    }
-
     private func refreshSummaryCard() {
         guard let container = representableContainer else { return }
         
-        // For demonstration we’ll just show a placeholder:
         hostingController.rootView = AnyView(
             SimulationSummaryCardView(
                 finalBTCPrice: 1234.56,

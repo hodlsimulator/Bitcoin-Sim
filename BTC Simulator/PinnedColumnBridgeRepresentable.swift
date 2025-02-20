@@ -30,6 +30,7 @@ struct PinnedColumnBridgeRepresentable: View {
             // 2) Let your UIKit view stretch under the safe areas:
             .ignoresSafeArea(.all)
             .navigationBarHidden(true)
+            .navigationBarBackButtonHidden(true)
         }
         // Or remove NavigationView altogether if you don’t need SwiftUI nav management
         .navigationViewStyle(StackNavigationViewStyle())
