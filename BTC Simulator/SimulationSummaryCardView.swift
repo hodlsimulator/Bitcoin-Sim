@@ -13,54 +13,68 @@ struct SimulationSummaryCardView: View {
     let growthPercent: Double
     let currencySymbol: String
     
+    // Add this closure for the back button
+    let onBackTapped: () -> Void
+
     var body: some View {
         GeometryReader { geometry in
-            let horizontalPadding: CGFloat = 16
-            let totalWidth = geometry.size.width - (horizontalPadding * 2)
-            let columnWidth = totalWidth / 3
-            
-            HStack(spacing: 0) {
-                // 1) BTC Price (right aligned)
-                VStack(spacing: 4) {
-                    Text("BTC Price")
-                        .font(.title3)
-                        .foregroundColor(.gray)
-                    
-                    // e.g. "$1,234.00", "$2.34M", "$1.23T"
-                    Text("\(currencySymbol)\(abbreviateForCardV2(finalBTCPrice))")
-                        .foregroundColor(.white)
-                        .font(.title2)
-                }
-                .frame(width: columnWidth, alignment: .trailing)
+            ZStack(alignment: .topLeading) {
                 
-                // 2) Portfolio (centre aligned)
-                VStack(spacing: 4) {
-                    Text("Portfolio")
-                        .font(.title3)
-                        .foregroundColor(.gray)
+                // Existing HStack with price/portfolio/growth
+                let horizontalPadding: CGFloat = 16
+                let totalWidth = geometry.size.width - (horizontalPadding * 2)
+                let columnWidth = totalWidth / 3
+
+                HStack(spacing: 0) {
+                    // 1) BTC Price
+                    VStack(spacing: 4) {
+                        Text("BTC Price")
+                            .font(.title3)
+                            .foregroundColor(.gray)
+                        
+                        Text("\(currencySymbol)\(abbreviateForCardV2(finalBTCPrice))")
+                            .foregroundColor(.white)
+                            .font(.title2)
+                    }
+                    .frame(width: columnWidth, alignment: .trailing)
                     
-                    // e.g. "$999.99", "$2.34M"
-                    Text("\(currencySymbol)\(abbreviateForCardV2(finalPortfolioValue))")
-                        .foregroundColor(.white)
-                        .font(.title2)
+                    // 2) Portfolio
+                    VStack(spacing: 4) {
+                        Text("Portfolio")
+                            .font(.title3)
+                            .foregroundColor(.gray)
+                        
+                        Text("\(currencySymbol)\(abbreviateForCardV2(finalPortfolioValue))")
+                            .foregroundColor(.white)
+                            .font(.title2)
+                    }
+                    .frame(width: columnWidth, alignment: .center)
+                    
+                    // 3) Growth
+                    VStack(spacing: 4) {
+                        Text("Growth")
+                            .font(.title3)
+                            .foregroundColor(.gray)
+                        
+                        Text(abbreviateGrowthV2(growthPercent))
+                            .foregroundColor(growthPercent >= 0 ? .green : .red)
+                            .font(.title2)
+                    }
+                    .frame(width: columnWidth, alignment: .leading)
                 }
-                .frame(width: columnWidth, alignment: .center)
+                .padding(.horizontal, horizontalPadding)
+                .padding(.vertical, 8)
                 
-                // 3) Growth (left aligned)
-                VStack(spacing: 4) {
-                    Text("Growth")
-                        .font(.title3)
-                        .foregroundColor(.gray)
-                    
-                    // e.g. "123%", "2.34M%", "1.23T%"
-                    Text(abbreviateGrowthV2(growthPercent))
-                        .foregroundColor(growthPercent >= 0 ? .green : .red)
-                        .font(.title2)
+                // NEW: A simple back button at top-left
+                Button(action: onBackTapped) {
+                    Image(systemName: "chevron.left")
+                        .foregroundColor(.white)
+                        .padding(8)
                 }
-                .frame(width: columnWidth, alignment: .leading)
+                .padding(.leading, 12)
+                .padding(.top, 8)
+                
             }
-            .padding(.horizontal, horizontalPadding)
-            .padding(.vertical, 8)
         }
         .frame(height: 80)
     }

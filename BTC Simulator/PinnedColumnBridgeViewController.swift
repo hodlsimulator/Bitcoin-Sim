@@ -20,35 +20,23 @@ class PinnedColumnBridgeViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        // A custom top bar
+        // A custom top bar (NO back button here)
         let topBar = UIView()
         topBar.backgroundColor = UIColor(white: 0.12, alpha: 1.0)
         topBar.translatesAutoresizingMaskIntoConstraints = false
 
-        // Create a back button with just a chevron
-        let backButton = UIButton(type: .system)
-        backButton.setImage(UIImage(systemName: "chevron.left"), for: .normal)
-        backButton.tintColor = .white
-        backButton.addTarget(self, action: #selector(handleBackButton), for: .touchUpInside)
-        backButton.translatesAutoresizingMaskIntoConstraints = false
-        topBar.addSubview(backButton)
+        // For example, you can leave the chart button or remove it:
+        // (chart button code omitted for brevity if you don't want it)
 
-        NSLayoutConstraint.activate([
-            backButton.leadingAnchor.constraint(equalTo: topBar.leadingAnchor, constant: 16),
-            backButton.centerYAnchor.constraint(equalTo: topBar.centerYAnchor)
-        ])
-
-        // We'll set the topBar’s height to ~70 for notch clearance
         let topBarHeight: CGFloat = 70
 
-        // A vertical stack that contains [topBar, summaryCardContainer + pinnedTablePlaceholder]
+        // Container stack: [ topBar, summaryCardContainer + pinnedTablePlaceholder ]
         let containerStack = UIStackView()
         containerStack.axis = .vertical
         containerStack.spacing = 0
         containerStack.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(containerStack)
 
-        // Fill the entire screen (no letterboxing)
         NSLayoutConstraint.activate([
             containerStack.topAnchor.constraint(equalTo: view.topAnchor),
             containerStack.bottomAnchor.constraint(equalTo: view.bottomAnchor),
@@ -56,11 +44,11 @@ class PinnedColumnBridgeViewController: UIViewController {
             containerStack.trailingAnchor.constraint(equalTo: view.trailingAnchor)
         ])
 
-        // 1) The top bar
+        // 1) Top bar at fixed height
         containerStack.addArrangedSubview(topBar)
         topBar.heightAnchor.constraint(equalToConstant: topBarHeight).isActive = true
 
-        // 2) Summary card + pinned table
+        // 2) Main stack: [ summaryCardContainer, pinnedTablePlaceholder ]
         pinnedTablePlaceholder.backgroundColor = UIColor.darkGray.withAlphaComponent(0.2)
         let mainStack = UIStackView(arrangedSubviews: [
             summaryCardContainer,
@@ -68,10 +56,9 @@ class PinnedColumnBridgeViewController: UIViewController {
         ])
         mainStack.axis = .vertical
         mainStack.spacing = 0
-
         containerStack.addArrangedSubview(mainStack)
 
-        // Attach hosting controller for the summary card
+        // Attach hosting controller for summary card
         addChild(hostingController)
         summaryCardContainer.addSubview(hostingController.view)
         hostingController.didMove(toParent: self)
@@ -85,7 +72,7 @@ class PinnedColumnBridgeViewController: UIViewController {
             summaryCardContainer.heightAnchor.constraint(equalToConstant: 90)
         ])
 
-        // Pin the pinned table VC into pinnedTablePlaceholder
+        // Pin the pinned table VC
         addChild(pinnedColumnTablesVC)
         pinnedTablePlaceholder.addSubview(pinnedColumnTablesVC.view)
         pinnedColumnTablesVC.didMove(toParent: self)
@@ -101,33 +88,38 @@ class PinnedColumnBridgeViewController: UIViewController {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        // We'll also hide the system nav bar here:
+        
+        // Hide the system nav bar so it doesn't show behind our custom bar.
         navigationController?.setNavigationBarHidden(true, animated: false)
 
         refreshSummaryCard()
         populatePinnedTable()
     }
 
-    // IMPORTANT: SwiftUI might re-show it after viewWillAppear, so hide it again:
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        navigationController?.setNavigationBarHidden(true, animated: false)
+    // Keep this so the summary card can call it via a closure:
+    @objc private func handleBackButton() {
+        navigationController?.popViewController(animated: true)
     }
 
-    @objc private func handleBackButton() {
-        // Pop or dismiss. e.g. pop if in a nav stack:
-        navigationController?.popViewController(animated: true)
+    // (Optional) If you had a chart button in the top bar, keep or remove:
+    @objc private func handleChartButton() {
+        print("Chart icon tapped!")
     }
 
     private func refreshSummaryCard() {
         guard let container = representableContainer else { return }
         
+        // Provide an onBackTapped closure to the summary card:
         hostingController.rootView = AnyView(
             SimulationSummaryCardView(
                 finalBTCPrice: 1234.56,
                 finalPortfolioValue: 1234567.89,
                 growthPercent: 12.34,
-                currencySymbol: "$"
+                currencySymbol: "$",
+                // Add this closure so the summary card's back button can call handleBackButton()
+                onBackTapped: { [weak self] in
+                    self?.handleBackButton()
+                }
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color(UIColor(white: 0.12, alpha: 1.0)))
