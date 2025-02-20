@@ -289,40 +289,59 @@ struct ContentView: View {
     @EnvironmentObject var coordinator: SimulationCoordinator
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                parametersScreen
-                if !coordinator.isLoading && !coordinator.isChartBuilding && !isKeyboardVisible {
-                    bottomIcons
+            NavigationStack {
+                ZStack {
+                    parametersScreen
+                    if !coordinator.isLoading && !coordinator.isChartBuilding && !isKeyboardVisible {
+                        bottomIcons
+                    }
+                    if coordinator.isLoading || coordinator.isChartBuilding {
+                        LoadingOverlayView()
+                            .environmentObject(coordinator)
+                            .environmentObject(simSettings)
+                    }
                 }
-                if coordinator.isLoading || coordinator.isChartBuilding {
-                    LoadingOverlayView()
-                        .environmentObject(coordinator)
-                        .environmentObject(simSettings)
-                }
-            }
-            // Hide SwiftUI nav bar for the MAIN screen:
-            .navigationBarHidden(true)
+                // Hide SwiftUI nav bar for the MAIN screen:
+                .navigationBarHidden(true)
 
-            // Destination for bridging screen:
-            .navigationDestination(isPresented: $showPinnedColumns) {
-                // Show SwiftUI’s nav bar *if desired*:
-                PinnedColumnBridgeRepresentable(
-                    coordinator: coordinator,
-                    inputManager: inputManager,
-                    monthlySimSettings: monthlySimSettings,
-                    simSettings: simSettings
-                )
+                // Destination for bridging screen:
+                .navigationDestination(isPresented: $showPinnedColumns) {
+                    // Show SwiftUI’s nav bar *if desired*:
+                    PinnedColumnBridgeRepresentable(
+                        coordinator: coordinator,
+                        inputManager: inputManager,
+                        monthlySimSettings: monthlySimSettings,
+                        simSettings: simSettings
+                    )
                     .navigationBarHidden(false)
-                    // If you REALLY want to set an inline title or color, you can re-enable:
                     // .navigationBarTitleDisplayMode(.inline)
                     // .toolbarBackground(Color(white: 0.12), for: .navigationBar)
                     // .toolbarBackground(.visible, for: .navigationBar)
+                    .onAppear {
+                        removeNavBarHairline()
+                    }
+                }
+                
+                // AFTER the bridging screen, add Settings & About:
+                .navigationDestination(isPresented: $showSettings) {
+                    SettingsView()
+                        .onAppear { removeNavBarHairline() }
+                        .environmentObject(simSettings)
+                        .environmentObject(monthlySimSettings)
+                        .environmentObject(coordinator)
+                }
+                .navigationDestination(isPresented: $showAbout) {
+                    AboutView()
+                        .onAppear { removeNavBarHairline() }
+                }
             }
+            .onAppear {
+                // Try removing the hairline here too
+                removeNavBarHairline()
+            }
+            .onChange(of: coordinator.isLoading) { _ in checkNavigationState() }
+            .onChange(of: coordinator.isChartBuilding) { _ in checkNavigationState() }
         }
-        .onChange(of: coordinator.isLoading) { _ in checkNavigationState() }
-        .onChange(of: coordinator.isChartBuilding) { _ in checkNavigationState() }
-    }
 
     private func checkNavigationState() {
             // Example logic that auto-navigates when done loading
@@ -363,10 +382,7 @@ struct ContentView: View {
     }
 
 
-    // If you still want the gear + info icons at bottom:
-    @ViewBuilder
     private var bottomIcons: some View {
-        if !coordinator.isLoading && !coordinator.isChartBuilding {
             VStack {
                 Spacer()
                 HStack {
@@ -391,8 +407,24 @@ struct ContentView: View {
                 .padding(.bottom, 30)
             }
         }
-    }
 
+        // Force removal of the hairline whenever we appear in a new screen
+        private func removeNavBarHairline() {
+            let appearance = UINavigationBarAppearance()
+            appearance.configureWithOpaqueBackground()
+            
+            // Same background as your main nav:
+            appearance.backgroundColor = UIColor(white: 0.12, alpha: 1.0)
+
+            // The crucial part for removing the line:
+            appearance.shadowColor = .clear
+
+            // Apply it to standard, compact, scrollEdge
+            UINavigationBar.appearance().standardAppearance = appearance
+            UINavigationBar.appearance().compactAppearance = appearance
+            UINavigationBar.appearance().scrollEdgeAppearance = appearance
+        }
+    
     // If you want to keep references, comment out old code:
     /*
     private var transitionToResultsButton: some View {
@@ -459,3 +491,4 @@ struct ContentView: View {
         }
     }
 }
+
