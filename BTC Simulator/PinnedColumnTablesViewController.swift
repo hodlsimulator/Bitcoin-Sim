@@ -9,26 +9,104 @@ import UIKit
 
 class PinnedColumnTablesViewController: UIViewController {
     
-    var representable: PinnedColumnTablesRepresentable!
-    
+    // Make it optional so we don't crash if it's nil
+    var representable: PinnedColumnTablesRepresentable?
+
+    // Left table for the pinned column
     let pinnedTableView = UITableView(frame: .zero, style: .plain)
+    // Right table for the rest of the columns
     let columnsTableView = UITableView(frame: .zero, style: .plain)
+    
+    // We'll create references to the header labels/stacks so we can fill them in later:
+    private let pinnedHeaderLabel = UILabel()
+    private let columnsHeaderStack = UIStackView()
     
     private var isSyncingScroll = false
     
-    // We'll call this whenever we detect that scrolling is near the bottom
+    // We'll call this whenever we detect scrolling is near the bottom
     var onIsAtBottomChanged: ((Bool) -> Void)?
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        
         view.backgroundColor = UIColor(white: 0.12, alpha: 1.0)
+        
+        // 1) Create "pinned" header view (left side)
+        let pinnedHeaderView = UIView()
+        pinnedHeaderView.backgroundColor = .black
+        pinnedHeaderView.translatesAutoresizingMaskIntoConstraints = false
+        
+        pinnedHeaderLabel.textColor = .orange
+        pinnedHeaderLabel.font = UIFont.boldSystemFont(ofSize: 14)
+        pinnedHeaderLabel.translatesAutoresizingMaskIntoConstraints = false
+        
+        pinnedHeaderView.addSubview(pinnedHeaderLabel)
+        NSLayoutConstraint.activate([
+            pinnedHeaderLabel.leadingAnchor.constraint(equalTo: pinnedHeaderView.leadingAnchor, constant: 8),
+            pinnedHeaderLabel.centerYAnchor.constraint(equalTo: pinnedHeaderView.centerYAnchor)
+        ])
+        
+        // 2) Create "columns" header view (right side)
+        let columnsHeaderView = UIView()
+        columnsHeaderView.backgroundColor = .black
+        columnsHeaderView.translatesAutoresizingMaskIntoConstraints = false
+        
+        columnsHeaderStack.axis = .horizontal
+        columnsHeaderStack.spacing = 16
+        columnsHeaderStack.alignment = .center
+        columnsHeaderStack.translatesAutoresizingMaskIntoConstraints = false
+        
+        columnsHeaderView.addSubview(columnsHeaderStack)
+        NSLayoutConstraint.activate([
+            columnsHeaderStack.leadingAnchor.constraint(equalTo: columnsHeaderView.leadingAnchor, constant: 8),
+            columnsHeaderStack.trailingAnchor.constraint(equalTo: columnsHeaderView.trailingAnchor, constant: -8),
+            columnsHeaderStack.topAnchor.constraint(equalTo: columnsHeaderView.topAnchor),
+            columnsHeaderStack.bottomAnchor.constraint(equalTo: columnsHeaderView.bottomAnchor)
+        ])
 
-        // Turn off safeArea-based auto-inset
+        // 3) Add subviews
+        pinnedHeaderView.translatesAutoresizingMaskIntoConstraints = false
+        columnsHeaderView.translatesAutoresizingMaskIntoConstraints = false
+        pinnedTableView.translatesAutoresizingMaskIntoConstraints = false
+        columnsTableView.translatesAutoresizingMaskIntoConstraints = false
+        
+        view.addSubview(pinnedHeaderView)
+        view.addSubview(columnsHeaderView)
+        view.addSubview(pinnedTableView)
+        view.addSubview(columnsTableView)
+        
+        // 4) Layout constraints
+        let headerHeight: CGFloat = 40
+        
+        NSLayoutConstraint.activate([
+            // Pinned header on the left
+            pinnedHeaderView.topAnchor.constraint(equalTo: view.topAnchor),
+            pinnedHeaderView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            pinnedHeaderView.widthAnchor.constraint(equalToConstant: 70),
+            pinnedHeaderView.heightAnchor.constraint(equalToConstant: headerHeight),
+            
+            // Columns header on the right
+            columnsHeaderView.topAnchor.constraint(equalTo: view.topAnchor),
+            columnsHeaderView.leadingAnchor.constraint(equalTo: pinnedHeaderView.trailingAnchor),
+            columnsHeaderView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            columnsHeaderView.heightAnchor.constraint(equalToConstant: headerHeight),
+            
+            // Pinned table below pinnedHeaderView
+            pinnedTableView.topAnchor.constraint(equalTo: pinnedHeaderView.bottomAnchor),
+            pinnedTableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            pinnedTableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            pinnedTableView.widthAnchor.constraint(equalToConstant: 70),
+            
+            // Columns table below columnsHeaderView
+            columnsTableView.topAnchor.constraint(equalTo: columnsHeaderView.bottomAnchor),
+            columnsTableView.leadingAnchor.constraint(equalTo: pinnedTableView.trailingAnchor),
+            columnsTableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            columnsTableView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
+        ])
+        
+        // 5) Table setup
         pinnedTableView.contentInsetAdjustmentBehavior = .never
         columnsTableView.contentInsetAdjustmentBehavior = .never
         
-        // Setup pinned table
         pinnedTableView.dataSource = self
         pinnedTableView.delegate = self
         pinnedTableView.separatorStyle = .none
@@ -36,37 +114,44 @@ class PinnedColumnTablesViewController: UIViewController {
         pinnedTableView.showsVerticalScrollIndicator = false
         pinnedTableView.register(PinnedColumnCell.self, forCellReuseIdentifier: "PinnedColumnCell")
         
-        // Setup columns table
         columnsTableView.dataSource = self
         columnsTableView.delegate = self
         columnsTableView.separatorStyle = .none
         columnsTableView.backgroundColor = .clear
         columnsTableView.showsVerticalScrollIndicator = true
         columnsTableView.register(ColumnsCell.self, forCellReuseIdentifier: "ColumnsCell")
-        
-        pinnedTableView.translatesAutoresizingMaskIntoConstraints = false
-        columnsTableView.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(pinnedTableView)
-        view.addSubview(columnsTableView)
-        
-        NSLayoutConstraint.activate([
-            // Pinned table on the left, fixed width
-            pinnedTableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            pinnedTableView.topAnchor.constraint(equalTo: view.topAnchor),
-            pinnedTableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            pinnedTableView.widthAnchor.constraint(equalToConstant: 70),
-            
-            // Columns table fills the rest
-            columnsTableView.leadingAnchor.constraint(equalTo: pinnedTableView.trailingAnchor),
-            columnsTableView.topAnchor.constraint(equalTo: view.topAnchor),
-            columnsTableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            columnsTableView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
-        ])
     }
     
-    // Called by the parent to scroll all the way down
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        
+        // If representable is set, update the header label/stack now:
+        guard let rep = representable else { return }
+
+        pinnedHeaderLabel.text = rep.pinnedColumnTitle
+        
+        // Clear out old labels (in case we reload)
+        columnsHeaderStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        
+        // Rebuild column title labels
+        for (title, _) in rep.columns {
+            let colLabel = UILabel()
+            colLabel.text = title
+            colLabel.textColor = .orange
+            colLabel.font = UIFont.boldSystemFont(ofSize: 14)
+            columnsHeaderStack.addArrangedSubview(colLabel)
+        }
+        
+        // Finally reload data in the tables
+        pinnedTableView.reloadData()
+        columnsTableView.reloadData()
+    }
+    
+    // Called by the parent to scroll both tables all the way down
     func scrollToBottom() {
-        let rowCount = representable.displayedData.count
+        guard let rep = representable else { return }
+        
+        let rowCount = rep.displayedData.count
         if rowCount > 0 {
             let lastIndex = rowCount - 1
             let pinnedPath = IndexPath(row: lastIndex, section: 0)
@@ -88,13 +173,18 @@ extension PinnedColumnTablesViewController: UITableViewDataSource, UITableViewDe
 
     func tableView(_ tableView: UITableView,
                    numberOfRowsInSection section: Int) -> Int {
-        return representable.displayedData.count
+        // If representable is nil, show 0 rows
+        return representable?.displayedData.count ?? 0
     }
 
     func tableView(_ tableView: UITableView,
                    cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         
-        let rowData = representable.displayedData[indexPath.row]
+        guard let rep = representable else {
+            return UITableViewCell()
+        }
+        
+        let rowData = rep.displayedData[indexPath.row]
         
         if tableView == pinnedTableView {
             guard let cell = tableView.dequeueReusableCell(
@@ -103,9 +193,10 @@ extension PinnedColumnTablesViewController: UITableViewDataSource, UITableViewDe
             ) as? PinnedColumnCell else {
                 return UITableViewCell()
             }
-            let pinnedValue = rowData[keyPath: representable.pinnedColumnKeyPath]
+            let pinnedValue = rowData[keyPath: rep.pinnedColumnKeyPath]
             cell.configure(pinnedValue: pinnedValue, backgroundIndex: indexPath.row)
             return cell
+            
         } else {
             guard let cell = tableView.dequeueReusableCell(
                 withIdentifier: "ColumnsCell",
@@ -115,7 +206,7 @@ extension PinnedColumnTablesViewController: UITableViewDataSource, UITableViewDe
             }
             cell.configure(
                 rowData: rowData,
-                columns: representable.columns,
+                columns: rep.columns,
                 rowIndex: indexPath.row
             )
             return cell
@@ -125,57 +216,6 @@ extension PinnedColumnTablesViewController: UITableViewDataSource, UITableViewDe
     func tableView(_ tableView: UITableView,
                    heightForRowAt indexPath: IndexPath) -> CGFloat {
         return 44
-    }
-
-    func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
-        if tableView == pinnedTableView {
-            let headerView = UIView()
-            headerView.backgroundColor = .black
-            
-            let label = UILabel()
-            label.text = representable.pinnedColumnTitle
-            label.textColor = .orange
-            label.font = UIFont.boldSystemFont(ofSize: 14)
-            label.translatesAutoresizingMaskIntoConstraints = false
-            
-            headerView.addSubview(label)
-            NSLayoutConstraint.activate([
-                label.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 8),
-                label.centerYAnchor.constraint(equalTo: headerView.centerYAnchor)
-            ])
-            return headerView
-            
-        } else {
-            let headerView = UIView()
-            headerView.backgroundColor = .black
-
-            let stack = UIStackView()
-            stack.axis = .horizontal
-            stack.spacing = 16
-            stack.alignment = .center
-            stack.translatesAutoresizingMaskIntoConstraints = false
-            headerView.addSubview(stack)
-
-            NSLayoutConstraint.activate([
-                stack.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 8),
-                stack.trailingAnchor.constraint(equalTo: headerView.trailingAnchor, constant: -8),
-                stack.topAnchor.constraint(equalTo: headerView.topAnchor),
-                stack.bottomAnchor.constraint(equalTo: headerView.bottomAnchor)
-            ])
-
-            for (title, _) in representable.columns {
-                let colLabel = UILabel()
-                colLabel.text = title
-                colLabel.textColor = .orange
-                colLabel.font = UIFont.boldSystemFont(ofSize: 14)
-                stack.addArrangedSubview(colLabel)
-            }
-            return headerView
-        }
-    }
-
-    func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
-        return 40
     }
 
     // MARK: - Sync scrolling + detect "at bottom"
@@ -191,12 +231,14 @@ extension PinnedColumnTablesViewController: UITableViewDataSource, UITableViewDe
 
         isSyncingScroll = false
 
+        guard let rep = representable else { return }
+
         // Update lastViewedRow for SwiftUI
         if let firstVisible = pinnedTableView.indexPathsForVisibleRows?.first {
-            representable.lastViewedRow = firstVisible.row
+            rep.lastViewedRow = firstVisible.row
         }
 
-        // Check if near bottom => set representable.isAtBottom and notify parent
+        // Check if near bottom => set rep.isAtBottom and notify parent
         let offsetY = scrollView.contentOffset.y
         let contentHeight = scrollView.contentSize.height
         let frameHeight = scrollView.frame.size.height
@@ -205,7 +247,7 @@ extension PinnedColumnTablesViewController: UITableViewDataSource, UITableViewDe
         let distanceFromBottom = contentHeight - (offsetY + frameHeight)
         let atBottom = (distanceFromBottom < nearBottomThreshold)
 
-        representable.isAtBottom = atBottom
-        onIsAtBottomChanged?(atBottom) // <-- The critical call
+        rep.isAtBottom = atBottom
+        onIsAtBottomChanged?(atBottom)
     }
 }
