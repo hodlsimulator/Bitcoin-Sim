@@ -291,70 +291,49 @@ struct ContentView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Always show the parameter entry or loading overlay, no old pinned table
                 parametersScreen
-
-                // If you want bottom icons
                 if !coordinator.isLoading && !coordinator.isChartBuilding && !isKeyboardVisible {
                     bottomIcons
                 }
-
                 if coordinator.isLoading || coordinator.isChartBuilding {
                     LoadingOverlayView()
                         .environmentObject(coordinator)
                         .environmentObject(simSettings)
                 }
             }
-            // Standard Navigation Destinations
-            .navigationDestination(isPresented: $showSettings) {
-                SettingsView()
-                    .environmentObject(simSettings)
-                    .environmentObject(monthlySimSettings)
-                    .environmentObject(inputManager)
-                    .environmentObject(chartDataCache)
-                    .environmentObject(coordinator)
-            }
-            .navigationDestination(isPresented: $showAbout) {
-                AboutView()
-            }
-            .navigationDestination(isPresented: $showHistograms) {
-                ForceReflowView {
-                    if let _ = coordinator.chartDataCache.allRuns {
-                        MonteCarloResultsView()
-                            .environmentObject(coordinator.chartDataCache)
-                            .environmentObject(simSettings)
-                            .environmentObject(coordinator.simChartSelection)
-                    } else {
-                        Text("Loading chart…")
-                            .foregroundColor(.white)
-                    }
-                }
-            }
-            // NEW: The bridging approach.
-            // Once showPinnedColumns = true, we navigate to pinned columns.
+            // Hide SwiftUI nav bar for the MAIN screen:
+            .navigationBarHidden(true)
+
+            // Destination for bridging screen:
             .navigationDestination(isPresented: $showPinnedColumns) {
-                PinnedColumnBridgeRepresentable()
-                    .environmentObject(coordinator)
-                    .environmentObject(inputManager)
-                    .environmentObject(monthlySimSettings)
-                    .environmentObject(simSettings)
-            }
-            .onChange(of: coordinator.isLoading) { _ in
-                navigateIfNeeded()
-            }
-            .onChange(of: coordinator.isChartBuilding) { _ in
-                navigateIfNeeded()
-            }
-            .onAppear {
-                // Load local text fields from inputManager
-                localIterations       = inputManager.iterations
-                localAnnualCAGR       = inputManager.annualCAGR
-                localAnnualVolatility = inputManager.annualVolatility
-                localStandardDev      = inputManager.standardDeviation
+                // Show SwiftUI’s nav bar *if desired*:
+                PinnedColumnBridgeRepresentable(
+                    coordinator: coordinator,
+                    inputManager: inputManager,
+                    monthlySimSettings: monthlySimSettings,
+                    simSettings: simSettings
+                )
+                    .navigationBarHidden(false)
+                    // If you REALLY want to set an inline title or color, you can re-enable:
+                    // .navigationBarTitleDisplayMode(.inline)
+                    // .toolbarBackground(Color(white: 0.12), for: .navigationBar)
+                    // .toolbarBackground(.visible, for: .navigationBar)
             }
         }
+        .onChange(of: coordinator.isLoading) { _ in checkNavigationState() }
+        .onChange(of: coordinator.isChartBuilding) { _ in checkNavigationState() }
     }
 
+    private func checkNavigationState() {
+            // Example logic that auto-navigates when done loading
+            if !coordinator.isLoading,
+               !coordinator.isChartBuilding,
+               !coordinator.monteCarloResults.isEmpty
+            {
+                showPinnedColumns = true
+            }
+        }
+    
     private func navigateIfNeeded() {
         if !coordinator.isLoading && !coordinator.isChartBuilding {
             showPinnedColumns = true

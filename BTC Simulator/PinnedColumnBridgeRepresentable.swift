@@ -11,16 +11,16 @@ import UIKit
 /// 1) A SwiftUI "parent" struct that appears as a View in navigation.
 ///    It shows a toolbar item with a chart icon on the right side,
 ///    while letting SwiftUI's default back button (chevron.left) appear on the left.
+///
 /// 2) It internally uses `BridgeContainer`, which is a UIViewControllerRepresentable
 ///    that actually creates and updates the UIKit `PinnedColumnBridgeViewController`.
-///
 struct PinnedColumnBridgeRepresentable: View {
     
-    // MARK: - Environment Objects
-    @EnvironmentObject var coordinator: SimulationCoordinator
-    @EnvironmentObject var inputManager: PersistentInputManager
-    @EnvironmentObject var monthlySimSettings: MonthlySimulationSettings
-    @EnvironmentObject var simSettings: SimulationSettings
+    // MARK: - Observed Objects (passed in from the parent SwiftUI view)
+    @ObservedObject var coordinator: SimulationCoordinator
+    @ObservedObject var inputManager: PersistentInputManager
+    @ObservedObject var monthlySimSettings: MonthlySimulationSettings
+    @ObservedObject var simSettings: SimulationSettings
 
     // MARK: - Body
     var body: some View {

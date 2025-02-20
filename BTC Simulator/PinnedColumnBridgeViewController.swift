@@ -110,7 +110,16 @@ class PinnedColumnBridgeViewController: UIViewController {
             currencySymbol: symbol
         )
 
-        hostingController.rootView = AnyView(summaryCard)
+        hostingController.rootView = AnyView(
+                SimulationSummaryCardView(
+                    finalBTCPrice: 1234.56,
+                    finalPortfolioValue: 1234567.89,
+                    growthPercent: 12.34,
+                    currencySymbol: "$"
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color(UIColor(white: 0.12, alpha: 1.0)))  // <— Make sure this matches your nav bar
+            )
     }
 
     /// NEW: Set up the pinned table with two columns: pinned "Week/Month" + "BTC Price (USD)"

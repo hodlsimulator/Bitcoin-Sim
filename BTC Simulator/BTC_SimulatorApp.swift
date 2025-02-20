@@ -28,7 +28,27 @@ struct BTCMonteCarloApp: App {
     @StateObject private var coordinator: SimulationCoordinator
 
     init() {
-        // 1) Register toggles first:
+        // --- 1) GLOBAL NAV BAR APPEARANCE OVERRIDES (Removes Hairline) ---
+        let navBarAppearance = UINavigationBarAppearance()
+        navBarAppearance.configureWithOpaqueBackground()
+        navBarAppearance.backgroundColor = UIColor(white: 0.12, alpha: 1.0)
+        navBarAppearance.shadowColor = .clear // Removes the thin line (hairline)
+        navBarAppearance.titleTextAttributes = [.foregroundColor: UIColor.white]
+
+        UINavigationBar.appearance().standardAppearance = navBarAppearance
+        UINavigationBar.appearance().compactAppearance = navBarAppearance
+        UINavigationBar.appearance().scrollEdgeAppearance = navBarAppearance
+        if #available(iOS 15.0, *) {
+            UINavigationBar.appearance().compactScrollEdgeAppearance = navBarAppearance
+        }
+
+        // Old-style approach (often not enough alone, but kept just in case):
+        UINavigationBar.appearance().shadowImage = UIImage()
+        UINavigationBar.appearance().setBackgroundImage(UIImage(), for: .default)
+
+        // --- 2) REMAINDER OF YOUR SETUP (Sentry, user defaults, etc.) ---
+
+        // Register defaults
         let defaultToggles: [String: Any] = [
             // Weekly toggles
             "lockedRandomSeed": false,
@@ -44,7 +64,7 @@ struct BTCMonteCarloApp: App {
             "useAnnualStep": false,
             "useRandomSeed": true,
             "seedValue": 0,
-            
+
             // Monthly toggles
             "useLognormalGrowthMonthly": true,
             "lockedRandomSeedMonthly": false,
@@ -62,16 +82,15 @@ struct BTCMonteCarloApp: App {
         ]
         UserDefaults.standard.register(defaults: defaultToggles)
 
-        // 2) Create local objects
-        let localAppViewModel       = AppViewModel()
-        let localInputManager       = PersistentInputManager()
-        let localWeeklySimSettings  = SimulationSettings(loadDefaults: true)
+        // Initialize local objects
+        let localAppViewModel = AppViewModel()
+        let localInputManager = PersistentInputManager()
+        let localWeeklySimSettings = SimulationSettings(loadDefaults: true)
         let localMonthlySimSettings = MonthlySimulationSettings(loadDefaults: true)
-        
-        let localChartDataCache     = ChartDataCache()
-        let localSimChartSelection  = SimChartSelection()
+        let localChartDataCache = ChartDataCache()
+        let localSimChartSelection = SimChartSelection()
 
-        // 3) Start Sentry (optional).
+        // Initialize Sentry
         SentrySDK.start { options in
             options.dsn = "https://examplePublicKey.ingest.sentry.io/exampleProjectID"
             options.attachViewHierarchy = false
@@ -80,8 +99,8 @@ struct BTCMonteCarloApp: App {
             options.swiftAsyncStacktraces = true
             options.enableAppLaunchProfiling = true
         }
-        
-        // 4) Create coordinator
+
+        // Create SimulationCoordinator
         let localCoordinator = SimulationCoordinator(
             chartDataCache: localChartDataCache,
             simSettings: localWeeklySimSettings,
@@ -89,22 +108,22 @@ struct BTCMonteCarloApp: App {
             inputManager: localInputManager,
             simChartSelection: localSimChartSelection
         )
-        
-        // 5) Assign to @StateObject
-        _appViewModel        = StateObject(wrappedValue: localAppViewModel)
-        _inputManager        = StateObject(wrappedValue: localInputManager)
-        _weeklySimSettings   = StateObject(wrappedValue: localWeeklySimSettings)
-        _monthlySimSettings  = StateObject(wrappedValue: localMonthlySimSettings)
-        _chartDataCache      = StateObject(wrappedValue: localChartDataCache)
-        _simChartSelection   = StateObject(wrappedValue: localSimChartSelection)
-        _coordinator         = StateObject(wrappedValue: localCoordinator)
+
+        // Assign objects to StateObjects
+        _appViewModel = StateObject(wrappedValue: localAppViewModel)
+        _inputManager = StateObject(wrappedValue: localInputManager)
+        _weeklySimSettings = StateObject(wrappedValue: localWeeklySimSettings)
+        _monthlySimSettings = StateObject(wrappedValue: localMonthlySimSettings)
+        _chartDataCache = StateObject(wrappedValue: localChartDataCache)
+        _simChartSelection = StateObject(wrappedValue: localSimChartSelection)
+        _coordinator = StateObject(wrappedValue: localCoordinator)
     }
 
     var body: some Scene {
         WindowGroup {
             ZStack {
                 Color.black.ignoresSafeArea()
-                
+
                 GeometryReader { geo in
                     Color.clear
                         .onAppear {
@@ -115,6 +134,8 @@ struct BTCMonteCarloApp: App {
                         }
                 }
 
+                // For demonstration: We ALWAYS show the test screen if hasOnboarded
+                // (just so you can see if that line appears or not)
                 if didFinishOnboarding {
                     NavigationStack {
                         ContentView()
@@ -125,8 +146,18 @@ struct BTCMonteCarloApp: App {
                             .environmentObject(simChartSelection)
                             .environmentObject(coordinator)
                             .environmentObject(appViewModel)
+
+                        // If you want SwiftUI to style the nav bar further (color, etc.),
+                        // you can re-enable these lines. Be aware they can reintroduce
+                        // a hairline or mismatch if not carefully matched with the .backgroundColor:
+                        /*
+                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbarBackground(Color(white: 0.12), for: .navigationBar)
+                        .toolbarBackground(.visible, for: .navigationBar)
+                        */
                     }
                     .preferredColorScheme(.dark)
+
                 } else {
                     NavigationStack {
                         OnboardingView(didFinishOnboarding: $didFinishOnboarding)
@@ -137,53 +168,43 @@ struct BTCMonteCarloApp: App {
                             .environmentObject(simChartSelection)
                             .environmentObject(coordinator)
                             .environmentObject(appViewModel)
+
+                        /*
+                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbarBackground(Color(white: 0.12), for: .navigationBar)
+                        .toolbarBackground(.visible, for: .navigationBar)
+                        */
                     }
                     .preferredColorScheme(.dark)
                 }
             }
             .onAppear {
-                
-                // (A) Call them on *every* launch if you like:
-                // weeklySimSettings.loadFromUserDefaults()
-                // monthlySimSettings.loadFromUserDefaultsMonthly()
-
-                // (B) Check if it's a fresh install (no "hasLaunchedBefore" set)
                 let hasLaunchedBefore = UserDefaults.standard.bool(forKey: "hasLaunchedBefore")
                 if !hasLaunchedBefore {
-                    // This is the very first time the app runs
-                    print("🚀 First Launch detected — calling restoreDefaults() for weekly and monthly.")
-                    
-                    // If you only want to restore weekly by default:
+                    print("🚀 First Launch, restoring defaults.")
                     weeklySimSettings.restoreDefaults()
                     weeklySimSettings.saveToUserDefaults()
-                    
-                    // If you also want monthly defaults set (in case user chooses monthly later):
                     monthlySimSettings.restoreDefaultsMonthly(whenIn: .months)
                     monthlySimSettings.saveToUserDefaultsMonthly()
-                    
-                    // Mark that we've now done first-launch setup
                     UserDefaults.standard.set(true, forKey: "hasLaunchedBefore")
                 }
-                
-                // Decide monthly vs weekly
+
+                // Check if monthly or weekly mode is in use
                 monthlySimSettings.loadFromUserDefaultsMonthly()
-                if monthlySimSettings.periodUnitMonthly == .months {
-                    coordinator.useMonthly = true
-                } else {
-                    coordinator.useMonthly = false
-                }
-                
+                coordinator.useMonthly = (monthlySimSettings.periodUnitMonthly == .months)
+
+                // Onboarding
                 weeklySimSettings.isOnboarding = !didFinishOnboarding
-                
-                // Load historical data etc.
+
+                // Load historical data
                 historicalBTCWeeklyReturns = loadAndAlignWeeklyData()
-                extendedWeeklyReturns      = historicalBTCWeeklyReturns
-                
+                extendedWeeklyReturns = historicalBTCWeeklyReturns
                 historicalBTCMonthlyReturns = loadAndAlignMonthlyData()
-                extendedMonthlyReturns      = historicalBTCMonthlyReturns
+                extendedMonthlyReturns = historicalBTCMonthlyReturns
             }
             .onChange(of: scenePhase) { _, newPhase in
                 if newPhase == .inactive || newPhase == .background {
+                    // Save sim settings on background
                     weeklySimSettings.saveToUserDefaults()
                     monthlySimSettings.saveToUserDefaultsMonthly()
                 }
@@ -196,3 +217,4 @@ struct BTCMonteCarloApp: App {
 class AppViewModel: ObservableObject {
     @Published var windowSize: CGSize = .zero
 }
+
