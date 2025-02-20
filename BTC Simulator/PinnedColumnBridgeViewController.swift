@@ -17,20 +17,35 @@ class PinnedColumnBridgeViewController: UIViewController {
     private let pinnedTablePlaceholder = UIView()
     private let pinnedColumnTablesVC = PinnedColumnTablesViewController()
 
+    // Larger scroll-to-bottom button with reduced opacity.
+    private let scrollToBottomButton: UIButton = {
+        let btn = UIButton(type: .system)
+        btn.setImage(UIImage(systemName: "chevron.down.circle.fill"), for: .normal)
+        btn.setPreferredSymbolConfiguration(
+            UIImage.SymbolConfiguration(pointSize: 40, weight: .regular),
+            forImageIn: .normal
+        )
+        btn.alpha = 0.3
+        btn.tintColor = .white
+        btn.translatesAutoresizingMaskIntoConstraints = false
+        btn.isHidden = false
+        return btn
+    }()
+    
+    // Track previous "at bottom" state to avoid re-triggering fade repeatedly
+    private var wasAtBottom = false
+
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        // A custom top bar (NO back button here)
+        // A custom top bar
         let topBar = UIView()
         topBar.backgroundColor = UIColor(white: 0.12, alpha: 1.0)
         topBar.translatesAutoresizingMaskIntoConstraints = false
 
-        // For example, you can leave the chart button or remove it:
-        // (chart button code omitted for brevity if you don't want it)
-
         let topBarHeight: CGFloat = 70
 
-        // Container stack: [ topBar, summaryCardContainer + pinnedTablePlaceholder ]
+        // Container stack: [topBar, summaryCardContainer + pinnedTablePlaceholder]
         let containerStack = UIStackView()
         containerStack.axis = .vertical
         containerStack.spacing = 0
@@ -44,7 +59,7 @@ class PinnedColumnBridgeViewController: UIViewController {
             containerStack.trailingAnchor.constraint(equalTo: view.trailingAnchor)
         ])
 
-        // 1) Top bar at fixed height
+        // 1) The top bar
         containerStack.addArrangedSubview(topBar)
         topBar.heightAnchor.constraint(equalToConstant: topBarHeight).isActive = true
 
@@ -84,24 +99,63 @@ class PinnedColumnBridgeViewController: UIViewController {
             pinnedColumnTablesVC.view.trailingAnchor.constraint(equalTo: pinnedTablePlaceholder.trailingAnchor),
             pinnedColumnTablesVC.view.bottomAnchor.constraint(equalTo: pinnedTablePlaceholder.bottomAnchor)
         ])
+
+        // 3) Add the scroll-to-bottom button
+        view.addSubview(scrollToBottomButton)
+        scrollToBottomButton.addTarget(self, action: #selector(handleScrollToBottom), for: .touchUpInside)
+
+        NSLayoutConstraint.activate([
+            scrollToBottomButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            scrollToBottomButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16),
+        ])
+
+        // 4) Hide/fade the button automatically if user is at bottom
+        pinnedColumnTablesVC.onIsAtBottomChanged = { [weak self] isAtBottom in
+            guard let self = self else { return }
+            
+            // Only animate if there's an actual change in bottom state
+            guard isAtBottom != self.wasAtBottom else { return }
+            self.wasAtBottom = isAtBottom
+            
+            DispatchQueue.main.async {
+                if isAtBottom {
+                    if !self.scrollToBottomButton.isHidden {
+                        UIView.animate(withDuration: 0.3, animations: {
+                            self.scrollToBottomButton.alpha = 0.0
+                        }, completion: { finished in
+                            if finished {
+                                self.scrollToBottomButton.isHidden = true
+                            }
+                        })
+                    }
+                } else {
+                    // Fade in
+                    if self.scrollToBottomButton.isHidden {
+                        self.scrollToBottomButton.isHidden = false
+                        self.scrollToBottomButton.alpha = 0.0
+                    }
+                    UIView.animate(withDuration: 0.3) {
+                        self.scrollToBottomButton.alpha = 0.3
+                    }
+                }
+            }
+        }
     }
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
-        // Hide the system nav bar so it doesn't show behind our custom bar.
+        // Hide the system nav bar so it doesn't appear behind our custom bar.
         navigationController?.setNavigationBarHidden(true, animated: false)
 
         refreshSummaryCard()
         populatePinnedTable()
     }
 
-    // Keep this so the summary card can call it via a closure:
     @objc private func handleBackButton() {
         navigationController?.popViewController(animated: true)
     }
 
-    // (Optional) If you had a chart button in the top bar, keep or remove:
     @objc private func handleChartButton() {
         print("Chart icon tapped!")
     }
@@ -109,7 +163,6 @@ class PinnedColumnBridgeViewController: UIViewController {
     private func refreshSummaryCard() {
         guard let container = representableContainer else { return }
         
-        // Provide an onBackTapped closure to the summary card:
         hostingController.rootView = AnyView(
             SimulationSummaryCardView(
                 finalBTCPrice: 1234.56,
@@ -120,7 +173,6 @@ class PinnedColumnBridgeViewController: UIViewController {
                     self?.handleBackButton()
                 },
                 onChartTapped: { [weak self] in
-                    // e.g. show or push a chart screen
                     print("Chart Tapped!")
                 }
             )
@@ -139,7 +191,12 @@ class PinnedColumnBridgeViewController: UIViewController {
                 ("BTC Price (USD)", \SimulationData.btcPriceUSD)
             ],
             lastViewedRow: .constant(0),
-            scrollToBottomFlag: .constant(false)
+            scrollToBottomFlag: .constant(false),
+            isAtBottom: .constant(false)
         )
+    }
+
+    @objc private func handleScrollToBottom() {
+        pinnedColumnTablesVC.scrollToBottom()
     }
 }

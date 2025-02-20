@@ -42,6 +42,8 @@ struct PinnedColumnTablesRepresentable: UIViewControllerRepresentable {
 
     /// If set to true from SwiftUI, we scroll to the bottom row.
     @Binding var scrollToBottomFlag: Bool
+    
+    @Binding var isAtBottom: Bool
 
     // MARK: - UIViewControllerRepresentable Requirements
 

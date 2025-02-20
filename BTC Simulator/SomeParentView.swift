@@ -8,10 +8,9 @@
 import SwiftUI
 
 /// A SwiftUI view that demonstrates how to embed the pinned-column UIKit layout.
-/// We pass data in, show a "Scroll to Bottom" button, etc.
+/// We pass data in, show a floating "Scroll to Bottom" button, etc.
 struct SomeParentView: View {
 
-    // Example: your final array of rows
     @EnvironmentObject var coordinator: SimulationCoordinator
 
     // The state to remember the last row scrolled
@@ -19,30 +18,42 @@ struct SomeParentView: View {
 
     // A flag that triggers scrolling to bottom
     @State private var scrollToBottomFlag = false
+    
+    // Whether we're currently near the bottom of the pinned tables
+    @State private var isAtBottom = false
 
     var body: some View {
         NavigationView {
-            VStack(spacing: 0) {
-
-                HStack {
-                    Button("Scroll to Bottom") {
-                        scrollToBottomFlag = true
-                    }
-                    .padding()
-
-                    Spacer()
-                }
-
-                // Our bridging view
+            ZStack {
+                // The UIKit bridging view
                 PinnedColumnTablesRepresentable(
                     displayedData: coordinator.monteCarloResults,
-                    pinnedColumnTitle: "Week",          // Not strictly displayed, but you can
-                    pinnedColumnKeyPath: \SimulationData.week,  // The property for pinned col
-                    columns: myColumns,                 // We'll define this below
+                    pinnedColumnTitle: "Week",
+                    pinnedColumnKeyPath: \SimulationData.week,
+                    columns: myColumns,
                     lastViewedRow: $lastViewedRow,
-                    scrollToBottomFlag: $scrollToBottomFlag
+                    scrollToBottomFlag: $scrollToBottomFlag,
+                    // IMPORTANT: pass the new isAtBottom binding here
+                    isAtBottom: $isAtBottom
                 )
                 .edgesIgnoringSafeArea(.bottom)
+
+                // Floating “Scroll to Bottom” button if not already at bottom
+                if !isAtBottom {
+                    VStack {
+                        Spacer()
+                        Button(action: {
+                            scrollToBottomFlag = true
+                        }) {
+                            Image(systemName: "chevron.down.circle")
+                                .foregroundColor(.white)
+                                .padding()
+                                .background(Color(white: 0.2).opacity(0.9))
+                                .clipShape(Circle())
+                        }
+                        .padding()
+                    }
+                }
             }
             .navigationBarTitle("Pinned Column Table", displayMode: .inline)
         }

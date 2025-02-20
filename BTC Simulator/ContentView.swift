@@ -243,7 +243,7 @@ struct ContentView: View {
 
     @FocusState private var activeField: ActiveField?
 
-    @State private var isAtBottom: Bool = false
+    // @State private var isAtBottom: Bool = false
     @State private var lastViewedWeek: Int = 0
 
     @State private var scrollToBottom: Bool = false
