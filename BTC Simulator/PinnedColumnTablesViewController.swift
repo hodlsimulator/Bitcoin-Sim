@@ -93,6 +93,11 @@ class PinnedColumnTablesViewController: UIViewController {
 
 extension PinnedColumnTablesViewController: UITableViewDataSource, UITableViewDelegate {
 
+    // Number of sections is 1. We'll show a header in that one section.
+    func numberOfSections(in tableView: UITableView) -> Int {
+        return 1
+    }
+
     func tableView(_ tableView: UITableView,
                    numberOfRowsInSection section: Int) -> Int {
         // Both tables share the same row count
@@ -138,8 +143,68 @@ extension PinnedColumnTablesViewController: UITableViewDataSource, UITableViewDe
         // Adjust as needed
         return 44
     }
+    
+    // MARK: - Table Header: "Week" on pinned table, "BTC Price (USD)" etc. on columns table
 
-    // MARK: Sync the scrolling of both tables
+    func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
+        // 1) For pinned table
+        if tableView == pinnedTableView {
+            // Make a black background view
+            let headerView = UIView()
+            headerView.backgroundColor = .black
+            
+            // Add a label with the pinned column title, e.g. "Week"
+            let label = UILabel()
+            label.text = representable.pinnedColumnTitle
+            label.textColor = .orange
+            label.font = UIFont.boldSystemFont(ofSize: 14)
+            label.translatesAutoresizingMaskIntoConstraints = false
+            
+            headerView.addSubview(label)
+            NSLayoutConstraint.activate([
+                label.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 8),
+                label.centerYAnchor.constraint(equalTo: headerView.centerYAnchor)
+            ])
+            return headerView
+
+        } else {
+            // 2) For columns table, we’ll show a horizontal row of all column titles
+            let headerView = UIView()
+            headerView.backgroundColor = .black
+
+            // Create a horizontal stack for each column's title
+            let stack = UIStackView()
+            stack.axis = .horizontal
+            stack.spacing = 16
+            stack.alignment = .center
+            stack.translatesAutoresizingMaskIntoConstraints = false
+            headerView.addSubview(stack)
+            
+            NSLayoutConstraint.activate([
+                stack.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 8),
+                stack.trailingAnchor.constraint(equalTo: headerView.trailingAnchor, constant: -8),
+                stack.topAnchor.constraint(equalTo: headerView.topAnchor),
+                stack.bottomAnchor.constraint(equalTo: headerView.bottomAnchor)
+            ])
+
+            // Add a label for each column’s title. E.g. "BTC Price (USD)"
+            for (title, _) in representable.columns {
+                let colLabel = UILabel()
+                colLabel.text = title
+                colLabel.textColor = .orange
+                colLabel.font = UIFont.boldSystemFont(ofSize: 14)
+                stack.addArrangedSubview(colLabel)
+            }
+            return headerView
+        }
+    }
+
+    func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
+        // Adjust as you wish. 30 or 44 are typical
+        return 40
+    }
+
+    // MARK: - Sync the scrolling of both tables
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         guard !isSyncingScroll else { return }
         isSyncingScroll = true
