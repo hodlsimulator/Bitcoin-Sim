@@ -16,57 +16,39 @@ class PinnedColumnBridgeViewController: UIViewController {
     private let summaryCardContainer = UIView()
     private let pinnedTablePlaceholder = UIView()
     private let pinnedColumnTablesVC = PinnedColumnTablesViewController()
+    private var topBarHeightConstraint: NSLayoutConstraint?
 
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        // Remove extra safe-area fiddling, so we can fill the entire screen:
-        // edgesForExtendedLayout = [] // Not needed anymore
-        
-        // 1) We do NOT rely on the system nav bar. We'll hide it in viewWillAppear.
-        //    Let's build a custom top bar:
+        // A custom top bar
         let topBar = UIView()
         topBar.backgroundColor = UIColor(white: 0.12, alpha: 1.0)
         topBar.translatesAutoresizingMaskIntoConstraints = false
-        
-        // For demonstration, a "Chart" button on the right:
-        let chartButton = UIButton(type: .system)
-        chartButton.setImage(UIImage(systemName: "chart.line.uptrend.xyaxis"), for: .normal)
-        chartButton.tintColor = .white
-        chartButton.addTarget(self, action: #selector(handleChartButton), for: .touchUpInside)
-        chartButton.translatesAutoresizingMaskIntoConstraints = false
-        topBar.addSubview(chartButton)
-        
-        NSLayoutConstraint.activate([
-            chartButton.trailingAnchor.constraint(equalTo: topBar.trailingAnchor, constant: -16),
-            chartButton.centerYAnchor.constraint(equalTo: topBar.centerYAnchor)
-        ])
 
-        // Optionally, a "Back" button on the left:
+        // Create a back button with just a chevron
         let backButton = UIButton(type: .system)
-        backButton.setTitle("Back", for: .normal)
+        backButton.setImage(UIImage(systemName: "chevron.left"), for: .normal)
         backButton.tintColor = .white
         backButton.addTarget(self, action: #selector(handleBackButton), for: .touchUpInside)
         backButton.translatesAutoresizingMaskIntoConstraints = false
         topBar.addSubview(backButton)
-        
+
         NSLayoutConstraint.activate([
             backButton.leadingAnchor.constraint(equalTo: topBar.leadingAnchor, constant: 16),
             backButton.centerYAnchor.constraint(equalTo: topBar.centerYAnchor)
         ])
 
-        // We'll set the topBar's height to ~50:
-        let topBarHeight: CGFloat = 50
+        // We’ll set the topBar’s height to ~70 for notch clearance
+        let topBarHeight: CGFloat = 70
 
-        // 2) A vertical stack containing:
-        //   [ topBar, summaryCardContainer + pinnedTablePlaceholder ]
+        // A vertical stack that contains [topBar, summaryCardContainer + pinnedTablePlaceholder]
         let containerStack = UIStackView()
         containerStack.axis = .vertical
         containerStack.spacing = 0
         containerStack.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(containerStack)
 
-        // Fill the entire screen without negative safe-area offsets:
         NSLayoutConstraint.activate([
             containerStack.topAnchor.constraint(equalTo: view.topAnchor),
             containerStack.bottomAnchor.constraint(equalTo: view.bottomAnchor),
@@ -74,13 +56,11 @@ class PinnedColumnBridgeViewController: UIViewController {
             containerStack.trailingAnchor.constraint(equalTo: view.trailingAnchor)
         ])
 
-        // 3) Add the topBar as the first arranged subview
+        // 1) The top bar
         containerStack.addArrangedSubview(topBar)
-        NSLayoutConstraint.activate([
-            topBar.heightAnchor.constraint(equalToConstant: topBarHeight)
-        ])
+        topBar.heightAnchor.constraint(equalToConstant: topBarHeight).isActive = true
 
-        // 4) Now your "main" stack for summary card + pinned table:
+        // 2) Summary card + pinned table
         pinnedTablePlaceholder.backgroundColor = UIColor.darkGray.withAlphaComponent(0.2)
         let mainStack = UIStackView(arrangedSubviews: [
             summaryCardContainer,
@@ -89,14 +69,13 @@ class PinnedColumnBridgeViewController: UIViewController {
         mainStack.axis = .vertical
         mainStack.spacing = 0
 
-        // Add it as the second arranged subview:
         containerStack.addArrangedSubview(mainStack)
 
-        // Attach hosting controller for your summary card
+        // Attach hosting controller for the summary card
         addChild(hostingController)
         summaryCardContainer.addSubview(hostingController.view)
         hostingController.didMove(toParent: self)
-        
+
         hostingController.view.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
             hostingController.view.topAnchor.constraint(equalTo: summaryCardContainer.topAnchor),
