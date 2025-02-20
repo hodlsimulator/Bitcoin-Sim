@@ -313,7 +313,10 @@ struct ContentView: View {
                         monthlySimSettings: monthlySimSettings,
                         simSettings: simSettings
                     )
-                    .navigationBarHidden(false)
+                    // Force SwiftUI nav bar off:
+                    .navigationBarHidden(true)
+                    .navigationBarBackButtonHidden(true)
+                    // .navigationBarHidden(false)
                     // .navigationBarTitleDisplayMode(.inline)
                     // .toolbarBackground(Color(white: 0.12), for: .navigationBar)
                     // .toolbarBackground(.visible, for: .navigationBar)
