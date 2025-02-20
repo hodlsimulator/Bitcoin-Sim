@@ -215,15 +215,48 @@ class PinnedColumnBridgeViewController: UIViewController {
     }
 
     private func refreshSummaryCard() {
-        // The updated summary card no longer takes onBackTapped or onChartTapped.
         guard let container = representableContainer else { return }
+        
+        let coord = container.coordinator
+        
+        // Make sure we have at least one row
+        guard let firstRow = coord.monteCarloResults.first,
+              let lastRow  = coord.monteCarloResults.last else {
+            return
+        }
+        
+        // Figure out final BTC price
+        let finalBTC = lastRow.btcPriceUSD
+        
+        // Decide on final portfolio in USD vs. EUR
+        let finalPortfolio: Decimal = (coord.simSettings.currencyPreference == .eur)
+            ? lastRow.portfolioValueEUR
+            : lastRow.portfolioValueUSD
+        
+        // Also figure out the initial portfolio value
+        let initialPortfolio: Decimal = (coord.simSettings.currencyPreference == .eur)
+            ? firstRow.portfolioValueEUR
+            : firstRow.portfolioValueUSD
+        
+        // Avoid dividing by zero
+        let growthPercentDouble: Double
+        if initialPortfolio == 0 {
+            growthPercentDouble = 0
+        } else {
+            let finalD = Double(truncating: finalPortfolio as NSNumber)
+            let initD  = Double(truncating: initialPortfolio as NSNumber)
+            growthPercentDouble = (finalD / initD - 1) * 100
+        }
+        
+        // Just assume "$" or "€", or read from simSettings if you prefer
+        let currencySymbol: String = (coord.simSettings.currencyPreference == .eur) ? "€" : "$"
         
         hostingController.rootView = AnyView(
             SimulationSummaryCardView(
-                finalBTCPrice: 1234.56,
-                finalPortfolioValue: 1234567.89,
-                growthPercent: 12.34,
-                currencySymbol: "$"
+                finalBTCPrice: Double(truncating: finalBTC as NSNumber),
+                finalPortfolioValue: Double(truncating: finalPortfolio as NSNumber),
+                growthPercent: growthPercentDouble,
+                currencySymbol: currencySymbol
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color(UIColor(white: 0.12, alpha: 1.0)))
