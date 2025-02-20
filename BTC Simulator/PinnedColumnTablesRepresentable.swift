@@ -15,9 +15,13 @@ import SwiftUI
 ///         displayedData: mySimulationDataArray,
 ///         pinnedColumnTitle: "Week",
 ///         pinnedColumnKeyPath: \SimulationData.week,
-///         columns: [("BTC Price (USD)", \SimulationData.btcPriceUSD), ...],
+///         columns: [
+///             ("BTC Price (USD)", \SimulationData.btcPriceUSD),
+///             ("Portfolio (USD)", \SimulationData.portfolioValueUSD)
+///         ],
 ///         lastViewedRow: $lastViewedRow,
-///         scrollToBottomFlag: $scrollToBottomFlag
+///         scrollToBottomFlag: $scrollToBottomFlag,
+///         isAtBottom: $isAtBottom
 ///     )
 ///
 struct PinnedColumnTablesRepresentable: UIViewControllerRepresentable {
@@ -31,10 +35,14 @@ struct PinnedColumnTablesRepresentable: UIViewControllerRepresentable {
     let pinnedColumnTitle: String
 
     /// A key path to the pinned value in each SimulationData (e.g. \.week)
+    /// This pinned column is shown on the left and does NOT need to be
+    /// included in 'columns' below.
     let pinnedColumnKeyPath: KeyPath<SimulationData, Int>
 
     /// The list of additional columns you want on the right side.
     /// Each tuple is (columnTitle, keyPath).
+    /// IMPORTANT: If you want these columns to appear in the new pager,
+    /// each partial key path here should point to a Decimal property.
     let columns: [(String, PartialKeyPath<SimulationData>)]
 
     /// Where we store or retrieve the user’s last viewed row.
@@ -43,6 +51,7 @@ struct PinnedColumnTablesRepresentable: UIViewControllerRepresentable {
     /// If set to true from SwiftUI, we scroll to the bottom row.
     @Binding var scrollToBottomFlag: Bool
     
+    /// Whether or not the user is currently scrolled near the bottom
     @Binding var isAtBottom: Bool
 
     // MARK: - UIViewControllerRepresentable Requirements

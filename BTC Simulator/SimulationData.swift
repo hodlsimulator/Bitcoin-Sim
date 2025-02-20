@@ -19,6 +19,19 @@ fileprivate extension Double {
     }
 }
 
+extension Decimal {
+    func formattedWithSeparator(minDecimals: Int = 2, maxDecimals: Int = 2) -> String {
+        // Convert to Double for formatting
+        let doubleValue = NSDecimalNumber(decimal: self).doubleValue
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.groupingSeparator = ","
+        formatter.minimumFractionDigits = minDecimals
+        formatter.maximumFractionDigits = maxDecimals
+        return formatter.string(from: NSNumber(value: doubleValue)) ?? "\(doubleValue)"
+    }
+}
+
 struct SimulationData: Identifiable {
     var id: Int { week }
 

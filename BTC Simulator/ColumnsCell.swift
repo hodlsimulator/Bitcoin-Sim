@@ -4,7 +4,7 @@
 //
 //  Created by Conor on 17/02/2025.
 //
-
+/*
 import UIKit
 
 /// A UITableViewCell that shows multiple columns side by side in a horizontal UIStackView.
@@ -82,3 +82,4 @@ class ColumnsCell: UITableViewCell {
         }
     }
 }
+*/

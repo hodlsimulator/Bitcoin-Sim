@@ -141,7 +141,7 @@ class PinnedColumnBridgeViewController: UIViewController {
             summaryCardContainer.heightAnchor.constraint(equalToConstant: 90)
         ])
 
-        // Pin the pinned table VC
+        // 3) Pin the pinned table VC directly under pinnedTablePlaceholder
         addChild(pinnedColumnTablesVC)
         pinnedTablePlaceholder.addSubview(pinnedColumnTablesVC.view)
         pinnedColumnTablesVC.didMove(toParent: self)
@@ -154,7 +154,7 @@ class PinnedColumnBridgeViewController: UIViewController {
             pinnedColumnTablesVC.view.bottomAnchor.constraint(equalTo: pinnedTablePlaceholder.bottomAnchor)
         ])
 
-        // 3) Add the scroll-to-bottom button
+        // 4) Add the scroll-to-bottom button
         view.addSubview(scrollToBottomButton)
         scrollToBottomButton.addTarget(self, action: #selector(handleScrollToBottom), for: .touchUpInside)
 
@@ -163,7 +163,7 @@ class PinnedColumnBridgeViewController: UIViewController {
             scrollToBottomButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16),
         ])
 
-        // 4) Hide/fade the button automatically if user is at bottom
+        // 5) Hide/fade the button automatically if user is at bottom
         pinnedColumnTablesVC.onIsAtBottomChanged = { [weak self] isAtBottom in
             guard let self = self else { return }
             
@@ -194,7 +194,7 @@ class PinnedColumnBridgeViewController: UIViewController {
                 }
             }
         }
-    }
+    }   
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
@@ -265,12 +265,16 @@ class PinnedColumnBridgeViewController: UIViewController {
 
     private func populatePinnedTable() {
         guard let container = representableContainer else { return }
+
         pinnedColumnTablesVC.representable = PinnedColumnTablesRepresentable(
             displayedData: container.coordinator.monteCarloResults,
             pinnedColumnTitle: "Week",
-            pinnedColumnKeyPath: \.week,
+            pinnedColumnKeyPath: \.week,  // Left/pinned column
             columns: [
-                ("BTC Price (USD)", \SimulationData.btcPriceUSD)
+                // The "other" columns on the right. Add as many as you want,
+                // each pointing to a Decimal property in SimulationData.
+                ("BTC Price (USD)", \SimulationData.btcPriceUSD),
+                ("Portfolio (USD)", \SimulationData.portfolioValueUSD)
             ],
             lastViewedRow: .constant(0),
             scrollToBottomFlag: .constant(false),

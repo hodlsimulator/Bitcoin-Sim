@@ -27,6 +27,8 @@
 		E14D24092D3A677F007CC11A /* SettingsPrinter.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14D24082D3A677D007CC11A /* SettingsPrinter.swift */; };
 		E14D240B2D3A698A007CC11A /* SimulationSettingsInit.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14D240A2D3A6988007CC11A /* SimulationSettingsInit.swift */; };
 		E14D24112D3A9525007CC11A /* SimulationSettings+UnifiedFactors.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14D24102D3A9524007CC11A /* SimulationSettings+UnifiedFactors.swift */; };
+		E15D66552D678D950090F472 /* ColumnsPagerViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E15D66542D678D930090F472 /* ColumnsPagerViewController.swift */; };
+		E15D66572D678DC80090F472 /* SinglePageColumnsVC.swift in Sources */ = {isa = PBXBuildFile; fileRef = E15D66562D678DC60090F472 /* SinglePageColumnsVC.swift */; };
 		E15DDF472D5A5A3A00CDD30A /* MonthlySimulationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = E15DDF462D5A5A3700CDD30A /* MonthlySimulationSettings.swift */; };
 		E15DDF492D5AD0F100CDD30A /* MonthlySimulationSettings+FactorSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = E15DDF482D5AD0EC00CDD30A /* MonthlySimulationSettings+FactorSync.swift */; };
 		E15DDF4B2D5AE1F700CDD30A /* RestoreDefaultsMonthly.swift in Sources */ = {isa = PBXBuildFile; fileRef = E15DDF4A2D5AE1EF00CDD30A /* RestoreDefaultsMonthly.swift */; };
@@ -145,6 +147,8 @@
 		E14D24082D3A677D007CC11A /* SettingsPrinter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsPrinter.swift; sourceTree = "<group>"; };
 		E14D240A2D3A6988007CC11A /* SimulationSettingsInit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulationSettingsInit.swift; sourceTree = "<group>"; };
 		E14D24102D3A9524007CC11A /* SimulationSettings+UnifiedFactors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SimulationSettings+UnifiedFactors.swift"; sourceTree = "<group>"; };
+		E15D66542D678D930090F472 /* ColumnsPagerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColumnsPagerViewController.swift; sourceTree = "<group>"; };
+		E15D66562D678DC60090F472 /* SinglePageColumnsVC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SinglePageColumnsVC.swift; sourceTree = "<group>"; };
 		E15DDF462D5A5A3700CDD30A /* MonthlySimulationSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlySimulationSettings.swift; sourceTree = "<group>"; };
 		E15DDF482D5AD0EC00CDD30A /* MonthlySimulationSettings+FactorSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MonthlySimulationSettings+FactorSync.swift"; sourceTree = "<group>"; };
 		E15DDF4A2D5AE1EF00CDD30A /* RestoreDefaultsMonthly.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RestoreDefaultsMonthly.swift; sourceTree = "<group>"; };
@@ -288,6 +292,7 @@
 				E18C2BE02D259245006E7438 /* ChartSnapshotView.swift */,
 				E1A1E5282D2E38F9008F7658 /* CheckboxToggleStyle.swift */,
 				E1942C9C2D63FD9000F5B9A1 /* ColumnsCell.swift */,
+				E15D66542D678D930090F472 /* ColumnsPagerViewController.swift */,
 				E112E3732D58B2E700167E92 /* ConsentView.swift */,
 				E166A8B82CF955E80003F518 /* ContentOffsetScrollView.swift */,
 				E166A8B12CF85B2B0003F518 /* ContentView.swift */,
@@ -341,6 +346,7 @@
 				E1B7B0A82D47575200B60EC6 /* SettingsSections.swift */,
 				E1B7B0AA2D4759D300B60EC6 /* SettingsWatchers.swift */,
 				E1B7B0A62D4753CC00B60EC6 /* ShiftFactors.swift */,
+				E15D66562D678DC60090F472 /* SinglePageColumnsVC.swift */,
 				E17B2F212D26A9F000ECE087 /* SimulationCoordinator.swift */,
 				E166A8AF2CF855C20003F518 /* SimulationData.swift */,
 				E1883F392D1DD94C007AA90B /* SimulationSettings.swift */,
@@ -529,6 +535,7 @@
 				E1C543BA2D2283A2005E416D /* YearlyPercentileData.swift in Sources */,
 				E1883F502D1FCEBD007AA90B /* OnboardingView.swift in Sources */,
 				E19D11442D42FA6800E3A55E /* RNGHelpers.swift in Sources */,
+				E15D66572D678DC80090F472 /* SinglePageColumnsVC.swift in Sources */,
 				E14344DA2D53553D00225A49 /* SimulationSettings+FactorSync.swift in Sources */,
 				E112E3762D58B73A00167E92 /* MailView.swift in Sources */,
 				E1A1E52F2D2E3A40008F7658 /* RowOffsetHelpers.swift in Sources */,
@@ -541,6 +548,7 @@
 				E191AD672D1B764400020DBE /* CSVLoaderBTC.swift in Sources */,
 				E1A1E5292D2E38FA008F7658 /* CheckboxToggleStyle.swift in Sources */,
 				E19D11422D42F9E600E3A55E /* NetDeposit.swift in Sources */,
+				E15D66552D678D950090F472 /* ColumnsPagerViewController.swift in Sources */,
 				E15DDF4F2D5B3AC500CDD30A /* ParameterEntryView.swift in Sources */,
 				E1942C912D628F2600F5B9A1 /* LoadingOverlayView.swift in Sources */,
 				E14344DE2D545CA600225A49 /* ApplyDictionaryFactorsToSim.swift in Sources */,

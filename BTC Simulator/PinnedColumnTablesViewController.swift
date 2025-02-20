@@ -14,140 +14,177 @@ class PinnedColumnTablesViewController: UIViewController {
 
     // Left table for the pinned column
     let pinnedTableView = UITableView(frame: .zero, style: .plain)
-    // Right table for the rest of the columns
-    let columnsTableView = UITableView(frame: .zero, style: .plain)
     
-    // We'll create references to the header labels/stacks so we can fill them in later:
+    // Instead of a single columns table, we now embed a ColumnsPagerViewController on the right
+    private let columnsPagerVC = ColumnsPagerViewController(
+        transitionStyle: .scroll,
+        navigationOrientation: .horizontal,
+        options: nil
+    )
+    
+    // A label/header for the pinned column
     private let pinnedHeaderLabel = UILabel()
-    private let columnsHeaderStack = UIStackView()
-    
-    private var isSyncingScroll = false
     
     // We'll call this whenever we detect scrolling is near the bottom
     var onIsAtBottomChanged: ((Bool) -> Void)?
+    
+    private var isSyncingScroll = false
 
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = UIColor(white: 0.12, alpha: 1.0)
+
+        // 1) Create a container for the entire header row.
+        let headersContainer = UIView()
+        headersContainer.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(headersContainer)
         
-        // 1) Create "pinned" header view (left side)
+        // Constrain this headersContainer to the top of our VC’s view.
+        // We'll give it a fixed height of 40 for the headers.
+        let headerHeight: CGFloat = 40
+        NSLayoutConstraint.activate([
+            headersContainer.topAnchor.constraint(equalTo: view.topAnchor),
+            headersContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            headersContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            headersContainer.heightAnchor.constraint(equalToConstant: headerHeight)
+        ])
+        
+        // 2) The pinned header (left side, for "Week")
         let pinnedHeaderView = UIView()
         pinnedHeaderView.backgroundColor = .black
         pinnedHeaderView.translatesAutoresizingMaskIntoConstraints = false
+        headersContainer.addSubview(pinnedHeaderView)
         
+        // Give it the same width as the pinned table (70).
+        NSLayoutConstraint.activate([
+            pinnedHeaderView.topAnchor.constraint(equalTo: headersContainer.topAnchor),
+            pinnedHeaderView.bottomAnchor.constraint(equalTo: headersContainer.bottomAnchor),
+            pinnedHeaderView.leadingAnchor.constraint(equalTo: headersContainer.leadingAnchor),
+            pinnedHeaderView.widthAnchor.constraint(equalToConstant: 70)
+        ])
+        
+        // Add the "Week" label
         pinnedHeaderLabel.textColor = .orange
         pinnedHeaderLabel.font = UIFont.boldSystemFont(ofSize: 14)
         pinnedHeaderLabel.translatesAutoresizingMaskIntoConstraints = false
-        
         pinnedHeaderView.addSubview(pinnedHeaderLabel)
+        
         NSLayoutConstraint.activate([
             pinnedHeaderLabel.leadingAnchor.constraint(equalTo: pinnedHeaderView.leadingAnchor, constant: 8),
             pinnedHeaderLabel.centerYAnchor.constraint(equalTo: pinnedHeaderView.centerYAnchor)
         ])
         
-        // 2) Create "columns" header view (right side)
+        // 3) A columns header view (right side) for the two column titles
         let columnsHeaderView = UIView()
         columnsHeaderView.backgroundColor = .black
         columnsHeaderView.translatesAutoresizingMaskIntoConstraints = false
+        headersContainer.addSubview(columnsHeaderView)
         
+        // Fill the remaining width to the right
+        NSLayoutConstraint.activate([
+            columnsHeaderView.topAnchor.constraint(equalTo: headersContainer.topAnchor),
+            columnsHeaderView.bottomAnchor.constraint(equalTo: headersContainer.bottomAnchor),
+            columnsHeaderView.leadingAnchor.constraint(equalTo: pinnedHeaderView.trailingAnchor),
+            columnsHeaderView.trailingAnchor.constraint(equalTo: headersContainer.trailingAnchor)
+        ])
+        
+        // Create a horizontal stack for the 2 column titles
+        let columnsHeaderStack = UIStackView()
         columnsHeaderStack.axis = .horizontal
-        columnsHeaderStack.spacing = 16
         columnsHeaderStack.alignment = .center
+        columnsHeaderStack.spacing = 16
         columnsHeaderStack.translatesAutoresizingMaskIntoConstraints = false
-        
         columnsHeaderView.addSubview(columnsHeaderStack)
+        
         NSLayoutConstraint.activate([
             columnsHeaderStack.leadingAnchor.constraint(equalTo: columnsHeaderView.leadingAnchor, constant: 8),
             columnsHeaderStack.trailingAnchor.constraint(equalTo: columnsHeaderView.trailingAnchor, constant: -8),
             columnsHeaderStack.topAnchor.constraint(equalTo: columnsHeaderView.topAnchor),
             columnsHeaderStack.bottomAnchor.constraint(equalTo: columnsHeaderView.bottomAnchor)
         ])
-
-        // 3) Add subviews
-        pinnedHeaderView.translatesAutoresizingMaskIntoConstraints = false
-        columnsHeaderView.translatesAutoresizingMaskIntoConstraints = false
+        
+        // Add two labels for the column headers
+        let col1Label = UILabel()
+        col1Label.text = "BTC Price (USD)"
+        col1Label.textColor = .orange
+        col1Label.font = UIFont.boldSystemFont(ofSize: 14)
+        columnsHeaderStack.addArrangedSubview(col1Label)
+        
+        let col2Label = UILabel()
+        col2Label.text = "Portfolio (USD)"
+        col2Label.textColor = .orange
+        col2Label.font = UIFont.boldSystemFont(ofSize: 14)
+        columnsHeaderStack.addArrangedSubview(col2Label)
+        
+        // 4) Now set up the pinned table below the header row
         pinnedTableView.translatesAutoresizingMaskIntoConstraints = false
-        columnsTableView.translatesAutoresizingMaskIntoConstraints = false
-        
-        view.addSubview(pinnedHeaderView)
-        view.addSubview(columnsHeaderView)
         view.addSubview(pinnedTableView)
-        view.addSubview(columnsTableView)
-        
-        // 4) Layout constraints
-        let headerHeight: CGFloat = 40
         
         NSLayoutConstraint.activate([
-            // Pinned header on the left
-            pinnedHeaderView.topAnchor.constraint(equalTo: view.topAnchor),
-            pinnedHeaderView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            pinnedHeaderView.widthAnchor.constraint(equalToConstant: 70),
-            pinnedHeaderView.heightAnchor.constraint(equalToConstant: headerHeight),
-            
-            // Columns header on the right
-            columnsHeaderView.topAnchor.constraint(equalTo: view.topAnchor),
-            columnsHeaderView.leadingAnchor.constraint(equalTo: pinnedHeaderView.trailingAnchor),
-            columnsHeaderView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            columnsHeaderView.heightAnchor.constraint(equalToConstant: headerHeight),
-            
-            // Pinned table below pinnedHeaderView
-            pinnedTableView.topAnchor.constraint(equalTo: pinnedHeaderView.bottomAnchor),
+            // pinned table is directly beneath the headersContainer
+            pinnedTableView.topAnchor.constraint(equalTo: headersContainer.bottomAnchor),
             pinnedTableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             pinnedTableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            pinnedTableView.widthAnchor.constraint(equalToConstant: 70),
-            
-            // Columns table below columnsHeaderView
-            columnsTableView.topAnchor.constraint(equalTo: columnsHeaderView.bottomAnchor),
-            columnsTableView.leadingAnchor.constraint(equalTo: pinnedTableView.trailingAnchor),
-            columnsTableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            columnsTableView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
+            pinnedTableView.widthAnchor.constraint(equalToConstant: 70)
         ])
         
-        // 5) Table setup
-        pinnedTableView.contentInsetAdjustmentBehavior = .never
-        columnsTableView.contentInsetAdjustmentBehavior = .never
+        // 5) Embed the columns pager to the right of the pinned table
+        addChild(columnsPagerVC)
+        columnsPagerVC.view.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(columnsPagerVC.view)
+        columnsPagerVC.didMove(toParent: self)
         
+        NSLayoutConstraint.activate([
+            columnsPagerVC.view.topAnchor.constraint(equalTo: headersContainer.bottomAnchor),
+            columnsPagerVC.view.leadingAnchor.constraint(equalTo: pinnedTableView.trailingAnchor),
+            columnsPagerVC.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            columnsPagerVC.view.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ])
+        
+        // 6) Set up pinnedTableView properties
+        pinnedTableView.contentInsetAdjustmentBehavior = .never
         pinnedTableView.dataSource = self
         pinnedTableView.delegate = self
         pinnedTableView.separatorStyle = .none
         pinnedTableView.backgroundColor = .clear
         pinnedTableView.showsVerticalScrollIndicator = false
         pinnedTableView.register(PinnedColumnCell.self, forCellReuseIdentifier: "PinnedColumnCell")
-        
-        columnsTableView.dataSource = self
-        columnsTableView.delegate = self
-        columnsTableView.separatorStyle = .none
-        columnsTableView.backgroundColor = .clear
-        columnsTableView.showsVerticalScrollIndicator = true
-        columnsTableView.register(ColumnsCell.self, forCellReuseIdentifier: "ColumnsCell")
     }
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
-        // If representable is set, update the header label/stack now:
+        // If representable is nil, bail
         guard let rep = representable else { return }
 
+        // Update the pinned header text
         pinnedHeaderLabel.text = rep.pinnedColumnTitle
+
+        // Reload pinned table
+        pinnedTableView.reloadData()
         
-        // Clear out old labels (in case we reload)
-        columnsHeaderStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
-        
-        // Rebuild column title labels
-        for (title, _) in rep.columns {
-            let colLabel = UILabel()
-            colLabel.text = title
-            colLabel.textColor = .orange
-            colLabel.font = UIFont.boldSystemFont(ofSize: 14)
-            columnsHeaderStack.addArrangedSubview(colLabel)
+        // Convert the partial keypaths in rep.columns to KeyPath<SimulationData, Decimal>
+        // Filter out any columns that aren’t Decimal:
+        let decimalColumns = rep.columns.compactMap { (title, partial) -> (String, KeyPath<SimulationData, Decimal>)? in
+            guard let kp = partial as? KeyPath<SimulationData, Decimal> else {
+                return nil
+            }
+            return (title, kp)
         }
         
-        // Finally reload data in the tables
-        pinnedTableView.reloadData()
-        columnsTableView.reloadData()
+        // If you want to skip the pinned column in the pager, do .dropFirst()
+        // columnsPagerVC.allColumns = Array(decimalColumns.dropFirst())
+        // Otherwise, use the full list:
+        columnsPagerVC.allColumns = decimalColumns
+        
+        // Pass all the row data to the pager
+        columnsPagerVC.displayedData = rep.displayedData
+        
+        // Force the pager to rebuild its pages
+        columnsPagerVC.reloadPages()
     }
     
-    // Called by the parent to scroll both tables all the way down
+    // Called by the parent to scroll pinned table to the bottom
     func scrollToBottom() {
         guard let rep = representable else { return }
         
@@ -155,16 +192,14 @@ class PinnedColumnTablesViewController: UIViewController {
         if rowCount > 0 {
             let lastIndex = rowCount - 1
             let pinnedPath = IndexPath(row: lastIndex, section: 0)
-            let columnsPath = IndexPath(row: lastIndex, section: 0)
-            
             pinnedTableView.scrollToRow(at: pinnedPath, at: .bottom, animated: true)
-            columnsTableView.scrollToRow(at: columnsPath, at: .bottom, animated: true)
         }
+        // The pager side would also scroll if you code that in SinglePageColumnsVC,
+        // but that requires more advanced sync logic across each page’s table.
     }
 }
 
-// MARK: - UITableViewDataSource & Delegate
-
+// MARK: - UITableViewDataSource & Delegate (For pinned table)
 extension PinnedColumnTablesViewController: UITableViewDataSource, UITableViewDelegate {
 
     func numberOfSections(in tableView: UITableView) -> Int {
@@ -173,7 +208,6 @@ extension PinnedColumnTablesViewController: UITableViewDataSource, UITableViewDe
 
     func tableView(_ tableView: UITableView,
                    numberOfRowsInSection section: Int) -> Int {
-        // If representable is nil, show 0 rows
         return representable?.displayedData.count ?? 0
     }
 
@@ -186,31 +220,16 @@ extension PinnedColumnTablesViewController: UITableViewDataSource, UITableViewDe
         
         let rowData = rep.displayedData[indexPath.row]
         
-        if tableView == pinnedTableView {
-            guard let cell = tableView.dequeueReusableCell(
-                withIdentifier: "PinnedColumnCell",
-                for: indexPath
-            ) as? PinnedColumnCell else {
-                return UITableViewCell()
-            }
-            let pinnedValue = rowData[keyPath: rep.pinnedColumnKeyPath]
-            cell.configure(pinnedValue: pinnedValue, backgroundIndex: indexPath.row)
-            return cell
-            
-        } else {
-            guard let cell = tableView.dequeueReusableCell(
-                withIdentifier: "ColumnsCell",
-                for: indexPath
-            ) as? ColumnsCell else {
-                return UITableViewCell()
-            }
-            cell.configure(
-                rowData: rowData,
-                columns: rep.columns,
-                rowIndex: indexPath.row
-            )
-            return cell
+        guard let cell = tableView.dequeueReusableCell(
+            withIdentifier: "PinnedColumnCell",
+            for: indexPath
+        ) as? PinnedColumnCell else {
+            return UITableViewCell()
         }
+        
+        let pinnedValue = rowData[keyPath: rep.pinnedColumnKeyPath]
+        cell.configure(pinnedValue: pinnedValue, backgroundIndex: indexPath.row)
+        return cell
     }
 
     func tableView(_ tableView: UITableView,
@@ -218,25 +237,13 @@ extension PinnedColumnTablesViewController: UITableViewDataSource, UITableViewDe
         return 44
     }
 
-    // MARK: - Sync scrolling + detect "at bottom"
+    // If you want the pinned table to sync scrolling with the pager’s table,
+    // you’d need to detect which SinglePageColumnsVC is active and sync its scrollView.
+    // That’s more advanced, so we’ll skip for now.
+    
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        guard !isSyncingScroll else { return }
-        isSyncingScroll = true
-
-        if scrollView == pinnedTableView {
-            columnsTableView.contentOffset = pinnedTableView.contentOffset
-        } else if scrollView == columnsTableView {
-            pinnedTableView.contentOffset = columnsTableView.contentOffset
-        }
-
-        isSyncingScroll = false
-
+        // We'll still do the "near bottom" detection
         guard let rep = representable else { return }
-
-        // Update lastViewedRow for SwiftUI
-        if let firstVisible = pinnedTableView.indexPathsForVisibleRows?.first {
-            rep.lastViewedRow = firstVisible.row
-        }
 
         // Check if near bottom => set rep.isAtBottom and notify parent
         let offsetY = scrollView.contentOffset.y
@@ -249,5 +256,7 @@ extension PinnedColumnTablesViewController: UITableViewDataSource, UITableViewDe
 
         rep.isAtBottom = atBottom
         onIsAtBottomChanged?(atBottom)
+        
+        // (No direct sync to columns, because we have a pager now.)
     }
 }
