@@ -17,6 +17,34 @@ class PinnedColumnBridgeViewController: UIViewController {
     private let pinnedTablePlaceholder = UIView()
     private let pinnedColumnTablesVC = PinnedColumnTablesViewController()
 
+    // A custom back button for the top bar
+    private let backButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setImage(UIImage(systemName: "chevron.left"), for: .normal)
+        button.tintColor = .white
+        button.translatesAutoresizingMaskIntoConstraints = false
+        return button
+    }()
+
+    // A chart button for the top bar
+    private let chartButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setImage(UIImage(systemName: "chart.line.uptrend.xyaxis"), for: .normal)
+        button.tintColor = .white
+        button.translatesAutoresizingMaskIntoConstraints = false
+        return button
+    }()
+    
+    // A centred label for the top bar
+    private let titleLabel: UILabel = {
+        let label = UILabel()
+        label.text = "Simulation Results"
+        label.textColor = .white
+        label.textAlignment = .center
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+
     // Larger scroll-to-bottom button with reduced opacity.
     private let scrollToBottomButton: UIButton = {
         let btn = UIButton(type: .system)
@@ -43,7 +71,7 @@ class PinnedColumnBridgeViewController: UIViewController {
         topBar.backgroundColor = UIColor(white: 0.12, alpha: 1.0)
         topBar.translatesAutoresizingMaskIntoConstraints = false
 
-        let topBarHeight: CGFloat = 70
+        let topBarHeight: CGFloat = 100
 
         // Container stack: [topBar, summaryCardContainer + pinnedTablePlaceholder]
         let containerStack = UIStackView()
@@ -62,6 +90,32 @@ class PinnedColumnBridgeViewController: UIViewController {
         // 1) The top bar
         containerStack.addArrangedSubview(topBar)
         topBar.heightAnchor.constraint(equalToConstant: topBarHeight).isActive = true
+
+        // Add buttons + title to top bar
+        topBar.addSubview(backButton)
+        topBar.addSubview(chartButton)
+        topBar.addSubview(titleLabel)
+
+        // Hook up button taps
+        backButton.addTarget(self, action: #selector(handleBackButton), for: .touchUpInside)
+        chartButton.addTarget(self, action: #selector(handleChartButton), for: .touchUpInside)
+
+        // Position them towards the bottom of topBar
+        let bottomOffset: CGFloat = -2
+
+        NSLayoutConstraint.activate([
+            // Back button on the left
+            backButton.leadingAnchor.constraint(equalTo: topBar.leadingAnchor, constant: 16),
+            backButton.bottomAnchor.constraint(equalTo: topBar.bottomAnchor, constant: bottomOffset),
+            
+            // Chart button on the right
+            chartButton.trailingAnchor.constraint(equalTo: topBar.trailingAnchor, constant: -16),
+            chartButton.bottomAnchor.constraint(equalTo: topBar.bottomAnchor, constant: bottomOffset),
+            
+            // Title in centre
+            titleLabel.centerXAnchor.constraint(equalTo: topBar.centerXAnchor),
+            titleLabel.bottomAnchor.constraint(equalTo: topBar.bottomAnchor, constant: bottomOffset)
+        ])
 
         // 2) Main stack: [ summaryCardContainer, pinnedTablePlaceholder ]
         pinnedTablePlaceholder.backgroundColor = UIColor.darkGray.withAlphaComponent(0.2)
@@ -161,6 +215,7 @@ class PinnedColumnBridgeViewController: UIViewController {
     }
 
     private func refreshSummaryCard() {
+        // The updated summary card no longer takes onBackTapped or onChartTapped.
         guard let container = representableContainer else { return }
         
         hostingController.rootView = AnyView(
@@ -168,13 +223,7 @@ class PinnedColumnBridgeViewController: UIViewController {
                 finalBTCPrice: 1234.56,
                 finalPortfolioValue: 1234567.89,
                 growthPercent: 12.34,
-                currencySymbol: "$",
-                onBackTapped: { [weak self] in
-                    self?.handleBackButton()
-                },
-                onChartTapped: { [weak self] in
-                    print("Chart Tapped!")
-                }
+                currencySymbol: "$"
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color(UIColor(white: 0.12, alpha: 1.0)))
