@@ -34,6 +34,10 @@ class PinnedColumnTablesViewController: UIViewController {
 
         view.backgroundColor = UIColor(white: 0.12, alpha: 1.0)
 
+        // Turn off safeArea-based auto-inset for both tables:
+        pinnedTableView.contentInsetAdjustmentBehavior = .never
+        columnsTableView.contentInsetAdjustmentBehavior = .never
+    
         // Setup pinned table
         pinnedTableView.dataSource = self
         pinnedTableView.delegate = self
