@@ -13,49 +13,46 @@ struct SimulationSummaryCardView: View {
     let growthPercent: Double
     let currencySymbol: String
     
-    // Add this closure for the back button
+    // Add closures for back + chart
     let onBackTapped: () -> Void
+    let onChartTapped: () -> Void
 
     var body: some View {
         GeometryReader { geometry in
-            ZStack(alignment: .topLeading) {
-                
-                // Existing HStack with price/portfolio/growth
+            ZStack {
+                // 1) The main HStack (price, portfolio, growth)
                 let horizontalPadding: CGFloat = 16
                 let totalWidth = geometry.size.width - (horizontalPadding * 2)
                 let columnWidth = totalWidth / 3
 
                 HStack(spacing: 0) {
-                    // 1) BTC Price
+                    // (1) BTC Price
                     VStack(spacing: 4) {
                         Text("BTC Price")
                             .font(.title3)
                             .foregroundColor(.gray)
-                        
                         Text("\(currencySymbol)\(abbreviateForCardV2(finalBTCPrice))")
                             .foregroundColor(.white)
                             .font(.title2)
                     }
                     .frame(width: columnWidth, alignment: .trailing)
                     
-                    // 2) Portfolio
+                    // (2) Portfolio
                     VStack(spacing: 4) {
                         Text("Portfolio")
                             .font(.title3)
                             .foregroundColor(.gray)
-                        
                         Text("\(currencySymbol)\(abbreviateForCardV2(finalPortfolioValue))")
                             .foregroundColor(.white)
                             .font(.title2)
                     }
                     .frame(width: columnWidth, alignment: .center)
                     
-                    // 3) Growth
+                    // (3) Growth
                     VStack(spacing: 4) {
                         Text("Growth")
                             .font(.title3)
                             .foregroundColor(.gray)
-                        
                         Text(abbreviateGrowthV2(growthPercent))
                             .foregroundColor(growthPercent >= 0 ? .green : .red)
                             .font(.title2)
@@ -65,15 +62,27 @@ struct SimulationSummaryCardView: View {
                 .padding(.horizontal, horizontalPadding)
                 .padding(.vertical, 8)
                 
-                // NEW: A simple back button at top-left
-                Button(action: onBackTapped) {
-                    Image(systemName: "chevron.left")
-                        .foregroundColor(.white)
-                        .padding(8)
+                // 2) Chevron left button
+                HStack {
+                    Button(action: onBackTapped) {
+                        Image(systemName: "chevron.left")
+                            .foregroundColor(.white)
+                            .padding(8)
+                    }
+                    .padding(.leading, 12)
+                    
+                    Spacer()
+                    
+                    // 3) Chart button on the right
+                    Button(action: onChartTapped) {
+                        Image(systemName: "chart.line.uptrend.xyaxis")
+                            .foregroundColor(.white)
+                            .padding(8)
+                    }
+                    .padding(.trailing, 12)
                 }
-                .padding(.leading, 12)
-                .padding(.top, 8)
-                
+                // Match the card’s vertical space
+                .frame(height: 80, alignment: .center)
             }
         }
         .frame(height: 80)

@@ -116,9 +116,12 @@ class PinnedColumnBridgeViewController: UIViewController {
                 finalPortfolioValue: 1234567.89,
                 growthPercent: 12.34,
                 currencySymbol: "$",
-                // Add this closure so the summary card's back button can call handleBackButton()
                 onBackTapped: { [weak self] in
                     self?.handleBackButton()
+                },
+                onChartTapped: { [weak self] in
+                    // e.g. show or push a chart screen
+                    print("Chart Tapped!")
                 }
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
