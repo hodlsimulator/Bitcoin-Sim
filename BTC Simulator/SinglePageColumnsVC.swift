@@ -7,6 +7,18 @@
 
 import UIKit
 
+// Helper extension for formattedWithSeparator()
+extension Decimal {
+    func formattedWithSeparator() -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.maximumFractionDigits = 2
+        formatter.minimumFractionDigits = 2
+        formatter.groupingSeparator = ","
+        return formatter.string(from: self as NSDecimalNumber) ?? "\(self)"
+    }
+}
+
 class SinglePageColumnsVC: UIViewController, UITableViewDataSource, UITableViewDelegate {
     
     // The columns we'll display for this page (up to 2).
@@ -15,8 +27,11 @@ class SinglePageColumnsVC: UIViewController, UITableViewDataSource, UITableViewD
     // The entire array of rows to be shown in this table.
     var displayedData: [SimulationData] = []
     
+    // A closure the parent can set to sync scrolling
+    var onScroll: ((UIScrollView) -> Void)?
+    
     // A simple table to list the 2 columns side by side.
-    private let tableView = UITableView(frame: .zero, style: .plain)
+    let tableView = UITableView(frame: .zero, style: .plain)
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -28,7 +43,7 @@ class SinglePageColumnsVC: UIViewController, UITableViewDataSource, UITableViewD
         tableView.showsVerticalScrollIndicator = true
         tableView.backgroundColor = .clear
         
-        // We'll register a custom cell class. Or just reuse a default style if you prefer.
+        // We'll register a custom cell class.
         tableView.register(TwoColumnCell.self, forCellReuseIdentifier: "TwoColumnCell")
         
         // Add the table view to our VC’s view
@@ -67,7 +82,6 @@ class SinglePageColumnsVC: UIViewController, UITableViewDataSource, UITableViewD
             if cols.indices.contains(0) {
                 let (_, keypath) = cols[0]
                 let val1 = rowData[keyPath: keypath]
-                // Format with thousands separator + 2 decimals
                 cell.label1.text = val1.formattedWithSeparator()
             } else {
                 cell.label1.text = nil
@@ -95,10 +109,9 @@ class SinglePageColumnsVC: UIViewController, UITableViewDataSource, UITableViewD
         return 44
     }
     
-    // Helper to format Decimal nicely
-    private func decimalToString(_ val: Decimal) -> String {
-        // Just a basic conversion. You can do something more fancy:
-        return NSDecimalNumber(decimal: val).stringValue
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        // Let the parent know we're scrolling so it can sync
+        onScroll?(scrollView)
     }
 }
 

@@ -28,6 +28,7 @@ class PinnedColumnTablesViewController: UIViewController {
     // We'll call this whenever we detect scrolling is near the bottom
     var onIsAtBottomChanged: ((Bool) -> Void)?
     
+    // Prevent infinite scroll-callback loops
     private var isSyncingScroll = false
 
     override func viewDidLoad() {
@@ -88,7 +89,6 @@ class PinnedColumnTablesViewController: UIViewController {
             columnsHeaderView.trailingAnchor.constraint(equalTo: headersContainer.trailingAnchor)
         ])
         
-        // --- REMOVE UIStackView. Instead, add two labels with explicit constraints ---
         // (1) BTC Price label near the left
         let col1Label = UILabel()
         col1Label.text = "BTC Price (USD)"
@@ -102,7 +102,7 @@ class PinnedColumnTablesViewController: UIViewController {
             col1Label.centerYAnchor.constraint(equalTo: columnsHeaderView.centerYAnchor)
         ])
         
-        // (2) Portfolio label, shifted left by adjusting the constant to your preference
+        // (2) Portfolio label, can adjust the 165 constant to position
         let col2Label = UILabel()
         col2Label.text = "Portfolio (USD)"
         col2Label.textColor = .orange
@@ -111,7 +111,6 @@ class PinnedColumnTablesViewController: UIViewController {
         columnsHeaderView.addSubview(col2Label)
         
         NSLayoutConstraint.activate([
-            // Adjust the 165 constant to position the Portfolio label as needed
             col2Label.leadingAnchor.constraint(equalTo: columnsHeaderView.leadingAnchor, constant: 165),
             col2Label.centerYAnchor.constraint(equalTo: columnsHeaderView.centerYAnchor)
         ])
@@ -149,6 +148,14 @@ class PinnedColumnTablesViewController: UIViewController {
         pinnedTableView.backgroundColor = .clear
         pinnedTableView.showsVerticalScrollIndicator = false
         pinnedTableView.register(PinnedColumnCell.self, forCellReuseIdentifier: "PinnedColumnCell")
+
+        // Whenever the page changes on the right, hook into its scrolling
+        columnsPagerVC.onPageChanged = { [weak self] pageVC in
+            guard let self = self else { return }
+            pageVC.onScroll = { [weak self] scrollView in
+                self?.syncScroll(from: scrollView, to: self?.pinnedTableView)
+            }
+        }
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -172,39 +179,55 @@ class PinnedColumnTablesViewController: UIViewController {
             return (title, kp)
         }
         
-        // If you want to skip the pinned column in the pager, do .dropFirst()
-        // columnsPagerVC.allColumns = Array(decimalColumns.dropFirst())
-        // Otherwise, use the full list:
+        // Pass columns & row data to the pager
         columnsPagerVC.allColumns = decimalColumns
-        
-        // Pass all the row data to the pager
         columnsPagerVC.displayedData = rep.displayedData
-        
-        // Force the pager to rebuild its pages
         columnsPagerVC.reloadPages()
     }
     
     // Called by the parent to scroll pinned table to the bottom
     func scrollToBottom() {
         guard let rep = representable else { return }
-        
         let rowCount = rep.displayedData.count
         if rowCount > 0 {
             let lastIndex = rowCount - 1
             let pinnedPath = IndexPath(row: lastIndex, section: 0)
             pinnedTableView.scrollToRow(at: pinnedPath, at: .bottom, animated: true)
+            
+            // Scroll the active page as well
+            if let activePage = columnsPagerVC.currentActivePage {
+                let columnsPath = IndexPath(row: lastIndex, section: 0)
+                activePage.tableView.scrollToRow(at: columnsPath, at: .bottom, animated: true)
+            }
         }
-        // The pager side would also scroll if you code that in SinglePageColumnsVC,
-        // but that requires more advanced sync logic across each page’s table.
+    }
+
+    // Called by parent to scroll pinned table to the top
+    func scrollToTop() {
+        let topIndex = IndexPath(row: 0, section: 0)
+        pinnedTableView.scrollToRow(at: topIndex, at: .top, animated: true)
+        
+        // Scroll the active page as well
+        if let activePage = columnsPagerVC.currentActivePage {
+            activePage.tableView.scrollToRow(at: topIndex, at: .top, animated: true)
+        }
+    }
+    
+    // Sync pinned <-> columns offset
+    private func syncScroll(from source: UIScrollView?, to target: UIScrollView?) {
+        guard !isSyncingScroll else { return }
+        guard let source = source, let target = target else { return }
+        
+        isSyncingScroll = true
+        target.contentOffset = source.contentOffset
+        isSyncingScroll = false
     }
 }
 
 // MARK: - UITableViewDataSource & Delegate (For pinned table)
 extension PinnedColumnTablesViewController: UITableViewDataSource, UITableViewDelegate {
 
-    func numberOfSections(in tableView: UITableView) -> Int {
-        return 1
-    }
+    func numberOfSections(in tableView: UITableView) -> Int { 1 }
 
     func tableView(_ tableView: UITableView,
                    numberOfRowsInSection section: Int) -> Int {
@@ -237,12 +260,7 @@ extension PinnedColumnTablesViewController: UITableViewDataSource, UITableViewDe
         return 44
     }
 
-    // If you want the pinned table to sync scrolling with the pager’s table,
-    // you’d need to detect which SinglePageColumnsVC is active and sync its scrollView.
-    // That’s more advanced, so we’ll skip for now.
-    
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        // We'll still do the "near bottom" detection
         guard let rep = representable else { return }
 
         // Check if near bottom => set rep.isAtBottom and notify parent
@@ -257,6 +275,9 @@ extension PinnedColumnTablesViewController: UITableViewDataSource, UITableViewDe
         rep.isAtBottom = atBottom
         onIsAtBottomChanged?(atBottom)
         
-        // (No direct sync to columns, because we have a pager now.)
+        // Sync pinned -> current page
+        if let activePage = columnsPagerVC.currentActivePage {
+            syncScroll(from: scrollView, to: activePage.tableView)
+        }
     }
 }

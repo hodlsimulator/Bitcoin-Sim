@@ -7,6 +7,19 @@
 
 import UIKit
 
+// Helper extension for formatting Int with a grouping separator
+extension Int {
+    func formattedWithSeparator() -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.groupingSeparator = ","
+        // No decimal places needed for week/month
+        formatter.minimumFractionDigits = 0
+        formatter.maximumFractionDigits = 0
+        return formatter.string(from: NSNumber(value: self)) ?? "\(self)"
+    }
+}
+
 /// A UITableViewCell for the pinned left column (e.g. "week" or "month").
 class PinnedColumnCell: UITableViewCell {
     
@@ -34,7 +47,8 @@ class PinnedColumnCell: UITableViewCell {
     /// Configure the cell with the pinned integer value (week #) and background row index
     func configure(pinnedValue: Int, backgroundIndex: Int) {
         label.textColor = .white
-        label.text = "\(pinnedValue)"
+        // Format the pinnedValue with a thousands separator
+        label.text = pinnedValue.formattedWithSeparator()
 
         let bg = backgroundIndex % 2 == 0
             ? UIColor(white: 0.10, alpha: 1)

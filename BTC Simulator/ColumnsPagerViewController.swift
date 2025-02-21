@@ -7,8 +7,6 @@
 
 import UIKit
 
-// Replace 'SimulationData' with whatever your actual data model is.
-// Also adjust KeyPath if your columns are something else.
 class ColumnsPagerViewController: UIPageViewController {
     
     // 1) The columns you want to show, e.g. [("BTC Price", \.btcPriceUSD), ("Portfolio", \.portfolioValueUSD), ...]
@@ -20,24 +18,33 @@ class ColumnsPagerViewController: UIPageViewController {
     // Internally we chunk "allColumns" into pairs so each page shows 2 columns.
     private var pagesData: [[(String, KeyPath<SimulationData, Decimal>)]] = []
     
+    // Track the SinglePageColumnsVC currently visible to the user
+    var currentActivePage: SinglePageColumnsVC?
+    
+    // A callback so the parent can observe page changes
+    var onPageChanged: ((SinglePageColumnsVC) -> Void)?
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        // We are our own dataSource and delegate.
         dataSource = self
-        delegate = self
+        delegate = self  // important, so we get page transition callbacks
         
-        // Make sure the scroll view inside UIPageViewController uses "paging".
+        // Make the internal scroll view use paging
         if let scrollView = view.subviews.compactMap({ $0 as? UIScrollView }).first {
             scrollView.isPagingEnabled = true
         }
         
-        // Convert allColumns into an array of pairs. (If there's an odd number, the last page has 1 column.)
         pagesData = chunkColumnsIntoPairs(allColumns)
         
         // Show page 0 by default
         if let firstVC = makeColumnsPageVC(forPageIndex: 0) {
             setViewControllers([firstVC], direction: .forward, animated: false)
+            currentActivePage = firstVC
+            
+            // IMPORTANT: Trigger onPageChanged for the initial page,
+            // so that the pinned table's "onScroll" can be set up even if we never swipe pages.
+            onPageChanged?(firstVC)
         }
     }
     
@@ -69,19 +76,27 @@ class ColumnsPagerViewController: UIPageViewController {
         
         let vc = SinglePageColumnsVC()
         vc.columnsToShow = pagesData[index]  // up to 2 columns
-        vc.displayedData = displayedData     // entire table’s worth of data
+        vc.displayedData = displayedData
         return vc
+    }
+    
+    func reloadPages() {
+        pagesData = chunkColumnsIntoPairs(allColumns)
+        if let first = makeColumnsPageVC(forPageIndex: 0) {
+            setViewControllers([first], direction: .forward, animated: false, completion: nil)
+            currentActivePage = first
+            
+            // Also call onPageChanged here so the pinned table gets the initial onScroll
+            onPageChanged?(first)
+        }
     }
 }
 
 // MARK: - UIPageViewControllerDataSource
 extension ColumnsPagerViewController: UIPageViewControllerDataSource {
     
-    // The view controller before the current page
-    func pageViewController(
-        _ pageViewController: UIPageViewController,
-        viewControllerBefore viewController: UIViewController
-    ) -> UIViewController? {
+    func pageViewController(_ pageViewController: UIPageViewController,
+                            viewControllerBefore viewController: UIViewController) -> UIViewController? {
         
         guard let singleVC = viewController as? SinglePageColumnsVC,
               let currentIndex = indexForPageVC(singleVC) else {
@@ -91,11 +106,8 @@ extension ColumnsPagerViewController: UIPageViewControllerDataSource {
         return makeColumnsPageVC(forPageIndex: prevIndex)
     }
     
-    // The view controller after the current page
-    func pageViewController(
-        _ pageViewController: UIPageViewController,
-        viewControllerAfter viewController: UIViewController
-    ) -> UIViewController? {
+    func pageViewController(_ pageViewController: UIPageViewController,
+                            viewControllerAfter viewController: UIViewController) -> UIViewController? {
         
         guard let singleVC = viewController as? SinglePageColumnsVC,
               let currentIndex = indexForPageVC(singleVC) else {
@@ -105,26 +117,32 @@ extension ColumnsPagerViewController: UIPageViewControllerDataSource {
         return makeColumnsPageVC(forPageIndex: nextIndex)
     }
     
-    /// Helper to find the current page index for SinglePageColumnsVC
     private func indexForPageVC(_ vc: SinglePageColumnsVC) -> Int? {
         guard let pageCols = vc.columnsToShow else { return nil }
         
-        // We compare just the column titles .map(\.0) to see if they match the chunk
         return pagesData.firstIndex { chunk in
             chunk.map(\.0) == pageCols.map(\.0)
-        }
-    }
-    
-    // In ColumnsPagerViewController:
-    func reloadPages() {
-        pagesData = chunkColumnsIntoPairs(allColumns)
-        if let first = makeColumnsPageVC(forPageIndex: 0) {
-            setViewControllers([first], direction: .forward, animated: false, completion: nil)
         }
     }
 }
 
 // MARK: - UIPageViewControllerDelegate
 extension ColumnsPagerViewController: UIPageViewControllerDelegate {
-    // (Optional) implement any delegate methods you need
+    
+    /// Called when the user finishes swiping to a new page
+    func pageViewController(_ pageViewController: UIPageViewController,
+                            didFinishAnimating finished: Bool,
+                            previousViewControllers: [UIViewController],
+                            transitionCompleted completed: Bool) {
+        
+        guard completed, let visibleVC = viewControllers?.first as? SinglePageColumnsVC else {
+            return
+        }
+        
+        // Update currentActivePage
+        currentActivePage = visibleVC
+        
+        // Notify parent so it can sync or do whatever is needed
+        onPageChanged?(visibleVC)
+    }
 }

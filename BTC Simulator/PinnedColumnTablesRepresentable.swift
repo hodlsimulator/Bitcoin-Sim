@@ -41,8 +41,8 @@ struct PinnedColumnTablesRepresentable: UIViewControllerRepresentable {
 
     /// The list of additional columns you want on the right side.
     /// Each tuple is (columnTitle, keyPath).
-    /// IMPORTANT: If you want these columns to appear in the new pager,
-    /// each partial key path here should point to a Decimal property.
+    /// IMPORTANT: If you want these columns to appear in the pager,
+    /// each partial key path must point to a Decimal property.
     let columns: [(String, PartialKeyPath<SimulationData>)]
 
     /// Where we store or retrieve the user’s last viewed row.
@@ -63,12 +63,23 @@ struct PinnedColumnTablesRepresentable: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> PinnedColumnTablesViewController {
         let vc = PinnedColumnTablesViewController()
         vc.representable = self
+        
+        // Whenever the pinned VC detects near-bottom scrolling, update SwiftUI's binding
+        vc.onIsAtBottomChanged = { newValue in
+            self.isAtBottom = newValue
+        }
+        
         return vc
     }
 
     func updateUIViewController(_ uiViewController: PinnedColumnTablesViewController,
                                 context: Context) {
         uiViewController.representable = self
+
+        // Hook up again in case the VC is re-used
+        uiViewController.onIsAtBottomChanged = { newValue in
+            self.isAtBottom = newValue
+        }
 
         // If SwiftUI sets scrollToBottomFlag:
         if scrollToBottomFlag {
