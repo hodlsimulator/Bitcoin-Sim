@@ -10,6 +10,7 @@ import SwiftUI
 
 class PinnedColumnBridgeViewController: UIViewController {
 
+    // This container references your SwiftUI/Coordinator logic
     var representableContainer: PinnedColumnBridgeRepresentable.BridgeContainer?
 
     private let hostingController = UIHostingController(rootView: AnyView(EmptyView()))
@@ -112,7 +113,7 @@ class PinnedColumnBridgeViewController: UIViewController {
             chartButton.trailingAnchor.constraint(equalTo: topBar.trailingAnchor, constant: -16),
             chartButton.bottomAnchor.constraint(equalTo: topBar.bottomAnchor, constant: bottomOffset),
             
-            // Title in centre
+            // Title in the centre
             titleLabel.centerXAnchor.constraint(equalTo: topBar.centerXAnchor),
             titleLabel.bottomAnchor.constraint(equalTo: topBar.bottomAnchor, constant: bottomOffset)
         ])
@@ -141,7 +142,7 @@ class PinnedColumnBridgeViewController: UIViewController {
             summaryCardContainer.heightAnchor.constraint(equalToConstant: 90)
         ])
 
-        // 3) Pin the pinned table VC directly under pinnedTablePlaceholder
+        // 3) Pin the pinned table VC inside pinnedTablePlaceholder
         addChild(pinnedColumnTablesVC)
         pinnedTablePlaceholder.addSubview(pinnedColumnTablesVC.view)
         pinnedColumnTablesVC.didMove(toParent: self)
@@ -167,7 +168,7 @@ class PinnedColumnBridgeViewController: UIViewController {
         pinnedColumnTablesVC.onIsAtBottomChanged = { [weak self] isAtBottom in
             guard let self = self else { return }
             
-            // Only animate if there's an actual change in bottom state
+            // Only animate if there's a change
             guard isAtBottom != self.wasAtBottom else { return }
             self.wasAtBottom = isAtBottom
             
@@ -194,12 +195,12 @@ class PinnedColumnBridgeViewController: UIViewController {
                 }
             }
         }
-    }   
+    }
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
-        // Hide the system nav bar so it doesn't appear behind our custom bar.
+        // Hide the system nav bar
         navigationController?.setNavigationBarHidden(true, animated: false)
 
         refreshSummaryCard()
@@ -266,15 +267,19 @@ class PinnedColumnBridgeViewController: UIViewController {
     private func populatePinnedTable() {
         guard let container = representableContainer else { return }
 
+        // Instead of limiting to Decimal, pass any numeric partial key paths
         pinnedColumnTablesVC.representable = PinnedColumnTablesRepresentable(
             displayedData: container.coordinator.monteCarloResults,
             pinnedColumnTitle: "Week",
-            pinnedColumnKeyPath: \.week,  // Left/pinned column
+            pinnedColumnKeyPath: \.week,
             columns: [
-                // The "other" columns on the right. Add as many as you want,
-                // each pointing to a Decimal property in SimulationData.
+                // You can have Decimal, Double, or Int partial key paths.
+                ("Starting BTC (BTC)", \SimulationData.startingBTC),
+                ("Net BTC (BTC)", \SimulationData.netBTCHoldings),
                 ("BTC Price (USD)", \SimulationData.btcPriceUSD),
-                ("Portfolio (USD)", \SimulationData.portfolioValueUSD)
+                ("Portfolio (USD)", \SimulationData.portfolioValueUSD),
+                ("Contrib (USD)", \SimulationData.contributionUSD),
+                // etc...
             ],
             lastViewedRow: .constant(0),
             scrollToBottomFlag: .constant(false),
