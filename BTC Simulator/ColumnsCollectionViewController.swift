@@ -20,23 +20,15 @@ class ColumnsCollectionViewController: UIViewController {
     // The 'pair' is an array of up to 2 columns, e.g. [("BTC Price", partial1), ("Portfolio", partial2)]
     public var onCenteredPairChanged: (([(String, PartialKeyPath<SimulationData>)]) -> Void)?
 
-
-    // (Optional) track a current index
-    // (Optional) track an active index if needed
-
-    // The collection view + flow layout
-    // Renamed to avoid overshadowing dataSource func "collectionView(_:_:)"
     public var columnsCollectionView: UICollectionView?
 
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = UIColor.clear
 
-        // 1) Create the layout
-        let layout = UICollectionViewFlowLayout()
+        // 1) Create the layout using CenterSnapFlowLayout
+        let layout = CenterSnapFlowLayout()
         layout.scrollDirection = .horizontal
-
-        // For partial columns, each cell narrower than screen
         layout.itemSize = CGSize(width: 240, height: view.bounds.height)
         layout.minimumLineSpacing = 10
 
@@ -45,12 +37,10 @@ class ColumnsCollectionViewController: UIViewController {
         cv.backgroundColor = .clear
         cv.showsHorizontalScrollIndicator = false
         cv.decelerationRate = .fast  // for snappier feel
-        cv.isPagingEnabled = false   // we want partial scroll, not full paging
+        cv.isPagingEnabled = false   // partial scroll, not full paging
         cv.dataSource    = self
         cv.delegate      = self
         cv.translatesAutoresizingMaskIntoConstraints = false
-
-        // Store in our public var
         self.columnsCollectionView = cv
 
         view.addSubview(cv)
@@ -74,7 +64,6 @@ class ColumnsCollectionViewController: UIViewController {
         }
     }
 
-    /// Public method so other VCs can trigger a reload easily
     public func reloadCollectionData() {
         columnsCollectionView?.reloadData()
     }
@@ -84,10 +73,7 @@ class ColumnsCollectionViewController: UIViewController {
 
 extension ColumnsCollectionViewController: UICollectionViewDataSource, UICollectionViewDelegate {
     
-    func collectionView(
-        _ collectionView: UICollectionView,
-        numberOfItemsInSection section: Int
-    ) -> Int {
+    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         return pairsData.count
     }
     
@@ -104,12 +90,30 @@ extension ColumnsCollectionViewController: UICollectionViewDataSource, UICollect
         let pair = pairsData[indexPath.item]
         cell.configure(pair: pair, displayedData: displayedData)
         
-        // If you want vertical scroll sync:
         cell.onScroll = { [weak self] scrollView in
-            // Pass up to pinned table
             self?.onScrollSync?(scrollView)
         }
         
         return cell
+    }
+    
+    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        guard let cv = columnsCollectionView else { return }
+        let centerX = cv.bounds.width / 2 + cv.contentOffset.x
+        let centerY = cv.bounds.height / 2 + cv.contentOffset.y
+        let centerPoint = CGPoint(x: centerX, y: centerY)
+        
+        if let indexPath = cv.indexPathForItem(at: centerPoint),
+           indexPath.item < pairsData.count {
+            let pair = pairsData[indexPath.item]
+            onCenteredPairChanged?(pair)
+        }
+    }
+    
+    // Optional: If you want it also to fire when dragging ends without deceleration
+    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        if !decelerate {
+            scrollViewDidEndDecelerating(scrollView)
+        }
     }
 }

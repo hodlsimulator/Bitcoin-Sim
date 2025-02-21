@@ -38,10 +38,12 @@ class TwoColumnCollectionViewController: UIViewController {
         let layout = CenterSnapFlowLayout()
         layout.scrollDirection = .horizontal
 
-        // Each cell is narrower than the full screen => partial-page scroll
-        // Adjust to your preference (width ~ 0.7 * screen)
-        layout.itemSize = CGSize(width: view.bounds.width * 0.7, height: view.bounds.height)
-        layout.minimumLineSpacing = 20
+        // Step 2: Adjust the item size so two items fit exactly on screen
+        let screenWidth = view.bounds.width
+        let spacing: CGFloat = 20
+        let itemWidth = (screenWidth - spacing) / 2
+        layout.itemSize = CGSize(width: itemWidth, height: view.bounds.height)
+        layout.minimumLineSpacing = spacing
 
         // 2) Create the collection view
         let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
