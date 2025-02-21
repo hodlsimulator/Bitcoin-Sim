@@ -8,22 +8,8 @@
 import SwiftUI
 
 /// A SwiftUI wrapper around the UIKit-based pinned-column table layout.
-///
-/// Usage example inside SwiftUI:
-///
-///     PinnedColumnTablesRepresentable(
-///         displayedData: mySimulationDataArray,
-///         pinnedColumnTitle: "Week",
-///         pinnedColumnKeyPath: \SimulationData.week,
-///         columns: [
-///             ("BTC Price (USD)", \SimulationData.btcPriceUSD),
-///             ("Portfolio (USD)", \SimulationData.portfolioValueUSD)
-///         ],
-///         lastViewedRow: $lastViewedRow,
-///         scrollToBottomFlag: $scrollToBottomFlag,
-///         isAtBottom: $isAtBottom
-///     )
-///
+/// This shows the pinned column (e.g., Week or Month) on the left,
+/// and swipable columns on the right via a ColumnsPagerViewController.
 struct PinnedColumnTablesRepresentable: UIViewControllerRepresentable {
 
     // MARK: - Inputs from SwiftUI
@@ -34,18 +20,16 @@ struct PinnedColumnTablesRepresentable: UIViewControllerRepresentable {
     /// Title for the pinned column (e.g. "Week", "Month")
     let pinnedColumnTitle: String
 
-    /// A key path to the pinned value in each SimulationData (e.g. \.week)
-    /// This pinned column is shown on the left and does NOT need to be
-    /// included in 'columns' below.
+    /// A key path to the pinned value in each SimulationData (e.g. \.week).
+    /// This pinned column is shown on the left.
     let pinnedColumnKeyPath: KeyPath<SimulationData, Int>
 
-    /// The list of additional columns you want on the right side.
-    /// Each tuple is (columnTitle, keyPath).
-    /// IMPORTANT: If you want these columns to appear in the pager,
-    /// each partial key path must point to a Decimal property.
+    /// The list of additional columns for the right side.
+    /// Each tuple is (columnTitle, partial key path).
+    /// PartialKeyPath can reference Decimal, Double, or Int.
     let columns: [(String, PartialKeyPath<SimulationData>)]
 
-    /// Where we store or retrieve the user’s last viewed row.
+    /// Where we store or retrieve the user's last viewed row in the table.
     @Binding var lastViewedRow: Int
 
     /// If set to true from SwiftUI, we scroll to the bottom row.
@@ -54,7 +38,7 @@ struct PinnedColumnTablesRepresentable: UIViewControllerRepresentable {
     /// Whether or not the user is currently scrolled near the bottom
     @Binding var isAtBottom: Bool
 
-    // MARK: - UIViewControllerRepresentable Requirements
+    // MARK: - UIViewControllerRepresentable
 
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
@@ -64,7 +48,7 @@ struct PinnedColumnTablesRepresentable: UIViewControllerRepresentable {
         let vc = PinnedColumnTablesViewController()
         vc.representable = self
         
-        // Whenever the pinned VC detects near-bottom scrolling, update SwiftUI's binding
+        // Update SwiftUI's isAtBottom whenever near-bottom changes
         vc.onIsAtBottomChanged = { newValue in
             self.isAtBottom = newValue
         }
@@ -74,14 +58,15 @@ struct PinnedColumnTablesRepresentable: UIViewControllerRepresentable {
 
     func updateUIViewController(_ uiViewController: PinnedColumnTablesViewController,
                                 context: Context) {
+        // Keep the representable in sync
         uiViewController.representable = self
-
-        // Hook up again in case the VC is re-used
+        
+        // If the pinned VC detects near-bottom scrolling, update SwiftUI
         uiViewController.onIsAtBottomChanged = { newValue in
             self.isAtBottom = newValue
         }
 
-        // If SwiftUI sets scrollToBottomFlag:
+        // If SwiftUI sets scrollToBottomFlag, scroll to bottom once and reset the flag
         if scrollToBottomFlag {
             uiViewController.scrollToBottom()
             // Reset the flag to avoid repeated scrolling

@@ -8,91 +8,92 @@
 import UIKit
 
 class ColumnsPagerViewController: UIPageViewController {
+
+    // The columns you want, each with a display title and PartialKeyPath
+    // (so we can handle Decimal, Double, or Int in SimulationData).
+    var allColumns: [(String, PartialKeyPath<SimulationData>)] = []
     
-    // 1) The columns you want to show, e.g. [("BTC Price", \.btcPriceUSD), ("Portfolio", \.portfolioValueUSD), ...]
-    var allColumns: [(String, KeyPath<SimulationData, Decimal>)] = []
-    
-    // 2) The entire array of data so each page can display rows. Typically from "representable.displayedData".
+    // All row data for each page to show in its table
     var displayedData: [SimulationData] = []
     
-    // Internally we chunk "allColumns" into pairs so each page shows 2 columns.
-    private var pagesData: [[(String, KeyPath<SimulationData, Decimal>)]] = []
+    // The internal array of pages, each page is [col[i], col[i+1]] (sliding pairs)
+    private var pagesData: [[(String, PartialKeyPath<SimulationData>)]] = []
     
-    // Track the SinglePageColumnsVC currently visible to the user
+    // Track the currently visible SinglePageColumnsVC
     var currentActivePage: SinglePageColumnsVC?
     
-    // A callback so the parent can observe page changes
+    // A callback so the parent can observe when the page changes
     var onPageChanged: ((SinglePageColumnsVC) -> Void)?
-    
+
+    // MARK: - Lifecycle
+
     override func viewDidLoad() {
         super.viewDidLoad()
         
         dataSource = self
-        delegate = self  // important, so we get page transition callbacks
+        delegate = self
         
-        // Make the internal scroll view use paging
+        // Ensure the scroll view is paging-enabled for snapping
         if let scrollView = view.subviews.compactMap({ $0 as? UIScrollView }).first {
             scrollView.isPagingEnabled = true
         }
         
-        pagesData = chunkColumnsIntoPairs(allColumns)
+        // Build the "sliding pairs" pages
+        pagesData = buildSlidingPairs(from: allColumns)
         
-        // Show page 0 by default
-        if let firstVC = makeColumnsPageVC(forPageIndex: 0) {
-            setViewControllers([firstVC], direction: .forward, animated: false)
-            currentActivePage = firstVC
-            
-            // IMPORTANT: Trigger onPageChanged for the initial page,
-            // so that the pinned table's "onScroll" can be set up even if we never swipe pages.
-            onPageChanged?(firstVC)
-        }
+        // Show columns [2,3] by default if possible, otherwise page 0
+        showPage(atIndex: 2)
     }
     
-    /// Splits an array of columns into subarrays of size 2 (the "pairs").
-    private func chunkColumnsIntoPairs(
-        _ columns: [(String, KeyPath<SimulationData, Decimal>)]
-    ) -> [[(String, KeyPath<SimulationData, Decimal>)]] {
+    // MARK: - Page Building Logic
+    
+    /// If columns = [A,B,C,D], produce pages [A,B], [B,C], [C,D].
+    /// If 1 column, just one single-col page. If none, return [].
+    private func buildSlidingPairs(
+        from columns: [(String, PartialKeyPath<SimulationData>)]
+    ) -> [[(String, PartialKeyPath<SimulationData>)]] {
         
-        var result = [[(String, KeyPath<SimulationData, Decimal>)]]()
-        var temp = [(String, KeyPath<SimulationData, Decimal>)]()
-        
-        for col in columns {
-            temp.append(col)
-            if temp.count == 2 {
-                result.append(temp)
-                temp.removeAll()
-            }
+        guard columns.count > 1 else {
+            if columns.isEmpty { return [] }
+            return [[columns[0]]]
         }
-        // If we had an odd number of columns, there's 1 leftover => final single-col page
-        if !temp.isEmpty {
-            result.append(temp)
+        
+        var result: [[(String, PartialKeyPath<SimulationData>)]] = []
+        for i in 0..<(columns.count - 1) {
+            result.append([columns[i], columns[i+1]])
         }
         return result
     }
     
-    /// Creates a new SinglePageColumnsVC for a given page index
+    /// Try to show a specific page index if it exists
+    private func showPage(atIndex index: Int) {
+        guard index >= 0, index < pagesData.count else { return }
+        guard let pageVC = makeColumnsPageVC(forPageIndex: index) else { return }
+        
+        setViewControllers([pageVC], direction: .forward, animated: false)
+        currentActivePage = pageVC
+        onPageChanged?(pageVC)
+    }
+    
+    /// Create a SinglePageColumnsVC for a particular page index
     private func makeColumnsPageVC(forPageIndex index: Int) -> SinglePageColumnsVC? {
-        guard index >= 0 && index < pagesData.count else { return nil }
+        guard index >= 0, index < pagesData.count else { return nil }
         
         let vc = SinglePageColumnsVC()
-        vc.columnsToShow = pagesData[index]  // up to 2 columns
+        vc.columnsToShow = pagesData[index]
         vc.displayedData = displayedData
         return vc
     }
     
+    /// Rebuild pages (e.g. if columns or data changed) and show page 0
     func reloadPages() {
-        pagesData = chunkColumnsIntoPairs(allColumns)
-        if let first = makeColumnsPageVC(forPageIndex: 0) {
-            setViewControllers([first], direction: .forward, animated: false, completion: nil)
-            currentActivePage = first
-            
-            // Also call onPageChanged here so the pinned table gets the initial onScroll
-            onPageChanged?(first)
-        }
+        pagesData = buildSlidingPairs(from: allColumns)
+        showPage(atIndex: 0)
     }
 }
 
 // MARK: - UIPageViewControllerDataSource
+
 extension ColumnsPagerViewController: UIPageViewControllerDataSource {
     
     func pageViewController(_ pageViewController: UIPageViewController,
@@ -117,9 +118,9 @@ extension ColumnsPagerViewController: UIPageViewControllerDataSource {
         return makeColumnsPageVC(forPageIndex: nextIndex)
     }
     
+    /// Identify which page corresponds to this SinglePageColumnsVC
     private func indexForPageVC(_ vc: SinglePageColumnsVC) -> Int? {
         guard let pageCols = vc.columnsToShow else { return nil }
-        
         return pagesData.firstIndex { chunk in
             chunk.map(\.0) == pageCols.map(\.0)
         }
@@ -127,22 +128,20 @@ extension ColumnsPagerViewController: UIPageViewControllerDataSource {
 }
 
 // MARK: - UIPageViewControllerDelegate
+
 extension ColumnsPagerViewController: UIPageViewControllerDelegate {
     
-    /// Called when the user finishes swiping to a new page
     func pageViewController(_ pageViewController: UIPageViewController,
                             didFinishAnimating finished: Bool,
                             previousViewControllers: [UIViewController],
                             transitionCompleted completed: Bool) {
         
-        guard completed, let visibleVC = viewControllers?.first as? SinglePageColumnsVC else {
+        guard completed,
+              let visibleVC = viewControllers?.first as? SinglePageColumnsVC else {
             return
         }
         
-        // Update currentActivePage
         currentActivePage = visibleVC
-        
-        // Notify parent so it can sync or do whatever is needed
         onPageChanged?(visibleVC)
     }
 }
