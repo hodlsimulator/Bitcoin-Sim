@@ -279,6 +279,7 @@ struct ContentView: View {
     @State private var showSnapshotView = false
     @State private var showSnapshotsDebug = false
 
+    // Whether we navigate to the pinned columns bridging screen
     @State private var showPinnedColumns = false
 
     // MARK: - Environment Objects
@@ -289,80 +290,66 @@ struct ContentView: View {
     @EnvironmentObject var coordinator: SimulationCoordinator
 
     var body: some View {
-            NavigationStack {
-                ZStack {
-                    parametersScreen
-                    if !coordinator.isLoading && !coordinator.isChartBuilding && !isKeyboardVisible {
-                        bottomIcons
-                    }
-                    if coordinator.isLoading || coordinator.isChartBuilding {
-                        LoadingOverlayView()
-                            .environmentObject(coordinator)
-                            .environmentObject(simSettings)
-                    }
-                }
-                // Hide SwiftUI nav bar for the MAIN screen:
-                .navigationBarHidden(true)
+        NavigationStack {
+            ZStack {
+                // The main parameter entry screen
+                parametersScreen
 
-                // Destination for bridging screen:
-                .navigationDestination(isPresented: $showPinnedColumns) {
-                    // Show SwiftUI’s nav bar *if desired*:
-                    PinnedColumnBridgeRepresentable(
-                        coordinator: coordinator,
-                        inputManager: inputManager,
-                        monthlySimSettings: monthlySimSettings,
-                        simSettings: simSettings
-                    )
-                    // Force SwiftUI nav bar off:
-                    .navigationBarHidden(true)
-                    .navigationBarBackButtonHidden(true)
-                    // .navigationBarHidden(false)
-                    // .navigationBarTitleDisplayMode(.inline)
-                    // .toolbarBackground(Color(white: 0.12), for: .navigationBar)
-                    // .toolbarBackground(.visible, for: .navigationBar)
-                    .onAppear {
-                        removeNavBarHairline()
-                    }
+                // Bottom icons bar if not loading/keyboard
+                if !coordinator.isLoading && !coordinator.isChartBuilding && !isKeyboardVisible {
+                    bottomIcons
                 }
                 
-                // AFTER the bridging screen, add Settings & About:
-                .navigationDestination(isPresented: $showSettings) {
-                    SettingsView()
-                        .onAppear { removeNavBarHairline() }
-                        .environmentObject(simSettings)
-                        .environmentObject(monthlySimSettings)
+                // Loading overlay if coordinator is busy
+                if coordinator.isLoading || coordinator.isChartBuilding {
+                    LoadingOverlayView()
                         .environmentObject(coordinator)
-                }
-                .navigationDestination(isPresented: $showAbout) {
-                    AboutView()
-                        .onAppear { removeNavBarHairline() }
+                        .environmentObject(simSettings)
                 }
             }
-            .onAppear {
-                // Try removing the hairline here too
-                removeNavBarHairline()
+            // Hide SwiftUI nav bar for the MAIN screen:
+            .navigationBarHidden(true)
+            
+            // Destination for bridging screen:
+            .navigationDestination(isPresented: $showPinnedColumns) {
+                // Show SwiftUI’s nav bar if you like, or keep hidden:
+                PinnedColumnBridgeRepresentable(
+                    coordinator: coordinator,
+                    inputManager: inputManager,
+                    monthlySimSettings: monthlySimSettings,
+                    simSettings: simSettings
+                )
+                // Force SwiftUI nav bar off:
+                .navigationBarHidden(true)
+                .navigationBarBackButtonHidden(true)
+                .onAppear {
+                    removeNavBarHairline()
+                }
             }
-            .onChange(of: coordinator.isLoading) { _ in checkNavigationState() }
-            .onChange(of: coordinator.isChartBuilding) { _ in checkNavigationState() }
-        }
-
-    private func checkNavigationState() {
-            // Example logic that auto-navigates when done loading
-            if !coordinator.isLoading,
-               !coordinator.isChartBuilding,
-               !coordinator.monteCarloResults.isEmpty
-            {
-                showPinnedColumns = true
+            
+            // AFTER the bridging screen, add Settings & About:
+            .navigationDestination(isPresented: $showSettings) {
+                SettingsView()
+                    .environmentObject(simSettings)
+                    .environmentObject(monthlySimSettings)
+                    .environmentObject(coordinator)
+                    .onAppear { removeNavBarHairline() }
+            }
+            .navigationDestination(isPresented: $showAbout) {
+                AboutView()
+                    .onAppear { removeNavBarHairline() }
             }
         }
-    
-    private func navigateIfNeeded() {
-        if !coordinator.isLoading && !coordinator.isChartBuilding {
-            showPinnedColumns = true
+        // On appear, remove any hairline from the nav bar
+        .onAppear {
+            removeNavBarHairline()
         }
+        // If coordinator finishes loading or building, check if we auto-navigate
+        .onChange(of: coordinator.isLoading) { _ in checkNavigationState() }
+        .onChange(of: coordinator.isChartBuilding) { _ in checkNavigationState() }
     }
 
-    // Your parameter entry subview
+    // MARK: - Parameter Screen
     private var parametersScreen: some View {
         ParameterEntryView(
             inputManager: inputManager,
@@ -372,64 +359,71 @@ struct ContentView: View {
             showPinnedColumns: $showPinnedColumns
         )
         .onChange(of: coordinator.isLoading) { newVal in
-            // Just for debugging
             print("DEBUG: coordinator.isLoading changed to \(newVal)")
         }
-        // We pass a callback or we can just watch if we want
         .onChange(of: coordinator.isChartBuilding) { newVal in
             print("DEBUG: coordinator.isChartBuilding changed to \(newVal)")
         }
-        // If you want, you can also watch a param from ParameterEntryView
-        // that sets 'showPinnedColumns = true' after runSimulation.
-        // For that, you'd pass a binding from ContentView to ParameterEntryView.
     }
 
-
+    // MARK: - Bottom Icons
     private var bottomIcons: some View {
-            VStack {
-                Spacer()
-                HStack {
-                    Button(action: { showAbout = true }) {
-                        Image(systemName: "info.circle")
-                            .font(.system(size: 28))
-                            .foregroundColor(.white)
-                            .padding()
-                    }
-                    .padding(.leading, 15)
-
-                    Spacer()
-
-                    Button(action: { showSettings = true }) {
-                        Image(systemName: "gearshape")
-                            .font(.system(size: 28))
-                            .foregroundColor(.white)
-                            .padding()
-                    }
-                    .padding(.trailing, 15)
+        VStack {
+            Spacer()
+            HStack {
+                Button(action: { showAbout = true }) {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 28))
+                        .foregroundColor(.white)
+                        .padding()
                 }
-                .padding(.bottom, 30)
+                .padding(.leading, 15)
+
+                Spacer()
+
+                Button(action: { showSettings = true }) {
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 28))
+                        .foregroundColor(.white)
+                        .padding()
+                }
+                .padding(.trailing, 15)
             }
+            .padding(.bottom, 30)
         }
+    }
 
-        // Force removal of the hairline whenever we appear in a new screen
-        private func removeNavBarHairline() {
-            let appearance = UINavigationBarAppearance()
-            appearance.configureWithOpaqueBackground()
-            
-            // Same background as your main nav:
-            appearance.backgroundColor = UIColor(white: 0.12, alpha: 1.0)
-
-            // The crucial part for removing the line:
-            appearance.shadowColor = .clear
-
-            // Apply it to standard, compact, scrollEdge
-            UINavigationBar.appearance().standardAppearance = appearance
-            UINavigationBar.appearance().compactAppearance = appearance
-            UINavigationBar.appearance().scrollEdgeAppearance = appearance
+    // MARK: - Logic for Navigation
+    private func checkNavigationState() {
+        // Example logic that auto-navigates to pinned columns after simulation
+        if !coordinator.isLoading,
+           !coordinator.isChartBuilding,
+           !coordinator.monteCarloResults.isEmpty
+        {
+            showPinnedColumns = true
         }
+    }
     
-    // If you want to keep references, comment out old code:
+    private func navigateIfNeeded() {
+        if !coordinator.isLoading && !coordinator.isChartBuilding {
+            showPinnedColumns = true
+        }
+    }
+
+    // MARK: - Remove Nav Bar Hairline
+    private func removeNavBarHairline() {
+        let appearance = UINavigationBarAppearance()
+        appearance.configureWithOpaqueBackground()
+        appearance.backgroundColor = UIColor(white: 0.12, alpha: 1.0)
+        appearance.shadowColor = .clear
+
+        UINavigationBar.appearance().standardAppearance   = appearance
+        UINavigationBar.appearance().compactAppearance    = appearance
+        UINavigationBar.appearance().scrollEdgeAppearance = appearance
+    }
+
     /*
+    // If you still want references to old transitions or overrides:
     private var transitionToResultsButton: some View {
         VStack {
             HStack {
@@ -450,7 +444,8 @@ struct ContentView: View {
     }
     */
 
-    // Example columns if needed for something else
+    // MARK: - Example Columns
+    // If needed for something else, you can pass this to the bridging representable
     private var columns: [(String, PartialKeyPath<SimulationData>)] {
         switch simSettings.currencyPreference {
         case .usd:

@@ -4,7 +4,7 @@
 //
 //  Created by Conor on 17/02/2025.
 //
-
+/*
 import SwiftUI
 
 /// A SwiftUI view that demonstrates how to embed the pinned-column UIKit layout.
@@ -69,3 +69,4 @@ struct SomeParentView: View {
         ]
     }
 }
+*/
