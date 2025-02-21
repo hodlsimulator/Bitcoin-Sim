@@ -7,8 +7,6 @@
 
 import UIKit
 
-/// A UICollectionViewCell that displays two columns (tables) side by side.
-/// Each column is one (String, PartialKeyPath<SimulationData>) from the "pair".
 class TwoColumnPairCell: UICollectionViewCell {
 
     // Two tables for the two columns
@@ -22,7 +20,17 @@ class TwoColumnPairCell: UICollectionViewCell {
     // A callback so the parent can sync vertical scrolling with the pinned table
     var onScroll: ((UIScrollView) -> Void)?
 
+    // Declare containers and stack view as instance properties
+    private let leftContainer: UIView
+    private let rightContainer: UIView
+    private let mainStack: UIStackView
+
     override init(frame: CGRect) {
+        // Initialize the properties before calling super.init
+        leftContainer = UIView()
+        rightContainer = UIView()
+        mainStack = UIStackView(arrangedSubviews: [leftContainer, rightContainer])
+
         super.init(frame: frame)
 
         contentView.backgroundColor = UIColor(white: 0.12, alpha: 1.0)
@@ -31,10 +39,7 @@ class TwoColumnPairCell: UICollectionViewCell {
         setupTable(tableViewLeft)
         setupTable(tableViewRight)
 
-        // 2) Create containers for each table
-        let leftContainer = UIView()
-        let rightContainer = UIView()
-
+        // 2) Containers are already initialized, set their properties
         leftContainer.translatesAutoresizingMaskIntoConstraints = false
         rightContainer.translatesAutoresizingMaskIntoConstraints = false
 
@@ -45,7 +50,7 @@ class TwoColumnPairCell: UICollectionViewCell {
         tableViewLeft.translatesAutoresizingMaskIntoConstraints = false
         tableViewRight.translatesAutoresizingMaskIntoConstraints = false
 
-        // 4) Constrain tableViewLeft with a 20pt gap on the left
+        // 4) Constrain tableViewLeft with a 40pt gap on the left
         NSLayoutConstraint.activate([
             tableViewLeft.topAnchor.constraint(equalTo: leftContainer.topAnchor),
             tableViewLeft.bottomAnchor.constraint(equalTo: leftContainer.bottomAnchor),
@@ -61,8 +66,7 @@ class TwoColumnPairCell: UICollectionViewCell {
             tableViewRight.trailingAnchor.constraint(equalTo: rightContainer.trailingAnchor)
         ])
 
-        // 6) Now stack these two containers side by side
-        let mainStack = UIStackView(arrangedSubviews: [leftContainer, rightContainer])
+        // 6) Configure and add mainStack
         mainStack.axis = .horizontal
         mainStack.distribution = .fillEqually
         mainStack.spacing = 0
@@ -94,20 +98,44 @@ class TwoColumnPairCell: UICollectionViewCell {
 
     private func setupTable(_ table: UITableView) {
         table.dataSource = self
-        table.delegate = self
+        table.delegate   = self
         table.separatorStyle = .none
         table.backgroundColor = .clear
         table.showsVerticalScrollIndicator = false
-
-        // Register a row cell for each row
+        
+        table.contentInsetAdjustmentBehavior = .never
+        table.contentInset.top = 0
+        
+        // Force 44 pt rows, just like pinnedTableView
+        table.rowHeight = 44
+        
         table.register(OneColumnRowCell.self, forCellReuseIdentifier: "OneColumnRowCell")
+    }
+    
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        
+        // Log frames after layout is complete
+        DispatchQueue.main.async {
+            print("TwoColumnPairCell LEFT table frame:", self.tableViewLeft.frame)
+            print("TwoColumnPairCell LEFT contentInset:", self.tableViewLeft.contentInset,
+                  "adjusted:", self.tableViewLeft.adjustedContentInset)
+            print("TwoColumnPairCell RIGHT table frame:", self.tableViewRight.frame)
+            print("TwoColumnPairCell RIGHT contentInset:", self.tableViewRight.contentInset,
+                  "adjusted:", self.tableViewRight.adjustedContentInset)
+            
+            // Log container and stack frames
+            print("Left container frame:", self.leftContainer.frame)
+            print("Right container frame:", self.rightContainer.frame)
+            print("Main stack frame:", self.mainStack.frame)
+            print("Content view frame:", self.contentView.frame)
+        }
     }
 }
 
 // MARK: - UITableViewDataSource & Delegate
 
 extension TwoColumnPairCell: UITableViewDataSource, UITableViewDelegate {
-
     func tableView(_ tableView: UITableView,
                    numberOfRowsInSection section: Int) -> Int {
         return displayedData.count

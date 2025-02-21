@@ -36,10 +36,8 @@ class TwoColumnCollectionViewController: UIViewController {
 
         let layout = CenterSnapFlowLayout()
         layout.scrollDirection = .horizontal
-
-        // Make each cell the full screen width so only one (2-column) cell is visible
         let screenWidth = view.bounds.width
-        layout.itemSize = CGSize(width: screenWidth, height: view.bounds.height)
+        layout.itemSize = CGSize(width: screenWidth, height: view.bounds.height)  // Use view.bounds.height
         layout.minimumLineSpacing = 0
 
         // Shift the content to the right by 20 points
@@ -49,6 +47,7 @@ class TwoColumnCollectionViewController: UIViewController {
         cv.backgroundColor = .clear
         cv.showsHorizontalScrollIndicator = false
         cv.translatesAutoresizingMaskIntoConstraints = false
+        cv.contentInsetAdjustmentBehavior = .never  
 
         cv.dataSource = self
         cv.delegate = self
@@ -68,6 +67,18 @@ class TwoColumnCollectionViewController: UIViewController {
     /// Call this after updating `pairsData` or `displayedData` to refresh
     func reloadData() {
         internalCollectionView?.reloadData()
+    }
+    
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        guard let cv = self.internalCollectionView,
+              let layout = cv.collectionViewLayout as? UICollectionViewFlowLayout else {
+            return
+        }
+        let collectionViewHeight = cv.bounds.height
+        let screenWidth = self.view.bounds.width
+        layout.itemSize = CGSize(width: screenWidth, height: collectionViewHeight)
+        layout.invalidateLayout() // Ensure layout updates
     }
 }
 
