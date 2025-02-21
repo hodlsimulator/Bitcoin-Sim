@@ -100,6 +100,12 @@ class SinglePageColumnsVC: UIViewController, UITableViewDataSource, UITableViewD
             cell.label2.text = nil
         }
         
+        // NEW: alternate row colours, matching the pinned table
+        let isEvenRow = (indexPath.row % 2 == 0)
+        cell.contentView.backgroundColor = isEvenRow
+            ? UIColor(white: 0.10, alpha: 1)
+            : UIColor(white: 0.14, alpha: 1)
+        
         return cell
     }
     
