@@ -19,6 +19,8 @@
 		E14344D82D52DE5500225A49 /* FactorCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14344D72D52DE5300225A49 /* FactorCatalog.swift */; };
 		E14344DA2D53553D00225A49 /* SimulationSettings+FactorSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14344D92D53553800225A49 /* SimulationSettings+FactorSync.swift */; };
 		E14344DE2D545CA600225A49 /* ApplyDictionaryFactorsToSim.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14344DD2D545C9D00225A49 /* ApplyDictionaryFactorsToSim.swift */; };
+		E14AED6E2D684D040068B2A5 /* ColumnsCollectionViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14AED6D2D684D020068B2A5 /* ColumnsCollectionViewController.swift */; };
+		E14AED702D684DA40068B2A5 /* ColumnsCollectionCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14AED6F2D684DA20068B2A5 /* ColumnsCollectionCell.swift */; };
 		E14D23F52D37425D007CC11A /* SimulationSummaryCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14D23F42D374258007CC11A /* SimulationSummaryCardView.swift */; };
 		E14D23FA2D3A2260007CC11A /* S&P 500 Historical Data Monthly.csv in Resources */ = {isa = PBXBuildFile; fileRef = E14D23F82D3A2260007CC11A /* S&P 500 Historical Data Monthly.csv */; };
 		E14D23FC2D3A2260007CC11A /* Bitcoin Historical Data Weekly.csv in Resources */ = {isa = PBXBuildFile; fileRef = E14D23F72D3A2260007CC11A /* Bitcoin Historical Data Weekly.csv */; };
@@ -139,6 +141,8 @@
 		E14344D72D52DE5300225A49 /* FactorCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FactorCatalog.swift; sourceTree = "<group>"; };
 		E14344D92D53553800225A49 /* SimulationSettings+FactorSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SimulationSettings+FactorSync.swift"; sourceTree = "<group>"; };
 		E14344DD2D545C9D00225A49 /* ApplyDictionaryFactorsToSim.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplyDictionaryFactorsToSim.swift; sourceTree = "<group>"; };
+		E14AED6D2D684D020068B2A5 /* ColumnsCollectionViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColumnsCollectionViewController.swift; sourceTree = "<group>"; };
+		E14AED6F2D684DA20068B2A5 /* ColumnsCollectionCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColumnsCollectionCell.swift; sourceTree = "<group>"; };
 		E14D23F42D374258007CC11A /* SimulationSummaryCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulationSummaryCardView.swift; sourceTree = "<group>"; };
 		E14D23F72D3A2260007CC11A /* Bitcoin Historical Data Weekly.csv */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Bitcoin Historical Data Weekly.csv"; sourceTree = "<group>"; };
 		E14D23F82D3A2260007CC11A /* S&P 500 Historical Data Monthly.csv */ = {isa = PBXFileReference; lastKnownFileType = text; path = "S&P 500 Historical Data Monthly.csv"; sourceTree = "<group>"; };
@@ -292,6 +296,8 @@
 				E18C2BE02D259245006E7438 /* ChartSnapshotView.swift */,
 				E1A1E5282D2E38F9008F7658 /* CheckboxToggleStyle.swift */,
 				E1942C9C2D63FD9000F5B9A1 /* ColumnsCell.swift */,
+				E14AED6F2D684DA20068B2A5 /* ColumnsCollectionCell.swift */,
+				E14AED6D2D684D020068B2A5 /* ColumnsCollectionViewController.swift */,
 				E15D66542D678D930090F472 /* ColumnsPagerViewController.swift */,
 				E112E3732D58B2E700167E92 /* ConsentView.swift */,
 				E166A8B82CF955E80003F518 /* ContentOffsetScrollView.swift */,
@@ -565,6 +571,8 @@
 				E19D10EF2D40290A00E3A55E /* SimulationSettings+RestoreDefaults.swift in Sources */,
 				E1883F3C2D1DDC78007AA90B /* ParametersFormView.swift in Sources */,
 				E18C2BE12D259248006E7438 /* ChartSnapshotView.swift in Sources */,
+				E14AED6E2D684D040068B2A5 /* ColumnsCollectionViewController.swift in Sources */,
+				E14AED702D684DA40068B2A5 /* ColumnsCollectionCell.swift in Sources */,
 				E1A1E52D2D2E39E4008F7658 /* SnapshotExtensions.swift in Sources */,
 				E1A1E51F2D2A7364008F7658 /* PortfolioChartView.swift in Sources */,
 				E15DDF4D2D5AECBB00CDD30A /* FactorIntensitySection.swift in Sources */,
