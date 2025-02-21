@@ -42,7 +42,7 @@ class PinnedColumnTablesViewController: UIViewController {
         
         let headerHeight: CGFloat = 40
         NSLayoutConstraint.activate([
-            headersContainer.topAnchor.constraint(equalTo: view.topAnchor),
+            headersContainer.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             headersContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             headersContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             headersContainer.heightAnchor.constraint(equalToConstant: headerHeight)

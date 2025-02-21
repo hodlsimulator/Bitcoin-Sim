@@ -27,22 +27,53 @@ class TwoColumnPairCell: UICollectionViewCell {
 
         contentView.backgroundColor = UIColor(white: 0.12, alpha: 1.0)
 
-        // 1) Configure the two table views
+        // 1) Configure each table
         setupTable(tableViewLeft)
         setupTable(tableViewRight)
 
-        // 2) Place them side by side in a horizontal stack
-        let stack = UIStackView(arrangedSubviews: [tableViewLeft, tableViewRight])
-        stack.axis = .horizontal
-        stack.distribution = .fillEqually
-        stack.translatesAutoresizingMaskIntoConstraints = false
+        // 2) Create containers for each table
+        let leftContainer = UIView()
+        let rightContainer = UIView()
 
-        contentView.addSubview(stack)
+        leftContainer.translatesAutoresizingMaskIntoConstraints = false
+        rightContainer.translatesAutoresizingMaskIntoConstraints = false
+
+        // 3) Add the tables to their containers
+        leftContainer.addSubview(tableViewLeft)
+        rightContainer.addSubview(tableViewRight)
+
+        tableViewLeft.translatesAutoresizingMaskIntoConstraints = false
+        tableViewRight.translatesAutoresizingMaskIntoConstraints = false
+
+        // 4) Constrain tableViewLeft with a 20pt gap on the left
         NSLayoutConstraint.activate([
-            stack.topAnchor.constraint(equalTo: contentView.topAnchor),
-            stack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            stack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            stack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
+            tableViewLeft.topAnchor.constraint(equalTo: leftContainer.topAnchor),
+            tableViewLeft.bottomAnchor.constraint(equalTo: leftContainer.bottomAnchor),
+            tableViewLeft.leadingAnchor.constraint(equalTo: leftContainer.leadingAnchor, constant: 40),
+            tableViewLeft.trailingAnchor.constraint(equalTo: leftContainer.trailingAnchor)
+        ])
+
+        // 5) Constrain tableViewRight normally (no extra left offset)
+        NSLayoutConstraint.activate([
+            tableViewRight.topAnchor.constraint(equalTo: rightContainer.topAnchor),
+            tableViewRight.bottomAnchor.constraint(equalTo: rightContainer.bottomAnchor),
+            tableViewRight.leadingAnchor.constraint(equalTo: rightContainer.leadingAnchor),
+            tableViewRight.trailingAnchor.constraint(equalTo: rightContainer.trailingAnchor)
+        ])
+
+        // 6) Now stack these two containers side by side
+        let mainStack = UIStackView(arrangedSubviews: [leftContainer, rightContainer])
+        mainStack.axis = .horizontal
+        mainStack.distribution = .fillEqually
+        mainStack.spacing = 0
+        mainStack.translatesAutoresizingMaskIntoConstraints = false
+
+        contentView.addSubview(mainStack)
+        NSLayoutConstraint.activate([
+            mainStack.topAnchor.constraint(equalTo: contentView.topAnchor),
+            mainStack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            mainStack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            mainStack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
         ])
     }
 
@@ -67,9 +98,8 @@ class TwoColumnPairCell: UICollectionViewCell {
         table.separatorStyle = .none
         table.backgroundColor = .clear
         table.showsVerticalScrollIndicator = false
-        table.translatesAutoresizingMaskIntoConstraints = false
 
-        // Register a row cell for each row in the column
+        // Register a row cell for each row
         table.register(OneColumnRowCell.self, forCellReuseIdentifier: "OneColumnRowCell")
     }
 }
@@ -95,8 +125,7 @@ extension TwoColumnPairCell: UITableViewDataSource, UITableViewDelegate {
 
         let rowData = displayedData[indexPath.row]
 
-        // Determine which column (left = 0, right = 1).
-        // If there's only 1 column in pair, the right table shows no data.
+        // Which column? (left = 0, right = 1)
         let colIndex = (tableView == tableViewLeft) ? 0 : 1
         if colIndex < pair.count {
             let (_, partial) = pair[colIndex]
