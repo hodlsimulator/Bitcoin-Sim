@@ -1,906 +1,265 @@
-diff --git a/BTC Simulator/ColumnsPagerViewController.swift b/BTC Simulator/ColumnsPagerViewController.swift
-index f8bc641..d4e7d74 100644
---- a/BTC Simulator/ColumnsPagerViewController.swift	
-+++ b/BTC Simulator/ColumnsPagerViewController.swift	
-@@ -8,93 +8,97 @@
- import UIKit
+diff --git a/BTC Simulator/ColumnsCollectionViewController.swift b/BTC Simulator/ColumnsCollectionViewController.swift
+index a6989e7..31158a9 100644
+--- a/BTC Simulator/ColumnsCollectionViewController.swift	
++++ b/BTC Simulator/ColumnsCollectionViewController.swift	
+@@ -9,32 +9,29 @@ import UIKit
  
- class ColumnsPagerViewController: UIPageViewController {
-+
-+    // 1) The columns you want, in the exact sequence you want them to appear.
-+    //    If allColumns = [A, B, C, D], we'll form pages [A,B], [B,C], [C,D].
-+    //    Use PartialKeyPath<SimulationData> so we can handle Int/Double/Decimal.
-+    var allColumns: [(String, PartialKeyPath<SimulationData>)] = []
-     
--    // 1) The columns you want to show, e.g. [("BTC Price", \.btcPriceUSD), ("Portfolio", \.portfolioValueUSD), ...]
--    var allColumns: [(String, KeyPath<SimulationData, Decimal>)] = []
--    
--    // 2) The entire array of data so each page can display rows. Typically from "representable.displayedData".
-+    // 2) The entire array of data so each page can display rows.
-     var displayedData: [SimulationData] = []
-     
--    // Internally we chunk "allColumns" into pairs so each page shows 2 columns.
--    private var pagesData: [[(String, KeyPath<SimulationData, Decimal>)]] = []
-+    // The array of pages, each page is a pair [col[i], col[i+1]] or single-col if only 1
-+    private var pagesData: [[(String, PartialKeyPath<SimulationData>)]] = []
-     
--    // Track the SinglePageColumnsVC currently visible to the user
-+    // Track the currently visible SinglePageColumnsVC
-     var currentActivePage: SinglePageColumnsVC?
-     
--    // A callback so the parent can observe page changes
-+    // A callback so a parent can observe page changes if needed
-     var onPageChanged: ((SinglePageColumnsVC) -> Void)?
--    
-+
-+    // MARK: - Lifecycle
-+
+ class ColumnsCollectionViewController: UIViewController {
+ 
+-    // The columns & data we want to display.
+-    // PartialKeyPath so each property can be Int/Double/Decimal.
+-    var allColumns: [(String, PartialKeyPath<SimulationData>)] = []
+-    var displayedData: [SimulationData] = []
++    // The columns & data we want to display (PartialKeyPath so each can be Int/Double/Decimal)
++    public var allColumns: [(String, PartialKeyPath<SimulationData>)] = []
++    public var displayedData: [SimulationData] = []
+ 
+     // For pinned-table scrolling sync
+-    var onScrollSync: ((UIScrollView) -> Void)?
++    public var onScrollSync: ((UIScrollView) -> Void)?
+ 
+-    // Optionally track a “currentActiveIndex” if needed
++    // (Optional) track a current index
+     private var currentActiveIndex: Int = 0
+ 
+-    // The collection view + a custom layout
+-    private var collectionView: UICollectionView?
++    // The collection view + flow layout
++    // Renamed to avoid overshadowing dataSource func "collectionView(_:_:)"
++    public var columnsCollectionView: UICollectionView?
+ 
      override func viewDidLoad() {
          super.viewDidLoad()
-         
-         dataSource = self
--        delegate = self  // important, so we get page transition callbacks
-+        delegate = self
-         
--        // Make the internal scroll view use paging
-+        // Ensure the scroll view is paging-enabled for snapping
-         if let scrollView = view.subviews.compactMap({ $0 as? UIScrollView }).first {
-             scrollView.isPagingEnabled = true
-         }
-         
--        pagesData = chunkColumnsIntoPairs(allColumns)
--        
--        // Show page 0 by default
--        if let firstVC = makeColumnsPageVC(forPageIndex: 0) {
--            setViewControllers([firstVC], direction: .forward, animated: false)
--            currentActivePage = firstVC
--            
--            // IMPORTANT: Trigger onPageChanged for the initial page,
--            // so that the pinned table's "onScroll" can be set up even if we never swipe pages.
--            onPageChanged?(firstVC)
--        }
-+        // Build pages and display the first page
-+        pagesData = buildSlidingPairs(from: allColumns)
-+        showPage(atIndex: 0)
-     }
-     
--    /// Splits an array of columns into subarrays of size 2 (the "pairs").
--    private func chunkColumnsIntoPairs(
--        _ columns: [(String, KeyPath<SimulationData, Decimal>)]
--    ) -> [[(String, KeyPath<SimulationData, Decimal>)]] {
--        
--        var result = [[(String, KeyPath<SimulationData, Decimal>)]]()
--        var temp = [(String, KeyPath<SimulationData, Decimal>)]()
-+    // MARK: - Page Building Logic
-+
-+    /// If allColumns = [A,B,C,D], we create consecutive pairs:
-+    /// Page0: [A,B], Page1: [B,C], Page2: [C,D].
-+    private func buildSlidingPairs(
-+        from columns: [(String, PartialKeyPath<SimulationData>)]
-+    ) -> [[(String, PartialKeyPath<SimulationData>)]] {
-         
--        for col in columns {
--            temp.append(col)
--            if temp.count == 2 {
--                result.append(temp)
--                temp.removeAll()
--            }
-+        // If we have 0 or 1 column, just make a single page with that column (if any)
-+        guard columns.count > 1 else {
-+            if columns.isEmpty { return [] }
-+            return [[columns[0]]]
-         }
--        // If we had an odd number of columns, there's 1 leftover => final single-col page
--        if !temp.isEmpty {
--            result.append(temp)
-+        
-+        // Create consecutive pairs
-+        var result: [[(String, PartialKeyPath<SimulationData>)]] = []
-+        for i in 0..<(columns.count - 1) {
-+            let pair = [columns[i], columns[i+1]]
-+            result.append(pair)
-         }
-         return result
-     }
-     
--    /// Creates a new SinglePageColumnsVC for a given page index
-+    /// Show a specific page by index (if valid)
-+    private func showPage(atIndex index: Int) {
-+        guard index >= 0, index < pagesData.count else { return }
-+        guard let pageVC = makeColumnsPageVC(forPageIndex: index) else { return }
-+        
-+        setViewControllers([pageVC], direction: .forward, animated: false)
-+        currentActivePage = pageVC
-+        onPageChanged?(pageVC)
-+    }
-+    
-+    /// Create a SinglePageColumnsVC for a particular page index
-     private func makeColumnsPageVC(forPageIndex index: Int) -> SinglePageColumnsVC? {
-         guard index >= 0 && index < pagesData.count else { return nil }
-         
-         let vc = SinglePageColumnsVC()
--        vc.columnsToShow = pagesData[index]  // up to 2 columns
-+        vc.columnsToShow = pagesData[index]  // e.g. [A,B]
-         vc.displayedData = displayedData
-         return vc
-     }
-     
-+    /// Rebuild pages (e.g. if columns or data changed) and show page 0
-     func reloadPages() {
--        pagesData = chunkColumnsIntoPairs(allColumns)
--        if let first = makeColumnsPageVC(forPageIndex: 0) {
--            setViewControllers([first], direction: .forward, animated: false, completion: nil)
--            currentActivePage = first
--            
--            // Also call onPageChanged here so the pinned table gets the initial onScroll
--            onPageChanged?(first)
--        }
-+        pagesData = buildSlidingPairs(from: allColumns)
-+        showPage(atIndex: 0)
-     }
- }
- 
- // MARK: - UIPageViewControllerDataSource
-+
- extension ColumnsPagerViewController: UIPageViewControllerDataSource {
-     
-+    /// If the user swipes left from the current page, we load the previous page
-     func pageViewController(_ pageViewController: UIPageViewController,
-                             viewControllerBefore viewController: UIViewController) -> UIViewController? {
-         
-@@ -106,6 +110,7 @@ extension ColumnsPagerViewController: UIPageViewControllerDataSource {
-         return makeColumnsPageVC(forPageIndex: prevIndex)
-     }
-     
-+    /// If the user swipes right from the current page, we load the next page
-     func pageViewController(_ pageViewController: UIPageViewController,
-                             viewControllerAfter viewController: UIViewController) -> UIViewController? {
-         
-@@ -117,9 +122,11 @@ extension ColumnsPagerViewController: UIPageViewControllerDataSource {
-         return makeColumnsPageVC(forPageIndex: nextIndex)
-     }
-     
-+    /// Find the index in pagesData for a given SinglePageColumnsVC
-     private func indexForPageVC(_ vc: SinglePageColumnsVC) -> Int? {
-         guard let pageCols = vc.columnsToShow else { return nil }
-         
-+        // Compare each chunk in pagesData to see which one matches
-         return pagesData.firstIndex { chunk in
-             chunk.map(\.0) == pageCols.map(\.0)
-         }
-@@ -127,22 +134,21 @@ extension ColumnsPagerViewController: UIPageViewControllerDataSource {
- }
- 
- // MARK: - UIPageViewControllerDelegate
-+
- extension ColumnsPagerViewController: UIPageViewControllerDelegate {
-     
--    /// Called when the user finishes swiping to a new page
-+    /// Called when a swipe completes and a new page is visible
-     func pageViewController(_ pageViewController: UIPageViewController,
-                             didFinishAnimating finished: Bool,
-                             previousViewControllers: [UIViewController],
-                             transitionCompleted completed: Bool) {
-         
--        guard completed, let visibleVC = viewControllers?.first as? SinglePageColumnsVC else {
-+        guard completed,
-+              let visibleVC = viewControllers?.first as? SinglePageColumnsVC else {
-             return
-         }
-         
--        // Update currentActivePage
-         currentActivePage = visibleVC
--        
--        // Notify parent so it can sync or do whatever is needed
-         onPageChanged?(visibleVC)
-     }
- }
-diff --git a/BTC Simulator/PinnedColumnBridgeRepresentable.swift b/BTC Simulator/PinnedColumnBridgeRepresentable.swift
-index 48b4598..eded3c3 100644
---- a/BTC Simulator/PinnedColumnBridgeRepresentable.swift	
-+++ b/BTC Simulator/PinnedColumnBridgeRepresentable.swift	
-@@ -8,18 +8,15 @@
- import SwiftUI
- import UIKit
- 
--// 1) Make sure to remove the default SwiftUI bar or hide it.
--//    For example, wrap the view in a NavigationView, but hide that nav bar:
- struct PinnedColumnBridgeRepresentable: View {
- 
--    // Dummy ObservedObjects
-+    // Observed objects
-     @ObservedObject var coordinator: SimulationCoordinator
-     @ObservedObject var inputManager: PersistentInputManager
-     @ObservedObject var monthlySimSettings: MonthlySimulationSettings
-     @ObservedObject var simSettings: SimulationSettings
- 
-     var body: some View {
--        // If you wrap this in a NavigationView, hide the bar:
-         NavigationView {
-             BridgeContainer(
-                 coordinator: coordinator,
-@@ -27,31 +24,36 @@ struct PinnedColumnBridgeRepresentable: View {
-                 monthlySimSettings: monthlySimSettings,
-                 simSettings: simSettings
-             )
--            // 2) Let your UIKit view stretch under the safe areas:
-             .ignoresSafeArea(.all)
-             .navigationBarHidden(true)
-             .navigationBarBackButtonHidden(true)
-         }
--        // Or remove NavigationView altogether if you don’t need SwiftUI nav management
-         .navigationViewStyle(StackNavigationViewStyle())
-     }
- 
-     struct BridgeContainer: UIViewControllerRepresentable {
-+        
-+        // The objects you want to share with your UIKit VC
-         let coordinator: SimulationCoordinator
-         let inputManager: PersistentInputManager
-         let monthlySimSettings: MonthlySimulationSettings
-         let simSettings: SimulationSettings
 -
--        func makeCoordinator() -> Coordinator { Coordinator(self) }
-+        
-+        func makeCoordinator() -> Coordinator {
-+            Coordinator(self)
-+        }
+         view.backgroundColor = UIColor.clear
  
-         func makeUIViewController(context: Context) -> PinnedColumnBridgeViewController {
-             let vc = PinnedColumnBridgeViewController()
-+            // Now the UIKit VC can access all the above objects by referencing .representableContainer
-             vc.representableContainer = self
-+            vc.simSettings = self.simSettings
-             return vc
+         // 1) Create the layout
+         let layout = UICollectionViewFlowLayout()
+         layout.scrollDirection = .horizontal
+ 
+-        // For partial columns:
+-        //   - item width < screen width
+-        //   - a bit of spacing so you see a “peek” of next column
++        // For partial columns, each cell narrower than screen
+         layout.itemSize = CGSize(width: 240, height: view.bounds.height)
+         layout.minimumLineSpacing = 10
+ 
+@@ -42,15 +39,16 @@ class ColumnsCollectionViewController: UIViewController {
+         let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
+         cv.backgroundColor = .clear
+         cv.showsHorizontalScrollIndicator = false
+-        cv.decelerationRate = .fast       // for a snappier feel
+-        cv.isPagingEnabled = false        // we want partial scroll, not full paging
++        cv.decelerationRate = .fast  // for snappier feel
++        cv.isPagingEnabled = false   // we want partial scroll, not full paging
+         cv.dataSource = self
+         cv.delegate = self
+         cv.translatesAutoresizingMaskIntoConstraints = false
+-        self.collectionView = cv
+ 
+-        view.addSubview(cv)
++        // Store in our public var
++        self.columnsCollectionView = cv
+ 
++        view.addSubview(cv)
+         NSLayoutConstraint.activate([
+             cv.topAnchor.constraint(equalTo: view.topAnchor),
+             cv.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+@@ -64,15 +62,21 @@ class ColumnsCollectionViewController: UIViewController {
+ 
+     override func viewDidAppear(_ animated: Bool) {
+         super.viewDidAppear(animated)
+-        // If you want to default to columns #2 and #3,
+-        // you might scroll to index 2 so it’s at or near the left edge:
++        // If you want to default to columns #2 & #3:
+         if allColumns.count > 2 {
+             let idxPath = IndexPath(item: 2, section: 0)
+-            collectionView?.scrollToItem(at: idxPath, at: .left, animated: false)
++            columnsCollectionView?.scrollToItem(at: idxPath, at: .left, animated: false)
          }
-         
-         func updateUIViewController(_ uiViewController: PinnedColumnBridgeViewController,
-                                     context: Context) {
-+            // If any of the properties changed, keep them in sync
-             uiViewController.representableContainer = self
-         }
-         
-diff --git a/BTC Simulator/PinnedColumnBridgeViewController.swift b/BTC Simulator/PinnedColumnBridgeViewController.swift
-index 1c732b8..2aaafa3 100644
---- a/BTC Simulator/PinnedColumnBridgeViewController.swift	
-+++ b/BTC Simulator/PinnedColumnBridgeViewController.swift	
-@@ -9,7 +9,8 @@ import UIKit
- import SwiftUI
- 
- class PinnedColumnBridgeViewController: UIViewController {
--
-+    var simSettings: SimulationSettings?
-+    
-     var representableContainer: PinnedColumnBridgeRepresentable.BridgeContainer?
- 
-     private let hostingController = UIHostingController(rootView: AnyView(EmptyView()))
-@@ -194,7 +195,7 @@ class PinnedColumnBridgeViewController: UIViewController {
-                 }
-             }
-         }
--    }   
-+    }
- 
-     override func viewWillAppear(_ animated: Bool) {
-         super.viewWillAppear(animated)
-@@ -265,20 +266,28 @@ class PinnedColumnBridgeViewController: UIViewController {
- 
-     private func populatePinnedTable() {
-         guard let container = representableContainer else { return }
-+        guard let simSettings = simSettings else { return }
+     }
 +
-+        let results = container.coordinator.monteCarloResults
-+        print("DEBUG: populatePinnedTable - results count =>", results.count)
++    /// Public method so other VCs can trigger a reload easily
++    public func reloadCollectionData() {
++        columnsCollectionView?.reloadData()
++    }
+ }
  
-+        // The rest is the same
-         pinnedColumnTablesVC.representable = PinnedColumnTablesRepresentable(
--            displayedData: container.coordinator.monteCarloResults,
-+            displayedData: results,
-             pinnedColumnTitle: "Week",
--            pinnedColumnKeyPath: \.week,  // Left/pinned column
-+            pinnedColumnKeyPath: \.week,
-             columns: [
--                // The "other" columns on the right. Add as many as you want,
--                // each pointing to a Decimal property in SimulationData.
-+                ("Starting BTC (BTC)", \SimulationData.startingBTC),
-+                ("Net BTC (BTC)", \SimulationData.netBTCHoldings),
-                 ("BTC Price (USD)", \SimulationData.btcPriceUSD),
--                ("Portfolio (USD)", \SimulationData.portfolioValueUSD)
-+                ("Portfolio (USD)", \SimulationData.portfolioValueUSD),
-+                ("Contrib (USD)", \SimulationData.contributionUSD),
-+                ("Fee (USD)", \SimulationData.transactionFeeUSD),
-             ],
-             lastViewedRow: .constant(0),
-             scrollToBottomFlag: .constant(false),
--            isAtBottom: .constant(false)
-+            isAtBottom: .constant(false),
-+            simSettings: simSettings
++// MARK: - UICollectionViewDataSource & Delegate
++
+ extension ColumnsCollectionViewController: UICollectionViewDataSource, UICollectionViewDelegate {
+ 
+     func collectionView(_ collectionView: UICollectionView,
+@@ -82,7 +86,7 @@ extension ColumnsCollectionViewController: UICollectionViewDataSource, UICollect
+ 
+     func collectionView(_ collectionView: UICollectionView,
+                         cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+-        
++
+         guard let cell = collectionView.dequeueReusableCell(
+             withReuseIdentifier: "ColumnsCollectionCell",
+             for: indexPath
+@@ -97,9 +101,12 @@ extension ColumnsCollectionViewController: UICollectionViewDataSource, UICollect
+             displayedData: displayedData
          )
-     }
  
-diff --git a/BTC Simulator/PinnedColumnTablesRepresentable.swift b/BTC Simulator/PinnedColumnTablesRepresentable.swift
-index 41c05c9..65465a8 100644
---- a/BTC Simulator/PinnedColumnTablesRepresentable.swift	
-+++ b/BTC Simulator/PinnedColumnTablesRepresentable.swift	
-@@ -8,22 +8,6 @@
- import SwiftUI
- 
- /// A SwiftUI wrapper around the UIKit-based pinned-column table layout.
--///
--/// Usage example inside SwiftUI:
--///
--///     PinnedColumnTablesRepresentable(
--///         displayedData: mySimulationDataArray,
--///         pinnedColumnTitle: "Week",
--///         pinnedColumnKeyPath: \SimulationData.week,
--///         columns: [
--///             ("BTC Price (USD)", \SimulationData.btcPriceUSD),
--///             ("Portfolio (USD)", \SimulationData.portfolioValueUSD)
--///         ],
--///         lastViewedRow: $lastViewedRow,
--///         scrollToBottomFlag: $scrollToBottomFlag,
--///         isAtBottom: $isAtBottom
--///     )
--///
- struct PinnedColumnTablesRepresentable: UIViewControllerRepresentable {
- 
-     // MARK: - Inputs from SwiftUI
-@@ -34,16 +18,13 @@ struct PinnedColumnTablesRepresentable: UIViewControllerRepresentable {
-     /// Title for the pinned column (e.g. "Week", "Month")
-     let pinnedColumnTitle: String
- 
--    /// A key path to the pinned value in each SimulationData (e.g. \.week)
-+    /// A key path to the pinned value in each SimulationData (e.g. \.week).
-     /// This pinned column is shown on the left and does NOT need to be
-     /// included in 'columns' below.
-     let pinnedColumnKeyPath: KeyPath<SimulationData, Int>
- 
--    /// The list of additional columns you want on the right side.
--    /// Each tuple is (columnTitle, keyPath).
--    /// IMPORTANT: If you want these columns to appear in the pager,
--    /// each partial key path must point to a Decimal property.
--    let columns: [(String, PartialKeyPath<SimulationData>)]
-+    /// A default set of columns if you want (but we’ll re-filter them below).
-+    var columns: [(String, PartialKeyPath<SimulationData>)] = []
- 
-     /// Where we store or retrieve the user’s last viewed row.
-     @Binding var lastViewedRow: Int
-@@ -54,7 +35,10 @@ struct PinnedColumnTablesRepresentable: UIViewControllerRepresentable {
-     /// Whether or not the user is currently scrolled near the bottom
-     @Binding var isAtBottom: Bool
- 
--    // MARK: - UIViewControllerRepresentable Requirements
-+    /// The user’s currency settings (USD/EUR/both).
-+    @ObservedObject var simSettings: SimulationSettings
-+
-+    // MARK: - UIViewControllerRepresentable
- 
-     func makeCoordinator() -> Coordinator {
-         Coordinator(self)
-@@ -63,25 +47,24 @@ struct PinnedColumnTablesRepresentable: UIViewControllerRepresentable {
-     func makeUIViewController(context: Context) -> PinnedColumnTablesViewController {
-         let vc = PinnedColumnTablesViewController()
-         vc.representable = self
--        
--        // Whenever the pinned VC detects near-bottom scrolling, update SwiftUI's binding
-+        // Setup bottom-detection binding
-         vc.onIsAtBottomChanged = { newValue in
-             self.isAtBottom = newValue
-         }
--        
-         return vc
-     }
- 
-     func updateUIViewController(_ uiViewController: PinnedColumnTablesViewController,
-                                 context: Context) {
-+        // 1) Reassign representable (in case any SwiftUI changes occurred).
-         uiViewController.representable = self
- 
--        // Hook up again in case the VC is re-used
-+        // 2) Re-hook onIsAtBottomChanged
-         uiViewController.onIsAtBottomChanged = { newValue in
-             self.isAtBottom = newValue
-         }
- 
--        // If SwiftUI sets scrollToBottomFlag:
-+        // 3) If SwiftUI sets scrollToBottomFlag:
-         if scrollToBottomFlag {
-             uiViewController.scrollToBottom()
-             // Reset the flag to avoid repeated scrolling
-@@ -89,10 +72,52 @@ struct PinnedColumnTablesRepresentable: UIViewControllerRepresentable {
-                 self._scrollToBottomFlag.wrappedValue = false
-             }
-         }
-+
-+        // 4) Filter columns based on simSettings.currencyPreference
-+        //    You can do your entire logic here or read from .columns and filter it.
-+        var filteredColumns: [(String, PartialKeyPath<SimulationData>)] = []
-+
-+        // Always show these (Double)
-+        filteredColumns.append(("Starting BTC (BTC)", \SimulationData.startingBTC))
-+        filteredColumns.append(("Net BTC (BTC)", \SimulationData.netBTCHoldings))
-+
-+        // Next, BTC price columns (Decimal)
-+        switch simSettings.currencyPreference {
-+        case .usd:
-+            filteredColumns.append(("BTC Price (USD)", \SimulationData.btcPriceUSD))
-+            filteredColumns.append(("Portfolio (USD)", \SimulationData.portfolioValueUSD))
-+        case .eur:
-+            filteredColumns.append(("BTC Price (EUR)", \SimulationData.btcPriceEUR))
-+            filteredColumns.append(("Portfolio (EUR)", \SimulationData.portfolioValueEUR))
-+        case .both:
-+            filteredColumns.append(("BTC Price (USD)", \SimulationData.btcPriceUSD))
-+            filteredColumns.append(("BTC Price (EUR)", \SimulationData.btcPriceEUR))
-+            filteredColumns.append(("Portfolio (USD)", \SimulationData.portfolioValueUSD))
-+            filteredColumns.append(("Portfolio (EUR)", \SimulationData.portfolioValueEUR))
++        // If you want vertical scroll sync:
++        cell.onScroll = { [weak self] scrollView in
++            // Pass up to pinned table
++            self?.onScrollSync?(scrollView)
 +        }
 +
-+        // Next, single-currency columns for contributions, fees, and withdraw
-+        switch simSettings.currencyPreference {
-+        case .usd, .both:
-+            filteredColumns.append(("Contrib (USD)", \SimulationData.contributionUSD))
-+            filteredColumns.append(("Fee (USD)", \SimulationData.transactionFeeUSD))
-+            filteredColumns.append(("Withdraw (USD)", \SimulationData.withdrawalUSD))
-+        case .eur:
-+            filteredColumns.append(("Contrib (EUR)", \SimulationData.contributionEUR))
-+            filteredColumns.append(("Fee (EUR)", \SimulationData.transactionFeeEUR))
-+            filteredColumns.append(("Withdraw (EUR)", \SimulationData.withdrawalEUR))
-+        }
-+
-+        // Finally, net contrib BTC
-+        filteredColumns.append(("Net Contrib BTC", \SimulationData.netContributionBTC))
-+
-+        // 5) Assign that final array to the VC’s pager
-+        uiViewController.columnsPagerVC.allColumns = filteredColumns
-+        uiViewController.columnsPagerVC.displayedData = displayedData
-+        uiViewController.columnsPagerVC.reloadPages()
+         return cell
      }
- 
-     // MARK: - Coordinator
 -
-     class Coordinator: NSObject {
-         var parent: PinnedColumnTablesRepresentable
-         init(_ parent: PinnedColumnTablesRepresentable) {
+-    // If you want custom spacing or sizing beyond the FlowLayout’s itemSize,
+-    // implement delegateFlowLayout methods here. But the big one is itemSize.
+ }
 diff --git a/BTC Simulator/PinnedColumnTablesViewController.swift b/BTC Simulator/PinnedColumnTablesViewController.swift
-index db6bc88..a44e78d 100644
+index a065a75..8f5dc6d 100644
 --- a/BTC Simulator/PinnedColumnTablesViewController.swift	
 +++ b/BTC Simulator/PinnedColumnTablesViewController.swift	
-@@ -9,14 +9,17 @@ import UIKit
- 
- class PinnedColumnTablesViewController: UIViewController {
-     
--    // Make it optional so we don't crash if it's nil
-+    // We'll have it optional so we don't crash if it's nil
-     var representable: PinnedColumnTablesRepresentable?
- 
-+    // If needed: onIsAtBottomChanged from the representable
-+    var onIsAtBottomChanged: ((Bool) -> Void)?
-+
-     // Left table for the pinned column
+@@ -18,12 +18,8 @@ class PinnedColumnTablesViewController: UIViewController {
+     // Left table for the pinned (e.g. "Week") column
      let pinnedTableView = UITableView(frame: .zero, style: .plain)
      
--    // Instead of a single columns table, we now embed a ColumnsPagerViewController on the right
--    private let columnsPagerVC = ColumnsPagerViewController(
-+    // The pager on the right
-+    let columnsPagerVC = ColumnsPagerViewController(
-         transitionStyle: .scroll,
-         navigationOrientation: .horizontal,
-         options: nil
-@@ -25,23 +28,22 @@ class PinnedColumnTablesViewController: UIViewController {
+-    // The pager on the right
+-    let columnsPagerVC = ColumnsPagerViewController(
+-        transitionStyle: .scroll,
+-        navigationOrientation: .horizontal,
+-        options: nil
+-    )
++    // Now we embed our new ColumnsCollectionViewController on the right
++    private let columnsCollectionVC = ColumnsCollectionViewController()
+     
      // A label/header for the pinned column
      private let pinnedHeaderLabel = UILabel()
-     
--    // We'll call this whenever we detect scrolling is near the bottom
--    var onIsAtBottomChanged: ((Bool) -> Void)?
--    
-     // Prevent infinite scroll-callback loops
-     private var isSyncingScroll = false
- 
-+    // Two labels for the dynamic column titles
-+    private let col1Label = UILabel()
-+    private let col2Label = UILabel()
-+
-     override func viewDidLoad() {
-         super.viewDidLoad()
-         view.backgroundColor = UIColor(white: 0.12, alpha: 1.0)
- 
--        // 1) Create a container for the entire header row.
-+        // 1) Container for the entire header row
-         let headersContainer = UIView()
-         headersContainer.translatesAutoresizingMaskIntoConstraints = false
-         view.addSubview(headersContainer)
-         
--        // Constrain this headersContainer to the top of our VC’s view.
--        // We'll give it a fixed height of 40 for the headers.
-         let headerHeight: CGFloat = 40
-         NSLayoutConstraint.activate([
-             headersContainer.topAnchor.constraint(equalTo: view.topAnchor),
-@@ -50,13 +52,12 @@ class PinnedColumnTablesViewController: UIViewController {
-             headersContainer.heightAnchor.constraint(equalToConstant: headerHeight)
-         ])
-         
--        // 2) The pinned header (left side, for "Week")
-+        // 2) The pinned header (left side)
-         let pinnedHeaderView = UIView()
-         pinnedHeaderView.backgroundColor = .black
-         pinnedHeaderView.translatesAutoresizingMaskIntoConstraints = false
-         headersContainer.addSubview(pinnedHeaderView)
-         
--        // Give it the same width as the pinned table (70).
-         NSLayoutConstraint.activate([
-             pinnedHeaderView.topAnchor.constraint(equalTo: headersContainer.topAnchor),
-             pinnedHeaderView.bottomAnchor.constraint(equalTo: headersContainer.bottomAnchor),
-@@ -64,7 +65,6 @@ class PinnedColumnTablesViewController: UIViewController {
-             pinnedHeaderView.widthAnchor.constraint(equalToConstant: 70)
-         ])
-         
--        // Add the "Week" label
-         pinnedHeaderLabel.textColor = .orange
-         pinnedHeaderLabel.font = UIFont.boldSystemFont(ofSize: 14)
-         pinnedHeaderLabel.translatesAutoresizingMaskIntoConstraints = false
-@@ -75,13 +75,12 @@ class PinnedColumnTablesViewController: UIViewController {
-             pinnedHeaderLabel.centerYAnchor.constraint(equalTo: pinnedHeaderView.centerYAnchor)
-         ])
-         
--        // 3) A columns header view (right side) for the two column titles
-+        // 3) A columns header view (right side)
-         let columnsHeaderView = UIView()
-         columnsHeaderView.backgroundColor = .black
-         columnsHeaderView.translatesAutoresizingMaskIntoConstraints = false
-         headersContainer.addSubview(columnsHeaderView)
-         
--        // Fill the remaining width to the right
-         NSLayoutConstraint.activate([
-             columnsHeaderView.topAnchor.constraint(equalTo: headersContainer.topAnchor),
-             columnsHeaderView.bottomAnchor.constraint(equalTo: headersContainer.bottomAnchor),
-@@ -89,9 +88,7 @@ class PinnedColumnTablesViewController: UIViewController {
-             columnsHeaderView.trailingAnchor.constraint(equalTo: headersContainer.trailingAnchor)
-         ])
-         
--        // (1) BTC Price label near the left
--        let col1Label = UILabel()
--        col1Label.text = "BTC Price (USD)"
-+        // col1Label
-         col1Label.textColor = .orange
-         col1Label.font = UIFont.boldSystemFont(ofSize: 14)
-         col1Label.translatesAutoresizingMaskIntoConstraints = false
-@@ -102,9 +99,7 @@ class PinnedColumnTablesViewController: UIViewController {
-             col1Label.centerYAnchor.constraint(equalTo: columnsHeaderView.centerYAnchor)
-         ])
-         
--        // (2) Portfolio label, can adjust the 165 constant to position
--        let col2Label = UILabel()
--        col2Label.text = "Portfolio (USD)"
-+        // col2Label
-         col2Label.textColor = .orange
-         col2Label.font = UIFont.boldSystemFont(ofSize: 14)
-         col2Label.translatesAutoresizingMaskIntoConstraints = false
-@@ -115,19 +110,18 @@ class PinnedColumnTablesViewController: UIViewController {
-             col2Label.centerYAnchor.constraint(equalTo: columnsHeaderView.centerYAnchor)
-         ])
-         
--        // 4) Now set up the pinned table below the header row
-+        // 4) Pinned table
-         pinnedTableView.translatesAutoresizingMaskIntoConstraints = false
-         view.addSubview(pinnedTableView)
-         
-         NSLayoutConstraint.activate([
--            // pinned table is directly beneath the headersContainer
-             pinnedTableView.topAnchor.constraint(equalTo: headersContainer.bottomAnchor),
-             pinnedTableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-             pinnedTableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+@@ -121,17 +117,17 @@ class PinnedColumnTablesViewController: UIViewController {
              pinnedTableView.widthAnchor.constraint(equalToConstant: 70)
          ])
          
--        // 5) Embed the columns pager to the right of the pinned table
-+        // 5) Add columns pager as a child
-         addChild(columnsPagerVC)
-         columnsPagerVC.view.translatesAutoresizingMaskIntoConstraints = false
-         view.addSubview(columnsPagerVC.view)
-@@ -140,7 +134,7 @@ class PinnedColumnTablesViewController: UIViewController {
-             columnsPagerVC.view.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+-        // 5) Add columnsPagerVC as a child
+-        addChild(columnsPagerVC)
+-        columnsPagerVC.view.translatesAutoresizingMaskIntoConstraints = false
+-        view.addSubview(columnsPagerVC.view)
+-        columnsPagerVC.didMove(toParent: self)
++        // 5) Add columnsCollectionVC as a child
++        addChild(columnsCollectionVC)
++        columnsCollectionVC.view.translatesAutoresizingMaskIntoConstraints = false
++        view.addSubview(columnsCollectionVC.view)
++        columnsCollectionVC.didMove(toParent: self)
+         
+         NSLayoutConstraint.activate([
+-            columnsPagerVC.view.topAnchor.constraint(equalTo: headersContainer.bottomAnchor),
+-            columnsPagerVC.view.leadingAnchor.constraint(equalTo: pinnedTableView.trailingAnchor),
+-            columnsPagerVC.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+-            columnsPagerVC.view.bottomAnchor.constraint(equalTo: view.bottomAnchor)
++            columnsCollectionVC.view.topAnchor.constraint(equalTo: headersContainer.bottomAnchor),
++            columnsCollectionVC.view.leadingAnchor.constraint(equalTo: pinnedTableView.trailingAnchor),
++            columnsCollectionVC.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
++            columnsCollectionVC.view.bottomAnchor.constraint(equalTo: view.bottomAnchor)
          ])
          
--        // 6) Set up pinnedTableView properties
-+        // pinnedTableView properties
-         pinnedTableView.contentInsetAdjustmentBehavior = .never
-         pinnedTableView.dataSource = self
-         pinnedTableView.delegate = self
-@@ -149,40 +143,47 @@ class PinnedColumnTablesViewController: UIViewController {
+         // pinnedTableView properties
+@@ -143,27 +139,11 @@ class PinnedColumnTablesViewController: UIViewController {
          pinnedTableView.showsVerticalScrollIndicator = false
          pinnedTableView.register(PinnedColumnCell.self, forCellReuseIdentifier: "PinnedColumnCell")
  
--        // Whenever the page changes on the right, hook into its scrolling
-+        // Keep the pinned table and the active columns table in sync
-         columnsPagerVC.onPageChanged = { [weak self] pageVC in
-             guard let self = self else { return }
-+
-+            // 1) Sync scrolling
-             pageVC.onScroll = { [weak self] scrollView in
-                 self?.syncScroll(from: scrollView, to: self?.pinnedTableView)
-             }
-+
-+            // 2) Update the two column titles at the top
-+            let cols = pageVC.columnsToShow ?? []
-+            if !cols.isEmpty {
-+                self.col1Label.text = cols[0].0
-+            } else {
-+                self.col1Label.text = nil
-+            }
-+            if cols.count > 1 {
-+                self.col2Label.text = cols[1].0
-+            } else {
-+                self.col2Label.text = nil
-+            }
+-        // 6) When the page changes, sync scrolling & update col1/col2 titles
+-        columnsPagerVC.onPageChanged = { [weak self] pageVC in
+-            guard let self = self else { return }
+-            
+-            // Sync scroll
+-            pageVC.onScroll = { [weak self] scrollView in
+-                self?.syncScroll(from: scrollView, to: self?.pinnedTableView)
+-            }
+-            
+-            // Update the two header labels
+-            let cols = pageVC.columnsToShow ?? []
+-            if !cols.isEmpty {
+-                self.col1Label.text = cols[0].0
+-            } else {
+-                self.col1Label.text = nil
+-            }
+-            if cols.count > 1 {
+-                self.col2Label.text = cols[1].0
+-            } else {
+-                self.col2Label.text = nil
+-            }
++        // 6) Let each collection cell sync its scrolling with pinned table
++        // We'll define how in step 4 of your plan (when we build the columns collection).
++        // For now, here's a callback:
++        columnsCollectionVC.onScrollSync = { [weak self] scrollView in
++            self?.syncScroll(from: scrollView, to: self?.pinnedTableView)
          }
      }
      
-     override func viewWillAppear(_ animated: Bool) {
-         super.viewWillAppear(animated)
-         
--        // If representable is nil, bail
-+        // If representable is nil, do nothing
-         guard let rep = representable else { return }
- 
--        // Update the pinned header text
-+        // Set pinned header text
-         pinnedHeaderLabel.text = rep.pinnedColumnTitle
- 
+@@ -179,10 +159,21 @@ class PinnedColumnTablesViewController: UIViewController {
          // Reload pinned table
          pinnedTableView.reloadData()
          
--        // Convert the partial keypaths in rep.columns to KeyPath<SimulationData, Decimal>
--        // Filter out any columns that aren’t Decimal:
--        let decimalColumns = rep.columns.compactMap { (title, partial) -> (String, KeyPath<SimulationData, Decimal>)? in
--            guard let kp = partial as? KeyPath<SimulationData, Decimal> else {
--                return nil
--            }
--            return (title, kp)
--        }
--        
--        // Pass columns & row data to the pager
--        columnsPagerVC.allColumns = decimalColumns
+-        // Just pass partial key paths directly to the pager
+-        columnsPagerVC.allColumns = rep.columns
 -        columnsPagerVC.displayedData = rep.displayedData
 -        columnsPagerVC.reloadPages()
-+        // At this point, the final columns are ALREADY set in 'updateUIViewController'
-+        // so we just re-load columns pager if needed:
-+        // columnsPagerVC.allColumns = ??? -- Not needed if done in updateUIViewController
-+        // columnsPagerVC.displayedData = ??? -- Same
-+        // columnsPagerVC.reloadPages()       -- The representable calls this
++        // Pass partial key paths to the columns collection
++        columnsCollectionVC.allColumns = rep.columns
++        columnsCollectionVC.displayedData = rep.displayedData
++        
++        // Reload the collection
++        // columnsCollectionVC.collectionView?.reloadData()
++        
++        columnsCollectionVC.allColumns = rep.columns
++        columnsCollectionVC.displayedData = rep.displayedData
++        columnsCollectionVC.reloadCollectionData()
++        
++        // For sync
++        columnsCollectionVC.onScrollSync = { [weak self] scrollView in
++            self?.syncScroll(from: scrollView, to: self?.pinnedTableView)
++        }
      }
      
-     // Called by the parent to scroll pinned table to the bottom
-@@ -194,7 +195,7 @@ class PinnedColumnTablesViewController: UIViewController {
+     // Called by parent to scroll pinned table to the bottom
+@@ -194,11 +185,8 @@ class PinnedColumnTablesViewController: UIViewController {
              let pinnedPath = IndexPath(row: lastIndex, section: 0)
              pinnedTableView.scrollToRow(at: pinnedPath, at: .bottom, animated: true)
              
--            // Scroll the active page as well
-+            // Also scroll the active page if needed
-             if let activePage = columnsPagerVC.currentActivePage {
-                 let columnsPath = IndexPath(row: lastIndex, section: 0)
-                 activePage.tableView.scrollToRow(at: columnsPath, at: .bottom, animated: true)
-@@ -202,21 +203,18 @@ class PinnedColumnTablesViewController: UIViewController {
+-            // Also scroll the active page
+-            if let activePage = columnsPagerVC.currentActivePage {
+-                let columnsPath = IndexPath(row: lastIndex, section: 0)
+-                activePage.tableView.scrollToRow(at: columnsPath, at: .bottom, animated: true)
+-            }
++            // If you'd like, you can also scroll any visible table in columnsCollectionVC
++            // But with multiple columns, you can pick a standard or skip
          }
      }
  
--    // Called by parent to scroll pinned table to the top
-     func scrollToTop() {
+@@ -206,9 +194,7 @@ class PinnedColumnTablesViewController: UIViewController {
          let topIndex = IndexPath(row: 0, section: 0)
          pinnedTableView.scrollToRow(at: topIndex, at: .top, animated: true)
          
--        // Scroll the active page as well
-         if let activePage = columnsPagerVC.currentActivePage {
-             activePage.tableView.scrollToRow(at: topIndex, at: .top, animated: true)
-         }
+-        if let activePage = columnsPagerVC.currentActivePage {
+-            activePage.tableView.scrollToRow(at: topIndex, at: .top, animated: true)
+-        }
++        // Similarly, you can scroll the first visible column's table if you want
      }
      
--    // Sync pinned <-> columns offset
-+    // Keep pinned & columns table scrolled together
-     private func syncScroll(from source: UIScrollView?, to target: UIScrollView?) {
--        guard !isSyncingScroll else { return }
--        guard let source = source, let target = target else { return }
-+        guard !isSyncingScroll, let source = source, let target = target else { return }
-         
-         isSyncingScroll = true
-         target.contentOffset = source.contentOffset
-@@ -224,7 +222,8 @@ class PinnedColumnTablesViewController: UIViewController {
-     }
- }
- 
--// MARK: - UITableViewDataSource & Delegate (For pinned table)
-+// MARK: - UITableViewDataSource & Delegate
-+
- extension PinnedColumnTablesViewController: UITableViewDataSource, UITableViewDelegate {
- 
-     func numberOfSections(in tableView: UITableView) -> Int { 1 }
-@@ -257,13 +256,13 @@ extension PinnedColumnTablesViewController: UITableViewDataSource, UITableViewDe
- 
-     func tableView(_ tableView: UITableView,
-                    heightForRowAt indexPath: IndexPath) -> CGFloat {
--        return 44
-+        44
-     }
- 
-     func scrollViewDidScroll(_ scrollView: UIScrollView) {
-         guard let rep = representable else { return }
- 
--        // Check if near bottom => set rep.isAtBottom and notify parent
-+        // near-bottom detection
-         let offsetY = scrollView.contentOffset.y
-         let contentHeight = scrollView.contentSize.height
-         let frameHeight = scrollView.frame.size.height
-@@ -272,10 +271,11 @@ extension PinnedColumnTablesViewController: UITableViewDataSource, UITableViewDe
-         let distanceFromBottom = contentHeight - (offsetY + frameHeight)
-         let atBottom = (distanceFromBottom < nearBottomThreshold)
- 
-+        // Tell SwiftUI about it
+     // Keep pinned & columns table scrolled together
+@@ -275,9 +261,10 @@ extension PinnedColumnTablesViewController: UITableViewDataSource, UITableViewDe
          rep.isAtBottom = atBottom
          onIsAtBottomChanged?(atBottom)
          
--        // Sync pinned -> current page
-+        // Sync pinned -> current columns page
-         if let activePage = columnsPagerVC.currentActivePage {
-             syncScroll(from: scrollView, to: activePage.tableView)
-         }
-diff --git a/BTC Simulator/SinglePageColumnsVC.swift b/BTC Simulator/SinglePageColumnsVC.swift
-index 5289c02..147845b 100644
---- a/BTC Simulator/SinglePageColumnsVC.swift	
-+++ b/BTC Simulator/SinglePageColumnsVC.swift	
-@@ -7,22 +7,33 @@
- 
- import UIKit
- 
--// Helper extension for formattedWithSeparator()
-+// Helper extensions for formatting
- extension Decimal {
-     func formattedWithSeparator() -> String {
-         let formatter = NumberFormatter()
-         formatter.numberStyle = .decimal
--        formatter.maximumFractionDigits = 2
--        formatter.minimumFractionDigits = 2
-         formatter.groupingSeparator = ","
-+        formatter.minimumFractionDigits = 2
-+        formatter.maximumFractionDigits = 2
-         return formatter.string(from: self as NSDecimalNumber) ?? "\(self)"
+-        // Sync pinned -> current columns page
+-        if let activePage = columnsPagerVC.currentActivePage {
+-            syncScroll(from: scrollView, to: activePage.tableView)
+-        }
++        // Sync pinned -> the "current" column's table
++        // We'll just pick "some" visible column if you want.
++        // Because there's multiple columns visible at once,
++        // you'd pick the first visible cell or something similar if needed.
++        // For now, you can skip it or implement more advanced logic.
      }
  }
- 
-+extension Double {
-+    func formattedWithSeparator() -> String {
-+        let formatter = NumberFormatter()
-+        formatter.numberStyle = .decimal
-+        formatter.groupingSeparator = ","
-+        formatter.minimumFractionDigits = 2
-+        formatter.maximumFractionDigits = 2
-+        return formatter.string(from: NSNumber(value: self)) ?? "\(self)"
-+    }
-+}
-+
- class SinglePageColumnsVC: UIViewController, UITableViewDataSource, UITableViewDelegate {
-     
--    // The columns we'll display for this page (up to 2).
--    var columnsToShow: [(String, KeyPath<SimulationData, Decimal>)]?
-+    // The columns we'll display for this page (up to 2), allowing either Decimal, Double, or Int.
-+    var columnsToShow: [(String, PartialKeyPath<SimulationData>)]?
-     
-     // The entire array of rows to be shown in this table.
-     var displayedData: [SimulationData] = []
-@@ -50,7 +61,7 @@ class SinglePageColumnsVC: UIViewController, UITableViewDataSource, UITableViewD
-         view.addSubview(tableView)
-         tableView.translatesAutoresizingMaskIntoConstraints = false
-         
--        // Constrain the table to fill the VC
-+        // Constrain the table to fill the entire view
-         NSLayoutConstraint.activate([
-             tableView.topAnchor.constraint(equalTo: view.topAnchor),
-             tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-@@ -60,6 +71,7 @@ class SinglePageColumnsVC: UIViewController, UITableViewDataSource, UITableViewD
-     }
- 
-     // MARK: - UITableViewDataSource
-+
-     func tableView(_ tableView: UITableView,
-                    numberOfRowsInSection section: Int) -> Int {
-         return displayedData.count
-@@ -75,41 +87,65 @@ class SinglePageColumnsVC: UIViewController, UITableViewDataSource, UITableViewD
-         
-         let rowData = displayedData[indexPath.row]
-         
--        // If we have exactly 2 columns, we display them in the cell’s 2 labels.
--        // If there's only 1 column, we show one label.
-+        // If columnsToShow is non-nil, fill label1, label2. Otherwise blank.
-         if let cols = columnsToShow {
-             // Column #1
-             if cols.indices.contains(0) {
--                let (_, keypath) = cols[0]
--                let val1 = rowData[keyPath: keypath]
--                cell.label1.text = val1.formattedWithSeparator()
-+                let (_, partial) = cols[0]
-+                cell.label1.text = formatValue(rowData, partial: partial)
-             } else {
-                 cell.label1.text = nil
-             }
-             
-             // Column #2
-             if cols.indices.contains(1) {
--                let (_, keypath) = cols[1]
--                let val2 = rowData[keyPath: keypath]
--                cell.label2.text = val2.formattedWithSeparator()
-+                let (_, partial) = cols[1]
-+                cell.label2.text = formatValue(rowData, partial: partial)
-             } else {
-                 cell.label2.text = nil
-             }
-         } else {
-+            // No columns => blank
-             cell.label1.text = nil
-             cell.label2.text = nil
-         }
-         
--        // NEW: alternate row colours, matching the pinned table
-+        // Alternate row colours, matching pinned table
-         let isEvenRow = (indexPath.row % 2 == 0)
-         cell.contentView.backgroundColor = isEvenRow
--            ? UIColor(white: 0.10, alpha: 1)
--            : UIColor(white: 0.14, alpha: 1)
-+            ? UIColor(white: 0.10, alpha: 1)  // darker grey
-+            : UIColor(white: 0.14, alpha: 1)  // lighter grey
-         
-         return cell
-     }
-     
-+    /// Format either a Decimal, Double, or Int property in rowData
-+    private func formatValue(_ rowData: SimulationData,
-+                             partial: PartialKeyPath<SimulationData>) -> String {
-+        
-+        // If it's a Decimal:
-+        if let kp = partial as? KeyPath<SimulationData, Decimal> {
-+            let value = rowData[keyPath: kp]
-+            return value.formattedWithSeparator()
-+        }
-+        // If it's a Double:
-+        if let kp = partial as? KeyPath<SimulationData, Double> {
-+            let value = rowData[keyPath: kp]
-+            return value.formattedWithSeparator()
-+        }
-+        // If it's an Int (e.g. week):
-+        if let kp = partial as? KeyPath<SimulationData, Int> {
-+            let value = rowData[keyPath: kp]
-+            // If you prefer not to show decimals, just do .description or String(value)
-+            return value.formattedWithSeparator()
-+        }
-+        
-+        // Fallback if none of the above:
-+        return "-"
-+    }
-+
-     // MARK: - UITableViewDelegate
-+
-     func tableView(_ tableView: UITableView,
-                    heightForRowAt indexPath: IndexPath) -> CGFloat {
-         return 44
-diff --git a/BTC Simulator/SomeParentView.swift b/BTC Simulator/SomeParentView.swift
-index cbf7454..e442467 100644
---- a/BTC Simulator/SomeParentView.swift	
-+++ b/BTC Simulator/SomeParentView.swift	
-@@ -12,6 +12,7 @@ import SwiftUI
- struct SomeParentView: View {
- 
-     @EnvironmentObject var coordinator: SimulationCoordinator
-+    @EnvironmentObject var simSettings: SimulationSettings
- 
-     // The state to remember the last row scrolled
-     @State private var lastViewedRow = 0
-@@ -34,7 +35,8 @@ struct SomeParentView: View {
-                     lastViewedRow: $lastViewedRow,
-                     scrollToBottomFlag: $scrollToBottomFlag,
-                     // IMPORTANT: pass the new isAtBottom binding here
--                    isAtBottom: $isAtBottom
-+                    isAtBottom: $isAtBottom,
-+                    simSettings: simSettings
-                 )
-                 .edgesIgnoringSafeArea(.bottom)
- 
 diff --git a/BTCMonteCarlo.xcodeproj/project.xcworkspace/xcuserdata/conor.xcuserdatad/UserInterfaceState.xcuserstate b/BTCMonteCarlo.xcodeproj/project.xcworkspace/xcuserdata/conor.xcuserdatad/UserInterfaceState.xcuserstate
-index 2c4cadf..7a32880 100644
+index db4edd4..f3d255b 100644
 Binary files a/BTCMonteCarlo.xcodeproj/project.xcworkspace/xcuserdata/conor.xcuserdatad/UserInterfaceState.xcuserstate and b/BTCMonteCarlo.xcodeproj/project.xcworkspace/xcuserdata/conor.xcuserdatad/UserInterfaceState.xcuserstate differ

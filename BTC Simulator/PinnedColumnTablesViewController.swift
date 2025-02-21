@@ -159,14 +159,9 @@ class PinnedColumnTablesViewController: UIViewController {
         // Reload pinned table
         pinnedTableView.reloadData()
         
-        // Pass partial key paths to the columns collection
-        columnsCollectionVC.allColumns = rep.columns
-        columnsCollectionVC.displayedData = rep.displayedData
-        
-        // Reload the collection
-        // columnsCollectionVC.collectionView?.reloadData()
-        
-        columnsCollectionVC.allColumns = rep.columns
+        // Build two-column pairs from rep.columns, then assign to columnsCollectionVC
+        let pairs = buildPairs(from: rep.columns)
+        columnsCollectionVC.pairsData = pairs
         columnsCollectionVC.displayedData = rep.displayedData
         columnsCollectionVC.reloadCollectionData()
         

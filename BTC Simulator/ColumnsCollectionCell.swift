@@ -7,50 +7,50 @@
 
 import UIKit
 
-class ColumnsCollectionCell: UICollectionViewCell {
+/// A two-column approach: each collection cell has 2 tables side by side.
+class ColumnsCollectionCell: UICollectionViewCell, UITableViewDataSource, UITableViewDelegate {
 
-    private let titleLabel = UILabel()
-    private let tableView = UITableView(frame: .zero, style: .plain)
+    private let tableViewLeft  = UITableView(frame: .zero, style: .plain)
+    private let tableViewRight = UITableView(frame: .zero, style: .plain)
 
-    // We might store the partial key path & data
-    private var columnTitle: String = ""
-    private var partial: PartialKeyPath<SimulationData>?
+    private var pair: [(String, PartialKeyPath<SimulationData>)] = []
     private var displayedData: [SimulationData] = []
 
-    // So we can call back when scrolling
-    var onScroll: ((UIScrollView)->Void)?
+    // Called when either table scrolls vertically,
+    // so we can sync the pinned table on the left.
+    var onScroll: ((UIScrollView) -> Void)?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
 
         contentView.backgroundColor = UIColor(white: 0.15, alpha: 1.0)
 
-        // 1) Title label at top
-        titleLabel.font = UIFont.boldSystemFont(ofSize: 14)
-        titleLabel.textColor = .orange
-        titleLabel.translatesAutoresizingMaskIntoConstraints = false
-        contentView.addSubview(titleLabel)
-        NSLayoutConstraint.activate([
-            titleLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 4),
-            titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 8),
-            titleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -8)
-        ])
+        // 1) Setup left table
+        tableViewLeft.dataSource = self
+        tableViewLeft.delegate = self
+        tableViewLeft.showsVerticalScrollIndicator = false
+        tableViewLeft.register(OneColumnRowCell.self, forCellReuseIdentifier: "OneColumnRowCell")
+        tableViewLeft.translatesAutoresizingMaskIntoConstraints = false
 
-        // 2) Table below the label
-        tableView.dataSource = self
-        tableView.delegate = self
-        tableView.separatorStyle = .none
-        tableView.backgroundColor = .clear
-        tableView.showsVerticalScrollIndicator = false
-        tableView.register(OneColumnRowCell.self, forCellReuseIdentifier: "OneColumnRowCell")
-        tableView.translatesAutoresizingMaskIntoConstraints = false
-        contentView.addSubview(tableView)
+        // 2) Setup right table
+        tableViewRight.dataSource = self
+        tableViewRight.delegate = self
+        tableViewRight.showsVerticalScrollIndicator = false
+        tableViewRight.register(OneColumnRowCell.self, forCellReuseIdentifier: "OneColumnRowCell")
+        tableViewRight.translatesAutoresizingMaskIntoConstraints = false
+
+        // 3) Place them side by side
+        let stack = UIStackView(arrangedSubviews: [tableViewLeft, tableViewRight])
+        stack.axis = .horizontal
+        stack.distribution = .fillEqually
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(stack)
 
         NSLayoutConstraint.activate([
-            tableView.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 4),
-            tableView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            tableView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            tableView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
+            stack.topAnchor.constraint(equalTo: contentView.topAnchor),
+            stack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            stack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            stack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
         ])
     }
 
@@ -58,67 +58,75 @@ class ColumnsCollectionCell: UICollectionViewCell {
         fatalError("init(coder:) not implemented")
     }
 
-    func configure(columnTitle: String,
-                   partialKeyPath: PartialKeyPath<SimulationData>,
+    /// Called by the collectionView's cellForItem to pass in the two columns & row data
+    func configure(pair: [(String, PartialKeyPath<SimulationData>)],
                    displayedData: [SimulationData]) {
-
-        self.columnTitle = columnTitle
-        self.partial = partialKeyPath
+        self.pair = pair
         self.displayedData = displayedData
 
-        titleLabel.text = columnTitle
-        // Force table reload
-        tableView.reloadData()
+        // Reload both tables
+        tableViewLeft.reloadData()
+        tableViewRight.reloadData()
     }
-}
 
-// MARK: - UITableViewDataSource & Delegate
-extension ColumnsCollectionCell: UITableViewDataSource, UITableViewDelegate {
-
-    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return displayedData.count
+    // MARK: - UITableViewDataSource
+    func tableView(_ tableView: UITableView,
+                   numberOfRowsInSection section: Int) -> Int {
+        displayedData.count
     }
 
     func tableView(_ tableView: UITableView,
                    cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         
-        guard let cell = tableView.dequeueReusableCell(withIdentifier: "OneColumnRowCell",
-                                                       for: indexPath) as? OneColumnRowCell else {
+        guard let cell = tableView.dequeueReusableCell(
+            withIdentifier: "OneColumnRowCell",
+            for: indexPath
+        ) as? OneColumnRowCell else {
             return UITableViewCell()
         }
-        
+
         let rowData = displayedData[indexPath.row]
-        // Format the partial key path
-        cell.configure(with: rowData, partial: partial)
+        let colIndex = (tableView == tableViewLeft) ? 0 : 1
+
+        if colIndex < pair.count {
+            let (_, partial) = pair[colIndex]
+            cell.configure(with: rowData, partial: partial)
+        } else {
+            cell.configure(with: rowData, partial: nil)
+        }
         
-        // Alternate color
-        let isEven = (indexPath.row % 2 == 0)
-        cell.contentView.backgroundColor = isEven
+        // row color
+        cell.contentView.backgroundColor = (indexPath.row % 2 == 0)
             ? UIColor(white: 0.10, alpha: 1.0)
             : UIColor(white: 0.14, alpha: 1.0)
         
         return cell
     }
 
+    // MARK: - UITableViewDelegate
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        // Let the parent (ColumnsCollectionViewController) or pinned table sync
+        // Let the parent sync pinned table
         onScroll?(scrollView)
     }
 }
 
+// MARK: - If you want the row cell in the same file:
 class OneColumnRowCell: UITableViewCell {
     private let label = UILabel()
 
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
+        
         label.textColor = .white
         label.font = UIFont.systemFont(ofSize: 14)
         label.translatesAutoresizingMaskIntoConstraints = false
+        
         contentView.addSubview(label)
         NSLayoutConstraint.activate([
             label.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 8),
             label.centerYAnchor.constraint(equalTo: contentView.centerYAnchor)
         ])
+        
         backgroundColor = .clear
         selectionStyle = .none
     }
@@ -127,19 +135,32 @@ class OneColumnRowCell: UITableViewCell {
         fatalError("init(coder:) not implemented")
     }
 
-    func configure(with rowData: SimulationData, partial: PartialKeyPath<SimulationData>?) {
+    /// Configure this cell with a single row of data plus an optional partial key path.
+    /// If partial is nil or not a numeric type, we display "-" by default.
+    func configure(with rowData: SimulationData,
+                   partial: PartialKeyPath<SimulationData>?) {
         guard let partial = partial else {
             label.text = "-"
             return
         }
-        // Check if it's Decimal, Double, or Int...
+
+        // If it's Decimal
         if let kp = partial as? KeyPath<SimulationData, Decimal> {
-            label.text = rowData[keyPath: kp].formattedWithSeparator()
-        } else if let kp = partial as? KeyPath<SimulationData, Double> {
-            label.text = rowData[keyPath: kp].formattedWithSeparator()
-        } else if let kp = partial as? KeyPath<SimulationData, Int> {
-            label.text = rowData[keyPath: kp].formattedWithSeparator()
-        } else {
+            let value = rowData[keyPath: kp]
+            label.text = value.formattedWithSeparator()
+        }
+        // If it's Double
+        else if let kp = partial as? KeyPath<SimulationData, Double> {
+            let value = rowData[keyPath: kp]
+            label.text = value.formattedWithSeparator()
+        }
+        // If it's Int
+        else if let kp = partial as? KeyPath<SimulationData, Int> {
+            let value = rowData[keyPath: kp]
+            label.text = value.formattedWithSeparator()
+        }
+        // Otherwise fallback
+        else {
             label.text = "-"
         }
     }

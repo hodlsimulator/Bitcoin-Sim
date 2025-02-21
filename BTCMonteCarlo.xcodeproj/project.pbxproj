@@ -21,6 +21,10 @@
 		E14344DE2D545CA600225A49 /* ApplyDictionaryFactorsToSim.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14344DD2D545C9D00225A49 /* ApplyDictionaryFactorsToSim.swift */; };
 		E14AED6E2D684D040068B2A5 /* ColumnsCollectionViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14AED6D2D684D020068B2A5 /* ColumnsCollectionViewController.swift */; };
 		E14AED702D684DA40068B2A5 /* ColumnsCollectionCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14AED6F2D684DA20068B2A5 /* ColumnsCollectionCell.swift */; };
+		E14AED722D6857840068B2A5 /* TwoColumnChunker.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14AED712D6857820068B2A5 /* TwoColumnChunker.swift */; };
+		E14AED742D6857A50068B2A5 /* CenterSnapFlowLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14AED732D6857A30068B2A5 /* CenterSnapFlowLayout.swift */; };
+		E14AED762D6857C70068B2A5 /* TwoColumnCollectionViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14AED752D6857C40068B2A5 /* TwoColumnCollectionViewController.swift */; };
+		E14AED782D6857DD0068B2A5 /* TwoColumnPairCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14AED772D6857DB0068B2A5 /* TwoColumnPairCell.swift */; };
 		E14D23F52D37425D007CC11A /* SimulationSummaryCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14D23F42D374258007CC11A /* SimulationSummaryCardView.swift */; };
 		E14D23FA2D3A2260007CC11A /* S&P 500 Historical Data Monthly.csv in Resources */ = {isa = PBXBuildFile; fileRef = E14D23F82D3A2260007CC11A /* S&P 500 Historical Data Monthly.csv */; };
 		E14D23FC2D3A2260007CC11A /* Bitcoin Historical Data Weekly.csv in Resources */ = {isa = PBXBuildFile; fileRef = E14D23F72D3A2260007CC11A /* Bitcoin Historical Data Weekly.csv */; };
@@ -143,6 +147,10 @@
 		E14344DD2D545C9D00225A49 /* ApplyDictionaryFactorsToSim.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplyDictionaryFactorsToSim.swift; sourceTree = "<group>"; };
 		E14AED6D2D684D020068B2A5 /* ColumnsCollectionViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColumnsCollectionViewController.swift; sourceTree = "<group>"; };
 		E14AED6F2D684DA20068B2A5 /* ColumnsCollectionCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColumnsCollectionCell.swift; sourceTree = "<group>"; };
+		E14AED712D6857820068B2A5 /* TwoColumnChunker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TwoColumnChunker.swift; sourceTree = "<group>"; };
+		E14AED732D6857A30068B2A5 /* CenterSnapFlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CenterSnapFlowLayout.swift; sourceTree = "<group>"; };
+		E14AED752D6857C40068B2A5 /* TwoColumnCollectionViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TwoColumnCollectionViewController.swift; sourceTree = "<group>"; };
+		E14AED772D6857DB0068B2A5 /* TwoColumnPairCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TwoColumnPairCell.swift; sourceTree = "<group>"; };
 		E14D23F42D374258007CC11A /* SimulationSummaryCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulationSummaryCardView.swift; sourceTree = "<group>"; };
 		E14D23F72D3A2260007CC11A /* Bitcoin Historical Data Weekly.csv */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Bitcoin Historical Data Weekly.csv"; sourceTree = "<group>"; };
 		E14D23F82D3A2260007CC11A /* S&P 500 Historical Data Monthly.csv */ = {isa = PBXFileReference; lastKnownFileType = text; path = "S&P 500 Historical Data Monthly.csv"; sourceTree = "<group>"; };
@@ -292,6 +300,7 @@
 				E12CCD8A2CF8235F0059931D /* BTC_SimulatorApp.swift */,
 				E1B7B09C2D44E0CE00B60EC6 /* BullishFactorsSection.swift */,
 				E1F1CB5F2D4EF177003DB24F /* CalibrationManager.swift */,
+				E14AED732D6857A30068B2A5 /* CenterSnapFlowLayout.swift */,
 				E1CFF0262D30D07800D9D044 /* ChartBuilders.swift */,
 				E18C2BE02D259245006E7438 /* ChartSnapshotView.swift */,
 				E1A1E5282D2E38F9008F7658 /* CheckboxToggleStyle.swift */,
@@ -370,6 +379,9 @@
 				E1A1E52C2D2E39E3008F7658 /* SnapshotExtensions.swift */,
 				E1942C9E2D63FDAF00F5B9A1 /* SomeParentView.swift */,
 				E1A1E5262D2E371B008F7658 /* TipsData.swift */,
+				E14AED712D6857820068B2A5 /* TwoColumnChunker.swift */,
+				E14AED752D6857C40068B2A5 /* TwoColumnCollectionViewController.swift */,
+				E14AED772D6857DB0068B2A5 /* TwoColumnPairCell.swift */,
 				E1B7B0A42D47532B00B60EC6 /* UIComponents.swift */,
 				E19D113B2D42F81A00E3A55E /* UtilityExtensions.swift */,
 				E1883F412D1E43D7007AA90B /* VisualEffectBlur.swift */,
@@ -526,6 +538,7 @@
 				E1883F522D1FDDB2007AA90B /* BitcoinShapes.swift in Sources */,
 				E19D10ED2D40279600E3A55E /* SimulationSettings+Defaults.swift in Sources */,
 				E191AD5F2D1B07BC00020DBE /* CSVLoaderHistorical.swift in Sources */,
+				E14AED722D6857840068B2A5 /* TwoColumnChunker.swift in Sources */,
 				E166A8B02CF855C20003F518 /* SimulationData.swift in Sources */,
 				E19D10F12D402BDC00E3A55E /* SimulationSettings+ToggleAll.swift in Sources */,
 				E1B7B0A92D47575400B60EC6 /* SettingsSections.swift in Sources */,
@@ -549,6 +562,7 @@
 				E17B2F802D2800D400ECE087 /* OrientationObserver.swift in Sources */,
 				E19D113C2D42F81C00E3A55E /* UtilityExtensions.swift in Sources */,
 				E19D113A2D42F75000E3A55E /* MarketRegime.swift in Sources */,
+				E14AED742D6857A50068B2A5 /* CenterSnapFlowLayout.swift in Sources */,
 				E19D10F92D40E66200E3A55E /* InMemorySettings.swift in Sources */,
 				E1883F402D1E0DCB007AA90B /* InputManager.swift in Sources */,
 				E191AD672D1B764400020DBE /* CSVLoaderBTC.swift in Sources */,
@@ -562,7 +576,9 @@
 				E14344D82D52DE5500225A49 /* FactorCatalog.swift in Sources */,
 				E19D10F32D4033D600E3A55E /* SimulationSettings+HashAndRun.swift in Sources */,
 				E191AD632D1B0C9400020DBE /* CSVLoaderSP500.swift in Sources */,
+				E14AED762D6857C70068B2A5 /* TwoColumnCollectionViewController.swift in Sources */,
 				E191AD652D1B0D5700020DBE /* CSVParsingUtilities.swift in Sources */,
+				E14AED782D6857DD0068B2A5 /* TwoColumnPairCell.swift in Sources */,
 				E19D10F72D40D8E100E3A55E /* SimulationSettings+BearishFactors.swift in Sources */,
 				E1B7B0AB2D4759D800B60EC6 /* SettingsWatchers.swift in Sources */,
 				E1F1CB642D4F2F0E003DB24F /* HistoricalDataCache.swift in Sources */,

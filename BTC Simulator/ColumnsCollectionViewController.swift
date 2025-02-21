@@ -9,15 +9,15 @@ import UIKit
 
 class ColumnsCollectionViewController: UIViewController {
 
-    // The columns & data we want to display (PartialKeyPath so each can be Int/Double/Decimal)
-    public var allColumns: [(String, PartialKeyPath<SimulationData>)] = []
+    // We'll now store pairs of columns (two columns per item)
+    public var pairsData: [[(String, PartialKeyPath<SimulationData>)]] = []
     public var displayedData: [SimulationData] = []
 
     // For pinned-table scrolling sync
     public var onScrollSync: ((UIScrollView) -> Void)?
 
     // (Optional) track a current index
-    private var currentActiveIndex: Int = 0
+    // (Optional) track an active index if needed
 
     // The collection view + flow layout
     // Renamed to avoid overshadowing dataSource func "collectionView(_:_:)"
@@ -41,8 +41,8 @@ class ColumnsCollectionViewController: UIViewController {
         cv.showsHorizontalScrollIndicator = false
         cv.decelerationRate = .fast  // for snappier feel
         cv.isPagingEnabled = false   // we want partial scroll, not full paging
-        cv.dataSource = self
-        cv.delegate = self
+        cv.dataSource    = self
+        cv.delegate      = self
         cv.translatesAutoresizingMaskIntoConstraints = false
 
         // Store in our public var
@@ -56,14 +56,14 @@ class ColumnsCollectionViewController: UIViewController {
             cv.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
 
-        // 3) Register a custom cell
+        // Register the two-column cell
         cv.register(ColumnsCollectionCell.self, forCellWithReuseIdentifier: "ColumnsCollectionCell")
     }
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        // If you want to default to columns #2 & #3:
-        if allColumns.count > 2 {
+        // If you want to default to the 3rd pair, for example:
+        if pairsData.count > 2 {
             let idxPath = IndexPath(item: 2, section: 0)
             columnsCollectionView?.scrollToItem(at: idxPath, at: .left, animated: false)
         }
@@ -78,35 +78,33 @@ class ColumnsCollectionViewController: UIViewController {
 // MARK: - UICollectionViewDataSource & Delegate
 
 extension ColumnsCollectionViewController: UICollectionViewDataSource, UICollectionViewDelegate {
-
-    func collectionView(_ collectionView: UICollectionView,
-                        numberOfItemsInSection section: Int) -> Int {
-        return allColumns.count
+    
+    func collectionView(
+        _ collectionView: UICollectionView,
+        numberOfItemsInSection section: Int
+    ) -> Int {
+        return pairsData.count
     }
-
+    
     func collectionView(_ collectionView: UICollectionView,
                         cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-
+        
         guard let cell = collectionView.dequeueReusableCell(
             withReuseIdentifier: "ColumnsCollectionCell",
             for: indexPath
         ) as? ColumnsCollectionCell else {
             return UICollectionViewCell()
         }
-
-        let (title, partial) = allColumns[indexPath.item]
-        cell.configure(
-            columnTitle: title,
-            partialKeyPath: partial,
-            displayedData: displayedData
-        )
-
+        
+        let pair = pairsData[indexPath.item]
+        cell.configure(pair: pair, displayedData: displayedData)
+        
         // If you want vertical scroll sync:
         cell.onScroll = { [weak self] scrollView in
             // Pass up to pinned table
             self?.onScrollSync?(scrollView)
         }
-
+        
         return cell
     }
 }
