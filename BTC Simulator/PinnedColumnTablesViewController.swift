@@ -18,12 +18,8 @@ class PinnedColumnTablesViewController: UIViewController {
     // Left table for the pinned (e.g. "Week") column
     let pinnedTableView = UITableView(frame: .zero, style: .plain)
     
-    // The pager on the right
-    let columnsPagerVC = ColumnsPagerViewController(
-        transitionStyle: .scroll,
-        navigationOrientation: .horizontal,
-        options: nil
-    )
+    // Now we embed our new ColumnsCollectionViewController on the right
+    private let columnsCollectionVC = ColumnsCollectionViewController()
     
     // A label/header for the pinned column
     private let pinnedHeaderLabel = UILabel()
@@ -121,17 +117,17 @@ class PinnedColumnTablesViewController: UIViewController {
             pinnedTableView.widthAnchor.constraint(equalToConstant: 70)
         ])
         
-        // 5) Add columnsPagerVC as a child
-        addChild(columnsPagerVC)
-        columnsPagerVC.view.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(columnsPagerVC.view)
-        columnsPagerVC.didMove(toParent: self)
+        // 5) Add columnsCollectionVC as a child
+        addChild(columnsCollectionVC)
+        columnsCollectionVC.view.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(columnsCollectionVC.view)
+        columnsCollectionVC.didMove(toParent: self)
         
         NSLayoutConstraint.activate([
-            columnsPagerVC.view.topAnchor.constraint(equalTo: headersContainer.bottomAnchor),
-            columnsPagerVC.view.leadingAnchor.constraint(equalTo: pinnedTableView.trailingAnchor),
-            columnsPagerVC.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            columnsPagerVC.view.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+            columnsCollectionVC.view.topAnchor.constraint(equalTo: headersContainer.bottomAnchor),
+            columnsCollectionVC.view.leadingAnchor.constraint(equalTo: pinnedTableView.trailingAnchor),
+            columnsCollectionVC.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            columnsCollectionVC.view.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
         
         // pinnedTableView properties
@@ -143,27 +139,11 @@ class PinnedColumnTablesViewController: UIViewController {
         pinnedTableView.showsVerticalScrollIndicator = false
         pinnedTableView.register(PinnedColumnCell.self, forCellReuseIdentifier: "PinnedColumnCell")
 
-        // 6) When the page changes, sync scrolling & update col1/col2 titles
-        columnsPagerVC.onPageChanged = { [weak self] pageVC in
-            guard let self = self else { return }
-            
-            // Sync scroll
-            pageVC.onScroll = { [weak self] scrollView in
-                self?.syncScroll(from: scrollView, to: self?.pinnedTableView)
-            }
-            
-            // Update the two header labels
-            let cols = pageVC.columnsToShow ?? []
-            if !cols.isEmpty {
-                self.col1Label.text = cols[0].0
-            } else {
-                self.col1Label.text = nil
-            }
-            if cols.count > 1 {
-                self.col2Label.text = cols[1].0
-            } else {
-                self.col2Label.text = nil
-            }
+        // 6) Let each collection cell sync its scrolling with pinned table
+        // We'll define how in step 4 of your plan (when we build the columns collection).
+        // For now, here's a callback:
+        columnsCollectionVC.onScrollSync = { [weak self] scrollView in
+            self?.syncScroll(from: scrollView, to: self?.pinnedTableView)
         }
     }
     
@@ -179,10 +159,21 @@ class PinnedColumnTablesViewController: UIViewController {
         // Reload pinned table
         pinnedTableView.reloadData()
         
-        // Just pass partial key paths directly to the pager
-        columnsPagerVC.allColumns = rep.columns
-        columnsPagerVC.displayedData = rep.displayedData
-        columnsPagerVC.reloadPages()
+        // Pass partial key paths to the columns collection
+        columnsCollectionVC.allColumns = rep.columns
+        columnsCollectionVC.displayedData = rep.displayedData
+        
+        // Reload the collection
+        // columnsCollectionVC.collectionView?.reloadData()
+        
+        columnsCollectionVC.allColumns = rep.columns
+        columnsCollectionVC.displayedData = rep.displayedData
+        columnsCollectionVC.reloadCollectionData()
+        
+        // For sync
+        columnsCollectionVC.onScrollSync = { [weak self] scrollView in
+            self?.syncScroll(from: scrollView, to: self?.pinnedTableView)
+        }
     }
     
     // Called by parent to scroll pinned table to the bottom
@@ -194,11 +185,8 @@ class PinnedColumnTablesViewController: UIViewController {
             let pinnedPath = IndexPath(row: lastIndex, section: 0)
             pinnedTableView.scrollToRow(at: pinnedPath, at: .bottom, animated: true)
             
-            // Also scroll the active page
-            if let activePage = columnsPagerVC.currentActivePage {
-                let columnsPath = IndexPath(row: lastIndex, section: 0)
-                activePage.tableView.scrollToRow(at: columnsPath, at: .bottom, animated: true)
-            }
+            // If you'd like, you can also scroll any visible table in columnsCollectionVC
+            // But with multiple columns, you can pick a standard or skip
         }
     }
 
@@ -206,9 +194,7 @@ class PinnedColumnTablesViewController: UIViewController {
         let topIndex = IndexPath(row: 0, section: 0)
         pinnedTableView.scrollToRow(at: topIndex, at: .top, animated: true)
         
-        if let activePage = columnsPagerVC.currentActivePage {
-            activePage.tableView.scrollToRow(at: topIndex, at: .top, animated: true)
-        }
+        // Similarly, you can scroll the first visible column's table if you want
     }
     
     // Keep pinned & columns table scrolled together
@@ -275,9 +261,10 @@ extension PinnedColumnTablesViewController: UITableViewDataSource, UITableViewDe
         rep.isAtBottom = atBottom
         onIsAtBottomChanged?(atBottom)
         
-        // Sync pinned -> current columns page
-        if let activePage = columnsPagerVC.currentActivePage {
-            syncScroll(from: scrollView, to: activePage.tableView)
-        }
+        // Sync pinned -> the "current" column's table
+        // We'll just pick "some" visible column if you want.
+        // Because there's multiple columns visible at once,
+        // you'd pick the first visible cell or something similar if needed.
+        // For now, you can skip it or implement more advanced logic.
     }
 }

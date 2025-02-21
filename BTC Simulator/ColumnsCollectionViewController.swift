@@ -9,32 +9,29 @@ import UIKit
 
 class ColumnsCollectionViewController: UIViewController {
 
-    // The columns & data we want to display.
-    // PartialKeyPath so each property can be Int/Double/Decimal.
-    var allColumns: [(String, PartialKeyPath<SimulationData>)] = []
-    var displayedData: [SimulationData] = []
+    // The columns & data we want to display (PartialKeyPath so each can be Int/Double/Decimal)
+    public var allColumns: [(String, PartialKeyPath<SimulationData>)] = []
+    public var displayedData: [SimulationData] = []
 
     // For pinned-table scrolling sync
-    var onScrollSync: ((UIScrollView) -> Void)?
+    public var onScrollSync: ((UIScrollView) -> Void)?
 
-    // Optionally track a “currentActiveIndex” if needed
+    // (Optional) track a current index
     private var currentActiveIndex: Int = 0
 
-    // The collection view + a custom layout
-    private var collectionView: UICollectionView?
+    // The collection view + flow layout
+    // Renamed to avoid overshadowing dataSource func "collectionView(_:_:)"
+    public var columnsCollectionView: UICollectionView?
 
     override func viewDidLoad() {
         super.viewDidLoad()
-
         view.backgroundColor = UIColor.clear
 
         // 1) Create the layout
         let layout = UICollectionViewFlowLayout()
         layout.scrollDirection = .horizontal
 
-        // For partial columns:
-        //   - item width < screen width
-        //   - a bit of spacing so you see a “peek” of next column
+        // For partial columns, each cell narrower than screen
         layout.itemSize = CGSize(width: 240, height: view.bounds.height)
         layout.minimumLineSpacing = 10
 
@@ -42,15 +39,16 @@ class ColumnsCollectionViewController: UIViewController {
         let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
         cv.backgroundColor = .clear
         cv.showsHorizontalScrollIndicator = false
-        cv.decelerationRate = .fast       // for a snappier feel
-        cv.isPagingEnabled = false        // we want partial scroll, not full paging
+        cv.decelerationRate = .fast  // for snappier feel
+        cv.isPagingEnabled = false   // we want partial scroll, not full paging
         cv.dataSource = self
         cv.delegate = self
         cv.translatesAutoresizingMaskIntoConstraints = false
-        self.collectionView = cv
+
+        // Store in our public var
+        self.columnsCollectionView = cv
 
         view.addSubview(cv)
-
         NSLayoutConstraint.activate([
             cv.topAnchor.constraint(equalTo: view.topAnchor),
             cv.leadingAnchor.constraint(equalTo: view.leadingAnchor),
@@ -64,14 +62,20 @@ class ColumnsCollectionViewController: UIViewController {
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        // If you want to default to columns #2 and #3,
-        // you might scroll to index 2 so it’s at or near the left edge:
+        // If you want to default to columns #2 & #3:
         if allColumns.count > 2 {
             let idxPath = IndexPath(item: 2, section: 0)
-            collectionView?.scrollToItem(at: idxPath, at: .left, animated: false)
+            columnsCollectionView?.scrollToItem(at: idxPath, at: .left, animated: false)
         }
     }
+
+    /// Public method so other VCs can trigger a reload easily
+    public func reloadCollectionData() {
+        columnsCollectionView?.reloadData()
+    }
 }
+
+// MARK: - UICollectionViewDataSource & Delegate
 
 extension ColumnsCollectionViewController: UICollectionViewDataSource, UICollectionViewDelegate {
 
@@ -82,7 +86,7 @@ extension ColumnsCollectionViewController: UICollectionViewDataSource, UICollect
 
     func collectionView(_ collectionView: UICollectionView,
                         cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        
+
         guard let cell = collectionView.dequeueReusableCell(
             withReuseIdentifier: "ColumnsCollectionCell",
             for: indexPath
@@ -97,9 +101,12 @@ extension ColumnsCollectionViewController: UICollectionViewDataSource, UICollect
             displayedData: displayedData
         )
 
+        // If you want vertical scroll sync:
+        cell.onScroll = { [weak self] scrollView in
+            // Pass up to pinned table
+            self?.onScrollSync?(scrollView)
+        }
+
         return cell
     }
-
-    // If you want custom spacing or sizing beyond the FlowLayout’s itemSize,
-    // implement delegateFlowLayout methods here. But the big one is itemSize.
 }
