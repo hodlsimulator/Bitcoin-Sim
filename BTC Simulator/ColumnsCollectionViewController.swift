@@ -15,6 +15,11 @@ class ColumnsCollectionViewController: UIViewController {
 
     // For pinned-table scrolling sync
     public var onScrollSync: ((UIScrollView) -> Void)?
+    
+    // A callback so the parent can know which pair is centered
+    // The 'pair' is an array of up to 2 columns, e.g. [("BTC Price", partial1), ("Portfolio", partial2)]
+    public var onCenteredPairChanged: (([(String, PartialKeyPath<SimulationData>)]) -> Void)?
+
 
     // (Optional) track a current index
     // (Optional) track an active index if needed

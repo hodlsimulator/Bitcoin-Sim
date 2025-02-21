@@ -8,7 +8,7 @@
 import Foundation
 
 // 1) Double extension for thousands separators
-fileprivate extension Double {
+extension Double {
     func formattedWithSeparator(minDecimals: Int = 2, maxDecimals: Int = 2) -> String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal

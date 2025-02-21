@@ -9,7 +9,7 @@ import SwiftUI
 
 /// A SwiftUI wrapper around the UIKit-based pinned-column table layout.
 /// This shows the pinned column (e.g., Week or Month) on the left,
-/// and swipable columns on the right via a ColumnsPagerViewController.
+/// and swipable columns on the right via a ColumnsCollectionViewController.
 struct PinnedColumnTablesRepresentable: UIViewControllerRepresentable {
 
     // MARK: - Inputs from SwiftUI

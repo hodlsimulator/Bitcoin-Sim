@@ -18,13 +18,13 @@ class PinnedColumnTablesViewController: UIViewController {
     // Left table for the pinned (e.g. "Week") column
     let pinnedTableView = UITableView(frame: .zero, style: .plain)
     
-    // Now we embed our new ColumnsCollectionViewController on the right
+    // Our new two-column collection to the right
     private let columnsCollectionVC = ColumnsCollectionViewController()
     
     // A label/header for the pinned column
     private let pinnedHeaderLabel = UILabel()
     
-    // Two labels for the dynamic column titles
+    // Two labels for the dynamic column titles (the "current" pair)
     private let col1Label = UILabel()
     private let col2Label = UILabel()
     
@@ -139,11 +139,28 @@ class PinnedColumnTablesViewController: UIViewController {
         pinnedTableView.showsVerticalScrollIndicator = false
         pinnedTableView.register(PinnedColumnCell.self, forCellReuseIdentifier: "PinnedColumnCell")
 
-        // 6) Let each collection cell sync its scrolling with pinned table
-        // We'll define how in step 4 of your plan (when we build the columns collection).
-        // For now, here's a callback:
+        // 6) Vertical scroll sync callback
         columnsCollectionVC.onScrollSync = { [weak self] scrollView in
             self?.syncScroll(from: scrollView, to: self?.pinnedTableView)
+        }
+
+        // 7) Listen for which two-column pair is centered, update col1Label / col2Label
+        columnsCollectionVC.onCenteredPairChanged = { [weak self] pair in
+            guard let self = self else { return }
+
+            // If pair.count > 0 => first col
+            if pair.count > 0 {
+                self.col1Label.text = pair[0].0
+            } else {
+                self.col1Label.text = nil
+            }
+
+            // If pair.count > 1 => second col
+            if pair.count > 1 {
+                self.col2Label.text = pair[1].0
+            } else {
+                self.col2Label.text = nil
+            }
         }
     }
     
@@ -159,19 +176,14 @@ class PinnedColumnTablesViewController: UIViewController {
         // Reload pinned table
         pinnedTableView.reloadData()
         
-        // Build two-column pairs from rep.columns, then assign to columnsCollectionVC
+        // Convert columns to pairs => each item has up to 2 columns
         let pairs = buildPairs(from: rep.columns)
         columnsCollectionVC.pairsData = pairs
         columnsCollectionVC.displayedData = rep.displayedData
         columnsCollectionVC.reloadCollectionData()
-        
-        // For sync
-        columnsCollectionVC.onScrollSync = { [weak self] scrollView in
-            self?.syncScroll(from: scrollView, to: self?.pinnedTableView)
-        }
     }
     
-    // Called by parent to scroll pinned table to the bottom
+    // Called by a parent if you want to scroll pinned table to the bottom
     func scrollToBottom() {
         guard let rep = representable else { return }
         let rowCount = rep.displayedData.count
@@ -179,20 +191,15 @@ class PinnedColumnTablesViewController: UIViewController {
             let lastIndex = rowCount - 1
             let pinnedPath = IndexPath(row: lastIndex, section: 0)
             pinnedTableView.scrollToRow(at: pinnedPath, at: .bottom, animated: true)
-            
-            // If you'd like, you can also scroll any visible table in columnsCollectionVC
-            // But with multiple columns, you can pick a standard or skip
         }
     }
 
     func scrollToTop() {
         let topIndex = IndexPath(row: 0, section: 0)
         pinnedTableView.scrollToRow(at: topIndex, at: .top, animated: true)
-        
-        // Similarly, you can scroll the first visible column's table if you want
     }
     
-    // Keep pinned & columns table scrolled together
+    /// Sync pinned & columns table scrolled offsets
     private func syncScroll(from source: UIScrollView?, to target: UIScrollView?) {
         guard !isSyncingScroll, let source = source, let target = target else { return }
         
@@ -256,10 +263,9 @@ extension PinnedColumnTablesViewController: UITableViewDataSource, UITableViewDe
         rep.isAtBottom = atBottom
         onIsAtBottomChanged?(atBottom)
         
-        // Sync pinned -> the "current" column's table
-        // We'll just pick "some" visible column if you want.
-        // Because there's multiple columns visible at once,
-        // you'd pick the first visible cell or something similar if needed.
-        // For now, you can skip it or implement more advanced logic.
+        // If you want pinned -> current columns table,
+        // you'd need logic to pick whichever two-col cell is "active"
+        // and sync that table's offset.
+        // We'll skip that for now.
     }
 }
