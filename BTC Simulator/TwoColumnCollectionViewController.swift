@@ -34,28 +34,24 @@ class TwoColumnCollectionViewController: UIViewController {
         super.viewDidLoad()
         view.backgroundColor = .clear
 
-        // 1) Create a snapping flow layout
         let layout = CenterSnapFlowLayout()
         layout.scrollDirection = .horizontal
 
-        // Step 2: Adjust the item size so two items fit exactly on screen (adjust as needed)
+        // Make each cell the full screen width so only one (2-column) cell is visible
         let screenWidth = view.bounds.width
-        let spacing: CGFloat = 20
-        let itemWidth = (screenWidth - spacing) / 2
-        layout.itemSize = CGSize(width: itemWidth, height: view.bounds.height)
-        layout.minimumLineSpacing = spacing
+        layout.itemSize = CGSize(width: screenWidth, height: view.bounds.height)
+        layout.minimumLineSpacing = 0
 
-        // 2) Create the collection view
+        // Shift the content to the right by 20 points
+        layout.sectionInset = UIEdgeInsets(top: 0, left: 20, bottom: 0, right: 0)
+
         let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
         cv.backgroundColor = .clear
         cv.showsHorizontalScrollIndicator = false
         cv.translatesAutoresizingMaskIntoConstraints = false
 
-        // Set dataSource & delegate
         cv.dataSource = self
         cv.delegate = self
-
-        // Register the 2-col cell
         cv.register(TwoColumnPairCell.self, forCellWithReuseIdentifier: "TwoColumnPairCell")
 
         view.addSubview(cv)
@@ -66,7 +62,6 @@ class TwoColumnCollectionViewController: UIViewController {
             cv.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
 
-        // Store it in our renamed property
         self.internalCollectionView = cv
     }
 
