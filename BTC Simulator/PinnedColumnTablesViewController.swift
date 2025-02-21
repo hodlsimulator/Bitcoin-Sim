@@ -88,33 +88,33 @@ class PinnedColumnTablesViewController: UIViewController {
             columnsHeaderView.trailingAnchor.constraint(equalTo: headersContainer.trailingAnchor)
         ])
         
-        // Create a horizontal stack for the 2 column titles
-        let columnsHeaderStack = UIStackView()
-        columnsHeaderStack.axis = .horizontal
-        columnsHeaderStack.alignment = .center
-        columnsHeaderStack.spacing = 16
-        columnsHeaderStack.translatesAutoresizingMaskIntoConstraints = false
-        columnsHeaderView.addSubview(columnsHeaderStack)
-        
-        NSLayoutConstraint.activate([
-            columnsHeaderStack.leadingAnchor.constraint(equalTo: columnsHeaderView.leadingAnchor, constant: 8),
-            columnsHeaderStack.trailingAnchor.constraint(equalTo: columnsHeaderView.trailingAnchor, constant: -8),
-            columnsHeaderStack.topAnchor.constraint(equalTo: columnsHeaderView.topAnchor),
-            columnsHeaderStack.bottomAnchor.constraint(equalTo: columnsHeaderView.bottomAnchor)
-        ])
-        
-        // Add two labels for the column headers
+        // --- REMOVE UIStackView. Instead, add two labels with explicit constraints ---
+        // (1) BTC Price label near the left
         let col1Label = UILabel()
         col1Label.text = "BTC Price (USD)"
         col1Label.textColor = .orange
         col1Label.font = UIFont.boldSystemFont(ofSize: 14)
-        columnsHeaderStack.addArrangedSubview(col1Label)
+        col1Label.translatesAutoresizingMaskIntoConstraints = false
+        columnsHeaderView.addSubview(col1Label)
         
+        NSLayoutConstraint.activate([
+            col1Label.leadingAnchor.constraint(equalTo: columnsHeaderView.leadingAnchor, constant: 6),
+            col1Label.centerYAnchor.constraint(equalTo: columnsHeaderView.centerYAnchor)
+        ])
+        
+        // (2) Portfolio label, shifted left by adjusting the constant to your preference
         let col2Label = UILabel()
         col2Label.text = "Portfolio (USD)"
         col2Label.textColor = .orange
         col2Label.font = UIFont.boldSystemFont(ofSize: 14)
-        columnsHeaderStack.addArrangedSubview(col2Label)
+        col2Label.translatesAutoresizingMaskIntoConstraints = false
+        columnsHeaderView.addSubview(col2Label)
+        
+        NSLayoutConstraint.activate([
+            // Adjust the 165 constant to position the Portfolio label as needed
+            col2Label.leadingAnchor.constraint(equalTo: columnsHeaderView.leadingAnchor, constant: 165),
+            col2Label.centerYAnchor.constraint(equalTo: columnsHeaderView.centerYAnchor)
+        ])
         
         // 4) Now set up the pinned table below the header row
         pinnedTableView.translatesAutoresizingMaskIntoConstraints = false
