@@ -99,18 +99,20 @@ extension ColumnsCollectionViewController: UICollectionViewDataSource, UICollect
     
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
         guard let cv = columnsCollectionView else { return }
-        let centerX = cv.bounds.width / 2 + cv.contentOffset.x
-        let centerY = cv.bounds.height / 2 + cv.contentOffset.y
+        // Calculate the point at the centre
+        let centerX = cv.contentOffset.x + (cv.bounds.width / 2.0)
+        let centerY = cv.contentOffset.y + (cv.bounds.height / 2.0)
         let centerPoint = CGPoint(x: centerX, y: centerY)
-        
+
+        // Get the item’s index where the centre is
         if let indexPath = cv.indexPathForItem(at: centerPoint),
            indexPath.item < pairsData.count {
             let pair = pairsData[indexPath.item]
             onCenteredPairChanged?(pair)
         }
     }
-    
-    // Optional: If you want it also to fire when dragging ends without deceleration
+
+    // Optionally call it when dragging ends without deceleration:
     func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
         if !decelerate {
             scrollViewDidEndDecelerating(scrollView)

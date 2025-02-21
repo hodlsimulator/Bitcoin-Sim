@@ -12,8 +12,8 @@ import UIKit
 class TwoColumnPairCell: UICollectionViewCell {
 
     // Two tables for the two columns
-    private let tableViewLeft  = UITableView(frame: .zero, style: .plain)
-    private let tableViewRight = UITableView(frame: .zero, style: .plain)
+    let tableViewLeft  = UITableView(frame: .zero, style: .plain)
+    let tableViewRight = UITableView(frame: .zero, style: .plain)
 
     // The pair itself (e.g. [("BTC Price", \.btcPriceUSD), ("Portfolio", \.portfolioValueUSD)])
     private var pair: [(String, PartialKeyPath<SimulationData>)] = []

@@ -27,8 +27,8 @@ class TwoColumnCollectionViewController: UIViewController {
     /// so the parent can update "col1Label" and "col2Label" with the new columns.
     var onCenteredPairChanged: (([(String, PartialKeyPath<SimulationData>)]) -> Void)?
 
-    /// The underlying collection view (with center snapping)
-    private var collectionView: UICollectionView?
+    /// Renamed to avoid "Ambiguous use of 'collectionView'" in other contexts
+    var internalCollectionView: UICollectionView?
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -38,7 +38,7 @@ class TwoColumnCollectionViewController: UIViewController {
         let layout = CenterSnapFlowLayout()
         layout.scrollDirection = .horizontal
 
-        // Step 2: Adjust the item size so two items fit exactly on screen
+        // Step 2: Adjust the item size so two items fit exactly on screen (adjust as needed)
         let screenWidth = view.bounds.width
         let spacing: CGFloat = 20
         let itemWidth = (screenWidth - spacing) / 2
@@ -66,12 +66,13 @@ class TwoColumnCollectionViewController: UIViewController {
             cv.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
 
-        self.collectionView = cv
+        // Store it in our renamed property
+        self.internalCollectionView = cv
     }
 
     /// Call this after updating `pairsData` or `displayedData` to refresh
     func reloadData() {
-        collectionView?.reloadData()
+        internalCollectionView?.reloadData()
     }
 }
 
@@ -113,8 +114,9 @@ extension TwoColumnCollectionViewController: UICollectionViewDataSource, UIColle
         let centerX = scrollView.contentOffset.x + (scrollView.bounds.width / 2.0)
         let centerPoint = CGPoint(x: centerX, y: scrollView.bounds.height / 2.0)
 
-        guard let cv = collectionView,
-              let indexPath = cv.indexPathForItem(at: centerPoint) else {
+        guard let cv = internalCollectionView,
+              let indexPath = cv.indexPathForItem(at: centerPoint),
+              indexPath.item < pairsData.count else {
             return
         }
 

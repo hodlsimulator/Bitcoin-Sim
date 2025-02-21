@@ -19,7 +19,7 @@ class PinnedColumnTablesViewController: UIViewController {
     let pinnedTableView = UITableView(frame: .zero, style: .plain)
     
     // Our new two-column collection to the right
-    private let columnsCollectionVC = ColumnsCollectionViewController()
+    private let columnsCollectionVC = TwoColumnCollectionViewController()
     
     // A label/header for the pinned column
     private let pinnedHeaderLabel = UILabel()
@@ -180,7 +180,7 @@ class PinnedColumnTablesViewController: UIViewController {
         let pairs = buildPairs(from: rep.columns)
         columnsCollectionVC.pairsData = pairs
         columnsCollectionVC.displayedData = rep.displayedData
-        columnsCollectionVC.reloadCollectionData()
+        columnsCollectionVC.reloadData()
     }
     
     // Called by a parent if you want to scroll pinned table to the bottom
@@ -249,8 +249,8 @@ extension PinnedColumnTablesViewController: UITableViewDataSource, UITableViewDe
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         guard let rep = representable else { return }
-        
-        // near-bottom detection
+
+        // near-bottom detection (unchanged)
         let offsetY = scrollView.contentOffset.y
         let contentHeight = scrollView.contentSize.height
         let frameHeight = scrollView.frame.size.height
@@ -263,9 +263,29 @@ extension PinnedColumnTablesViewController: UITableViewDataSource, UITableViewDe
         rep.isAtBottom = atBottom
         onIsAtBottomChanged?(atBottom)
         
-        // If you want pinned -> current columns table,
-        // you'd need logic to pick whichever two-col cell is "active"
-        // and sync that table's offset.
-        // We'll skip that for now.
+        // Prevent infinite loops
+        guard !isSyncingScroll else { return }
+        isSyncingScroll = true
+        
+        // Now figure out which two-column cell is centered in the collection.
+        // (You may have stored `columnsCollectionVC` as a property.)
+        // We'll assume you named it `columnsCollectionVC`.
+        if let cv = columnsCollectionVC.internalCollectionView {
+            // Find the center of the collection view's visible bounds
+            let cvCenterX = cv.contentOffset.x + (cv.bounds.width / 2.0)
+            let cvCenterY = cv.contentOffset.y + (cv.bounds.height / 2.0)
+            let centerPoint = CGPoint(x: cvCenterX, y: cvCenterY)
+            
+            if let indexPath = cv.indexPathForItem(at: centerPoint),
+               let cell = cv.cellForItem(at: indexPath) as? TwoColumnPairCell {
+                
+                // We have the 2-column cell that's currently on screen
+                // Now sync its left/right table offsets with the pinned table
+                cell.tableViewLeft.contentOffset.y = scrollView.contentOffset.y
+                cell.tableViewRight.contentOffset.y = scrollView.contentOffset.y
+            }
+        }
+        
+        isSyncingScroll = false
     }
 }
