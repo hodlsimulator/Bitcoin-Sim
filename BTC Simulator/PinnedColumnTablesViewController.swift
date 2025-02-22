@@ -33,7 +33,7 @@ class PinnedColumnTablesViewController: UIViewController {
         super.viewDidLoad()
         view.backgroundColor = UIColor(white: 0.12, alpha: 1.0)
         
-        // Disable any auto-inset adjustments so both pinned table and column tables line up.
+        // Disable auto-inset adjustments so pinned table and column tables line up.
         pinnedTableView.contentInsetAdjustmentBehavior = .never
         if #available(iOS 11.0, *) {
             columnsCollectionVC.internalCollectionView?.contentInsetAdjustmentBehavior = .never
@@ -122,8 +122,18 @@ class PinnedColumnTablesViewController: UIViewController {
         pinnedTableView.backgroundColor = .clear
         pinnedTableView.showsVerticalScrollIndicator = false
         pinnedTableView.register(PinnedColumnCell.self, forCellReuseIdentifier: "PinnedColumnCell")
-        view.addSubview(pinnedTableView)
+
+        // Remove table insets
+        pinnedTableView.cellLayoutMarginsFollowReadableWidth = false
+        pinnedTableView.layoutMargins = .zero
+        pinnedTableView.separatorInset = .zero
         
+        // On iOS 15+, remove top padding if any (just in case)
+        if #available(iOS 15.0, *) {
+            pinnedTableView.sectionHeaderTopPadding = 0
+        }
+
+        view.addSubview(pinnedTableView)
         NSLayoutConstraint.activate([
             pinnedTableView.topAnchor.constraint(equalTo: headersContainer.bottomAnchor),
             pinnedTableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
@@ -252,7 +262,7 @@ extension PinnedColumnTablesViewController: UITableViewDataSource, UITableViewDe
         guard let rep = representable else { return }
 
         // near-bottom detection (unchanged)
-        let offsetY      = scrollView.contentOffset.y
+        let offsetY       = scrollView.contentOffset.y
         let contentHeight = scrollView.contentSize.height
         let frameHeight   = scrollView.frame.size.height
         
@@ -287,3 +297,4 @@ extension PinnedColumnTablesViewController: UITableViewDataSource, UITableViewDe
         isSyncingScroll = false
     }
 }
+    

@@ -54,7 +54,7 @@ class TwoColumnPairCell: UICollectionViewCell {
         NSLayoutConstraint.activate([
             tableViewLeft.topAnchor.constraint(equalTo: leftContainer.topAnchor),
             tableViewLeft.bottomAnchor.constraint(equalTo: leftContainer.bottomAnchor),
-            tableViewLeft.leadingAnchor.constraint(equalTo: leftContainer.leadingAnchor, constant: 40),
+            tableViewLeft.leadingAnchor.constraint(equalTo: leftContainer.leadingAnchor),  // Remove constant: 40
             tableViewLeft.trailingAnchor.constraint(equalTo: leftContainer.trailingAnchor)
         ])
 
@@ -149,7 +149,7 @@ extension TwoColumnPairCell: UITableViewDataSource, UITableViewDelegate {
 
         // Alternate row background color
         let isEvenRow = (indexPath.row % 2 == 0)
-        cell.contentView.backgroundColor = isEvenRow
+        cell.backgroundColor = isEvenRow
             ? UIColor(white: 0.10, alpha: 1.0)
             : UIColor(white: 0.14, alpha: 1.0)
 

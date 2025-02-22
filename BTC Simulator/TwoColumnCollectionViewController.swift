@@ -40,8 +40,7 @@ class TwoColumnCollectionViewController: UIViewController {
         layout.itemSize = CGSize(width: screenWidth, height: view.bounds.height)  // Use view.bounds.height
         layout.minimumLineSpacing = 0
 
-        // Shift the content to the right by 20 points
-        layout.sectionInset = UIEdgeInsets(top: 0, left: 20, bottom: 0, right: 0)
+        layout.sectionInset = .zero
 
         let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
         cv.backgroundColor = .clear

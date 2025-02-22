@@ -10,6 +10,7 @@ import UIKit
 /// A two-column approach: each collection cell has 2 tables side by side.
 class ColumnsCollectionCell: UICollectionViewCell, UITableViewDataSource, UITableViewDelegate {
 
+    // The two tables
     private let tableViewLeft  = UITableView(frame: .zero, style: .plain)
     private let tableViewRight = UITableView(frame: .zero, style: .plain)
 
@@ -32,12 +33,22 @@ class ColumnsCollectionCell: UICollectionViewCell, UITableViewDataSource, UITabl
         tableViewLeft.register(OneColumnRowCell.self, forCellReuseIdentifier: "OneColumnRowCell")
         tableViewLeft.translatesAutoresizingMaskIntoConstraints = false
 
+        // >>> ADD THESE LINES so the background stripes fill from the left
+        tableViewLeft.cellLayoutMarginsFollowReadableWidth = false
+        tableViewLeft.layoutMargins = .zero
+        tableViewLeft.separatorInset = .zero
+
         // 2) Setup right table
         tableViewRight.dataSource = self
         tableViewRight.delegate = self
         tableViewRight.showsVerticalScrollIndicator = false
         tableViewRight.register(OneColumnRowCell.self, forCellReuseIdentifier: "OneColumnRowCell")
         tableViewRight.translatesAutoresizingMaskIntoConstraints = false
+
+        // >>> Same fix here too
+        tableViewRight.cellLayoutMarginsFollowReadableWidth = false
+        tableViewRight.layoutMargins = .zero
+        tableViewRight.separatorInset = .zero
 
         // 3) Place them side by side
         let stack = UIStackView(arrangedSubviews: [tableViewLeft, tableViewRight])
@@ -96,7 +107,7 @@ class ColumnsCollectionCell: UICollectionViewCell, UITableViewDataSource, UITabl
         }
         
         // row color
-        cell.contentView.backgroundColor = (indexPath.row % 2 == 0)
+        cell.backgroundColor = (indexPath.row % 2 == 0)
             ? UIColor(white: 0.10, alpha: 1.0)
             : UIColor(white: 0.14, alpha: 1.0)
         
@@ -112,18 +123,24 @@ class ColumnsCollectionCell: UICollectionViewCell, UITableViewDataSource, UITabl
 
 // MARK: - If you want the row cell in the same file:
 class OneColumnRowCell: UITableViewCell {
+
     private let label = UILabel()
 
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
         
+        // >>> Add these lines in the row cell so the background extends fully
+        preservesSuperviewLayoutMargins = false
+        layoutMargins = .zero
+        separatorInset = .zero
+
         label.textColor = .white
         label.font = UIFont.systemFont(ofSize: 14)
         label.translatesAutoresizingMaskIntoConstraints = false
         
         contentView.addSubview(label)
         NSLayoutConstraint.activate([
-            label.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 8),
+            label.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 18),  // Changed from 8 to 18
             label.centerYAnchor.constraint(equalTo: contentView.centerYAnchor)
         ])
         
@@ -136,7 +153,6 @@ class OneColumnRowCell: UITableViewCell {
     }
 
     /// Configure this cell with a single row of data plus an optional partial key path.
-    /// If partial is nil or not a numeric type, we display "-" by default.
     func configure(with rowData: SimulationData,
                    partial: PartialKeyPath<SimulationData>?) {
         guard let partial = partial else {
