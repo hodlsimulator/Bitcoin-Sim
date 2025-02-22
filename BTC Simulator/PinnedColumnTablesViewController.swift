@@ -29,13 +29,13 @@ class PinnedColumnTablesViewController: UIViewController {
     // Prevent infinite scroll-callback loops
     private var isSyncingScroll = false
 
-    // MARK: - View Lifecycle
+    // MARK: - Lifecycle
 
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = UIColor(white: 0.12, alpha: 1.0)
         
-        // Disable auto-inset adjustments so pinned table and column tables line up
+        // Disable auto-inset adjustments so pinned table and column tables line up.
         pinnedTableView.contentInsetAdjustmentBehavior = .never
         if #available(iOS 11.0, *) {
             columnsCollectionVC.internalCollectionView?.contentInsetAdjustmentBehavior = .never
@@ -129,8 +129,6 @@ class PinnedColumnTablesViewController: UIViewController {
         pinnedTableView.cellLayoutMarginsFollowReadableWidth = false
         pinnedTableView.layoutMargins = .zero
         pinnedTableView.separatorInset = .zero
-        
-        // On iOS 15+, remove top padding if any
         if #available(iOS 15.0, *) {
             pinnedTableView.sectionHeaderTopPadding = 0
         }
@@ -159,14 +157,13 @@ class PinnedColumnTablesViewController: UIViewController {
         ])
         
         // ----------------------------------------------------------------
-        // 4) Sync vertical scrolling
+        // 4) Sync vertical scrolling, including near-bottom detection
         // ----------------------------------------------------------------
-        // Whenever any table in the two-column collection scrolls, we unify offsets:
         columnsCollectionVC.onScrollSync = { [weak self] scrollView in
-            self?.syncAllTables(with: scrollView)
+            self?.syncAllTablesAndCheckBottom(with: scrollView)
         }
         
-        // 5) Listen for which two-column pair is centered, update col1Label / col2Label
+        // 5) Which columns are centered?
         columnsCollectionVC.onCenteredPairChanged = { [weak self] pair in
             guard let self = self else { return }
             self.col1Label.text = pair.first?.0
@@ -193,16 +190,17 @@ class PinnedColumnTablesViewController: UIViewController {
         columnsCollectionVC.reloadData()
     }
     
-    // MARK: - Scroll & Sync
+    // MARK: - Sync & Near-Bottom
 
-    /// Unify the vertical offset for the pinned table and all visible two-column tables
-    private func syncAllTables(with sourceScrollView: UIScrollView) {
+    /// Sync all table offsets, then check if pinned table is near the bottom.
+    private func syncAllTablesAndCheckBottom(with sourceScrollView: UIScrollView) {
         guard !isSyncingScroll else { return }
         isSyncingScroll = true
-        
+
+        // We'll unify everyone's offset to match sourceScrollView's vertical offset.
         let newOffset = sourceScrollView.contentOffset
-        
-        // If the source is NOT the pinned table, update the pinned table
+
+        // If source is NOT the pinned table, update pinned table offset
         if sourceScrollView != pinnedTableView {
             pinnedTableView.contentOffset = newOffset
         }
@@ -216,8 +214,28 @@ class PinnedColumnTablesViewController: UIViewController {
                 }
             }
         }
-        
+
+        // Now do near-bottom detection on the pinned table's offset
+        checkIfNearBottom()
+
         isSyncingScroll = false
+    }
+
+    /// Measure pinned table's offset to see if user is near bottom; notify SwiftUI if changed.
+    private func checkIfNearBottom() {
+        guard let rep = representable else { return }
+        
+        let offsetY       = pinnedTableView.contentOffset.y
+        let contentHeight = pinnedTableView.contentSize.height
+        let frameHeight   = pinnedTableView.frame.height
+        
+        let nearBottomThreshold: CGFloat = 50
+        let distanceFromBottom = contentHeight - (offsetY + frameHeight)
+        let atBottom = (distanceFromBottom < nearBottomThreshold)
+        
+        // Pass that up to SwiftUI
+        rep.isAtBottom = atBottom
+        onIsAtBottomChanged?(atBottom)
     }
 
     // MARK: - Public Methods
@@ -281,24 +299,9 @@ extension PinnedColumnTablesViewController: UITableViewDataSource, UITableViewDe
         44
     }
     
+    // If the user physically scrolls the pinned table, unify offsets & check bottom:
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        guard !isSyncingScroll else { return }
-        guard let rep = representable else { return }
-        
-        // near-bottom detection
-        let offsetY       = scrollView.contentOffset.y
-        let contentHeight = scrollView.contentSize.height
-        let frameHeight   = scrollView.frame.size.height
-        
-        let nearBottomThreshold: CGFloat = 50
-        let distanceFromBottom = contentHeight - (offsetY + frameHeight)
-        let atBottom = (distanceFromBottom < nearBottomThreshold)
-        
-        // Pass that up to SwiftUI
-        rep.isAtBottom = atBottom
-        onIsAtBottomChanged?(atBottom)
-        
-        // Sync pinned table + columns
-        syncAllTables(with: scrollView)
+        guard scrollView == pinnedTableView, !isSyncingScroll else { return }
+        syncAllTablesAndCheckBottom(with: scrollView)
     }
 }
