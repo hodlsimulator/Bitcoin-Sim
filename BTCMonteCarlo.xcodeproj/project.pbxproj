@@ -27,6 +27,7 @@
 		E14AED7E2D686A400068B2A5 /* NumericExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14AED7D2D686A3E0068B2A5 /* NumericExtensions.swift */; };
 		E14AED802D6960730068B2A5 /* SnapTwoColumnsFlowLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14AED7F2D69606F0068B2A5 /* SnapTwoColumnsFlowLayout.swift */; };
 		E14AED822D6960E50068B2A5 /* OneColumnCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14AED812D6960E00068B2A5 /* OneColumnCell.swift */; };
+		E14AED852D69A27B0068B2A5 /* PinnedColumnBridgeRepresentableUIKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14AED842D69A2780068B2A5 /* PinnedColumnBridgeRepresentableUIKit.swift */; };
 		E14D23F52D37425D007CC11A /* SimulationSummaryCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14D23F42D374258007CC11A /* SimulationSummaryCardView.swift */; };
 		E14D23FA2D3A2260007CC11A /* S&P 500 Historical Data Monthly.csv in Resources */ = {isa = PBXBuildFile; fileRef = E14D23F82D3A2260007CC11A /* S&P 500 Historical Data Monthly.csv */; };
 		E14D23FC2D3A2260007CC11A /* Bitcoin Historical Data Weekly.csv in Resources */ = {isa = PBXBuildFile; fileRef = E14D23F72D3A2260007CC11A /* Bitcoin Historical Data Weekly.csv */; };
@@ -152,6 +153,7 @@
 		E14AED7D2D686A3E0068B2A5 /* NumericExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NumericExtensions.swift; sourceTree = "<group>"; };
 		E14AED7F2D69606F0068B2A5 /* SnapTwoColumnsFlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnapTwoColumnsFlowLayout.swift; sourceTree = "<group>"; };
 		E14AED812D6960E00068B2A5 /* OneColumnCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OneColumnCell.swift; sourceTree = "<group>"; };
+		E14AED842D69A2780068B2A5 /* PinnedColumnBridgeRepresentableUIKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinnedColumnBridgeRepresentableUIKit.swift; sourceTree = "<group>"; };
 		E14D23F42D374258007CC11A /* SimulationSummaryCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulationSummaryCardView.swift; sourceTree = "<group>"; };
 		E14D23F72D3A2260007CC11A /* Bitcoin Historical Data Weekly.csv */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Bitcoin Historical Data Weekly.csv"; sourceTree = "<group>"; };
 		E14D23F82D3A2260007CC11A /* S&P 500 Historical Data Monthly.csv */ = {isa = PBXFileReference; lastKnownFileType = text; path = "S&P 500 Historical Data Monthly.csv"; sourceTree = "<group>"; };
@@ -400,6 +402,7 @@
 				E166A8B82CF955E80003F518 /* ContentOffsetScrollView.swift */,
 				E14AED812D6960E00068B2A5 /* OneColumnCell.swift */,
 				E1942CA02D64331900F5B9A1 /* PinnedColumnBridgeRepresentable.swift */,
+				E14AED842D69A2780068B2A5 /* PinnedColumnBridgeRepresentableUIKit.swift */,
 				E1942CA22D64334B00F5B9A1 /* PinnedColumnBridgeViewController.swift */,
 				E1942C9A2D63FD7300F5B9A1 /* PinnedColumnCell.swift */,
 				E1942C962D63FD0900F5B9A1 /* PinnedColumnTablesRepresentable.swift */,
@@ -614,6 +617,7 @@
 				E1942CA32D64334D00F5B9A1 /* PinnedColumnBridgeViewController.swift in Sources */,
 				E1F1CB622D4F081D003DB24F /* HalvingHistoricalManager.swift in Sources */,
 				E1883F3E2D1E0D7A007AA90B /* ActiveField.swift in Sources */,
+				E14AED852D69A27B0068B2A5 /* PinnedColumnBridgeRepresentableUIKit.swift in Sources */,
 				E1942C992D63FD6200F5B9A1 /* PinnedColumnTablesViewController.swift in Sources */,
 				E1942C8F2D61C50A00F5B9A1 /* OnboardingSteps.swift in Sources */,
 				E19D10F52D40D10E00E3A55E /* SimulationSettings+BullishFactors.swift in Sources */,

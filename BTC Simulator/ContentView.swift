@@ -310,19 +310,15 @@ struct ContentView: View {
             // Hide SwiftUI nav bar for the MAIN screen:
             .navigationBarHidden(true)
             
-            // Destination for bridging screen:
             .navigationDestination(isPresented: $showPinnedColumns) {
-                // Show SwiftUI’s nav bar if you like, or keep hidden:
-                PinnedColumnBridgeRepresentable(
-                    isPresented: $showPinnedColumns,
+                PinnedColumnBridgeRepresentableUIKit(
                     coordinator: coordinator,
                     inputManager: inputManager,
                     monthlySimSettings: monthlySimSettings,
                     simSettings: simSettings
                 )
-                // Force SwiftUI nav bar off:
                 .navigationBarHidden(true)
-                .navigationBarBackButtonHidden(true)
+                .edgesIgnoringSafeArea(.all)
                 .onAppear {
                     removeNavBarHairline()
                 }

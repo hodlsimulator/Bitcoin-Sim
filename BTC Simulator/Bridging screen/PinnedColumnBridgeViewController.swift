@@ -8,38 +8,14 @@
 import UIKit
 import SwiftUI
 
-/// A simple struct to store references from SwiftUI
-struct BridgeContainer {
-    let coordinator: SimulationCoordinator
-    let simSettings: SimulationSettings
-    let monthlySimSettings: MonthlySimulationSettings
-    let inputManager: PersistentInputManager
-}
-
-/// Example of an enum within `SimulationSettings`:
-/// If your real code has this defined elsewhere, remove it here.
-/// (Shown just for clarity — not strictly required if you already have it.)
-extension SimulationSettings {
-    enum CurrencyPreference {
-        case usd
-        case eur
-        case both
-    }
-}
-
 class PinnedColumnBridgeViewController: UIViewController {
 
-    // MARK: - SwiftUI Dismiss Binding
-    // If you're controlling navigation from SwiftUI, set this from the .Representable
-    var dismissBinding: Binding<Bool>?
+    // MARK: - Properties
+    
+    // This container references your SwiftUI/Coordinator logic
+    var representableContainer: PinnedColumnBridgeRepresentable.BridgeContainer?
 
-    // MARK: - Container for references
-    var representableContainer: BridgeContainer?
-
-    // UIHostingController for any summary SwiftUI content
     private let hostingController = UIHostingController(rootView: AnyView(EmptyView()))
-
-    // MARK: - UI Elements
     private let summaryCardContainer = UIView()
     private let pinnedTablePlaceholder = UIView()
     private let pinnedColumnTablesVC = PinnedColumnTablesViewController()
@@ -72,7 +48,7 @@ class PinnedColumnBridgeViewController: UIViewController {
         return label
     }()
 
-    // Larger scroll-to-bottom button with reduced opacity
+    // Larger scroll-to-bottom button with reduced opacity.
     private let scrollToBottomButton: UIButton = {
         let btn = UIButton(type: .system)
         btn.setImage(UIImage(systemName: "chevron.down.circle.fill"), for: .normal)
@@ -87,7 +63,7 @@ class PinnedColumnBridgeViewController: UIViewController {
         return btn
     }()
     
-    // Track previous "at bottom" state to avoid re-triggering fade
+    // Track previous "at bottom" state to avoid re-triggering fade repeatedly
     private var wasAtBottom = false
 
     // MARK: - viewDidLoad
@@ -95,7 +71,7 @@ class PinnedColumnBridgeViewController: UIViewController {
         super.viewDidLoad()
         print("PinnedColumnBridgeViewController: viewDidLoad called")
 
-        // Re-enable default iOS swipe-to-go-back gesture if there's a nav controller
+        // 1) Re-enable swipe-to-go-back if on a real nav stack:
         if let nav = navigationController {
             nav.interactivePopGestureRecognizer?.delegate = self
             nav.interactivePopGestureRecognizer?.isEnabled = true
@@ -107,7 +83,7 @@ class PinnedColumnBridgeViewController: UIViewController {
             automaticallyAdjustsScrollViewInsets = false
         }
         
-        // Create a custom top bar
+        // 2) A custom top bar
         let topBar = UIView()
         topBar.backgroundColor = UIColor(white: 0.12, alpha: 1.0)
         topBar.translatesAutoresizingMaskIntoConstraints = false
@@ -128,12 +104,20 @@ class PinnedColumnBridgeViewController: UIViewController {
             containerStack.trailingAnchor.constraint(equalTo: view.trailingAnchor)
         ])
 
-        // 1) The top bar
+        // 3) The top bar
         containerStack.addArrangedSubview(topBar)
         topBar.heightAnchor.constraint(equalToConstant: topBarHeight).isActive = true
 
-        // Add buttons + title to top bar
-        topBar.addSubview(backButton)
+        // 4) Create a container to enlarge the tap area.
+        //    We'll place it where your old back button used to be.
+        let backContainer = UIView()
+        backContainer.translatesAutoresizingMaskIntoConstraints = false
+        topBar.addSubview(backContainer)
+        
+        // Put the actual backButton inside that container
+        backContainer.addSubview(backButton)
+
+        // Also add your chart button + title to topBar
         topBar.addSubview(chartButton)
         topBar.addSubview(titleLabel)
 
@@ -141,20 +125,32 @@ class PinnedColumnBridgeViewController: UIViewController {
         backButton.addTarget(self, action: #selector(handleBackButton), for: .touchUpInside)
         chartButton.addTarget(self, action: #selector(handleChartButton), for: .touchUpInside)
 
-        // Position them near the bottom of the top bar
+        // 5) Use the same bottomOffset of -2 so it stays near the bottom:
         let bottomOffset: CGFloat = -2
+
         NSLayoutConstraint.activate([
-            backButton.leadingAnchor.constraint(equalTo: topBar.leadingAnchor, constant: 16),
-            backButton.bottomAnchor.constraint(equalTo: topBar.bottomAnchor, constant: bottomOffset),
+            // Position the backContainer similarly to your old back button
+            backContainer.leadingAnchor.constraint(equalTo: topBar.leadingAnchor, constant: 16),
+            backContainer.bottomAnchor.constraint(equalTo: topBar.bottomAnchor, constant: bottomOffset),
+            // Make it 44x44 so the tap area is bigger
+            backContainer.widthAnchor.constraint(equalToConstant: 44),
+            backContainer.heightAnchor.constraint(equalToConstant: 44),
+
+            // Pin the backButton to the bottom+leading of this container
+            // so it ends up in the same spot it used to be.
+            backButton.leadingAnchor.constraint(equalTo: backContainer.leadingAnchor),
+            backButton.bottomAnchor.constraint(equalTo: backContainer.bottomAnchor),
             
+            // Chart button on the right
             chartButton.trailingAnchor.constraint(equalTo: topBar.trailingAnchor, constant: -16),
             chartButton.bottomAnchor.constraint(equalTo: topBar.bottomAnchor, constant: bottomOffset),
             
+            // Title in the centre
             titleLabel.centerXAnchor.constraint(equalTo: topBar.centerXAnchor),
             titleLabel.bottomAnchor.constraint(equalTo: topBar.bottomAnchor, constant: bottomOffset)
         ])
 
-        // 2) Main stack: [ summaryCardContainer, pinnedTablePlaceholder ]
+        // 6) The rest is your original layout
         pinnedTablePlaceholder.backgroundColor = UIColor.darkGray.withAlphaComponent(0.2)
         let mainStack = UIStackView(arrangedSubviews: [
             summaryCardContainer,
@@ -180,7 +176,7 @@ class PinnedColumnBridgeViewController: UIViewController {
             summaryCardContainer.heightAnchor.constraint(equalToConstant: 90)
         ])
 
-        // 3) Pin the pinned table VC inside pinnedTablePlaceholder
+        // Pin the pinned table VC inside pinnedTablePlaceholder
         addChild(pinnedColumnTablesVC)
         pinnedTablePlaceholder.addSubview(pinnedColumnTablesVC.view)
         pinnedColumnTablesVC.didMove(toParent: self)
@@ -193,7 +189,7 @@ class PinnedColumnBridgeViewController: UIViewController {
             pinnedColumnTablesVC.view.bottomAnchor.constraint(equalTo: pinnedTablePlaceholder.bottomAnchor)
         ])
 
-        // 4) Add the scroll-to-bottom button
+        // 7) Add the scroll-to-bottom button
         view.addSubview(scrollToBottomButton)
         scrollToBottomButton.addTarget(self, action: #selector(handleScrollToBottom), for: .touchUpInside)
 
@@ -202,7 +198,7 @@ class PinnedColumnBridgeViewController: UIViewController {
             scrollToBottomButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16),
         ])
 
-        // 5) Hide/fade the button automatically if user is at bottom
+        // 8) Hide/fade the button automatically if user is at bottom
         pinnedColumnTablesVC.onIsAtBottomChanged = { [weak self] isAtBottom in
             guard let self = self else { return }
             guard isAtBottom != self.wasAtBottom else { return }
@@ -247,10 +243,17 @@ class PinnedColumnBridgeViewController: UIViewController {
     // MARK: - Button Handlers
     @objc private func handleBackButton() {
         print("PinnedColumnBridgeViewController: Back button tapped")
+        let count = navigationController?.viewControllers.count ?? 0
+        print("PinnedColumnBridgeViewController: nav stack count = \(count)")
 
-        // If controlling nav from SwiftUI, flip the binding to false
-        // SwiftUI sees that isPresented changed -> pop/dismiss
-        dismissBinding?.wrappedValue = false
+        // If there's more than 1 VC on the nav stack, pop. Otherwise, dismiss
+        if let nav = navigationController, nav.viewControllers.count > 1 {
+            nav.popViewController(animated: true)
+        } else {
+            dismiss(animated: true) {
+                print("PinnedColumnBridgeViewController: Dismissed modally")
+            }
+        }
     }
 
     @objc private func handleChartButton() {
@@ -278,28 +281,14 @@ class PinnedColumnBridgeViewController: UIViewController {
         let finalBTC = lastRow.btcPriceUSD
         
         // Decide on final portfolio in USD vs. EUR
-        let finalPreference = coord.simSettings.currencyPreference
-        let finalPortfolio: Decimal
-        switch finalPreference {
-        case .eur:
-            finalPortfolio = lastRow.portfolioValueEUR
-        case .usd:
-            finalPortfolio = lastRow.portfolioValueUSD
-        case .both:
-            // Example: choose USD if you like, or handle differently
-            finalPortfolio = lastRow.portfolioValueUSD
-        }
+        let finalPortfolio: Decimal = (coord.simSettings.currencyPreference == .eur)
+            ? lastRow.portfolioValueEUR
+            : lastRow.portfolioValueUSD
         
         // Also figure out the initial portfolio value
-        let initialPortfolio: Decimal
-        switch finalPreference {
-        case .eur:
-            initialPortfolio = firstRow.portfolioValueEUR
-        case .usd:
-            initialPortfolio = firstRow.portfolioValueUSD
-        case .both:
-            initialPortfolio = firstRow.portfolioValueUSD
-        }
+        let initialPortfolio: Decimal = (coord.simSettings.currencyPreference == .eur)
+            ? firstRow.portfolioValueEUR
+            : firstRow.portfolioValueUSD
         
         // Avoid dividing by zero
         let growthPercentDouble: Double
@@ -312,13 +301,7 @@ class PinnedColumnBridgeViewController: UIViewController {
         }
         
         // Just assume "$" or "€", or read from simSettings if you prefer
-        let currencySymbol: String
-        switch finalPreference {
-        case .eur:
-            currencySymbol = "€"
-        default:
-            currencySymbol = "$"
-        }
+        let currencySymbol: String = (coord.simSettings.currencyPreference == .eur) ? "€" : "$"
         
         hostingController.rootView = AnyView(
             SimulationSummaryCardView(
@@ -339,7 +322,6 @@ class PinnedColumnBridgeViewController: UIViewController {
         let pref = container.simSettings.currencyPreference
         
         // Build columns based on the user’s currencyPreference
-        // (We fully qualify .usd / .eur / .both to avoid “cannot infer base”)
         let columns: [(String, PartialKeyPath<SimulationData>)]
         switch pref {
         case .usd:
@@ -398,7 +380,7 @@ class PinnedColumnBridgeViewController: UIViewController {
     // MARK: - Layout
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        // Optional logging
+        // Keep as needed; extra logging if desired
         // print("PinnedColumnBridgeViewController: viewDidLayoutSubviews called")
     }
 }
@@ -409,8 +391,7 @@ extension PinnedColumnBridgeViewController: UIGestureRecognizerDelegate {
         print("PinnedColumnBridgeViewController: Swipe-to-go-back gesture detected")
         let count = navigationController?.viewControllers.count ?? 0
         print("PinnedColumnBridgeViewController: nav stack count = \(count)")
-        // If SwiftUI is showing a nav stack, it might still be 1.
-        // This only matters if you have a real UIKit nav stack
+        // Only allow swipe if there's more than one VC on the nav stack
         return count > 1
     }
 }

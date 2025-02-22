@@ -8,45 +8,58 @@
 import SwiftUI
 import UIKit
 
-struct PinnedColumnBridgeRepresentable: UIViewControllerRepresentable {
+// 1) Make sure to remove the default SwiftUI bar or hide it.
+//    For example, wrap the view in a NavigationView, but hide that nav bar:
+struct PinnedColumnBridgeRepresentable: View {
 
-    // This binding controls whether SwiftUI considers this screen "presented."
-    @Binding var isPresented: Bool
+    // Dummy ObservedObjects
+    @ObservedObject var coordinator: SimulationCoordinator
+    @ObservedObject var inputManager: PersistentInputManager
+    @ObservedObject var monthlySimSettings: MonthlySimulationSettings
+    @ObservedObject var simSettings: SimulationSettings
 
-    // Any needed references
-    let coordinator: SimulationCoordinator
-    let inputManager: PersistentInputManager
-    let monthlySimSettings: MonthlySimulationSettings
-    let simSettings: SimulationSettings
-
-    // Create the UIViewController
-    func makeUIViewController(context: Context) -> PinnedColumnBridgeViewController {
-        let vc = PinnedColumnBridgeViewController()
-
-        // 1) Pass the SwiftUI binding to your UIKit VC
-        vc.dismissBinding = $isPresented
-
-        // 2) Pass the container with coordinator and settings
-        //    (whatever your existing VC expects)
-        vc.representableContainer = .init(
-            coordinator: coordinator,
-            simSettings: simSettings,
-            monthlySimSettings: monthlySimSettings,
-            inputManager: inputManager
-        )
-
-        return vc
+    var body: some View {
+        // If you wrap this in a NavigationView, hide the bar:
+        NavigationView {
+            BridgeContainer(
+                coordinator: coordinator,
+                inputManager: inputManager,
+                monthlySimSettings: monthlySimSettings,
+                simSettings: simSettings
+            )
+            // 2) Let your UIKit view stretch under the safe areas:
+            .ignoresSafeArea(.all)
+            .navigationBarHidden(true)
+            .navigationBarBackButtonHidden(true)
+        }
+        // Or remove NavigationView altogether if you don’t need SwiftUI nav management
+        .navigationViewStyle(StackNavigationViewStyle())
     }
 
-    // Update as needed if your data changes
-    func updateUIViewController(_ uiViewController: PinnedColumnBridgeViewController,
-                                context: Context) {
-        // E.g., if you need to refresh the container references:
-        uiViewController.representableContainer = .init(
-            coordinator: coordinator,
-            simSettings: simSettings,
-            monthlySimSettings: monthlySimSettings,
-            inputManager: inputManager
-        )
+    struct BridgeContainer: UIViewControllerRepresentable {
+        let coordinator: SimulationCoordinator
+        let inputManager: PersistentInputManager
+        let monthlySimSettings: MonthlySimulationSettings
+        let simSettings: SimulationSettings
+
+        func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+        func makeUIViewController(context: Context) -> PinnedColumnBridgeViewController {
+            let vc = PinnedColumnBridgeViewController()
+            vc.representableContainer = self
+            return vc
+        }
+        
+        func updateUIViewController(_ uiViewController: PinnedColumnBridgeViewController,
+                                    context: Context) {
+            uiViewController.representableContainer = self
+        }
+        
+        class Coordinator: NSObject {
+            var parent: BridgeContainer
+            init(_ parent: BridgeContainer) {
+                self.parent = parent
+            }
+        }
     }
 }
