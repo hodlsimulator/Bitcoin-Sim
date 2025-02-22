@@ -9,41 +9,44 @@ import SwiftUI
 import UIKit
 
 struct PinnedColumnBridgeRepresentable: UIViewControllerRepresentable {
-    /// A binding so SwiftUI can toggle this screen on/off.
     @Binding var isPresented: Bool
-
-    /// ObservedObjects from your environment
     @ObservedObject var coordinator: SimulationCoordinator
     @ObservedObject var inputManager: PersistentInputManager
     @ObservedObject var monthlySimSettings: MonthlySimulationSettings
     @ObservedObject var simSettings: SimulationSettings
 
-    func makeUIViewController(context: Context) -> PinnedColumnBridgeViewController {
-        let vc = PinnedColumnBridgeViewController()
-
-        // 1) Provide references so your bridging VC can do its job
-        vc.representableContainer = .init(
+    func makeUIViewController(context: Context) -> UIViewController {
+        // Create your pinned VC
+        let pinnedVC = PinnedColumnBridgeViewController()
+        pinnedVC.representableContainer = .init(
             coordinator: coordinator,
             inputManager: inputManager,
             monthlySimSettings: monthlySimSettings,
             simSettings: simSettings
         )
+        pinnedVC.dismissBinding = $isPresented
 
-        // 2) Pass the SwiftUI binding so the VC can set isPresented = false
-        //    when the user taps back.
-        vc.dismissBinding = $isPresented
-
-        return vc
+        // Embed it in a UINavigationController
+        let navController = UINavigationController(rootViewController: pinnedVC)
+        
+        // Optional: configure nav bar tints etc.
+        navController.navigationBar.tintColor = .white
+        
+        return navController
     }
 
-    func updateUIViewController(_ uiViewController: PinnedColumnBridgeViewController,
+    func updateUIViewController(_ uiViewController: UIViewController,
                                 context: Context) {
-        // If settings or data changes, refresh references
-        uiViewController.representableContainer = .init(
-            coordinator: coordinator,
-            inputManager: inputManager,
-            monthlySimSettings: monthlySimSettings,
-            simSettings: simSettings
-        )
+        // Update references if needed
+        if let navController = uiViewController as? UINavigationController,
+           let pinnedVC = navController.viewControllers.first as? PinnedColumnBridgeViewController {
+            
+            pinnedVC.representableContainer = .init(
+                coordinator: coordinator,
+                inputManager: inputManager,
+                monthlySimSettings: monthlySimSettings,
+                simSettings: simSettings
+            )
+        }
     }
 }

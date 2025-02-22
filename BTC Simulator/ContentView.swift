@@ -295,11 +295,11 @@ struct ContentView: View {
                 // The main parameter entry screen
                 parametersScreen
 
-                // Bottom icons bar if not loading/keyboard
+                // Bottom icons bar (only if not loading/keyboard)
                 if !coordinator.isLoading && !coordinator.isChartBuilding && !isKeyboardVisible {
                     bottomIcons
                 }
-                
+
                 // Loading overlay if coordinator is busy
                 if coordinator.isLoading || coordinator.isChartBuilding {
                     LoadingOverlayView()
@@ -307,9 +307,10 @@ struct ContentView: View {
                         .environmentObject(simSettings)
                 }
             }
-            // Hide SwiftUI nav bar for the MAIN screen:
+            // Hide the nav bar on the main screen
             .navigationBarHidden(true)
             
+            // 1) Bridging screen
             .navigationDestination(isPresented: $showPinnedColumns) {
                 PinnedColumnBridgeRepresentableUIKit(
                     isPresented: $showPinnedColumns,
@@ -318,14 +319,14 @@ struct ContentView: View {
                     monthlySimSettings: monthlySimSettings,
                     simSettings: simSettings
                 )
-                .navigationBarHidden(true)
-                .edgesIgnoringSafeArea(.all)
+                .navigationBarHidden(false)
+                // Remove the .navigationBarBackButtonDisplayMode line
                 .onAppear {
                     removeNavBarHairline()
                 }
             }
             
-            // AFTER the bridging screen, add Settings & About:
+            // 2) Settings screen
             .navigationDestination(isPresented: $showSettings) {
                 SettingsView()
                     .environmentObject(simSettings)
@@ -333,16 +334,16 @@ struct ContentView: View {
                     .environmentObject(coordinator)
                     .onAppear { removeNavBarHairline() }
             }
+            
+            // 3) About screen
             .navigationDestination(isPresented: $showAbout) {
                 AboutView()
                     .onAppear { removeNavBarHairline() }
             }
         }
-        // On appear, remove any hairline from the nav bar
         .onAppear {
             removeNavBarHairline()
         }
-        // If coordinator finishes loading or building, check if we auto-navigate
         .onChange(of: coordinator.isLoading) { _ in checkNavigationState() }
         .onChange(of: coordinator.isChartBuilding) { _ in checkNavigationState() }
     }
@@ -488,3 +489,13 @@ struct ContentView: View {
     }
 }
 
+extension View {
+    @ViewBuilder
+    func ifAvailableiOS16(_ transform: (Self) -> some View) -> some View {
+        if #available(iOS 16.0, *) {
+            transform(self)
+        } else {
+            self
+        }
+    }
+}
