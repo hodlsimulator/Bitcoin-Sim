@@ -101,9 +101,9 @@ class ColumnsCollectionCell: UICollectionViewCell, UITableViewDataSource, UITabl
 
         if colIndex < pair.count {
             let (_, partial) = pair[colIndex]
-            cell.configure(with: rowData, partial: partial)
+            cell.configure(rowData, partialKey: partial)
         } else {
-            cell.configure(with: rowData, partial: nil)
+            cell.configure(rowData, partialKey: nil)
         }
         
         // row color
@@ -118,66 +118,5 @@ class ColumnsCollectionCell: UICollectionViewCell, UITableViewDataSource, UITabl
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         // Let the parent sync pinned table
         onScroll?(scrollView)
-    }
-}
-
-// MARK: - If you want the row cell in the same file:
-class OneColumnRowCell: UITableViewCell {
-
-    private let label = UILabel()
-
-    override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
-        super.init(style: style, reuseIdentifier: reuseIdentifier)
-        
-        // >>> Add these lines in the row cell so the background extends fully
-        preservesSuperviewLayoutMargins = false
-        layoutMargins = .zero
-        separatorInset = .zero
-
-        label.textColor = .white
-        label.font = UIFont.systemFont(ofSize: 14)
-        label.translatesAutoresizingMaskIntoConstraints = false
-        
-        contentView.addSubview(label)
-        NSLayoutConstraint.activate([
-            label.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 18),  // Changed from 8 to 18
-            label.centerYAnchor.constraint(equalTo: contentView.centerYAnchor)
-        ])
-        
-        backgroundColor = .clear
-        selectionStyle = .none
-    }
-
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) not implemented")
-    }
-
-    /// Configure this cell with a single row of data plus an optional partial key path.
-    func configure(with rowData: SimulationData,
-                   partial: PartialKeyPath<SimulationData>?) {
-        guard let partial = partial else {
-            label.text = "-"
-            return
-        }
-
-        // If it's Decimal
-        if let kp = partial as? KeyPath<SimulationData, Decimal> {
-            let value = rowData[keyPath: kp]
-            label.text = value.formattedWithSeparator()
-        }
-        // If it's Double
-        else if let kp = partial as? KeyPath<SimulationData, Double> {
-            let value = rowData[keyPath: kp]
-            label.text = value.formattedWithSeparator()
-        }
-        // If it's Int
-        else if let kp = partial as? KeyPath<SimulationData, Int> {
-            let value = rowData[keyPath: kp]
-            label.text = value.formattedWithSeparator()
-        }
-        // Otherwise fallback
-        else {
-            label.text = "-"
-        }
     }
 }

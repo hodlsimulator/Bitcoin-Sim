@@ -8,41 +8,34 @@
 import UIKit
 
 class ColumnsCollectionViewController: UIViewController {
-
-    // We'll now store pairs of columns (two columns per item)
-    public var pairsData: [[(String, PartialKeyPath<SimulationData>)]] = []
-    public var displayedData: [SimulationData] = []
-
-    // For pinned-table scrolling sync
-    public var onScrollSync: ((UIScrollView) -> Void)?
     
-    // A callback so the parent can know which pair is centered
-    // The 'pair' is an array of up to 2 columns, e.g. [("BTC Price", partial1), ("Portfolio", partial2)]
-    public var onCenteredPairChanged: (([(String, PartialKeyPath<SimulationData>)]) -> Void)?
-
+    // Instead of pairsData, we have a simple list of columns (one per cell)
+    public var columnsData: [(String, PartialKeyPath<SimulationData>)] = []
+    public var displayedData: [SimulationData] = []
+    
+    // For pinned-table vertical sync
+    public var onScrollSync: ((UIScrollView) -> Void)?
+    // For detecting which column is centred
+    public var onCenteredColumnChanged: ((Int) -> Void)?
+    
     public var columnsCollectionView: UICollectionView?
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = UIColor.clear
+        view.backgroundColor = .clear
 
-        // 1) Create the layout using CenterSnapFlowLayout
-        let layout = CenterSnapFlowLayout()
-        layout.scrollDirection = .horizontal
-        layout.itemSize = CGSize(width: 240, height: view.bounds.height)
-        layout.minimumLineSpacing = 10
-
-        // 2) Create the collection view
+        let layout = SnapTwoColumnsFlowLayout()
         let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
         cv.backgroundColor = .clear
         cv.showsHorizontalScrollIndicator = false
-        cv.decelerationRate = .fast  // for snappier feel
-        cv.isPagingEnabled = false   // partial scroll, not full paging
-        cv.dataSource    = self
-        cv.delegate      = self
+        cv.decelerationRate = .fast
+        cv.dataSource = self
+        cv.delegate   = self
         cv.translatesAutoresizingMaskIntoConstraints = false
-        self.columnsCollectionView = cv
-
+        
+        // Register the single-column cell
+        cv.register(OneColumnCell.self, forCellWithReuseIdentifier: "OneColumnCell")
+        
         view.addSubview(cv)
         NSLayoutConstraint.activate([
             cv.topAnchor.constraint(equalTo: view.topAnchor),
@@ -50,21 +43,11 @@ class ColumnsCollectionViewController: UIViewController {
             cv.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             cv.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
-
-        // Register the two-column cell
-        cv.register(ColumnsCollectionCell.self, forCellWithReuseIdentifier: "ColumnsCollectionCell")
+        
+        self.columnsCollectionView = cv
     }
-
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        // If you want to default to the 3rd pair, for example:
-        if pairsData.count > 2 {
-            let idxPath = IndexPath(item: 2, section: 0)
-            columnsCollectionView?.scrollToItem(at: idxPath, at: .left, animated: false)
-        }
-    }
-
-    public func reloadCollectionData() {
+    
+    public func reloadData() {
         columnsCollectionView?.reloadData()
     }
 }
@@ -73,23 +56,29 @@ class ColumnsCollectionViewController: UIViewController {
 
 extension ColumnsCollectionViewController: UICollectionViewDataSource, UICollectionViewDelegate {
     
-    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return pairsData.count
+    func collectionView(_ collectionView: UICollectionView,
+                        numberOfItemsInSection section: Int) -> Int {
+        return columnsData.count
     }
     
     func collectionView(_ collectionView: UICollectionView,
                         cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         
         guard let cell = collectionView.dequeueReusableCell(
-            withReuseIdentifier: "ColumnsCollectionCell",
+            withReuseIdentifier: "OneColumnCell",
             for: indexPath
-        ) as? ColumnsCollectionCell else {
+        ) as? OneColumnCell else {
             return UICollectionViewCell()
         }
         
-        let pair = pairsData[indexPath.item]
-        cell.configure(pair: pair, displayedData: displayedData)
+        let (title, kp) = columnsData[indexPath.item]
+        cell.configure(
+            columnTitle: title,
+            partialKey: kp,
+            displayedData: displayedData
+        )
         
+        // If user scrolls vertically on this column, bubble up the event
         cell.onScroll = { [weak self] scrollView in
             self?.onScrollSync?(scrollView)
         }
@@ -97,25 +86,20 @@ extension ColumnsCollectionViewController: UICollectionViewDataSource, UICollect
         return cell
     }
     
+    // Snap detection for which column is “centered”
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
-        guard let cv = columnsCollectionView else { return }
-        // Calculate the point at the centre
-        let centerX = cv.contentOffset.x + (cv.bounds.width / 2.0)
-        let centerY = cv.contentOffset.y + (cv.bounds.height / 2.0)
-        let centerPoint = CGPoint(x: centerX, y: centerY)
-
-        // Get the item’s index where the centre is
-        if let indexPath = cv.indexPathForItem(at: centerPoint),
-           indexPath.item < pairsData.count {
-            let pair = pairsData[indexPath.item]
-            onCenteredPairChanged?(pair)
-        }
+        handleCentredColumn(scrollView)
     }
-
-    // Optionally call it when dragging ends without deceleration:
-    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
-        if !decelerate {
-            scrollViewDidEndDecelerating(scrollView)
+    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate: Bool) {
+        if !willDecelerate { handleCentredColumn(scrollView) }
+    }
+    
+    private func handleCentredColumn(_ scrollView: UIScrollView) {
+        let centerX = scrollView.contentOffset.x + (scrollView.bounds.width / 2)
+        let centerPoint = CGPoint(x: centerX, y: scrollView.bounds.height / 2)
+        
+        if let indexPath = columnsCollectionView?.indexPathForItem(at: centerPoint) {
+            onCenteredColumnChanged?(indexPath.item)
         }
     }
 }

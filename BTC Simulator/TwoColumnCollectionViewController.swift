@@ -7,50 +7,39 @@
 
 import UIKit
 
-/// A horizontally scrolling collection view that displays "two columns" per cell.
-/// We chunk the columns into pairs beforehand, then each item in `pairsData` has
-/// up to two (String, PartialKeyPath<SimulationData>) entries.
 class TwoColumnCollectionViewController: UIViewController {
-
-    /// Each item represents 2 columns (or 1 leftover). For example:
-    ///   [("BTC Price", \.btcPriceUSD), ("Portfolio", \.portfolioValueUSD)]
-    var pairsData: [[(String, PartialKeyPath<SimulationData>)]] = []
 
     /// The array of rows to populate each column's table
     var displayedData: [SimulationData] = []
 
-    /// Called whenever one of the two tables in a cell scrolls vertically;
-    /// the parent can sync with the pinned table.
+    /// Instead of pairs, we just have an array of columns
+    var columnsData: [(String, PartialKeyPath<SimulationData>)] = []
+
+    /// Called whenever one of the single-column tables scrolls vertically
     var onScrollSync: ((UIScrollView) -> Void)?
 
-    /// Called when the user scrolls horizontally and a new cell is centred,
-    /// so the parent can update "col1Label" and "col2Label" with the new columns.
-    var onCenteredPairChanged: (([(String, PartialKeyPath<SimulationData>)]) -> Void)?
+    /// Called when the user scrolls horizontally and a new column is centred,
+    /// passing the index of the centred column.
+    var onCenteredColumnChanged: ((Int) -> Void)?
 
-    /// Renamed to avoid "Ambiguous use of 'collectionView'" in other contexts
     var internalCollectionView: UICollectionView?
 
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .clear
 
-        let layout = CenterSnapFlowLayout()
-        layout.scrollDirection = .horizontal
-        let screenWidth = view.bounds.width
-        layout.itemSize = CGSize(width: screenWidth, height: view.bounds.height)  // Use view.bounds.height
-        layout.minimumLineSpacing = 0
-
-        layout.sectionInset = .zero
-
+        // e.g. SnapTwoColumnsFlowLayout so 2 columns fit side by side
+        let layout = SnapTwoColumnsFlowLayout()
         let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
         cv.backgroundColor = .clear
         cv.showsHorizontalScrollIndicator = false
         cv.translatesAutoresizingMaskIntoConstraints = false
-        cv.contentInsetAdjustmentBehavior = .never  
+        cv.contentInsetAdjustmentBehavior = .never
 
         cv.dataSource = self
-        cv.delegate = self
-        cv.register(TwoColumnPairCell.self, forCellWithReuseIdentifier: "TwoColumnPairCell")
+        cv.delegate   = self
+        // Register the single‑column cell
+        cv.register(OneColumnCell.self, forCellWithReuseIdentifier: "OneColumnCell")
 
         view.addSubview(cv)
         NSLayoutConstraint.activate([
@@ -63,21 +52,13 @@ class TwoColumnCollectionViewController: UIViewController {
         self.internalCollectionView = cv
     }
 
-    /// Call this after updating `pairsData` or `displayedData` to refresh
     func reloadData() {
         internalCollectionView?.reloadData()
     }
     
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        guard let cv = self.internalCollectionView,
-              let layout = cv.collectionViewLayout as? UICollectionViewFlowLayout else {
-            return
-        }
-        let collectionViewHeight = cv.bounds.height
-        let screenWidth = self.view.bounds.width
-        layout.itemSize = CGSize(width: screenWidth, height: collectionViewHeight)
-        layout.invalidateLayout() // Ensure layout updates
+        internalCollectionView?.collectionViewLayout.invalidateLayout()
     }
 }
 
@@ -87,26 +68,27 @@ extension TwoColumnCollectionViewController: UICollectionViewDataSource, UIColle
     
     func collectionView(_ collectionView: UICollectionView,
                         numberOfItemsInSection section: Int) -> Int {
-        return pairsData.count
+        return columnsData.count
     }
 
     func collectionView(_ collectionView: UICollectionView,
                         cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
 
         guard let cell = collectionView.dequeueReusableCell(
-            withReuseIdentifier: "TwoColumnPairCell",
+            withReuseIdentifier: "OneColumnCell",
             for: indexPath
-        ) as? TwoColumnPairCell else {
+        ) as? OneColumnCell else {
             return UICollectionViewCell()
         }
 
-        // The pair of columns for this "page"
-        let pair = pairsData[indexPath.item]
+        let (title, partial) = columnsData[indexPath.item]
+        cell.configure(
+            columnTitle: title,
+            partialKey: partial,
+            displayedData: displayedData
+        )
 
-        // Configure the cell with the two columns plus row data
-        cell.configure(pair: pair, displayedData: displayedData)
-
-        // If the user scrolls vertically in either table, pass that up to pinned table
+        // If the user scrolls vertically in this single column
         cell.onScroll = { [weak self] scrollView in
             self?.onScrollSync?(scrollView)
         }
@@ -114,19 +96,25 @@ extension TwoColumnCollectionViewController: UICollectionViewDataSource, UIColle
         return cell
     }
 
-    func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        // Determine which cell is currently near the center of the screen
+    // Snap-based “center” detection
+    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        handleCenteredColumn(in: scrollView)
+    }
+    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate: Bool) {
+        if !willDecelerate { handleCenteredColumn(in: scrollView) }
+    }
+
+    private func handleCenteredColumn(in scrollView: UIScrollView) {
         let centerX = scrollView.contentOffset.x + (scrollView.bounds.width / 2.0)
         let centerPoint = CGPoint(x: centerX, y: scrollView.bounds.height / 2.0)
 
-        guard let cv = internalCollectionView,
-              let indexPath = cv.indexPathForItem(at: centerPoint),
-              indexPath.item < pairsData.count else {
+        guard let cv = internalCollectionView else { return }
+        guard let indexPath = cv.indexPathForItem(at: centerPoint),
+              indexPath.item < columnsData.count else {
             return
         }
 
-        // The "active" pair
-        let pair = pairsData[indexPath.item]
-        onCenteredPairChanged?(pair)
+        // Pass the item index as an Int
+        onCenteredColumnChanged?(indexPath.item)
     }
 }
