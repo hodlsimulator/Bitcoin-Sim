@@ -274,21 +274,60 @@ class PinnedColumnBridgeViewController: UIViewController {
 
     private func populatePinnedTable() {
         guard let container = representableContainer else { return }
-
-        // Instead of limiting to Decimal, pass any numeric partial key paths
-        pinnedColumnTablesVC.representable = PinnedColumnTablesRepresentable(
-            displayedData: container.coordinator.monteCarloResults,
-            pinnedColumnTitle: "Week",
-            pinnedColumnKeyPath: \.week,
-            columns: [
-                // You can have Decimal, Double, or Int partial key paths.
+        
+        let data = container.coordinator.monteCarloResults
+        let pref = container.simSettings.currencyPreference
+        
+        // Build columns based on the user’s currencyPreference
+        let columns: [(String, PartialKeyPath<SimulationData>)]
+        switch pref {
+        case .usd:
+            columns = [
                 ("Starting BTC (BTC)", \SimulationData.startingBTC),
                 ("Net BTC (BTC)", \SimulationData.netBTCHoldings),
                 ("BTC Price (USD)", \SimulationData.btcPriceUSD),
                 ("Portfolio (USD)", \SimulationData.portfolioValueUSD),
                 ("Contrib (USD)", \SimulationData.contributionUSD),
-                // etc...
-            ],
+                ("Fee (USD)", \SimulationData.transactionFeeUSD),
+                ("Net Contrib (BTC)", \SimulationData.netContributionBTC),
+                ("Withdraw (USD)", \SimulationData.withdrawalUSD)
+            ]
+            
+        case .eur:
+            columns = [
+                ("Starting BTC (BTC)", \SimulationData.startingBTC),
+                ("Net BTC (BTC)", \SimulationData.netBTCHoldings),
+                ("BTC Price (EUR)", \SimulationData.btcPriceEUR),
+                ("Portfolio (EUR)", \SimulationData.portfolioValueEUR),
+                ("Contrib (EUR)", \SimulationData.contributionEUR),
+                ("Fee (EUR)", \SimulationData.transactionFeeEUR),
+                ("Net Contrib (BTC)", \SimulationData.netContributionBTC),
+                ("Withdraw (EUR)", \SimulationData.withdrawalEUR)
+            ]
+            
+        case .both:
+            columns = [
+                ("Starting BTC (BTC)", \SimulationData.startingBTC),
+                ("Net BTC (BTC)", \SimulationData.netBTCHoldings),
+                ("BTC Price (USD)", \SimulationData.btcPriceUSD),
+                ("BTC Price (EUR)", \SimulationData.btcPriceEUR),
+                ("Portfolio (USD)", \SimulationData.portfolioValueUSD),
+                ("Portfolio (EUR)", \SimulationData.portfolioValueEUR),
+                ("Contrib (USD)", \SimulationData.contributionUSD),
+                ("Contrib (EUR)", \SimulationData.contributionEUR),
+                ("Fee (USD)", \SimulationData.transactionFeeUSD),
+                ("Fee (EUR)", \SimulationData.transactionFeeEUR),
+                ("Net Contrib (BTC)", \SimulationData.netContributionBTC),
+                ("Withdraw (USD)", \SimulationData.withdrawalUSD),
+                ("Withdraw (EUR)", \SimulationData.withdrawalEUR)
+            ]
+        }
+
+        pinnedColumnTablesVC.representable = PinnedColumnTablesRepresentable(
+            displayedData: data,
+            pinnedColumnTitle: "Week",
+            pinnedColumnKeyPath: \.week,
+            columns: columns,
             lastViewedRow: .constant(0),
             scrollToBottomFlag: .constant(false),
             isAtBottom: .constant(false)
