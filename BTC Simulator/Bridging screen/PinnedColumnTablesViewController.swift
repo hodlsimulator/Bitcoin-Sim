@@ -221,6 +221,12 @@ class PinnedColumnTablesViewController: UIViewController {
         if rep.displayedData.count > 0 {
             let topIndex = IndexPath(row: 0, section: 0)
             pinnedTableView.scrollToRow(at: topIndex, at: .top, animated: true)
+
+            // After the table view finishes animating, update offsets
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                // This ensures pinnedTableView.contentOffset is fresh
+                self.syncAllTables(with: self.pinnedTableView)
+            }
         }
     }
     
