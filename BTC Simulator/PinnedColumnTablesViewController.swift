@@ -19,7 +19,7 @@ class PinnedColumnTablesViewController: UIViewController {
     let pinnedTableView = UITableView(frame: .zero, style: .plain)
     
     // Our two-column collection to the right
-    private let columnsCollectionVC = TwoColumnCollectionViewController()
+    let columnsCollectionVC = TwoColumnCollectionViewController()
     
     // Labels for the pinned column header & the two dynamic column titles
     private let pinnedHeaderLabel = UILabel()
@@ -29,11 +29,13 @@ class PinnedColumnTablesViewController: UIViewController {
     // Prevent infinite scroll-callback loops
     private var isSyncingScroll = false
 
+    // MARK: - View Lifecycle
+
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = UIColor(white: 0.12, alpha: 1.0)
         
-        // Disable auto-inset adjustments so pinned table and column tables line up.
+        // Disable auto-inset adjustments so pinned table and column tables line up
         pinnedTableView.contentInsetAdjustmentBehavior = .never
         if #available(iOS 11.0, *) {
             columnsCollectionVC.internalCollectionView?.contentInsetAdjustmentBehavior = .never
@@ -123,12 +125,12 @@ class PinnedColumnTablesViewController: UIViewController {
         pinnedTableView.showsVerticalScrollIndicator = false
         pinnedTableView.register(PinnedColumnCell.self, forCellReuseIdentifier: "PinnedColumnCell")
 
-        // Remove table insets
+        // Remove extra insets/margins
         pinnedTableView.cellLayoutMarginsFollowReadableWidth = false
         pinnedTableView.layoutMargins = .zero
         pinnedTableView.separatorInset = .zero
         
-        // On iOS 15+, remove top padding if any (just in case)
+        // On iOS 15+, remove top padding if any
         if #available(iOS 15.0, *) {
             pinnedTableView.sectionHeaderTopPadding = 0
         }
@@ -157,10 +159,11 @@ class PinnedColumnTablesViewController: UIViewController {
         ])
         
         // ----------------------------------------------------------------
-        // 4) Vertical scroll sync callback
+        // 4) Sync vertical scrolling
         // ----------------------------------------------------------------
+        // Whenever any table in the two-column collection scrolls, we unify offsets:
         columnsCollectionVC.onScrollSync = { [weak self] scrollView in
-            self?.syncScroll(from: scrollView, to: self?.pinnedTableView)
+            self?.syncAllTables(with: scrollView)
         }
         
         // 5) Listen for which two-column pair is centered, update col1Label / col2Label
@@ -190,7 +193,35 @@ class PinnedColumnTablesViewController: UIViewController {
         columnsCollectionVC.reloadData()
     }
     
-    // Called by a parent if you want to scroll pinned table to the bottom
+    // MARK: - Scroll & Sync
+
+    /// Unify the vertical offset for the pinned table and all visible two-column tables
+    private func syncAllTables(with sourceScrollView: UIScrollView) {
+        guard !isSyncingScroll else { return }
+        isSyncingScroll = true
+        
+        let newOffset = sourceScrollView.contentOffset
+        
+        // If the source is NOT the pinned table, update the pinned table
+        if sourceScrollView != pinnedTableView {
+            pinnedTableView.contentOffset = newOffset
+        }
+
+        // Update each visible two-column cell's left & right tables
+        if let cv = columnsCollectionVC.internalCollectionView {
+            for cell in cv.visibleCells {
+                if let twoColCell = cell as? TwoColumnPairCell {
+                    twoColCell.tableViewLeft.contentOffset  = newOffset
+                    twoColCell.tableViewRight.contentOffset = newOffset
+                }
+            }
+        }
+        
+        isSyncingScroll = false
+    }
+
+    // MARK: - Public Methods
+
     func scrollToBottom() {
         guard let rep = representable else { return }
         let rowCount = rep.displayedData.count
@@ -202,17 +233,11 @@ class PinnedColumnTablesViewController: UIViewController {
     }
 
     func scrollToTop() {
-        let topIndex = IndexPath(row: 0, section: 0)
-        pinnedTableView.scrollToRow(at: topIndex, at: .top, animated: true)
-    }
-    
-    /// Sync pinned & columns table scrolled offsets
-    private func syncScroll(from source: UIScrollView?, to target: UIScrollView?) {
-        guard !isSyncingScroll, let source = source, let target = target else { return }
-        
-        isSyncingScroll = true
-        target.contentOffset = source.contentOffset
-        isSyncingScroll = false
+        guard let rep = representable else { return }
+        if rep.displayedData.count > 0 {
+            let topIndex = IndexPath(row: 0, section: 0)
+            pinnedTableView.scrollToRow(at: topIndex, at: .top, animated: true)
+        }
     }
     
     override func viewDidLayoutSubviews() {
@@ -226,8 +251,7 @@ extension PinnedColumnTablesViewController: UITableViewDataSource, UITableViewDe
     
     func numberOfSections(in tableView: UITableView) -> Int { 1 }
     
-    func tableView(_ tableView: UITableView,
-                   numberOfRowsInSection section: Int) -> Int {
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return representable?.displayedData.count ?? 0
     }
     
@@ -253,15 +277,15 @@ extension PinnedColumnTablesViewController: UITableViewDataSource, UITableViewDe
         return cell
     }
     
-    func tableView(_ tableView: UITableView,
-                   heightForRowAt indexPath: IndexPath) -> CGFloat {
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
         44
     }
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        guard !isSyncingScroll else { return }
         guard let rep = representable else { return }
-
-        // near-bottom detection (unchanged)
+        
+        // near-bottom detection
         let offsetY       = scrollView.contentOffset.y
         let contentHeight = scrollView.contentSize.height
         let frameHeight   = scrollView.frame.size.height
@@ -274,27 +298,7 @@ extension PinnedColumnTablesViewController: UITableViewDataSource, UITableViewDe
         rep.isAtBottom = atBottom
         onIsAtBottomChanged?(atBottom)
         
-        // Prevent infinite loops
-        guard !isSyncingScroll else { return }
-        isSyncingScroll = true
-        
-        // Now figure out which two-column cell is centered in the collection
-        if let cv = columnsCollectionVC.internalCollectionView {
-            let cvCenterX = cv.contentOffset.x + (cv.bounds.width / 2.0)
-            let cvCenterY = cv.contentOffset.y + (cv.bounds.height / 2.0)
-            let centerPoint = CGPoint(x: cvCenterX, y: cvCenterY)
-            
-            if let indexPath = cv.indexPathForItem(at: centerPoint),
-               let cell = cv.cellForItem(at: indexPath) as? TwoColumnPairCell {
-                
-                // We have the 2-column cell that's currently on screen
-                // Sync its left/right table offsets with the pinned table
-                cell.tableViewLeft.contentOffset.y  = scrollView.contentOffset.y
-                cell.tableViewRight.contentOffset.y = scrollView.contentOffset.y
-            }
-        }
-        
-        isSyncingScroll = false
+        // Sync pinned table + columns
+        syncAllTables(with: scrollView)
     }
 }
-    
