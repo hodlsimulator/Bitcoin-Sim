@@ -61,6 +61,7 @@
 		E1883F482D1E8E21007AA90B /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1883F472D1E8E1C007AA90B /* AboutView.swift */; };
 		E1883F502D1FCEBD007AA90B /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1883F4F2D1FCEB9007AA90B /* OnboardingView.swift */; };
 		E1883F522D1FDDB2007AA90B /* BitcoinShapes.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1883F512D1FDDB0007AA90B /* BitcoinShapes.swift */; };
+		E18B2D5F2D6A7ACC005E5EDE /* CustomBarViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E18B2D5E2D6A7ACA005E5EDE /* CustomBarViewController.swift */; };
 		E18C2BE12D259248006E7438 /* ChartSnapshotView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E18C2BE02D259245006E7438 /* ChartSnapshotView.swift */; };
 		E191AD5D2D1B06E600020DBE /* BitcoinHistoricalData.swift in Sources */ = {isa = PBXBuildFile; fileRef = E191AD5C2D1B06E000020DBE /* BitcoinHistoricalData.swift */; };
 		E191AD5F2D1B07BC00020DBE /* CSVLoaderHistorical.swift in Sources */ = {isa = PBXBuildFile; fileRef = E191AD5E2D1B07B800020DBE /* CSVLoaderHistorical.swift */; };
@@ -187,6 +188,7 @@
 		E1883F472D1E8E1C007AA90B /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
 		E1883F4F2D1FCEB9007AA90B /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		E1883F512D1FDDB0007AA90B /* BitcoinShapes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BitcoinShapes.swift; sourceTree = "<group>"; };
+		E18B2D5E2D6A7ACA005E5EDE /* CustomBarViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomBarViewController.swift; sourceTree = "<group>"; };
 		E18C2BE02D259245006E7438 /* ChartSnapshotView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartSnapshotView.swift; sourceTree = "<group>"; };
 		E191AD5C2D1B06E000020DBE /* BitcoinHistoricalData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BitcoinHistoricalData.swift; sourceTree = "<group>"; };
 		E191AD5E2D1B07B800020DBE /* CSVLoaderHistorical.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVLoaderHistorical.swift; sourceTree = "<group>"; };
@@ -400,6 +402,7 @@
 				E14AED6F2D684DA20068B2A5 /* ColumnsCollectionCell.swift */,
 				E14AED6D2D684D020068B2A5 /* ColumnsCollectionViewController.swift */,
 				E166A8B82CF955E80003F518 /* ContentOffsetScrollView.swift */,
+				E18B2D5E2D6A7ACA005E5EDE /* CustomBarViewController.swift */,
 				E14AED812D6960E00068B2A5 /* OneColumnCell.swift */,
 				E1942CA02D64331900F5B9A1 /* PinnedColumnBridgeRepresentable.swift */,
 				E14AED842D69A2780068B2A5 /* PinnedColumnBridgeRepresentableUIKit.swift */,
@@ -564,6 +567,7 @@
 				E1883F502D1FCEBD007AA90B /* OnboardingView.swift in Sources */,
 				E19D11442D42FA6800E3A55E /* RNGHelpers.swift in Sources */,
 				E14344DA2D53553D00225A49 /* SimulationSettings+FactorSync.swift in Sources */,
+				E18B2D5F2D6A7ACC005E5EDE /* CustomBarViewController.swift in Sources */,
 				E112E3762D58B73A00167E92 /* MailView.swift in Sources */,
 				E1A1E52F2D2E3A40008F7658 /* RowOffsetHelpers.swift in Sources */,
 				E17B2F802D2800D400ECE087 /* OrientationObserver.swift in Sources */,

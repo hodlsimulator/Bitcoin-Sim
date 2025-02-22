@@ -292,7 +292,7 @@ struct ContentView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Your main parameter entry screen
+                // The main parameter entry screen
                 parametersScreen
 
                 // Bottom icons bar (only if not loading/keyboard)
@@ -307,7 +307,7 @@ struct ContentView: View {
                         .environmentObject(simSettings)
                 }
             }
-            // Hide nav bar on the main screen
+            // Hide the nav bar on the main screen
             .navigationBarHidden(true)
 
             // Bridging screen
@@ -319,68 +319,30 @@ struct ContentView: View {
                     monthlySimSettings: monthlySimSettings,
                     simSettings: simSettings
                 )
-                .navigationBarHidden(false)
-                // Centre title
-                .navigationBarTitle("Simulation Results", displayMode: .inline)
-                // Right chart button
-                .navigationBarItems(
-                    trailing: Button(action: {
-                        print("Chart tapped!")
-                    }) {
-                        Image(systemName: "chart.line.uptrend.xyaxis")
-                            .foregroundColor(.white)
-                    }
-                )
-                // Attempt to tint (Chevron, etc.) white
-                .accentColor(.white)
+                .navigationBarHidden(true) // Hide the system bar entirely
                 .onAppear {
-                    // 1) Create your custom appearance
-                    let appearance = UINavigationBarAppearance()
-                    appearance.configureWithOpaqueBackground()
-                    
-                    // The same grey as your summary card
-                    appearance.backgroundColor = UIColor(white: 0.12, alpha: 1.0)
-                    
-                    // Title in white
-                    appearance.titleTextAttributes = [.foregroundColor: UIColor.white]
-                    
-                    // 2) Remove hairline by clearing shadow
-                    appearance.shadowColor = .clear
-                    appearance.shadowImage = UIImage()
-                    
-                    // 3) Remove "Back" text the old-school way (may or may not work in SwiftUI)
-                    let backItem = UIBarButtonItem(title: "", style: .plain, target: nil, action: nil)
-                    UINavigationBar.appearance().topItem?.backBarButtonItem = backItem
-                    
-                    // 4) Assign the appearance to standard & scrollEdge
-                    UINavigationBar.appearance().standardAppearance = appearance
-                    UINavigationBar.appearance().scrollEdgeAppearance = appearance
-                    
-                    // 5) Make the chevron & icons white (avoid the default blue)
-                    UINavigationBar.appearance().tintColor = .white
+                    removeNavBarHairline() // optional, if you keep it around
                 }
             }
 
-            // Settings
+            // Settings screen
             .navigationDestination(isPresented: $showSettings) {
                 SettingsView()
                     .environmentObject(simSettings)
                     .environmentObject(monthlySimSettings)
                     .environmentObject(coordinator)
-                    .onAppear {
-                        removeNavBarHairline()
-                    }
+                    .onAppear { removeNavBarHairline() }
             }
-            
-            // About
+
+            // About screen
             .navigationDestination(isPresented: $showAbout) {
                 AboutView()
-                    .onAppear {
-                        removeNavBarHairline()
-                    }
+                    .onAppear { removeNavBarHairline() }
             }
         }
         .onAppear {
+            // Shift back button title off-screen globally
+            UIBarButtonItem.appearance().setBackButtonTitlePositionAdjustment(UIOffset(horizontal: -1000, vertical: 0), for: .default)
             removeNavBarHairline()
         }
         .onChange(of: coordinator.isLoading) { _ in

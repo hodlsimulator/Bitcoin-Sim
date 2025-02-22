@@ -15,7 +15,7 @@ struct PinnedColumnBridgeRepresentable: UIViewControllerRepresentable {
     @ObservedObject var monthlySimSettings: MonthlySimulationSettings
     @ObservedObject var simSettings: SimulationSettings
 
-    func makeUIViewController(context: Context) -> UIViewController {
+    func makeUIViewController(context: Context) -> PinnedColumnBridgeViewController {
         // Create your pinned VC
         let pinnedVC = PinnedColumnBridgeViewController()
         pinnedVC.representableContainer = .init(
@@ -26,22 +26,14 @@ struct PinnedColumnBridgeRepresentable: UIViewControllerRepresentable {
         )
         pinnedVC.dismissBinding = $isPresented
 
-        // Embed it in a UINavigationController
-        let navController = UINavigationController(rootViewController: pinnedVC)
-        
-        // Optional: configure nav bar tints etc.
-        navController.navigationBar.tintColor = .white
-        
-        return navController
+        // Return pinnedVC directly (no extra UINavigationController)
+            return pinnedVC
     }
 
-    func updateUIViewController(_ uiViewController: UIViewController,
-                                context: Context) {
+    func updateUIViewController(_ uiViewController: PinnedColumnBridgeViewController,
+                                     context: Context) {
         // Update references if needed
-        if let navController = uiViewController as? UINavigationController,
-           let pinnedVC = navController.viewControllers.first as? PinnedColumnBridgeViewController {
-            
-            pinnedVC.representableContainer = .init(
+        uiViewController.representableContainer = .init(
                 coordinator: coordinator,
                 inputManager: inputManager,
                 monthlySimSettings: monthlySimSettings,
@@ -49,4 +41,3 @@ struct PinnedColumnBridgeRepresentable: UIViewControllerRepresentable {
             )
         }
     }
-}
