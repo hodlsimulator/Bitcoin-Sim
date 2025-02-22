@@ -15,6 +15,8 @@ class PinnedColumnTablesViewController: UIViewController {
     // If needed: onIsAtBottomChanged from the representable
     var onIsAtBottomChanged: ((Bool) -> Void)?
 
+    var currentVerticalOffset: CGPoint = .zero
+    
     // Left table for the pinned (e.g. "Week") column
     let pinnedTableView = UITableView(frame: .zero, style: .plain)
     
@@ -243,6 +245,8 @@ class PinnedColumnTablesViewController: UIViewController {
                     }
                 }
             }
+        
+            currentVerticalOffset = newOffset
             
             isSyncingScroll = false
         }

@@ -88,7 +88,13 @@ extension TwoColumnCollectionViewController: UICollectionViewDataSource, UIColle
             displayedData: displayedData
         )
 
-        // If the user scrolls vertically in this single column
+        // Sync vertical offset to the "global" offset from parent
+        if let parentVC = self.parent as? PinnedColumnTablesViewController {
+            let offset = parentVC.currentVerticalOffset
+            cell.setVerticalOffset(offset)
+        }
+
+        // If the user scrolls vertically in this single column, bubble up
         cell.onScroll = { [weak self] scrollView in
             self?.onScrollSync?(scrollView)
         }
