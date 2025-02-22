@@ -292,7 +292,7 @@ struct ContentView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // The main parameter entry screen
+                // Your main parameter entry screen
                 parametersScreen
 
                 // Bottom icons bar (only if not loading/keyboard)
@@ -307,10 +307,10 @@ struct ContentView: View {
                         .environmentObject(simSettings)
                 }
             }
-            // Hide the nav bar on the main Parameter screen:
+            // Hide nav bar on the main screen
             .navigationBarHidden(true)
-            
-            // 1) Bridging screen
+
+            // Bridging screen
             .navigationDestination(isPresented: $showPinnedColumns) {
                 PinnedColumnBridgeRepresentableUIKit(
                     isPresented: $showPinnedColumns,
@@ -319,55 +319,76 @@ struct ContentView: View {
                     monthlySimSettings: monthlySimSettings,
                     simSettings: simSettings
                 )
-                // Show the nav bar here
                 .navigationBarHidden(false)
-                // Title in the centre
-                .navigationTitle("Simulation Results")
-                .navigationBarTitleDisplayMode(.inline)
-                // Add a toolbar with a right button (chart icon)
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Button {
-                            print("Chart tapped!")
-                        } label: {
-                            Image(systemName: "chart.line.uptrend.xyaxis")
-                        }
+                // Centre title
+                .navigationBarTitle("Simulation Results", displayMode: .inline)
+                // Right chart button
+                .navigationBarItems(
+                    trailing: Button(action: {
+                        print("Chart tapped!")
+                    }) {
+                        Image(systemName: "chart.line.uptrend.xyaxis")
+                            .foregroundColor(.white)
                     }
-                }
-                // Tint everything white (back chevron, chart icon)
-                .tint(.white)
-                // Make the nav bar background a dark grey, if you want to match your summary card
-                .toolbarBackground(
-                    Color(white: 0.12),
-                    for: .navigationBar
                 )
-                // Use dark text for nav items so they stay white on dark grey
-                .toolbarColorScheme(.dark, for: .navigationBar)
+                // Attempt to tint (Chevron, etc.) white
+                .accentColor(.white)
                 .onAppear {
-                    removeNavBarHairline()
+                    // 1) Create your custom appearance
+                    let appearance = UINavigationBarAppearance()
+                    appearance.configureWithOpaqueBackground()
+                    
+                    // The same grey as your summary card
+                    appearance.backgroundColor = UIColor(white: 0.12, alpha: 1.0)
+                    
+                    // Title in white
+                    appearance.titleTextAttributes = [.foregroundColor: UIColor.white]
+                    
+                    // 2) Remove hairline by clearing shadow
+                    appearance.shadowColor = .clear
+                    appearance.shadowImage = UIImage()
+                    
+                    // 3) Remove "Back" text the old-school way (may or may not work in SwiftUI)
+                    let backItem = UIBarButtonItem(title: "", style: .plain, target: nil, action: nil)
+                    UINavigationBar.appearance().topItem?.backBarButtonItem = backItem
+                    
+                    // 4) Assign the appearance to standard & scrollEdge
+                    UINavigationBar.appearance().standardAppearance = appearance
+                    UINavigationBar.appearance().scrollEdgeAppearance = appearance
+                    
+                    // 5) Make the chevron & icons white (avoid the default blue)
+                    UINavigationBar.appearance().tintColor = .white
                 }
             }
-            
-            // 2) Settings screen
+
+            // Settings
             .navigationDestination(isPresented: $showSettings) {
                 SettingsView()
                     .environmentObject(simSettings)
                     .environmentObject(monthlySimSettings)
                     .environmentObject(coordinator)
-                    .onAppear { removeNavBarHairline() }
+                    .onAppear {
+                        removeNavBarHairline()
+                    }
             }
             
-            // 3) About screen
+            // About
             .navigationDestination(isPresented: $showAbout) {
                 AboutView()
-                    .onAppear { removeNavBarHairline() }
+                    .onAppear {
+                        removeNavBarHairline()
+                    }
             }
         }
         .onAppear {
             removeNavBarHairline()
         }
-        .onChange(of: coordinator.isLoading) { _ in checkNavigationState() }
-        .onChange(of: coordinator.isChartBuilding) { _ in checkNavigationState() }
+        .onChange(of: coordinator.isLoading) { _ in
+            checkNavigationState()
+        }
+        .onChange(of: coordinator.isChartBuilding) { _ in
+            checkNavigationState()
+        }
     }
 
     // MARK: - Parameter Screen
