@@ -297,18 +297,15 @@
 				E191AD5C2D1B06E000020DBE /* BitcoinHistoricalData.swift */,
 				E1883F512D1FDDB0007AA90B /* BitcoinShapes.swift */,
 				E1E31C4C2D433DB600ED22E6 /* BlockBootstrapSimulator.swift */,
+				E14AED832D69794A0068B2A5 /* Bridging screen */,
 				E12CCD8A2CF8235F0059931D /* BTC_SimulatorApp.swift */,
 				E1B7B09C2D44E0CE00B60EC6 /* BullishFactorsSection.swift */,
 				E1F1CB5F2D4EF177003DB24F /* CalibrationManager.swift */,
-				E14AED732D6857A30068B2A5 /* CenterSnapFlowLayout.swift */,
 				E1CFF0262D30D07800D9D044 /* ChartBuilders.swift */,
 				E18C2BE02D259245006E7438 /* ChartSnapshotView.swift */,
 				E1A1E5282D2E38F9008F7658 /* CheckboxToggleStyle.swift */,
 				E1942C9C2D63FD9000F5B9A1 /* ColumnsCell.swift */,
-				E14AED6F2D684DA20068B2A5 /* ColumnsCollectionCell.swift */,
-				E14AED6D2D684D020068B2A5 /* ColumnsCollectionViewController.swift */,
 				E112E3732D58B2E700167E92 /* ConsentView.swift */,
-				E166A8B82CF955E80003F518 /* ContentOffsetScrollView.swift */,
 				E166A8B12CF85B2B0003F518 /* ContentView.swift */,
 				E191AD662D1B763E00020DBE /* CSVLoaderBTC.swift */,
 				E191AD5E2D1B07B800020DBE /* CSVLoaderHistorical.swift */,
@@ -343,16 +340,10 @@
 				E14AED7D2D686A3E0068B2A5 /* NumericExtensions.swift */,
 				E1883F4F2D1FCEB9007AA90B /* OnboardingView.swift */,
 				E1942C8E2D61C50800F5B9A1 /* OnboardingSteps.swift */,
-				E14AED812D6960E00068B2A5 /* OneColumnCell.swift */,
 				E17B2F7F2D2800D100ECE087 /* OrientationObserver.swift */,
 				E1F1CB652D4F31B9003DB24F /* ParallelSimulationRunner.swift */,
 				E15DDF4E2D5B3AC000CDD30A /* ParameterEntryView.swift */,
 				E1883F3B2D1DDC75007AA90B /* ParametersFormView.swift */,
-				E1942CA02D64331900F5B9A1 /* PinnedColumnBridgeRepresentable.swift */,
-				E1942CA22D64334B00F5B9A1 /* PinnedColumnBridgeViewController.swift */,
-				E1942C9A2D63FD7300F5B9A1 /* PinnedColumnCell.swift */,
-				E1942C962D63FD0900F5B9A1 /* PinnedColumnTablesRepresentable.swift */,
-				E1942C982D63FD5E00F5B9A1 /* PinnedColumnTablesViewController.swift */,
 				E1A1E51E2D2A7362008F7658 /* PortfolioChartView.swift */,
 				E15DDF4A2D5AE1EF00CDD30A /* RestoreDefaultsMonthly.swift */,
 				E19D11432D42FA6600E3A55E /* RNGHelpers.swift */,
@@ -377,11 +368,7 @@
 				E14D23F42D374258007CC11A /* SimulationSummaryCardView.swift */,
 				E1F1CB672D4F3366003DB24F /* SimulationUtilities.swift */,
 				E1A1E52C2D2E39E3008F7658 /* SnapshotExtensions.swift */,
-				E14AED7F2D69606F0068B2A5 /* SnapTwoColumnsFlowLayout.swift */,
-				E1942C9E2D63FDAF00F5B9A1 /* SomeParentView.swift */,
 				E1A1E5262D2E371B008F7658 /* TipsData.swift */,
-				E14AED712D6857820068B2A5 /* TwoColumnChunker.swift */,
-				E14AED752D6857C40068B2A5 /* TwoColumnCollectionViewController.swift */,
 				E1B7B0A42D47532B00B60EC6 /* UIComponents.swift */,
 				E19D113B2D42F81A00E3A55E /* UtilityExtensions.swift */,
 				E1883F412D1E43D7007AA90B /* VisualEffectBlur.swift */,
@@ -404,6 +391,27 @@
 				E12CCD912CF823610059931D /* Preview Assets.xcassets */,
 			);
 			path = "Preview Content";
+			sourceTree = "<group>";
+		};
+		E14AED832D69794A0068B2A5 /* Bridging screen */ = {
+			isa = PBXGroup;
+			children = (
+				E14AED732D6857A30068B2A5 /* CenterSnapFlowLayout.swift */,
+				E14AED6F2D684DA20068B2A5 /* ColumnsCollectionCell.swift */,
+				E14AED6D2D684D020068B2A5 /* ColumnsCollectionViewController.swift */,
+				E166A8B82CF955E80003F518 /* ContentOffsetScrollView.swift */,
+				E14AED812D6960E00068B2A5 /* OneColumnCell.swift */,
+				E1942CA02D64331900F5B9A1 /* PinnedColumnBridgeRepresentable.swift */,
+				E1942CA22D64334B00F5B9A1 /* PinnedColumnBridgeViewController.swift */,
+				E1942C9A2D63FD7300F5B9A1 /* PinnedColumnCell.swift */,
+				E1942C962D63FD0900F5B9A1 /* PinnedColumnTablesRepresentable.swift */,
+				E1942C982D63FD5E00F5B9A1 /* PinnedColumnTablesViewController.swift */,
+				E14AED7F2D69606F0068B2A5 /* SnapTwoColumnsFlowLayout.swift */,
+				E1942C9E2D63FDAF00F5B9A1 /* SomeParentView.swift */,
+				E14AED712D6857820068B2A5 /* TwoColumnChunker.swift */,
+				E14AED752D6857C40068B2A5 /* TwoColumnCollectionViewController.swift */,
+			);
+			path = "Bridging screen";
 			sourceTree = "<group>";
 		};
 		E1CDC7812D1BC85900F89006 /* Frameworks */ = {
