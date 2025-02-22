@@ -207,22 +207,6 @@ class PinnedColumnTablesViewController: UIViewController {
     
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        
-        print("PinnedColumnTablesVC pinnedTableView frame:", pinnedTableView.frame)
-        print("PinnedColumnTablesVC pinnedTableView contentInset:", pinnedTableView.contentInset)
-        print("PinnedColumnTablesVC pinnedTableView adjustedContentInset:", pinnedTableView.adjustedContentInset)
-        
-        // Debugging columnsCollectionVC positioning issue
-        if let superview = columnsCollectionVC.view.superview {
-            print("columnsCollectionVC.view superview:", superview)
-            print("Superview frame:", superview.frame)
-            print("Superview constraints:")
-            for constraint in superview.constraints {
-                print("  -", constraint)
-            }
-        } else {
-            print("columnsCollectionVC.view superview: nil")
-        }
     }
 }
 

@@ -114,22 +114,6 @@ class TwoColumnPairCell: UICollectionViewCell {
     
     override func layoutSubviews() {
         super.layoutSubviews()
-        
-        // Log frames after layout is complete
-        DispatchQueue.main.async {
-            print("TwoColumnPairCell LEFT table frame:", self.tableViewLeft.frame)
-            print("TwoColumnPairCell LEFT contentInset:", self.tableViewLeft.contentInset,
-                  "adjusted:", self.tableViewLeft.adjustedContentInset)
-            print("TwoColumnPairCell RIGHT table frame:", self.tableViewRight.frame)
-            print("TwoColumnPairCell RIGHT contentInset:", self.tableViewRight.contentInset,
-                  "adjusted:", self.tableViewRight.adjustedContentInset)
-            
-            // Log container and stack frames
-            print("Left container frame:", self.leftContainer.frame)
-            print("Right container frame:", self.rightContainer.frame)
-            print("Main stack frame:", self.mainStack.frame)
-            print("Content view frame:", self.contentView.frame)
-        }
     }
 }
 

@@ -302,33 +302,6 @@ class PinnedColumnBridgeViewController: UIViewController {
     // In PinnedColumnBridgeViewController.swift
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        
-        print("pinnedTablePlaceholder constraints:")
-        for c in pinnedTablePlaceholder.constraints {
-            print("  -", c)
-        }
-
-        // If pinnedTablePlaceholder is inside a UIStackView or container
-        if let placeholderSuperview = pinnedTablePlaceholder.superview {
-            print("placeholderSuperview:", placeholderSuperview)
-            print("placeholderSuperview constraints:")
-            for c in placeholderSuperview.constraints {
-                print("  -", c)
-            }
-        }
-        
-        // Also dump pinnedColumnTablesVC.view constraints
-        let pinnedChildView = pinnedColumnTablesVC.view!
-        print("pinnedColumnTablesVC.view constraints:")
-        for c in pinnedChildView.constraints {
-            print("  -", c)
-        }
-        if let childSuperview = pinnedChildView.superview {
-            print("pinnedColumnTablesVC.view superview:", childSuperview)
-            print("pinnedColumnTablesVC.view superview constraints:")
-            for c in childSuperview.constraints {
-                print("  -", c)
-            }
-        }
+        // Everything else stays as needed; all print statements are removed
     }
 }
