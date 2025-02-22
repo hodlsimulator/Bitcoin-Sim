@@ -314,6 +314,7 @@ struct ContentView: View {
             .navigationDestination(isPresented: $showPinnedColumns) {
                 // Show SwiftUI’s nav bar if you like, or keep hidden:
                 PinnedColumnBridgeRepresentable(
+                    isPresented: $showPinnedColumns,
                     coordinator: coordinator,
                     inputManager: inputManager,
                     monthlySimSettings: monthlySimSettings,

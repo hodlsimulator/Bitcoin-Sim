@@ -72,7 +72,6 @@
 		E1942C992D63FD6200F5B9A1 /* PinnedColumnTablesViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1942C982D63FD5E00F5B9A1 /* PinnedColumnTablesViewController.swift */; };
 		E1942C9B2D63FD7500F5B9A1 /* PinnedColumnCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1942C9A2D63FD7300F5B9A1 /* PinnedColumnCell.swift */; };
 		E1942C9D2D63FD9200F5B9A1 /* ColumnsCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1942C9C2D63FD9000F5B9A1 /* ColumnsCell.swift */; };
-		E1942C9F2D63FDB100F5B9A1 /* SomeParentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1942C9E2D63FDAF00F5B9A1 /* SomeParentView.swift */; };
 		E1942CA12D64331C00F5B9A1 /* PinnedColumnBridgeRepresentable.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1942CA02D64331900F5B9A1 /* PinnedColumnBridgeRepresentable.swift */; };
 		E1942CA32D64334D00F5B9A1 /* PinnedColumnBridgeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1942CA22D64334B00F5B9A1 /* PinnedColumnBridgeViewController.swift */; };
 		E19D10E72D3ED96200E3A55E /* GARCHHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = E19D10E62D3ED96000E3A55E /* GARCHHelper.swift */; };
@@ -198,7 +197,6 @@
 		E1942C982D63FD5E00F5B9A1 /* PinnedColumnTablesViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinnedColumnTablesViewController.swift; sourceTree = "<group>"; };
 		E1942C9A2D63FD7300F5B9A1 /* PinnedColumnCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinnedColumnCell.swift; sourceTree = "<group>"; };
 		E1942C9C2D63FD9000F5B9A1 /* ColumnsCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColumnsCell.swift; sourceTree = "<group>"; };
-		E1942C9E2D63FDAF00F5B9A1 /* SomeParentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SomeParentView.swift; sourceTree = "<group>"; };
 		E1942CA02D64331900F5B9A1 /* PinnedColumnBridgeRepresentable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinnedColumnBridgeRepresentable.swift; sourceTree = "<group>"; };
 		E1942CA22D64334B00F5B9A1 /* PinnedColumnBridgeViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinnedColumnBridgeViewController.swift; sourceTree = "<group>"; };
 		E19D10E62D3ED96000E3A55E /* GARCHHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GARCHHelper.swift; sourceTree = "<group>"; };
@@ -407,7 +405,6 @@
 				E1942C962D63FD0900F5B9A1 /* PinnedColumnTablesRepresentable.swift */,
 				E1942C982D63FD5E00F5B9A1 /* PinnedColumnTablesViewController.swift */,
 				E14AED7F2D69606F0068B2A5 /* SnapTwoColumnsFlowLayout.swift */,
-				E1942C9E2D63FDAF00F5B9A1 /* SomeParentView.swift */,
 				E14AED712D6857820068B2A5 /* TwoColumnChunker.swift */,
 				E14AED752D6857C40068B2A5 /* TwoColumnCollectionViewController.swift */,
 			);
@@ -566,7 +563,6 @@
 				E14344DA2D53553D00225A49 /* SimulationSettings+FactorSync.swift in Sources */,
 				E112E3762D58B73A00167E92 /* MailView.swift in Sources */,
 				E1A1E52F2D2E3A40008F7658 /* RowOffsetHelpers.swift in Sources */,
-				E1942C9F2D63FDB100F5B9A1 /* SomeParentView.swift in Sources */,
 				E17B2F802D2800D400ECE087 /* OrientationObserver.swift in Sources */,
 				E19D113C2D42F81C00E3A55E /* UtilityExtensions.swift in Sources */,
 				E19D113A2D42F75000E3A55E /* MarketRegime.swift in Sources */,

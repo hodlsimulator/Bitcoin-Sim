@@ -8,12 +8,38 @@
 import UIKit
 import SwiftUI
 
+/// A simple struct to store references from SwiftUI
+struct BridgeContainer {
+    let coordinator: SimulationCoordinator
+    let simSettings: SimulationSettings
+    let monthlySimSettings: MonthlySimulationSettings
+    let inputManager: PersistentInputManager
+}
+
+/// Example of an enum within `SimulationSettings`:
+/// If your real code has this defined elsewhere, remove it here.
+/// (Shown just for clarity — not strictly required if you already have it.)
+extension SimulationSettings {
+    enum CurrencyPreference {
+        case usd
+        case eur
+        case both
+    }
+}
+
 class PinnedColumnBridgeViewController: UIViewController {
 
-    // This container references your SwiftUI/Coordinator logic
-    var representableContainer: PinnedColumnBridgeRepresentable.BridgeContainer?
+    // MARK: - SwiftUI Dismiss Binding
+    // If you're controlling navigation from SwiftUI, set this from the .Representable
+    var dismissBinding: Binding<Bool>?
 
+    // MARK: - Container for references
+    var representableContainer: BridgeContainer?
+
+    // UIHostingController for any summary SwiftUI content
     private let hostingController = UIHostingController(rootView: AnyView(EmptyView()))
+
+    // MARK: - UI Elements
     private let summaryCardContainer = UIView()
     private let pinnedTablePlaceholder = UIView()
     private let pinnedColumnTablesVC = PinnedColumnTablesViewController()
@@ -46,7 +72,7 @@ class PinnedColumnBridgeViewController: UIViewController {
         return label
     }()
 
-    // Larger scroll-to-bottom button with reduced opacity.
+    // Larger scroll-to-bottom button with reduced opacity
     private let scrollToBottomButton: UIButton = {
         let btn = UIButton(type: .system)
         btn.setImage(UIImage(systemName: "chevron.down.circle.fill"), for: .normal)
@@ -61,19 +87,27 @@ class PinnedColumnBridgeViewController: UIViewController {
         return btn
     }()
     
-    // Track previous "at bottom" state to avoid re-triggering fade repeatedly
+    // Track previous "at bottom" state to avoid re-triggering fade
     private var wasAtBottom = false
 
+    // MARK: - viewDidLoad
     override func viewDidLoad() {
         super.viewDidLoad()
+        print("PinnedColumnBridgeViewController: viewDidLoad called")
 
-        if #available(iOS 11.0, *) {
-                self.additionalSafeAreaInsets = .zero
-            } else {
-                automaticallyAdjustsScrollViewInsets = false
-            }
+        // Re-enable default iOS swipe-to-go-back gesture if there's a nav controller
+        if let nav = navigationController {
+            nav.interactivePopGestureRecognizer?.delegate = self
+            nav.interactivePopGestureRecognizer?.isEnabled = true
+        }
         
-        // A custom top bar
+        if #available(iOS 11.0, *) {
+            self.additionalSafeAreaInsets = .zero
+        } else {
+            automaticallyAdjustsScrollViewInsets = false
+        }
+        
+        // Create a custom top bar
         let topBar = UIView()
         topBar.backgroundColor = UIColor(white: 0.12, alpha: 1.0)
         topBar.translatesAutoresizingMaskIntoConstraints = false
@@ -107,19 +141,15 @@ class PinnedColumnBridgeViewController: UIViewController {
         backButton.addTarget(self, action: #selector(handleBackButton), for: .touchUpInside)
         chartButton.addTarget(self, action: #selector(handleChartButton), for: .touchUpInside)
 
-        // Position them towards the bottom of topBar
+        // Position them near the bottom of the top bar
         let bottomOffset: CGFloat = -2
-
         NSLayoutConstraint.activate([
-            // Back button on the left
             backButton.leadingAnchor.constraint(equalTo: topBar.leadingAnchor, constant: 16),
             backButton.bottomAnchor.constraint(equalTo: topBar.bottomAnchor, constant: bottomOffset),
             
-            // Chart button on the right
             chartButton.trailingAnchor.constraint(equalTo: topBar.trailingAnchor, constant: -16),
             chartButton.bottomAnchor.constraint(equalTo: topBar.bottomAnchor, constant: bottomOffset),
             
-            // Title in the centre
             titleLabel.centerXAnchor.constraint(equalTo: topBar.centerXAnchor),
             titleLabel.bottomAnchor.constraint(equalTo: topBar.bottomAnchor, constant: bottomOffset)
         ])
@@ -175,8 +205,6 @@ class PinnedColumnBridgeViewController: UIViewController {
         // 5) Hide/fade the button automatically if user is at bottom
         pinnedColumnTablesVC.onIsAtBottomChanged = { [weak self] isAtBottom in
             guard let self = self else { return }
-            
-            // Only animate if there's a change
             guard isAtBottom != self.wasAtBottom else { return }
             self.wasAtBottom = isAtBottom
             
@@ -192,7 +220,6 @@ class PinnedColumnBridgeViewController: UIViewController {
                         })
                     }
                 } else {
-                    // Fade in
                     if self.scrollToBottomButton.isHidden {
                         self.scrollToBottomButton.isHidden = false
                         self.scrollToBottomButton.alpha = 0.0
@@ -205,9 +232,11 @@ class PinnedColumnBridgeViewController: UIViewController {
         }
     }
 
+    // MARK: - viewWillAppear
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        
+        print("PinnedColumnBridgeViewController: viewWillAppear called")
+
         // Hide the system nav bar
         navigationController?.setNavigationBarHidden(true, animated: false)
 
@@ -215,14 +244,25 @@ class PinnedColumnBridgeViewController: UIViewController {
         populatePinnedTable()
     }
 
+    // MARK: - Button Handlers
     @objc private func handleBackButton() {
-        navigationController?.popViewController(animated: true)
+        print("PinnedColumnBridgeViewController: Back button tapped")
+
+        // If controlling nav from SwiftUI, flip the binding to false
+        // SwiftUI sees that isPresented changed -> pop/dismiss
+        dismissBinding?.wrappedValue = false
     }
 
     @objc private func handleChartButton() {
-        print("Chart icon tapped!")
+        print("PinnedColumnBridgeViewController: Chart icon tapped!")
     }
 
+    @objc private func handleScrollToBottom() {
+        print("PinnedColumnBridgeViewController: Scroll-to-bottom button tapped")
+        pinnedColumnTablesVC.scrollToBottom()
+    }
+    
+    // MARK: - Refresh / Populate
     private func refreshSummaryCard() {
         guard let container = representableContainer else { return }
         
@@ -238,14 +278,28 @@ class PinnedColumnBridgeViewController: UIViewController {
         let finalBTC = lastRow.btcPriceUSD
         
         // Decide on final portfolio in USD vs. EUR
-        let finalPortfolio: Decimal = (coord.simSettings.currencyPreference == .eur)
-            ? lastRow.portfolioValueEUR
-            : lastRow.portfolioValueUSD
+        let finalPreference = coord.simSettings.currencyPreference
+        let finalPortfolio: Decimal
+        switch finalPreference {
+        case .eur:
+            finalPortfolio = lastRow.portfolioValueEUR
+        case .usd:
+            finalPortfolio = lastRow.portfolioValueUSD
+        case .both:
+            // Example: choose USD if you like, or handle differently
+            finalPortfolio = lastRow.portfolioValueUSD
+        }
         
         // Also figure out the initial portfolio value
-        let initialPortfolio: Decimal = (coord.simSettings.currencyPreference == .eur)
-            ? firstRow.portfolioValueEUR
-            : firstRow.portfolioValueUSD
+        let initialPortfolio: Decimal
+        switch finalPreference {
+        case .eur:
+            initialPortfolio = firstRow.portfolioValueEUR
+        case .usd:
+            initialPortfolio = firstRow.portfolioValueUSD
+        case .both:
+            initialPortfolio = firstRow.portfolioValueUSD
+        }
         
         // Avoid dividing by zero
         let growthPercentDouble: Double
@@ -258,7 +312,13 @@ class PinnedColumnBridgeViewController: UIViewController {
         }
         
         // Just assume "$" or "€", or read from simSettings if you prefer
-        let currencySymbol: String = (coord.simSettings.currencyPreference == .eur) ? "€" : "$"
+        let currencySymbol: String
+        switch finalPreference {
+        case .eur:
+            currencySymbol = "€"
+        default:
+            currencySymbol = "$"
+        }
         
         hostingController.rootView = AnyView(
             SimulationSummaryCardView(
@@ -279,6 +339,7 @@ class PinnedColumnBridgeViewController: UIViewController {
         let pref = container.simSettings.currencyPreference
         
         // Build columns based on the user’s currencyPreference
+        // (We fully qualify .usd / .eur / .both to avoid “cannot infer base”)
         let columns: [(String, PartialKeyPath<SimulationData>)]
         switch pref {
         case .usd:
@@ -333,14 +394,23 @@ class PinnedColumnBridgeViewController: UIViewController {
             isAtBottom: .constant(false)
         )
     }
-
-    @objc private func handleScrollToBottom() {
-        pinnedColumnTablesVC.scrollToBottom()
-    }
     
-    // In PinnedColumnBridgeViewController.swift
+    // MARK: - Layout
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        // Everything else stays as needed; all print statements are removed
+        // Optional logging
+        // print("PinnedColumnBridgeViewController: viewDidLayoutSubviews called")
+    }
+}
+
+// MARK: - UIGestureRecognizerDelegate
+extension PinnedColumnBridgeViewController: UIGestureRecognizerDelegate {
+    func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        print("PinnedColumnBridgeViewController: Swipe-to-go-back gesture detected")
+        let count = navigationController?.viewControllers.count ?? 0
+        print("PinnedColumnBridgeViewController: nav stack count = \(count)")
+        // If SwiftUI is showing a nav stack, it might still be 1.
+        // This only matters if you have a real UIKit nav stack
+        return count > 1
     }
 }
