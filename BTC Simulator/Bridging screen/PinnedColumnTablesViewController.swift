@@ -301,10 +301,12 @@ extension PinnedColumnTablesViewController: UITableViewDataSource, UITableViewDe
     }
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        guard scrollView == pinnedTableView, !isSyncingScroll else { return }
+        // Don’t do anything if we’re already syncing
+        guard !isSyncingScroll else { return }
 
+        // Sync pinned + visible column offsets
         syncAllTables(with: scrollView)
-        
+
         // near-bottom detection
         guard let rep = representable else { return }
         
@@ -315,8 +317,26 @@ extension PinnedColumnTablesViewController: UITableViewDataSource, UITableViewDe
         let nearBottomThreshold: CGFloat = 50
         let distanceFromBottom = contentHeight - (offsetY + frameHeight)
         let atBottom = (distanceFromBottom < nearBottomThreshold)
+
+        // Pass that to SwiftUI or your parent
+        rep.isAtBottom = atBottom
+        onIsAtBottomChanged?(atBottom)
+    }
+
+    
+    // In PinnedColumnTablesViewController:
+    private func checkIfNearBottom(_ scrollView: UIScrollView) {
+        guard let rep = representable else { return }
+
+        let offsetY       = scrollView.contentOffset.y
+        let contentHeight = scrollView.contentSize.height
+        let frameHeight   = scrollView.frame.size.height
         
-        // Pass that up to SwiftUI
+        let nearBottomThreshold: CGFloat = 50
+        let distanceFromBottom = contentHeight - (offsetY + frameHeight)
+        let atBottom = (distanceFromBottom < nearBottomThreshold)
+
+        // Pass that to SwiftUI or your parent callback
         rep.isAtBottom = atBottom
         onIsAtBottomChanged?(atBottom)
     }

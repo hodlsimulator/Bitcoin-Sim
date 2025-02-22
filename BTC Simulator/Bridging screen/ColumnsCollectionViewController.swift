@@ -82,9 +82,14 @@ extension ColumnsCollectionViewController: UICollectionViewDataSource, UICollect
             displayedData: displayedData
         )
         
-        // If user scrolls vertically on this column, bubble up the event
         cell.onScroll = { [weak self] scrollView in
+            // Already in place:
             self?.onScrollSync?(scrollView)
+            
+            // NEW: also call pinnedColumnTablesViewController’s scrollViewDidScroll
+            if let pinnedVC = self?.parent as? PinnedColumnTablesViewController {
+                pinnedVC.scrollViewDidScroll(scrollView)
+            }
         }
         
         return cell

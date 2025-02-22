@@ -94,10 +94,13 @@ extension TwoColumnCollectionViewController: UICollectionViewDataSource, UIColle
             cell.setVerticalOffset(offset)
         }
 
-        // If the user scrolls vertically in this single column, bubble up
         cell.onScroll = { [weak self] scrollView in
             self?.onScrollSync?(scrollView)
-        }
+            
+            if let pinnedVC = self?.parent as? PinnedColumnTablesViewController {
+                pinnedVC.scrollViewDidScroll(scrollView)
+            }
+        }   
 
         return cell
     }
