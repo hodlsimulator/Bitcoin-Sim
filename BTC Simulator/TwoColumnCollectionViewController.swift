@@ -105,16 +105,23 @@ extension TwoColumnCollectionViewController: UICollectionViewDataSource, UIColle
     }
 
     private func handleCenteredColumn(in scrollView: UIScrollView) {
-        let centerX = scrollView.contentOffset.x + (scrollView.bounds.width / 2.0)
-        let centerPoint = CGPoint(x: centerX, y: scrollView.bounds.height / 2.0)
-
         guard let cv = internalCollectionView else { return }
-        guard let indexPath = cv.indexPathForItem(at: centerPoint),
-              indexPath.item < columnsData.count else {
-            return
-        }
+        
+        // Shift the 'centre' 1/4 screen to the left so we pick the left column
+        let offsetX = scrollView.contentOffset.x + (scrollView.bounds.width / 4.0)
+        let offsetY = scrollView.bounds.height / 2.0
+        let adjustedCenterPoint = CGPoint(x: offsetX, y: offsetY)
 
-        // Pass the item index as an Int
-        onCenteredColumnChanged?(indexPath.item)
+        if let indexPath = cv.indexPathForItem(at: adjustedCenterPoint),
+           indexPath.item < columnsData.count {
+
+            // This 'left' item is now recognized as the "current" column
+            let leftColumnIndex = indexPath.item
+            
+            // Then in your parent, you can do:
+            //   col1Label = columnsData[leftColumnIndex].0
+            //   col2Label = columnsData[leftColumnIndex + 1].0 (if it exists)
+            onCenteredColumnChanged?(leftColumnIndex)
+        }
     }
 }
