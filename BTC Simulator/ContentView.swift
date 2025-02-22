@@ -307,7 +307,7 @@ struct ContentView: View {
                         .environmentObject(simSettings)
                 }
             }
-            // Hide the nav bar on the main screen
+            // Hide the nav bar on the main Parameter screen:
             .navigationBarHidden(true)
             
             // 1) Bridging screen
@@ -319,8 +319,30 @@ struct ContentView: View {
                     monthlySimSettings: monthlySimSettings,
                     simSettings: simSettings
                 )
+                // Show the nav bar here
                 .navigationBarHidden(false)
-                // Remove the .navigationBarBackButtonDisplayMode line
+                // Title in the centre
+                .navigationTitle("Simulation Results")
+                .navigationBarTitleDisplayMode(.inline)
+                // Add a toolbar with a right button (chart icon)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button {
+                            print("Chart tapped!")
+                        } label: {
+                            Image(systemName: "chart.line.uptrend.xyaxis")
+                        }
+                    }
+                }
+                // Tint everything white (back chevron, chart icon)
+                .tint(.white)
+                // Make the nav bar background a dark grey, if you want to match your summary card
+                .toolbarBackground(
+                    Color(white: 0.12),
+                    for: .navigationBar
+                )
+                // Use dark text for nav items so they stay white on dark grey
+                .toolbarColorScheme(.dark, for: .navigationBar)
                 .onAppear {
                     removeNavBarHairline()
                 }
