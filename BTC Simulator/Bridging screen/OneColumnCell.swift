@@ -24,15 +24,16 @@ class OneColumnCell: UICollectionViewCell, UITableViewDelegate, UITableViewDataS
         backgroundColor = UIColor(white: 0.15, alpha: 1.0)
         
         tableView.translatesAutoresizingMaskIntoConstraints = false
-        tableView.delegate   = self
+        tableView.delegate = self
         tableView.dataSource = self
         tableView.backgroundColor = .clear
         tableView.showsVerticalScrollIndicator = false
         tableView.register(OneColumnRowCell.self, forCellReuseIdentifier: "OneColumnRowCell")
-        
-        // Explicitly set row height to 44 points
         tableView.rowHeight = 44
         
+        // Make sure content inset isn't automatically adjusted
+        tableView.contentInsetAdjustmentBehavior = .never
+
         // Remove extra margins and insets
         tableView.cellLayoutMarginsFollowReadableWidth = false
         tableView.layoutMargins = .zero
@@ -59,8 +60,8 @@ class OneColumnCell: UICollectionViewCell, UITableViewDelegate, UITableViewDataS
     func configure(columnTitle: String,
                    partialKey: PartialKeyPath<SimulationData>,
                    displayedData: [SimulationData]) {
-        self.columnTitle   = columnTitle
-        self.partialKey    = partialKey
+        self.columnTitle = columnTitle
+        self.partialKey = partialKey
         self.displayedData = displayedData
         tableView.reloadData()
     }
@@ -145,6 +146,7 @@ class OneColumnRowCell: UITableViewCell {
             label.text = "-"
             return
         }
+        
         // If it's Decimal
         if let kp = pk as? KeyPath<SimulationData, Decimal> {
             let val = rowData[keyPath: kp]

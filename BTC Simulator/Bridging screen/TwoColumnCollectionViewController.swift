@@ -9,17 +9,17 @@ import UIKit
 
 class TwoColumnCollectionViewController: UIViewController {
 
-    /// The array of rows to populate each column's table
+    // The array of rows to populate each column's table
     var displayedData: [SimulationData] = []
 
-    /// Instead of pairs, we just have an array of columns
+    // Instead of pairs, we just have an array of columns
     var columnsData: [(String, PartialKeyPath<SimulationData>)] = []
 
-    /// Called whenever one of the single-column tables scrolls vertically
+    // Called whenever one of the single-column tables scrolls vertically
     var onScrollSync: ((UIScrollView) -> Void)?
 
-    /// Called when the user scrolls horizontally and a new column is centred,
-    /// passing the index of the centred column.
+    // Called when the user scrolls horizontally and a new column is centred,
+    // passing the index of the centred column
     var onCenteredColumnChanged: ((Int) -> Void)?
 
     var internalCollectionView: UICollectionView?
@@ -38,6 +38,7 @@ class TwoColumnCollectionViewController: UIViewController {
 
         cv.dataSource = self
         cv.delegate   = self
+
         // Register the single‑column cell
         cv.register(OneColumnCell.self, forCellWithReuseIdentifier: "OneColumnCell")
 
@@ -55,7 +56,7 @@ class TwoColumnCollectionViewController: UIViewController {
     func reloadData() {
         internalCollectionView?.reloadData()
     }
-    
+
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         internalCollectionView?.collectionViewLayout.invalidateLayout()
@@ -65,15 +66,16 @@ class TwoColumnCollectionViewController: UIViewController {
 // MARK: - UICollectionViewDataSource & Delegate
 
 extension TwoColumnCollectionViewController: UICollectionViewDataSource, UICollectionViewDelegate {
-    
+
+    // 1) Required data source method
     func collectionView(_ collectionView: UICollectionView,
                         numberOfItemsInSection section: Int) -> Int {
         return columnsData.count
     }
 
+    // 2) Required data source method
     func collectionView(_ collectionView: UICollectionView,
                         cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-
         guard let cell = collectionView.dequeueReusableCell(
             withReuseIdentifier: "OneColumnCell",
             for: indexPath
@@ -88,34 +90,49 @@ extension TwoColumnCollectionViewController: UICollectionViewDataSource, UIColle
             displayedData: displayedData
         )
 
-        // Sync vertical offset to the "global" offset from parent
+        // Sync vertical offset asynchronously
         if let parentVC = self.parent as? PinnedColumnTablesViewController {
-            let offset = parentVC.currentVerticalOffset
-            cell.setVerticalOffset(offset)
+            DispatchQueue.main.async {
+                cell.setVerticalOffset(parentVC.currentVerticalOffset)
+            }
         }
 
         cell.onScroll = { [weak self] scrollView in
             self?.onScrollSync?(scrollView)
-            
             if let pinnedVC = self?.parent as? PinnedColumnTablesViewController {
                 pinnedVC.scrollViewDidScroll(scrollView)
             }
-        }   
+        }
 
         return cell
+    }
+
+    // 3) Optional but helpful: triggers right before a cell becomes visible
+    func collectionView(_ collectionView: UICollectionView,
+                        willDisplay cell: UICollectionViewCell,
+                        forItemAt indexPath: IndexPath) {
+        
+        if let oneColCell = cell as? OneColumnCell,
+           let parentVC = self.parent as? PinnedColumnTablesViewController {
+            // Make sure newly displayed cells start at the correct vertical offset
+            oneColCell.setVerticalOffset(parentVC.currentVerticalOffset)
+        }
     }
 
     // Snap-based “center” detection
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
         handleCenteredColumn(in: scrollView)
     }
+
     func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate: Bool) {
-        if !willDecelerate { handleCenteredColumn(in: scrollView) }
+        if !willDecelerate {
+            handleCenteredColumn(in: scrollView)
+        }
     }
 
     private func handleCenteredColumn(in scrollView: UIScrollView) {
         guard let cv = internalCollectionView else { return }
-        
+
         // Shift the 'centre' 1/4 screen to the left so we pick the left column
         let offsetX = scrollView.contentOffset.x + (scrollView.bounds.width / 4.0)
         let offsetY = scrollView.bounds.height / 2.0
@@ -123,13 +140,8 @@ extension TwoColumnCollectionViewController: UICollectionViewDataSource, UIColle
 
         if let indexPath = cv.indexPathForItem(at: adjustedCenterPoint),
            indexPath.item < columnsData.count {
-
-            // This 'left' item is now recognized as the "current" column
-            let leftColumnIndex = indexPath.item
             
-            // Then in your parent, you can do:
-            //   col1Label = columnsData[leftColumnIndex].0
-            //   col2Label = columnsData[leftColumnIndex + 1].0 (if it exists)
+            let leftColumnIndex = indexPath.item
             onCenteredColumnChanged?(leftColumnIndex)
         }
     }
