@@ -119,7 +119,7 @@ class PinnedColumnTablesViewController: UIViewController {
         pinnedTableView.translatesAutoresizingMaskIntoConstraints = false
         pinnedTableView.dataSource = self
         pinnedTableView.delegate   = self
-        pinnedTableView.separatorStyle = .none
+        pinnedTableView.separatorStyle = .singleLine  // Changed to show separators
         pinnedTableView.backgroundColor = .clear
         pinnedTableView.showsVerticalScrollIndicator = false
         pinnedTableView.register(PinnedColumnCell.self, forCellReuseIdentifier: "PinnedColumnCell")

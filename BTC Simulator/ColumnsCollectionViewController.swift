@@ -33,6 +33,10 @@ class ColumnsCollectionViewController: UIViewController {
         cv.delegate   = self
         cv.translatesAutoresizingMaskIntoConstraints = false
         
+        // Remove content insets
+        cv.contentInset = .zero
+        cv.contentInsetAdjustmentBehavior = .never
+        
         // Register the single-column cell
         cv.register(OneColumnCell.self, forCellWithReuseIdentifier: "OneColumnCell")
         

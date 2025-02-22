@@ -30,10 +30,15 @@ class OneColumnCell: UICollectionViewCell, UITableViewDelegate, UITableViewDataS
         tableView.showsVerticalScrollIndicator = false
         tableView.register(OneColumnRowCell.self, forCellReuseIdentifier: "OneColumnRowCell")
         
-        // Remove extra margins
+        // Explicitly set row height to 44 points
+        tableView.rowHeight = 44
+        
+        // Remove extra margins and insets
         tableView.cellLayoutMarginsFollowReadableWidth = false
         tableView.layoutMargins = .zero
         tableView.separatorInset = .zero
+        tableView.contentInset = .zero
+        tableView.scrollIndicatorInsets = .zero
         if #available(iOS 15.0, *) {
             tableView.sectionHeaderTopPadding = 0
         }
@@ -47,7 +52,6 @@ class OneColumnCell: UICollectionViewCell, UITableViewDelegate, UITableViewDataS
         ])
     }
 
-    
     required init?(coder: NSCoder) {
         fatalError("init(coder:) not implemented")
     }
@@ -114,20 +118,21 @@ class OneColumnRowCell: UITableViewCell {
         backgroundColor = .clear
         selectionStyle  = .none
         
+        // Remove margins
+        preservesSuperviewLayoutMargins = false
+        layoutMargins = .zero
+        separatorInset = .zero
+        
         label.textColor = .white
         label.font = UIFont.systemFont(ofSize: 14)
         label.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(label)
         
         NSLayoutConstraint.activate([
-            label.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 8),
+            // Reintroduce 18 points to match pinned table alignment
+            label.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 18),
             label.centerYAnchor.constraint(equalTo: contentView.centerYAnchor)
         ])
-        
-        // Remove margins
-        preservesSuperviewLayoutMargins = false
-        layoutMargins = .zero
-        separatorInset = .zero
     }
     
     required init?(coder: NSCoder) {
