@@ -7,24 +7,28 @@
 
 import UIKit
 
-/// A layout that shows 2 columns per screen width
-/// and snaps horizontally in single-column increments.
 class SnapTwoColumnsFlowLayout: UICollectionViewFlowLayout {
     
     override func prepare() {
         super.prepare()
         guard let cv = collectionView else { return }
         
-        // Each cell is half the collection width => 2 columns on screen
-        let width = cv.bounds.width / 2
+        // Each item is half the collection width => 2 columns per screen
+        let width  = cv.bounds.width / 2
         let height = cv.bounds.height
         
         itemSize = CGSize(width: width, height: height)
         minimumLineSpacing = 0
         scrollDirection = .horizontal
+        
+        // Force a higher deceleration rate for stronger snapping
+        cv.decelerationRate = UIScrollView.DecelerationRate.fast
+        // If you want it even more abrupt, you can do:
+        // cv.decelerationRate = UIScrollView.DecelerationRate(rawValue: UIScrollView.DecelerationRate.fast.rawValue * 2.0)
     }
     
-    /// Snap to half-screen boundaries.
+    /// Force a snap to half-screen boundaries,
+    /// ignoring velocity so it always lands on the nearest page.
     override func targetContentOffset(
         forProposedContentOffset proposedContentOffset: CGPoint,
         withScrollingVelocity velocity: CGPoint
@@ -34,10 +38,14 @@ class SnapTwoColumnsFlowLayout: UICollectionViewFlowLayout {
                                              withScrollingVelocity: velocity)
         }
         
+        // Each "page" is half the screen
         let halfWidth = cv.bounds.width / 2
+        
+        // We'll ignore the actual velocity and snap to the nearest half page
         let rawPage = proposedContentOffset.x / halfWidth
         let rounded = round(rawPage)
+        let newX = rounded * halfWidth
         
-        return CGPoint(x: rounded * halfWidth, y: proposedContentOffset.y)
+        return CGPoint(x: newX, y: proposedContentOffset.y)
     }
 }
