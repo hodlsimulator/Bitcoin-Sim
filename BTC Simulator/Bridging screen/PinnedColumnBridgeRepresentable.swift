@@ -8,58 +8,42 @@
 import SwiftUI
 import UIKit
 
-// 1) Make sure to remove the default SwiftUI bar or hide it.
-//    For example, wrap the view in a NavigationView, but hide that nav bar:
-struct PinnedColumnBridgeRepresentable: View {
+struct PinnedColumnBridgeRepresentable: UIViewControllerRepresentable {
+    /// A binding so SwiftUI can toggle this screen on/off.
+    @Binding var isPresented: Bool
 
-    // Dummy ObservedObjects
+    /// ObservedObjects from your environment
     @ObservedObject var coordinator: SimulationCoordinator
     @ObservedObject var inputManager: PersistentInputManager
     @ObservedObject var monthlySimSettings: MonthlySimulationSettings
     @ObservedObject var simSettings: SimulationSettings
 
-    var body: some View {
-        // If you wrap this in a NavigationView, hide the bar:
-        NavigationView {
-            BridgeContainer(
-                coordinator: coordinator,
-                inputManager: inputManager,
-                monthlySimSettings: monthlySimSettings,
-                simSettings: simSettings
-            )
-            // 2) Let your UIKit view stretch under the safe areas:
-            .ignoresSafeArea(.all)
-            .navigationBarHidden(true)
-            .navigationBarBackButtonHidden(true)
-        }
-        // Or remove NavigationView altogether if you don’t need SwiftUI nav management
-        .navigationViewStyle(StackNavigationViewStyle())
+    func makeUIViewController(context: Context) -> PinnedColumnBridgeViewController {
+        let vc = PinnedColumnBridgeViewController()
+
+        // 1) Provide references so your bridging VC can do its job
+        vc.representableContainer = .init(
+            coordinator: coordinator,
+            inputManager: inputManager,
+            monthlySimSettings: monthlySimSettings,
+            simSettings: simSettings
+        )
+
+        // 2) Pass the SwiftUI binding so the VC can set isPresented = false
+        //    when the user taps back.
+        vc.dismissBinding = $isPresented
+
+        return vc
     }
 
-    struct BridgeContainer: UIViewControllerRepresentable {
-        let coordinator: SimulationCoordinator
-        let inputManager: PersistentInputManager
-        let monthlySimSettings: MonthlySimulationSettings
-        let simSettings: SimulationSettings
-
-        func makeCoordinator() -> Coordinator { Coordinator(self) }
-
-        func makeUIViewController(context: Context) -> PinnedColumnBridgeViewController {
-            let vc = PinnedColumnBridgeViewController()
-            vc.representableContainer = self
-            return vc
-        }
-        
-        func updateUIViewController(_ uiViewController: PinnedColumnBridgeViewController,
-                                    context: Context) {
-            uiViewController.representableContainer = self
-        }
-        
-        class Coordinator: NSObject {
-            var parent: BridgeContainer
-            init(_ parent: BridgeContainer) {
-                self.parent = parent
-            }
-        }
+    func updateUIViewController(_ uiViewController: PinnedColumnBridgeViewController,
+                                context: Context) {
+        // If settings or data changes, refresh references
+        uiViewController.representableContainer = .init(
+            coordinator: coordinator,
+            inputManager: inputManager,
+            monthlySimSettings: monthlySimSettings,
+            simSettings: simSettings
+        )
     }
 }

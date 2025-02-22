@@ -312,6 +312,7 @@ struct ContentView: View {
             
             .navigationDestination(isPresented: $showPinnedColumns) {
                 PinnedColumnBridgeRepresentableUIKit(
+                    isPresented: $showPinnedColumns,
                     coordinator: coordinator,
                     inputManager: inputManager,
                     monthlySimSettings: monthlySimSettings,
