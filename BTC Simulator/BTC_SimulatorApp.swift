@@ -39,6 +39,10 @@ struct BTCMonteCarloApp: App {
         UINavigationBar.appearance().standardAppearance   = navBarAppearance
         UINavigationBar.appearance().compactAppearance    = navBarAppearance
         UINavigationBar.appearance().scrollEdgeAppearance = navBarAppearance
+        
+        // Make arrows and bar buttons white.
+        UINavigationBar.appearance().tintColor = .white
+            
         if #available(iOS 15.0, *) {
             UINavigationBar.appearance().compactScrollEdgeAppearance = navBarAppearance
         }
@@ -146,6 +150,7 @@ struct BTCMonteCarloApp: App {
                             .environmentObject(coordinator)
                             .environmentObject(appViewModel)
                     }
+                    .tint(.white) // <–– SwiftUI override so the arrow is never blue.
                     .preferredColorScheme(.dark)
 
                 } else {

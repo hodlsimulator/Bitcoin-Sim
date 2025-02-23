@@ -18,39 +18,6 @@ struct BridgeContainer {
     let chartDataCache: ChartDataCache
 }
 
-// MARK: - ChartHostingController
-class ChartHostingController<Content: View>: UIHostingController<Content> {
-    
-    // We add this so the nav bar's appearance is fully customised.
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        
-        // Create a custom appearance
-        let appearance = UINavigationBarAppearance()
-        appearance.configureWithOpaqueBackground()
-        appearance.backgroundColor = .black  // Or your preferred colour
-        appearance.titleTextAttributes = [.foregroundColor: UIColor.white]
-        appearance.shadowColor = .clear   // <-- Add this line to remove the hairline
-        
-        // Remove any default back-button text
-        appearance.backButtonAppearance.normal.titlePositionAdjustment = UIOffset(horizontal: -2000, vertical: 0)
-        
-        // Apply to standard & scrollEdge appearances
-        navigationItem.standardAppearance = appearance
-        navigationItem.scrollEdgeAppearance = appearance
-        
-        // Also ensure no "Back" text by default
-        navigationItem.backButtonDisplayMode = .minimal
-    }
-    
-    // Show nav bar again (in white) whenever we appear
-    override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
-        navigationController?.setNavigationBarHidden(false, animated: false)
-        navigationController?.navigationBar.tintColor = .white
-    }
-}
-
 // MARK: - PinnedColumnBridgeViewController
 class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDelegate {
 
