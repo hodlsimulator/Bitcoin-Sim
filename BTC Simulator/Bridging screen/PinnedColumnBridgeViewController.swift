@@ -1,3 +1,4 @@
+//
 //  PinnedColumnBridgeViewController.swift
 //  BTCMonteCarlo
 //
@@ -28,9 +29,8 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
     private let backButton   = UIButton(type: .system)
     private let chartButton  = UIButton(type: .system)
 
-    // The standard nav bar is 44pt plus the status-bar safe area on modern devices
-    // so we’ll just keep 44 as the “additional” nav bar height:
-    private let customNavBarHeight: CGFloat = 44
+    // Bump this up to allow space for the status bar + room for buttons
+    private let customNavBarHeight: CGFloat = 64
     private let summaryCardHeight:  CGFloat = 80
 
     private let hostingController      = UIHostingController(rootView: AnyView(EmptyView()))
@@ -71,7 +71,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
             nav.interactivePopGestureRecognizer?.isEnabled = true
         }
 
-        // Setup custom top bar and other UI
+        // 1) Setup custom top bar
         setupCustomTopBar()
 
         // 2) Setup summaryCardContainer below the nav bar
@@ -97,8 +97,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         ])
         hostingController.didMove(toParent: self)
 
-        // 3) Pinned table area
-        /// Update pinnedTablePlaceholder constraints for full-bleed bottom
+        // 3) Pinned table area (extend to bottom)
         pinnedTablePlaceholder.backgroundColor = UIColor.darkGray.withAlphaComponent(0.2)
         pinnedTablePlaceholder.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(pinnedTablePlaceholder)
@@ -106,7 +105,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
             pinnedTablePlaceholder.topAnchor.constraint(equalTo: summaryCardContainer.bottomAnchor),
             pinnedTablePlaceholder.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             pinnedTablePlaceholder.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            pinnedTablePlaceholder.bottomAnchor.constraint(equalTo: view.bottomAnchor) // Changed from safeAreaLayoutGuide.bottomAnchor
+            pinnedTablePlaceholder.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
 
         // Embed pinnedColumnTablesVC
@@ -120,6 +119,12 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
             pinnedColumnTablesVC.view.bottomAnchor.constraint(equalTo: pinnedTablePlaceholder.bottomAnchor)
         ])
         pinnedColumnTablesVC.didMove(toParent: self)
+        
+        // If pinnedColumnTablesVC has a UITableView, ensure no extra insets:
+        if let tableView = pinnedColumnTablesVC.view.subviews.first as? UITableView {
+            tableView.contentInset.bottom = 0
+            tableView.verticalScrollIndicatorInsets.bottom = 0
+        }
 
         // 4) Scroll-to-bottom button
         view.addSubview(scrollToBottomButton)
@@ -174,27 +179,27 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         customTopBar.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(customTopBar)
 
-        // Anchor to view.topAnchor for full-bleed behind status bar
         NSLayoutConstraint.activate([
-            customTopBar.topAnchor.constraint(equalTo: view.topAnchor), // Changed from safeArea-based anchoring
+            // Bar extends from the very top down 64pts below the safe area’s top
+            customTopBar.topAnchor.constraint(equalTo: view.topAnchor),
             customTopBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             customTopBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            customTopBar.heightAnchor.constraint(equalToConstant: customNavBarHeight + view.safeAreaInsets.top) // Include status bar height
+            customTopBar.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor,
+                                                 constant: customNavBarHeight)
         ])
 
         // Back button
         backButton.setImage(UIImage(systemName: "chevron.left"), for: .normal)
         backButton.tintColor = .white
-        backButton.adjustsImageWhenHighlighted = false
         backButton.translatesAutoresizingMaskIntoConstraints = false
-        backButton.addTarget(self, action: #selector(handleBack), for: .touchUpInside)
         customTopBar.addSubview(backButton)
         NSLayoutConstraint.activate([
             backButton.leadingAnchor.constraint(equalTo: customTopBar.leadingAnchor, constant: 16),
             backButton.centerYAnchor.constraint(equalTo: customTopBar.centerYAnchor)
         ])
+        backButton.addTarget(self, action: #selector(handleBack), for: .touchUpInside)
 
-        // Title label
+        // Title
         titleLabel.text = "Simulation Results"
         titleLabel.textColor = .white
         titleLabel.font = UIFont.boldSystemFont(ofSize: 17)
@@ -202,20 +207,19 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         customTopBar.addSubview(titleLabel)
         NSLayoutConstraint.activate([
             titleLabel.centerXAnchor.constraint(equalTo: customTopBar.centerXAnchor),
-            titleLabel.centerYAnchor.constraint(equalTo: customTopBar.centerYAnchor)
+            titleLabel.centerYAnchor.constraint(equalTo: backButton.centerYAnchor)
         ])
 
         // Chart button
         chartButton.setImage(UIImage(systemName: "chart.line.uptrend.xyaxis"), for: .normal)
         chartButton.tintColor = .white
-        chartButton.adjustsImageWhenHighlighted = false
         chartButton.translatesAutoresizingMaskIntoConstraints = false
-        chartButton.addTarget(self, action: #selector(handleChartButton), for: .touchUpInside)
         customTopBar.addSubview(chartButton)
         NSLayoutConstraint.activate([
             chartButton.trailingAnchor.constraint(equalTo: customTopBar.trailingAnchor, constant: -16),
-            chartButton.centerYAnchor.constraint(equalTo: customTopBar.centerYAnchor)
+            chartButton.centerYAnchor.constraint(equalTo: backButton.centerYAnchor)
         ])
+        chartButton.addTarget(self, action: #selector(handleChartButton), for: .touchUpInside)
     }
 
     // MARK: - Edge-Swipe
