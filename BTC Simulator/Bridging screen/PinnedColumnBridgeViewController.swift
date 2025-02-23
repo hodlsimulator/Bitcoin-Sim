@@ -300,16 +300,34 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         guard let container = representableContainer else { return }
         let coord = container.coordinator
 
-        guard let firstRow = coord.monteCarloResults.first,
-              let lastRow  = coord.monteCarloResults.last else { return }
+        // Make sure we have any results
+        guard !coord.monteCarloResults.isEmpty else { return }
+        guard let lastRow = coord.monteCarloResults.last else { return }
 
+        // We'll show final BTC in USD for the card's price display
         let finalBTC = lastRow.btcPriceUSD
+
         switch coord.simSettings.currencyPreference {
+
+        // -------------------------------------------------------------
+        // 1) USD branch
+        // -------------------------------------------------------------
         case .usd:
             let finalPortfolio = lastRow.portfolioValueUSD
-            let initialPortfolio = firstRow.portfolioValueUSD
-            let (growthPercentDouble, currencySymbol) = growthCalc(finalPortfolio, initialPortfolio, "$")
-
+            
+            // Sum all weekly contributions (USD) as Decimal
+            var totalContributed = Decimal(0)
+            for row in coord.monteCarloResults {
+                totalContributed += Decimal(row.contributionUSD) // <–– wrap in Decimal()
+            }
+            
+            // Convert the Double startingBalance to Decimal
+            totalContributed += Decimal(coord.simSettings.startingBalance)
+            
+            let (growthPercentDouble, currencySymbol) =
+                growthCalcWithContributions(finalPortfolio, totalContributed, symbol: "$")
+            
+            // Pass the computed growth into SwiftUI
             hostingController.rootView = AnyView(
                 SimulationSummaryCardView(
                     finalBTCPrice: Double(truncating: finalBTC as NSNumber),
@@ -322,10 +340,23 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
                 .background(Color(UIColor(white: 0.12, alpha: 1.0)))
             )
 
+        // -------------------------------------------------------------
+        // 2) EUR branch
+        // -------------------------------------------------------------
         case .eur:
             let finalPortfolio = lastRow.portfolioValueEUR
-            let initialPortfolio = firstRow.portfolioValueEUR
-            let (growthPercentDouble, currencySymbol) = growthCalc(finalPortfolio, initialPortfolio, "€")
+            
+            var totalContributed = Decimal(0)
+            for row in coord.monteCarloResults {
+                totalContributed += Decimal(row.contributionEUR) // <–– wrap in Decimal()
+            }
+            
+            // If startingBalance is in USD, you might convert it,
+            // but here's a direct Decimal() for simplicity:
+            totalContributed += Decimal(coord.simSettings.startingBalance)
+            
+            let (growthPercentDouble, currencySymbol) =
+                growthCalcWithContributions(finalPortfolio, totalContributed, symbol: "€")
 
             hostingController.rootView = AnyView(
                 SimulationSummaryCardView(
@@ -338,10 +369,22 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
                 .background(Color(UIColor(white: 0.12, alpha: 1.0)))
             )
 
+        // -------------------------------------------------------------
+        // 3) Both branch
+        // -------------------------------------------------------------
         case .both:
+            // We'll just display USD for the final portfolio
             let finalPortfolio = lastRow.portfolioValueUSD
-            let initialPortfolio = firstRow.portfolioValueUSD
-            let (growthPercentDouble, currencySymbol) = growthCalc(finalPortfolio, initialPortfolio, "$")
+
+            var totalContributed = Decimal(0)
+            for row in coord.monteCarloResults {
+                totalContributed += Decimal(row.contributionUSD) // <–– wrap in Decimal()
+            }
+            
+            totalContributed += Decimal(coord.simSettings.startingBalance)
+            
+            let (growthPercentDouble, currencySymbol) =
+                growthCalcWithContributions(finalPortfolio, totalContributed, symbol: "$")
 
             hostingController.rootView = AnyView(
                 SimulationSummaryCardView(
@@ -354,6 +397,22 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
                 .background(Color(UIColor(white: 0.12, alpha: 1.0)))
             )
         }
+    }
+
+    // MARK: - Growth Calculation Helper
+    private func growthCalcWithContributions(
+        _ finalValue: Decimal,
+        _ totalContributed: Decimal,
+        symbol: String
+    ) -> (Double, String) {
+        guard totalContributed > 0 else {
+            // Avoid divide by zero if user contributed nothing
+            return (0.0, symbol)
+        }
+        // ratio = final / total
+        let ratio = NSDecimalNumber(decimal: finalValue / totalContributed).doubleValue
+        let growthDouble = (ratio - 1.0) * 100.0
+        return (growthDouble, symbol)
     }
 
     private func populatePinnedTable() {
