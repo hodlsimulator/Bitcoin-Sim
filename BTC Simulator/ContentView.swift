@@ -22,9 +22,6 @@ class PersistentInputManager: ObservableObject {
     @Published var firstYearContribution: String { didSet {
         UserDefaults.standard.set(firstYearContribution, forKey: "firstYearContribution")
     }}
-    @Published var subsequentContribution: String { didSet {
-        UserDefaults.standard.set(subsequentContribution, forKey: "subsequentContribution")
-    }}
     @Published var iterations: String { didSet {
         UserDefaults.standard.set(iterations, forKey: "iterations")
     }}
@@ -84,7 +81,6 @@ class PersistentInputManager: ObservableObject {
         }
         
         self.firstYearContribution    = UserDefaults.standard.string(forKey: "firstYearContribution") ?? "100"
-        self.subsequentContribution   = UserDefaults.standard.string(forKey: "subsequentContribution") ?? "100"
         self.iterations              = UserDefaults.standard.string(forKey: "iterations") ?? "100"
         self.annualCAGR              = UserDefaults.standard.string(forKey: "annualCAGR") ?? "30"
         self.annualVolatility        = UserDefaults.standard.string(forKey: "annualVolatility") ?? "80"
@@ -113,7 +109,6 @@ class PersistentInputManager: ObservableObject {
 
     func saveToDefaults() {
         UserDefaults.standard.set(firstYearContribution, forKey: "firstYearContribution")
-        UserDefaults.standard.set(subsequentContribution, forKey: "subsequentContribution")
         UserDefaults.standard.set(iterations, forKey: "iterations")
         UserDefaults.standard.set(annualCAGR, forKey: "annualCAGR")
         UserDefaults.standard.set(annualVolatility, forKey: "annualVolatility")

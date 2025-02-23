@@ -127,7 +127,6 @@ private func runWeeklySimulation(
     
     // DCA deposit amounts (example defaults)
     let firstYearVal  = 100.0
-    let secondYearVal = 50.0
     
     var lastStepLogReturn = 0.0
     var lastAutoReturn = 0.0
@@ -227,10 +226,8 @@ private func runWeeklySimulation(
         var typedDeposit = 0.0
         if currentWeek == 1 {
             typedDeposit = settings.startingBalance
-        } else if currentWeek <= 52 {
-            typedDeposit = firstYearVal
         } else {
-            typedDeposit = secondYearVal
+            typedDeposit = firstYearVal // Always use the same deposit every week
         }
         
         let (feeEUR, feeUSD, cEur, cUsd, depositBTC) = computeNetDeposit(

@@ -358,7 +358,6 @@ extension OnboardingView {
             monthlySimSettings.feePercentageMonthly      = feePercentage
 
             inputManager.firstYearContribution  = String(contributionPerStep)
-            inputManager.subsequentContribution = String(contributionPerStep)
             inputManager.threshold1             = threshold1
             inputManager.withdrawAmount1        = withdraw1
             inputManager.threshold2             = threshold2
@@ -381,7 +380,6 @@ extension OnboardingView {
             weeklySimSettings.feePercentage      = feePercentage
 
             inputManager.firstYearContribution   = String(contributionPerStep)
-            inputManager.subsequentContribution  = String(contributionPerStep)
             inputManager.threshold1              = threshold1
             inputManager.withdrawAmount1         = withdraw1
             inputManager.threshold2              = threshold2
