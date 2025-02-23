@@ -15,12 +15,13 @@ struct BridgeContainer {
     let monthlySimSettings: MonthlySimulationSettings
     let simSettings: SimulationSettings
     let simChartSelection: SimChartSelection
-    let chartDataCache: ChartDataCache    // <-- Ensure you have this
+    let chartDataCache: ChartDataCache
 }
 
 // MARK: - PinnedColumnBridgeViewController
 class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDelegate {
 
+    // MARK: - Properties
     var representableContainer: BridgeContainer?
     var dismissBinding: Binding<Bool>?
 
@@ -53,19 +54,22 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
 
     private var wasAtBottom = false
 
+    /// Store the system's original pop gesture delegate
+    private weak var originalGestureDelegate: UIGestureRecognizerDelegate?
+
     override func viewDidLoad() {
         super.viewDidLoad()
+
+        // Extend layout behind status bar and bottom safe area
         edgesForExtendedLayout = .all
         extendedLayoutIncludesOpaqueBars = true
-        navigationController?.isNavigationBarHidden = true
 
-        if let nav = navigationController {
-            nav.interactivePopGestureRecognizer?.delegate = self
-            nav.interactivePopGestureRecognizer?.isEnabled = true
-        }
+        // Hide system navigation bar
+        navigationController?.isNavigationBarHidden = true
 
         setupCustomTopBar()
 
+        // 1) SummaryCard container
         summaryCardContainer.backgroundColor = UIColor(white: 0.12, alpha: 1.0)
         summaryCardContainer.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(summaryCardContainer)
@@ -87,6 +91,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         ])
         hostingController.didMove(toParent: self)
 
+        // 2) Pinned table area
         pinnedTablePlaceholder.backgroundColor = UIColor.darkGray.withAlphaComponent(0.2)
         pinnedTablePlaceholder.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(pinnedTablePlaceholder)
@@ -107,13 +112,14 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
             pinnedColumnTablesVC.view.bottomAnchor.constraint(equalTo: pinnedTablePlaceholder.bottomAnchor)
         ])
         pinnedColumnTablesVC.didMove(toParent: self)
-        
+
         if let tableView = pinnedColumnTablesVC.view.subviews.first as? UITableView {
             tableView.contentInsetAdjustmentBehavior = .never
             tableView.contentInset.bottom = 0
             tableView.verticalScrollIndicatorInsets.bottom = 0
         }
 
+        // 3) Scroll-to-bottom button
         view.addSubview(scrollToBottomButton)
         scrollToBottomButton.addTarget(self, action: #selector(handleScrollToBottom), for: .touchUpInside)
         NSLayoutConstraint.activate([
@@ -148,16 +154,41 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         }
     }
 
+    // MARK: - viewWillAppear
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+
+        // Hide system nav bar
         navigationController?.setNavigationBarHidden(true, animated: false)
-        navigationController?.interactivePopGestureRecognizer?.delegate = self
-        navigationController?.interactivePopGestureRecognizer?.isEnabled = true
+
+        // If no stored delegate yet, store it. Then assign ourselves
+        if let nav = navigationController, let popGesture = nav.interactivePopGestureRecognizer {
+            if originalGestureDelegate == nil {
+                originalGestureDelegate = popGesture.delegate
+            }
+            popGesture.delegate = self
+            popGesture.isEnabled = true
+        }
 
         refreshSummaryCard()
         populatePinnedTable()
     }
 
+    // MARK: - viewWillDisappear
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+
+        // If we no longer exist in the nav stack -> we were popped
+        if let nav = navigationController, !nav.viewControllers.contains(self) {
+            if let popGesture = nav.interactivePopGestureRecognizer {
+                // Restore original
+                popGesture.delegate = originalGestureDelegate
+                popGesture.isEnabled = true
+            }
+        }
+    }
+
+    // MARK: - Setup Custom Bar
     private func setupCustomTopBar() {
         customTopBar.backgroundColor = UIColor(white: 0.12, alpha: 1.0)
         customTopBar.translatesAutoresizingMaskIntoConstraints = false
@@ -167,9 +198,11 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
             customTopBar.topAnchor.constraint(equalTo: view.topAnchor),
             customTopBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             customTopBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            customTopBar.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: customNavBarHeight)
+            customTopBar.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor,
+                                                 constant: customNavBarHeight)
         ])
 
+        // Back button
         backButton.setImage(UIImage(systemName: "chevron.left"), for: .normal)
         backButton.tintColor = .white
         backButton.translatesAutoresizingMaskIntoConstraints = false
@@ -180,6 +213,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         ])
         backButton.addTarget(self, action: #selector(handleBack), for: .touchUpInside)
 
+        // Title label
         titleLabel.text = "Simulation Results"
         titleLabel.textColor = .white
         titleLabel.font = UIFont.boldSystemFont(ofSize: 17)
@@ -190,6 +224,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
             titleLabel.centerYAnchor.constraint(equalTo: backButton.centerYAnchor)
         ])
 
+        // Chart button
         chartButton.setImage(UIImage(systemName: "chart.line.uptrend.xyaxis"), for: .normal)
         chartButton.tintColor = .white
         chartButton.translatesAutoresizingMaskIntoConstraints = false
@@ -201,32 +236,44 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         chartButton.addTarget(self, action: #selector(handleChartButton), for: .touchUpInside)
     }
 
+    // MARK: - Gesture Delegate
     func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        return navigationController?.viewControllers.count ?? 0 > 1
+        // Only allow if there's more than 1 VC on the stack
+        return (navigationController?.viewControllers.count ?? 0) > 1
     }
 
+    // MARK: - Button Handlers
     @objc private func handleBack() {
         navigationController?.popViewController(animated: true)
     }
 
     @objc private func handleChartButton() {
-        guard let container = representableContainer else { return }
+        guard let container = representableContainer, let nav = navigationController else { return }
 
-        // *** The crucial line: .environmentObject(container.chartDataCache) ***
+        // 1) Restore original delegate so the chart screen uses the default edge-swipe
+        if let popGesture = nav.interactivePopGestureRecognizer {
+            popGesture.delegate = originalGestureDelegate
+            popGesture.isEnabled = true
+        }
+
+        // 2) Create your SwiftUI charts screen
         let chartView = MonteCarloResultsView()
             .environmentObject(container.coordinator)
             .environmentObject(container.simSettings)
             .environmentObject(container.simChartSelection)
-            .environmentObject(container.chartDataCache)  // <-- Provide ChartDataCache
+            .environmentObject(container.chartDataCache)
 
         let chartHostingController = UIHostingController(rootView: chartView)
-        navigationController?.pushViewController(chartHostingController, animated: true)
+
+        // 3) Push the chart screen
+        nav.pushViewController(chartHostingController, animated: true)
     }
 
     @objc private func handleScrollToBottom() {
         pinnedColumnTablesVC.scrollToBottom()
     }
 
+    // MARK: - Populate
     private func refreshSummaryCard() {
         guard let container = representableContainer else { return }
         let coord = container.coordinator
@@ -289,7 +336,6 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
 
     private func populatePinnedTable() {
         guard let container = representableContainer else { return }
-
         let data = container.coordinator.monteCarloResults
         let pref = container.simSettings.currencyPreference
 
@@ -346,6 +392,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         )
     }
 
+    // MARK: - Growth Calculation
     private func growthCalc(_ finalPortfolio: Decimal,
                             _ initialPortfolio: Decimal,
                             _ symbol: String) -> (Double, String) {
