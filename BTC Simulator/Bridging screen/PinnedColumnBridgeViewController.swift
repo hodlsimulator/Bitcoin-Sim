@@ -24,7 +24,7 @@ class ChartHostingController<Content: View>: UIHostingController<Content> {
         navigationController?.setNavigationBarHidden(false, animated: false)
         navigationController?.navigationBar.tintColor = .white
     }
-}
+}   
 
 // MARK: - PinnedColumnBridgeViewController
 class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDelegate {
@@ -68,6 +68,15 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
     override func viewDidLoad() {
         super.viewDidLoad()
 
+        // backButton.isHidden = true
+        
+        // Use an empty backBarButtonItem so the *next* screen’s “Back” text is hidden
+        let emptyItem = UIBarButtonItem(title: "", style: .plain, target: nil, action: nil)
+        navigationItem.backBarButtonItem = emptyItem
+        
+        // You can still hide the system nav bar here if you want a custom top bar:
+        navigationController?.isNavigationBarHidden = true
+        
         // 1) Remove back text for the next screen we push
         navigationItem.backButtonDisplayMode = .minimal
 
@@ -259,23 +268,35 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
     }
 
     @objc private func handleChartButton() {
-        guard let container = representableContainer, let nav = navigationController else { return }
+        guard let container = representableContainer,
+              let nav = navigationController else { return }
 
-        // Restore original delegate to ensure default edge-swipe behavior
+        // Restore default edge-swipe
         if let popGesture = nav.interactivePopGestureRecognizer {
             popGesture.delegate = originalGestureDelegate
             popGesture.isEnabled = true
         }
 
-        // Create the SwiftUI chart screen
+        // --- Clear the bridging VC's back text so the next screen's arrow has no label ---
+        // 1) Look at the navigation bar items.
+        // 2) The bridging VC is "one below" the top item.
+        // 3) Overwrite its backBarButtonItem with an empty one.
+        if let items = nav.navigationBar.items, items.count >= 1 {
+            let bridgingItem = items[items.count - 1]
+            bridgingItem.backBarButtonItem = UIBarButtonItem(title: "", style: .plain, target: nil, action: nil)
+        }
+
+        // Build the chart view
         let chartView = MonteCarloResultsView()
             .environmentObject(container.coordinator)
             .environmentObject(container.simSettings)
             .environmentObject(container.simChartSelection)
             .environmentObject(container.chartDataCache)
 
-        // Use our ChartHostingController
+        // Wrap in a ChartHostingController
         let chartHostingController = ChartHostingController(rootView: chartView)
+
+        // Push it
         nav.pushViewController(chartHostingController, animated: true)
     }
 
