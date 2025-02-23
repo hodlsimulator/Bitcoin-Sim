@@ -18,13 +18,37 @@ struct BridgeContainer {
     let chartDataCache: ChartDataCache
 }
 
+// MARK: - ChartHostingController
 class ChartHostingController<Content: View>: UIHostingController<Content> {
+    
+    // We add this so the nav bar's appearance is fully customised.
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        // Create a custom appearance
+        let appearance = UINavigationBarAppearance()
+        appearance.configureWithOpaqueBackground()
+        appearance.backgroundColor = .black  // Or your preferred colour
+        appearance.titleTextAttributes = [.foregroundColor: UIColor.white]
+        
+        // Remove any default back-button text
+        appearance.backButtonAppearance.normal.titlePositionAdjustment = UIOffset(horizontal: -2000, vertical: 0)
+        
+        // Apply to standard & scrollEdge appearances
+        navigationItem.standardAppearance = appearance
+        navigationItem.scrollEdgeAppearance = appearance
+        
+        // Also ensure no "Back" text by default
+        navigationItem.backButtonDisplayMode = .minimal
+    }
+    
+    // Show nav bar again (in white) whenever we appear
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         navigationController?.setNavigationBarHidden(false, animated: false)
         navigationController?.navigationBar.tintColor = .white
     }
-}   
+}
 
 // MARK: - PinnedColumnBridgeViewController
 class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDelegate {
@@ -41,6 +65,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
     private let customNavBarHeight: CGFloat = 30
     private let summaryCardHeight:  CGFloat = 88
 
+    // Notice we keep using our own hosting controller here, that’s fine.
     private let hostingController      = UIHostingController(rootView: AnyView(EmptyView()))
     private let summaryCardContainer   = UIView()
     private let pinnedTablePlaceholder = UIView()
@@ -68,25 +93,20 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        // backButton.isHidden = true
-        
-        // Use an empty backBarButtonItem so the *next* screen’s “Back” text is hidden
+        // Remove any 'Back' text for the NEXT screen:
         let emptyItem = UIBarButtonItem(title: "", style: .plain, target: nil, action: nil)
         navigationItem.backBarButtonItem = emptyItem
         
-        // You can still hide the system nav bar here if you want a custom top bar:
+        // Hide the system nav bar on THIS screen, so we only see our custom top bar
         navigationController?.isNavigationBarHidden = true
         
-        // 1) Remove back text for the next screen we push
+        // Also remove the "Back" text on next pushes
         navigationItem.backButtonDisplayMode = .minimal
 
         // Extend layout behind status bar and bottom safe area
         edgesForExtendedLayout = .all
         extendedLayoutIncludesOpaqueBars = true
-
-        // Hide system navigation bar for THIS screen
-        navigationController?.isNavigationBarHidden = true
-
+        
         setupCustomTopBar()
 
         // 1) SummaryCard container
@@ -181,7 +201,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         // Hide system nav bar on this screen
         navigationController?.setNavigationBarHidden(true, animated: false)
 
-        // If no stored delegate yet, store it. Then assign ourselves
+        // Enable edge-swipe
         if let nav = navigationController, let popGesture = nav.interactivePopGestureRecognizer {
             if originalGestureDelegate == nil {
                 originalGestureDelegate = popGesture.delegate
@@ -198,10 +218,9 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
 
-        // If we no longer exist in the nav stack -> we were popped
+        // If we are popped off the nav stack, restore default swipe behaviour
         if let nav = navigationController, !nav.viewControllers.contains(self) {
             if let popGesture = nav.interactivePopGestureRecognizer {
-                // Restore original
                 popGesture.delegate = originalGestureDelegate
                 popGesture.isEnabled = true
             }
@@ -222,7 +241,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
                                                  constant: customNavBarHeight)
         ])
 
-        // Back button
+        // Back button (our custom one)
         backButton.setImage(UIImage(systemName: "chevron.left"), for: .normal)
         backButton.tintColor = .white
         backButton.translatesAutoresizingMaskIntoConstraints = false
@@ -258,7 +277,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
 
     // MARK: - Gesture Delegate
     func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        // Only allow if there's more than 1 VC on the stack
+        // Only allow edge-swipe if there's more than 1 VC on the stack
         return (navigationController?.viewControllers.count ?? 0) > 1
     }
 
@@ -271,16 +290,13 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         guard let container = representableContainer,
               let nav = navigationController else { return }
 
-        // Restore default edge-swipe
+        // Restore default edge-swipe for next screen
         if let popGesture = nav.interactivePopGestureRecognizer {
             popGesture.delegate = originalGestureDelegate
             popGesture.isEnabled = true
         }
 
-        // --- Clear the bridging VC's back text so the next screen's arrow has no label ---
-        // 1) Look at the navigation bar items.
-        // 2) The bridging VC is "one below" the top item.
-        // 3) Overwrite its backBarButtonItem with an empty one.
+        // Clear bridging VC's back text so the next screen’s arrow has no label
         if let items = nav.navigationBar.items, items.count >= 1 {
             let bridgingItem = items[items.count - 1]
             bridgingItem.backBarButtonItem = UIBarButtonItem(title: "", style: .plain, target: nil, action: nil)
@@ -293,7 +309,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
             .environmentObject(container.simChartSelection)
             .environmentObject(container.chartDataCache)
 
-        // Wrap in a ChartHostingController
+        // Wrap in ChartHostingController
         let chartHostingController = ChartHostingController(rootView: chartView)
 
         // Push it
@@ -304,7 +320,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         pinnedColumnTablesVC.scrollToBottom()
     }
 
-    // MARK: - Populate
+    // MARK: - Populate / Refresh
     private func refreshSummaryCard() {
         guard let container = representableContainer else { return }
         let coord = container.coordinator
