@@ -125,7 +125,8 @@ class OneColumnRowCell: UITableViewCell {
         separatorInset = .zero
         
         label.textColor = .white
-        label.font = UIFont.systemFont(ofSize: 14)
+        // Changed font size to 17 to match pinned column
+        label.font = UIFont.systemFont(ofSize: 17)
         label.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(label)
         

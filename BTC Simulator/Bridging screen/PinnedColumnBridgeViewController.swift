@@ -122,6 +122,9 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         
         // If pinnedColumnTablesVC has a UITableView, ensure no extra insets:
         if let tableView = pinnedColumnTablesVC.view.subviews.first as? UITableView {
+            // Stop iOS from adding extra “safe area” insets
+            tableView.contentInsetAdjustmentBehavior = .never
+            // Optional: remove any existing insets if needed
             tableView.contentInset.bottom = 0
             tableView.verticalScrollIndicatorInsets.bottom = 0
         }

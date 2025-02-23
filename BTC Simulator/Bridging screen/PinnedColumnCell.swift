@@ -16,6 +16,7 @@ class PinnedColumnCell: UITableViewCell {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
         
         label.translatesAutoresizingMaskIntoConstraints = false
+        label.font = .systemFont(ofSize: 17) // Added font line
         contentView.addSubview(label)
         
         NSLayoutConstraint.activate([

@@ -36,12 +36,18 @@ class PinnedColumnTablesViewController: UIViewController {
         super.viewDidLoad()
         view.backgroundColor = UIColor(white: 0.12, alpha: 1.0)
         
-        // Disable auto-inset adjustments so pinned table and column tables line up
         pinnedTableView.contentInsetAdjustmentBehavior = .never
+        pinnedTableView.contentInset = .zero
+        pinnedTableView.scrollIndicatorInsets = .zero
         if #available(iOS 11.0, *) {
             columnsCollectionVC.internalCollectionView?.contentInsetAdjustmentBehavior = .never
+            columnsCollectionVC.internalCollectionView?.contentInset = .zero
+            columnsCollectionVC.internalCollectionView?.scrollIndicatorInsets = .zero
         }
-
+        
+        // Temporary for debugging
+        pinnedTableView.backgroundColor = .red
+        
         // ----------------------------------------------------------------
         // 1) A container for the entire "column headers" row (40 pts tall)
         // ----------------------------------------------------------------
@@ -259,6 +265,19 @@ class PinnedColumnTablesViewController: UIViewController {
     
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
+        
+        let bottomSafeArea = view.safeAreaInsets.bottom
+        
+        pinnedTableView.contentInset.bottom = bottomSafeArea
+        
+        // For iOS 13+:
+        if #available(iOS 13.0, *) {
+            pinnedTableView.verticalScrollIndicatorInsets =
+                UIEdgeInsets(top: 0, left: 0, bottom: bottomSafeArea, right: 0)
+        } else {
+            // Fallback if you need iOS < 13 support
+            pinnedTableView.scrollIndicatorInsets.bottom = bottomSafeArea
+        }
     }
 }
 
