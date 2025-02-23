@@ -312,16 +312,16 @@ struct ContentView: View {
 
             // Bridging screen
             .navigationDestination(isPresented: $showPinnedColumns) {
-                PinnedColumnBridgeRepresentableUIKit(
+                PinnedColumnBridgeRepresentable(
                     isPresented: $showPinnedColumns,
                     coordinator: coordinator,
                     inputManager: inputManager,
                     monthlySimSettings: monthlySimSettings,
                     simSettings: simSettings
                 )
-                .navigationBarHidden(true) // Hide the system bar entirely
+                .fullBleedStyle() // Add this modifier here
                 .onAppear {
-                    removeNavBarHairline() // optional, if you keep it around
+                    removeNavBarHairline()
                 }
             }
 
@@ -331,18 +331,25 @@ struct ContentView: View {
                     .environmentObject(simSettings)
                     .environmentObject(monthlySimSettings)
                     .environmentObject(coordinator)
-                    .onAppear { removeNavBarHairline() }
+                    .onAppear {
+                        removeNavBarHairline()
+                    }
             }
 
             // About screen
             .navigationDestination(isPresented: $showAbout) {
                 AboutView()
-                    .onAppear { removeNavBarHairline() }
+                    .onAppear {
+                        removeNavBarHairline()
+                    }
             }
         }
         .onAppear {
             // Shift back button title off-screen globally
-            UIBarButtonItem.appearance().setBackButtonTitlePositionAdjustment(UIOffset(horizontal: -1000, vertical: 0), for: .default)
+            UIBarButtonItem.appearance().setBackButtonTitlePositionAdjustment(
+                UIOffset(horizontal: -1000, vertical: 0),
+                for: .default
+            )
             removeNavBarHairline()
         }
         .onChange(of: coordinator.isLoading) { _ in

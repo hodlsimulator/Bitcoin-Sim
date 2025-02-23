@@ -16,7 +16,6 @@ struct PinnedColumnBridgeRepresentable: UIViewControllerRepresentable {
     @ObservedObject var simSettings: SimulationSettings
 
     func makeUIViewController(context: Context) -> PinnedColumnBridgeViewController {
-        // Create your pinned VC
         let pinnedVC = PinnedColumnBridgeViewController()
         pinnedVC.representableContainer = .init(
             coordinator: coordinator,
@@ -25,19 +24,24 @@ struct PinnedColumnBridgeRepresentable: UIViewControllerRepresentable {
             simSettings: simSettings
         )
         pinnedVC.dismissBinding = $isPresented
-
-        // Return pinnedVC directly (no extra UINavigationController)
-            return pinnedVC
+        return pinnedVC
     }
 
-    func updateUIViewController(_ uiViewController: PinnedColumnBridgeViewController,
-                                     context: Context) {
-        // Update references if needed
+    func updateUIViewController(_ uiViewController: PinnedColumnBridgeViewController, context: Context) {
         uiViewController.representableContainer = .init(
-                coordinator: coordinator,
-                inputManager: inputManager,
-                monthlySimSettings: monthlySimSettings,
-                simSettings: simSettings
-            )
-        }
+            coordinator: coordinator,
+            inputManager: inputManager,
+            monthlySimSettings: monthlySimSettings,
+            simSettings: simSettings
+        )
     }
+}
+
+extension PinnedColumnBridgeRepresentable {
+    func fullBleedStyle() -> some View {
+        self
+            .navigationBarHidden(true)           // Hide SwiftUI's navigation bar
+            .navigationBarBackButtonHidden(true) // Prevent back button interference
+            .ignoresSafeArea(.all, edges: .top)  // Allow content to extend to top edge
+    }
+}

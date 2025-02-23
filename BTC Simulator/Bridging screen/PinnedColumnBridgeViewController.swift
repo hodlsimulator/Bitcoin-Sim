@@ -58,16 +58,20 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        // Hide the system nav bar
+        // Extend layout behind status bar and bottom safe area
+        edgesForExtendedLayout = .all
+        extendedLayoutIncludesOpaqueBars = true
+
+        // Hide system navigation bar
         navigationController?.isNavigationBarHidden = true
 
-        // Re-enable edge-swipe pop
+        // Re-enable edge-swipe pop gesture
         if let nav = navigationController {
             nav.interactivePopGestureRecognizer?.delegate = self
             nav.interactivePopGestureRecognizer?.isEnabled = true
         }
 
-        // 1) Setup the custom top bar
+        // Setup custom top bar and other UI
         setupCustomTopBar()
 
         // 2) Setup summaryCardContainer below the nav bar
@@ -94,6 +98,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         hostingController.didMove(toParent: self)
 
         // 3) Pinned table area
+        /// Update pinnedTablePlaceholder constraints for full-bleed bottom
         pinnedTablePlaceholder.backgroundColor = UIColor.darkGray.withAlphaComponent(0.2)
         pinnedTablePlaceholder.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(pinnedTablePlaceholder)
@@ -101,7 +106,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
             pinnedTablePlaceholder.topAnchor.constraint(equalTo: summaryCardContainer.bottomAnchor),
             pinnedTablePlaceholder.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             pinnedTablePlaceholder.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            pinnedTablePlaceholder.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
+            pinnedTablePlaceholder.bottomAnchor.constraint(equalTo: view.bottomAnchor) // Changed from safeAreaLayoutGuide.bottomAnchor
         ])
 
         // Embed pinnedColumnTablesVC
@@ -169,15 +174,12 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         customTopBar.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(customTopBar)
 
-        // This anchors the bar from the very top of the screen
-        // down to safeAreaLayoutGuide.topAnchor + 44 points.
+        // Anchor to view.topAnchor for full-bleed behind status bar
         NSLayoutConstraint.activate([
-            customTopBar.topAnchor.constraint(equalTo: view.topAnchor),
+            customTopBar.topAnchor.constraint(equalTo: view.topAnchor), // Changed from safeArea-based anchoring
             customTopBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             customTopBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            // This bottom anchor makes the bar 44 points taller than the safe area’s top
-            customTopBar.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor,
-                                                 constant: customNavBarHeight)
+            customTopBar.heightAnchor.constraint(equalToConstant: customNavBarHeight + view.safeAreaInsets.top) // Include status bar height
         ])
 
         // Back button
@@ -218,8 +220,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
 
     // MARK: - Edge-Swipe
     func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        let count = navigationController?.viewControllers.count ?? 0
-        return count > 1
+        return navigationController?.viewControllers.count ?? 0 > 1
     }
 
     // MARK: - Button Handlers
