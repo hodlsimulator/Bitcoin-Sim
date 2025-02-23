@@ -30,6 +30,7 @@ class ChartHostingController<Content: View>: UIHostingController<Content> {
         appearance.configureWithOpaqueBackground()
         appearance.backgroundColor = .black  // Or your preferred colour
         appearance.titleTextAttributes = [.foregroundColor: UIColor.white]
+        appearance.shadowColor = .clear   // <-- Add this line to remove the hairline
         
         // Remove any default back-button text
         appearance.backButtonAppearance.normal.titlePositionAdjustment = UIOffset(horizontal: -2000, vertical: 0)
