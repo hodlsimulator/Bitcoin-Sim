@@ -161,6 +161,13 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
             }
         }
     }
+    
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        // Force the pinned table VC to layout now.
+        pinnedColumnTablesVC.view.setNeedsLayout()
+        pinnedColumnTablesVC.view.layoutIfNeeded()
+    }
 
     // MARK: - viewWillAppear
     override func viewWillAppear(_ animated: Bool) {
@@ -405,6 +412,12 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
             scrollToBottomFlag: .constant(false),
             isAtBottom: .constant(false)
         )
+        
+        // Force layout on next tick:
+        DispatchQueue.main.async {
+            self.pinnedColumnTablesVC.view.setNeedsLayout()
+            self.pinnedColumnTablesVC.view.layoutIfNeeded()
+        }
     }
 
     // MARK: - Growth Calculation

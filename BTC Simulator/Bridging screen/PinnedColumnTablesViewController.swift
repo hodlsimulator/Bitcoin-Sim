@@ -198,16 +198,17 @@ class PinnedColumnTablesViewController: UIViewController {
         guard let rep = representable else { return }
         
         pinnedHeaderLabel.text = rep.pinnedColumnTitle
-
-        // Assign columns & data
         columnsCollectionVC.columnsData   = rep.columns
         columnsCollectionVC.displayedData = rep.displayedData
         columnsCollectionVC.reloadData()
         
-        // Now scroll to the “BTC Price (xxx)” column
-        // if it’s at index 2 in your array.
+        // Scroll the collection to column 2
         DispatchQueue.main.async {
             self.columnsCollectionVC.scrollToColumnIndex(2)
+            
+            // Now manually call onCenteredColumnChanged so col1/col2 appear immediately:
+            let desiredIndex = 2
+            self.columnsCollectionVC.onCenteredColumnChanged?(desiredIndex)
         }
     }
     
