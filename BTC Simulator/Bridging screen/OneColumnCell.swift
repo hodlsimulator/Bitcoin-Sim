@@ -125,7 +125,7 @@ class OneColumnRowCell: UITableViewCell {
         separatorInset = .zero
         
         label.textColor = .white
-        // Changed font size to 17 to match pinned column
+        // Use 17-pt font to match pinned column
         label.font = UIFont.systemFont(ofSize: 17)
         label.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(label)
@@ -148,21 +148,50 @@ class OneColumnRowCell: UITableViewCell {
             return
         }
         
-        // If it's Decimal
+        // ------------------------------------
+        // 1) If key path is a Decimal property
+        // ------------------------------------
         if let kp = pk as? KeyPath<SimulationData, Decimal> {
             let val = rowData[keyPath: kp]
+            // All your Decimals here default to 2 decimals unless you do custom logic
+            // If you ever have a BTC value stored as Decimal, you can do:
             label.text = val.formattedWithSeparator()
         }
-        // If it's Double
+        // ------------------------------------
+        // 2) If key path is a Double property
+        // ------------------------------------
         else if let kp = pk as? KeyPath<SimulationData, Double> {
             let val = rowData[keyPath: kp]
-            label.text = val.formattedWithSeparator()
+            
+            // If it's one of the three BTC fields:
+            if kp == \SimulationData.startingBTC ||
+               kp == \SimulationData.netBTCHoldings ||
+               kp == \SimulationData.netContributionBTC {
+                
+                // Format with 8 decimals
+                let formatter = NumberFormatter()
+                formatter.numberStyle = .decimal
+                formatter.groupingSeparator = ","
+                formatter.minimumFractionDigits = 8
+                formatter.maximumFractionDigits = 8
+                
+                label.text = formatter.string(from: NSNumber(value: val)) ?? "\(val)"
+            }
+            else {
+                // Otherwise, default to your 2-decimal extension
+                label.text = val.formattedWithSeparator()
+            }
         }
-        // If it's Int
+        // ------------------------------------
+        // 3) If key path is an Int property
+        // ------------------------------------
         else if let kp = pk as? KeyPath<SimulationData, Int> {
             let val = rowData[keyPath: kp]
             label.text = val.formattedWithSeparator()
         }
+        // ------------------------------------
+        // 4) Anything else
+        // ------------------------------------
         else {
             label.text = "-"
         }
