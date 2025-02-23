@@ -278,6 +278,7 @@ struct MonteCarloResultsView: View {
     @EnvironmentObject var simChartSelection: SimChartSelection
     @EnvironmentObject var chartDataCache: ChartDataCache
     @EnvironmentObject var simSettings: SimulationSettings
+    @Environment(\.presentationMode) var presentationMode
     @StateObject private var orientationObserver = OrientationObserver()
     
     @State private var squishedLandscape: UIImage? = nil
@@ -338,15 +339,23 @@ struct MonteCarloResultsView: View {
                 Button {
                     withAnimation {
                         // Flip between .btcPrice and .cumulativePortfolio
-                        simChartSelection.selectedChart = (simChartSelection.selectedChart == .cumulativePortfolio ? .btcPrice : .cumulativePortfolio)
+                        simChartSelection.selectedChart = (
+                            simChartSelection.selectedChart == .cumulativePortfolio
+                            ? .btcPrice
+                            : .cumulativePortfolio
+                        )
                         showChartMenu = false
                     }
                 } label: {
-                    Text(simChartSelection.selectedChart == .cumulativePortfolio ? "BTC Price Chart" : "Cumulative Portfolio")
-                        .foregroundColor(.white)
-                        .font(.headline)
-                        .multilineTextAlignment(.center)
-                        .frame(maxWidth: .infinity, minHeight: 50)
+                    Text(
+                        simChartSelection.selectedChart == .cumulativePortfolio
+                        ? "BTC Price Chart"
+                        : "Cumulative Portfolio"
+                    )
+                    .foregroundColor(.white)
+                    .font(.headline)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity, minHeight: 50)
                 }
                 .buttonStyle(.plain)
                 .background(Color.black)
@@ -359,13 +368,27 @@ struct MonteCarloResultsView: View {
         .navigationTitle(
             isLandscape
             ? ""
-            : (simChartSelection.selectedChart == .btcPrice
-               ? "Monte Carlo – BTC Price (USD)"
-               : "Cumulative Portfolio Returns")
+            : (
+                simChartSelection.selectedChart == .btcPrice
+                ? "Monte Carlo – BTC Price (USD)"
+                : "Cumulative Portfolio Returns"
+            )
         )
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarHidden(isLandscape)
+        .navigationBarBackButtonHidden(true)    // Hide default back button label
         .toolbar {
+            // Custom back button (leading)
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button {
+                    // For iOS < 15
+                    presentationMode.wrappedValue.dismiss()
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .foregroundColor(.white)
+                }
+            }
+            
             // Chart menu toggle if portrait
             if !isLandscape {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -381,7 +404,6 @@ struct MonteCarloResultsView: View {
             }
         }
         .onAppear {
-            // If we start in landscape, build the squished version & snapshot
             if isLandscape, let portrait = portraitSnapshot {
                 squishedLandscape = squishPortraitImage(portrait)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
@@ -401,13 +423,11 @@ struct MonteCarloResultsView: View {
         }
         .onChange(of: isLandscape, initial: false) { _, newVal in
             if newVal {
-                // Rotating to landscape: show squished portrait immediately
                 if let portrait = portraitSnapshot {
                     DispatchQueue.main.async {
                         squishedLandscape = squishPortraitImage(portrait)
                     }
                 }
-                // Then after a delay, build the true landscape snapshot
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     isGeneratingLandscape = true
                     buildTrueLandscapeSnapshot { newSnapshot in
@@ -422,7 +442,6 @@ struct MonteCarloResultsView: View {
                     }
                 }
             } else {
-                // Rotating back to portrait: clear landscape snapshots
                 squishedLandscape = nil
                 brandNewLandscapeSnapshot = nil
                 isGeneratingLandscape = false
