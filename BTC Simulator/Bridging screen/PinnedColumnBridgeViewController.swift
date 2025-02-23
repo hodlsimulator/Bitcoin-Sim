@@ -30,8 +30,8 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
     private let chartButton  = UIButton(type: .system)
 
     // Bump this up to allow space for the status bar + room for buttons
-    private let customNavBarHeight: CGFloat = 64
-    private let summaryCardHeight:  CGFloat = 80
+    private let customNavBarHeight: CGFloat = 30
+    private let summaryCardHeight:  CGFloat = 88
 
     private let hostingController      = UIHostingController(rootView: AnyView(EmptyView()))
     private let summaryCardContainer   = UIView()
@@ -179,8 +179,8 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         customTopBar.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(customTopBar)
 
+        // The nav bar extends from the very top to (safeArea + 30)
         NSLayoutConstraint.activate([
-            // Bar extends from the very top down 64pts below the safe area’s top
             customTopBar.topAnchor.constraint(equalTo: view.topAnchor),
             customTopBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             customTopBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
@@ -194,12 +194,14 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         backButton.translatesAutoresizingMaskIntoConstraints = false
         customTopBar.addSubview(backButton)
         NSLayoutConstraint.activate([
+            // Bring it closer to the left edge
             backButton.leadingAnchor.constraint(equalTo: customTopBar.leadingAnchor, constant: 16),
-            backButton.centerYAnchor.constraint(equalTo: customTopBar.centerYAnchor)
+            // Slightly lower than absolute centre to avoid the status bar
+            backButton.centerYAnchor.constraint(equalTo: customTopBar.centerYAnchor, constant: 30)
         ])
         backButton.addTarget(self, action: #selector(handleBack), for: .touchUpInside)
 
-        // Title
+        // Title label
         titleLabel.text = "Simulation Results"
         titleLabel.textColor = .white
         titleLabel.font = UIFont.boldSystemFont(ofSize: 17)
@@ -207,6 +209,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         customTopBar.addSubview(titleLabel)
         NSLayoutConstraint.activate([
             titleLabel.centerXAnchor.constraint(equalTo: customTopBar.centerXAnchor),
+            // Match backButton’s vertical offset
             titleLabel.centerYAnchor.constraint(equalTo: backButton.centerYAnchor)
         ])
 
@@ -216,6 +219,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         chartButton.translatesAutoresizingMaskIntoConstraints = false
         customTopBar.addSubview(chartButton)
         NSLayoutConstraint.activate([
+            // Bring it closer to the right edge
             chartButton.trailingAnchor.constraint(equalTo: customTopBar.trailingAnchor, constant: -16),
             chartButton.centerYAnchor.constraint(equalTo: backButton.centerYAnchor)
         ])
@@ -263,6 +267,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
                     growthPercent: growthPercentDouble,
                     currencySymbol: currencySymbol
                 )
+                .padding(.bottom, 8) // <— extra bottom padding
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color(UIColor(white: 0.12, alpha: 1.0)))
             )
