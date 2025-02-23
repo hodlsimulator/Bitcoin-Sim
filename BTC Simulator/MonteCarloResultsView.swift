@@ -243,13 +243,13 @@ func bestFitLine(
     simSettings: SimulationSettings,
     iterationCount: Int
 ) -> some ChartContent {
-    // Clamp iterationCount to [70..1000]
+    // Clamp iterationCount to [70..700]
     let clamped = max(70, min(iterationCount, 700))
     let fraction = Double(clamped - 70) / Double(700 - 70)
     
     // 1) Make brightness drop from 1.0 → 0.65
     let minBrightness: CGFloat = 1.0
-    let maxDarkBrightness: CGFloat = 0.65  // darker than before
+    let maxDarkBrightness: CGFloat = 0.65
     let dynamicBrightness = minBrightness - fraction * (minBrightness - maxDarkBrightness)
     
     // 2) Thicken from 2.0 → 4.0
@@ -257,7 +257,6 @@ func bestFitLine(
     let maxWidth: CGFloat = 4.0
     let lineWidth = minWidth + fraction * (maxWidth - minWidth)
     
-    // 3) Apply new styling
     return ForEach(run.points) { pt in
         LineMark(
             x: .value("Year", convertPeriodToYears(pt.week, simSettings)),
@@ -316,7 +315,6 @@ struct MonteCarloResultsView: View {
             
             contentView
             
-            // Show overlay if generating landscape
             if isGeneratingLandscape {
                 Color.black.opacity(0.6).ignoresSafeArea()
                 VStack(spacing: 20) {
@@ -327,7 +325,6 @@ struct MonteCarloResultsView: View {
                 }
             }
             
-            // The top-drawer menu in portrait
             if !isLandscape && showChartMenu {
                 Color.black.opacity(0.3)
                     .ignoresSafeArea()
@@ -338,24 +335,17 @@ struct MonteCarloResultsView: View {
                 
                 Button {
                     withAnimation {
-                        // Flip between .btcPrice and .cumulativePortfolio
-                        simChartSelection.selectedChart = (
-                            simChartSelection.selectedChart == .cumulativePortfolio
-                            ? .btcPrice
-                            : .cumulativePortfolio
-                        )
+                        simChartSelection.selectedChart = (simChartSelection.selectedChart == .cumulativePortfolio
+                            ? .btcPrice : .cumulativePortfolio)
                         showChartMenu = false
                     }
                 } label: {
-                    Text(
-                        simChartSelection.selectedChart == .cumulativePortfolio
-                        ? "BTC Price Chart"
-                        : "Cumulative Portfolio"
-                    )
-                    .foregroundColor(.white)
-                    .font(.headline)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity, minHeight: 50)
+                    Text(simChartSelection.selectedChart == .cumulativePortfolio
+                         ? "BTC Price Chart" : "Cumulative Portfolio")
+                        .foregroundColor(.white)
+                        .font(.headline)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity, minHeight: 50)
                 }
                 .buttonStyle(.plain)
                 .background(Color.black)
@@ -368,28 +358,13 @@ struct MonteCarloResultsView: View {
         .navigationTitle(
             isLandscape
             ? ""
-            : (
-                simChartSelection.selectedChart == .btcPrice
-                ? "Monte Carlo – BTC Price (USD)"
-                : "Cumulative Portfolio Returns"
-            )
+            : (simChartSelection.selectedChart == .btcPrice
+               ? "Monte Carlo – BTC Price (USD)"
+               : "Cumulative Portfolio Returns")
         )
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarHidden(isLandscape)
-        .navigationBarBackButtonHidden(true)    // Hide default back button label
         .toolbar {
-            // Custom back button (leading)
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button {
-                    // For iOS < 15
-                    presentationMode.wrappedValue.dismiss()
-                } label: {
-                    Image(systemName: "chevron.left")
-                        .foregroundColor(.white)
-                }
-            }
-            
-            // Chart menu toggle if portrait
             if !isLandscape {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
@@ -404,6 +379,12 @@ struct MonteCarloResultsView: View {
             }
         }
         .onAppear {
+            // Force the back button title offscreen on this screen if iOS < 16:
+            UIBarButtonItem.appearance().setBackButtonTitlePositionAdjustment(
+                UIOffset(horizontal: -1000, vertical: 0),
+                for: .default
+            )
+            
             if isLandscape, let portrait = portraitSnapshot {
                 squishedLandscape = squishPortraitImage(portrait)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
@@ -449,14 +430,12 @@ struct MonteCarloResultsView: View {
         }
     }
     
-    // MARK: - Content
     @ViewBuilder
     private var contentView: some View {
         if isLandscape {
             VStack(spacing: 0) {
                 Spacer().frame(height: 20)
                 
-                // 1) If we have a new or cached landscape snapshot
                 if let freshLandscape = freshLandscapeSnapshot {
                     Image(uiImage: freshLandscape)
                         .resizable()
@@ -464,7 +443,6 @@ struct MonteCarloResultsView: View {
                         .antialiased(false)
                         .aspectRatio(contentMode: .fill)
                     
-                // 2) Or a squished portrait fallback
                 } else if let squished = squishedLandscape {
                     Image(uiImage: squished)
                         .resizable()
@@ -472,11 +450,9 @@ struct MonteCarloResultsView: View {
                         .antialiased(false)
                         .aspectRatio(contentMode: .fill)
                     
-                // 3) Or an existing portrait snapshot
                 } else if let portrait = portraitSnapshot {
                     SquishedLandscapePlaceholderView(image: portrait)
                     
-                // 4) Else show the live chart
                 } else {
                     if simChartSelection.selectedChart == .btcPrice {
                         MonteCarloChartView()
@@ -492,7 +468,6 @@ struct MonteCarloResultsView: View {
                 }
             }
         } else {
-            // Portrait
             if simChartSelection.selectedChart == .btcPrice {
                 if let btcSnapshot = chartDataCache.chartSnapshot {
                     SnapshotView(snapshot: btcSnapshot)
@@ -515,7 +490,6 @@ struct MonteCarloResultsView: View {
         }
     }
     
-    // MARK: - Build the landscape snapshot
     private func buildTrueLandscapeSnapshot(completion: @escaping (UIImage) -> Void) {
         let desiredSize = CGSize(width: 800, height: 400)
         

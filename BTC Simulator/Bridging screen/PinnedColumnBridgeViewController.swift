@@ -18,6 +18,14 @@ struct BridgeContainer {
     let chartDataCache: ChartDataCache
 }
 
+class ChartHostingController<Content: View>: UIHostingController<Content> {
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        navigationController?.setNavigationBarHidden(false, animated: false)
+        navigationController?.navigationBar.tintColor = .white
+    }
+}
+
 // MARK: - PinnedColumnBridgeViewController
 class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDelegate {
 
@@ -60,11 +68,14 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
     override func viewDidLoad() {
         super.viewDidLoad()
 
+        // 1) Remove back text for the next screen we push
+        navigationItem.backButtonDisplayMode = .minimal
+
         // Extend layout behind status bar and bottom safe area
         edgesForExtendedLayout = .all
         extendedLayoutIncludesOpaqueBars = true
 
-        // Hide system navigation bar
+        // Hide system navigation bar for THIS screen
         navigationController?.isNavigationBarHidden = true
 
         setupCustomTopBar()
@@ -158,7 +169,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
 
-        // Hide system nav bar
+        // Hide system nav bar on this screen
         navigationController?.setNavigationBarHidden(true, animated: false)
 
         // If no stored delegate yet, store it. Then assign ourselves
@@ -250,22 +261,21 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
     @objc private func handleChartButton() {
         guard let container = representableContainer, let nav = navigationController else { return }
 
-        // 1) Restore original delegate so the chart screen uses the default edge-swipe
+        // Restore original delegate to ensure default edge-swipe behavior
         if let popGesture = nav.interactivePopGestureRecognizer {
             popGesture.delegate = originalGestureDelegate
             popGesture.isEnabled = true
         }
 
-        // 2) Create your SwiftUI charts screen
+        // Create the SwiftUI chart screen
         let chartView = MonteCarloResultsView()
             .environmentObject(container.coordinator)
             .environmentObject(container.simSettings)
             .environmentObject(container.simChartSelection)
             .environmentObject(container.chartDataCache)
 
-        let chartHostingController = UIHostingController(rootView: chartView)
-
-        // 3) Push the chart screen
+        // Use our ChartHostingController
+        let chartHostingController = ChartHostingController(rootView: chartView)
         nav.pushViewController(chartHostingController, animated: true)
     }
 
