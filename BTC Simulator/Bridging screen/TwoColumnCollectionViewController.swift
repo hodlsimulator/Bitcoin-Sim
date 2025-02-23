@@ -61,6 +61,13 @@ class TwoColumnCollectionViewController: UIViewController {
         super.viewDidLayoutSubviews()
         internalCollectionView?.collectionViewLayout.invalidateLayout()
     }
+
+    // MARK: - New code to ensure we scroll horizontally after layout is ready
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        // If "BTC Price" is at index 2, call the helper so that columns 2 & 3 are visible
+        scrollToColumnIndex(2)
+    }
 }
 
 // MARK: - UICollectionViewDataSource & Delegate
@@ -144,5 +151,21 @@ extension TwoColumnCollectionViewController: UICollectionViewDataSource, UIColle
             let leftColumnIndex = indexPath.item
             onCenteredColumnChanged?(leftColumnIndex)
         }
+    }
+}
+
+// MARK: - Helper for scrolling horizontally to a column index
+
+extension TwoColumnCollectionViewController {
+
+    /// Scroll so that the item at `columnIndex` is on the left side,
+    /// showing columns `columnIndex` and `columnIndex + 1`.
+    func scrollToColumnIndex(_ columnIndex: Int) {
+        guard let cv = internalCollectionView else { return }
+        guard columnIndex >= 0 && columnIndex < columnsData.count else { return }
+
+        // Easiest approach: scroll-to-item with .left alignment
+        let indexPath = IndexPath(item: columnIndex, section: 0)
+        cv.scrollToItem(at: indexPath, at: .left, animated: false)
     }
 }

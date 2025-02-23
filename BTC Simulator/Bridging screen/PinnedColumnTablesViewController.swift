@@ -195,20 +195,20 @@ class PinnedColumnTablesViewController: UIViewController {
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        
-        // If representable is nil, do nothing
         guard let rep = representable else { return }
-
-        // Set pinned header text
+        
         pinnedHeaderLabel.text = rep.pinnedColumnTitle
 
-        // Reload pinned table
-        pinnedTableView.reloadData()
-        
-        // Just pass the columns & data directly to columnsCollectionVC
+        // Assign columns & data
         columnsCollectionVC.columnsData   = rep.columns
         columnsCollectionVC.displayedData = rep.displayedData
         columnsCollectionVC.reloadData()
+        
+        // Now scroll to the “BTC Price (xxx)” column
+        // if it’s at index 2 in your array.
+        DispatchQueue.main.async {
+            self.columnsCollectionVC.scrollToColumnIndex(2)
+        }
     }
     
     // Called by a parent if you want to scroll pinned table to the bottom
