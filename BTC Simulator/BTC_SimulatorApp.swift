@@ -19,6 +19,7 @@ struct BTCMonteCarloApp: App {
     @AppStorage("hasOnboarded") private var didFinishOnboarding = false
     @AppStorage("isMonthlyMode") private var isMonthlyMode = false
 
+    // MARK: - StateObjects (so they live for the life of the app)
     @StateObject private var appViewModel: AppViewModel
     @StateObject private var inputManager: PersistentInputManager
     @StateObject private var weeklySimSettings: SimulationSettings
@@ -28,27 +29,25 @@ struct BTCMonteCarloApp: App {
     @StateObject private var coordinator: SimulationCoordinator
 
     init() {
-        // --- 1) GLOBAL NAV BAR APPEARANCE OVERRIDES (Removes Hairline) ---
+        // 1) Global navigation bar styling
         let navBarAppearance = UINavigationBarAppearance()
         navBarAppearance.configureWithOpaqueBackground()
         navBarAppearance.backgroundColor = UIColor(white: 0.12, alpha: 1.0)
-        navBarAppearance.shadowColor = .clear // Removes the thin line (hairline)
+        navBarAppearance.shadowColor = .clear // remove the thin hairline
         navBarAppearance.titleTextAttributes = [.foregroundColor: UIColor.white]
 
-        UINavigationBar.appearance().standardAppearance = navBarAppearance
-        UINavigationBar.appearance().compactAppearance = navBarAppearance
+        UINavigationBar.appearance().standardAppearance   = navBarAppearance
+        UINavigationBar.appearance().compactAppearance    = navBarAppearance
         UINavigationBar.appearance().scrollEdgeAppearance = navBarAppearance
         if #available(iOS 15.0, *) {
             UINavigationBar.appearance().compactScrollEdgeAppearance = navBarAppearance
         }
 
-        // Old-style approach (often not enough alone, but kept just in case):
+        // Old style approach (extra measure to remove hairline):
         UINavigationBar.appearance().shadowImage = UIImage()
         UINavigationBar.appearance().setBackgroundImage(UIImage(), for: .default)
 
-        // --- 2) REMAINDER OF YOUR SETUP (Sentry, user defaults, etc.) ---
-
-        // Register defaults
+        // 2) Register any default toggles/values
         let defaultToggles: [String: Any] = [
             // Weekly toggles
             "lockedRandomSeed": false,
@@ -82,25 +81,25 @@ struct BTCMonteCarloApp: App {
         ]
         UserDefaults.standard.register(defaults: defaultToggles)
 
-        // Initialize local objects
-        let localAppViewModel = AppViewModel()
-        let localInputManager = PersistentInputManager()
-        let localWeeklySimSettings = SimulationSettings(loadDefaults: true)
+        // 3) Create local objects
+        let localAppViewModel       = AppViewModel()
+        let localInputManager       = PersistentInputManager()
+        let localWeeklySimSettings  = SimulationSettings(loadDefaults: true)
         let localMonthlySimSettings = MonthlySimulationSettings(loadDefaults: true)
-        let localChartDataCache = ChartDataCache()
-        let localSimChartSelection = SimChartSelection()
+        let localChartDataCache     = ChartDataCache()
+        let localSimChartSelection  = SimChartSelection()
 
-        // Initialize Sentry
+        // 4) Initialize Sentry
         SentrySDK.start { options in
-            options.dsn = "https://examplePublicKey.ingest.sentry.io/exampleProjectID"
-            options.attachViewHierarchy = false
-            options.enableMetricKit = true
+            options.dsn                            = "https://examplePublicKey.ingest.sentry.io/exampleProjectID"
+            options.attachViewHierarchy            = false
+            options.enableMetricKit                = true
             options.enableTimeToFullDisplayTracing = true
-            options.swiftAsyncStacktraces = true
-            options.enableAppLaunchProfiling = true
+            options.swiftAsyncStacktraces          = true
+            options.enableAppLaunchProfiling       = true
         }
 
-        // Create SimulationCoordinator
+        // 5) Create the SimulationCoordinator
         let localCoordinator = SimulationCoordinator(
             chartDataCache: localChartDataCache,
             simSettings: localWeeklySimSettings,
@@ -109,16 +108,17 @@ struct BTCMonteCarloApp: App {
             simChartSelection: localSimChartSelection
         )
 
-        // Assign objects to StateObjects
-        _appViewModel = StateObject(wrappedValue: localAppViewModel)
-        _inputManager = StateObject(wrappedValue: localInputManager)
-        _weeklySimSettings = StateObject(wrappedValue: localWeeklySimSettings)
+        // 6) Assign objects to @StateObject wrappers
+        _appViewModel       = StateObject(wrappedValue: localAppViewModel)
+        _inputManager       = StateObject(wrappedValue: localInputManager)
+        _weeklySimSettings  = StateObject(wrappedValue: localWeeklySimSettings)
         _monthlySimSettings = StateObject(wrappedValue: localMonthlySimSettings)
-        _chartDataCache = StateObject(wrappedValue: localChartDataCache)
-        _simChartSelection = StateObject(wrappedValue: localSimChartSelection)
-        _coordinator = StateObject(wrappedValue: localCoordinator)
+        _chartDataCache     = StateObject(wrappedValue: localChartDataCache)
+        _simChartSelection  = StateObject(wrappedValue: localSimChartSelection)
+        _coordinator        = StateObject(wrappedValue: localCoordinator)
     }
 
+    // MARK: - Main Scene
     var body: some Scene {
         WindowGroup {
             ZStack {
@@ -134,8 +134,7 @@ struct BTCMonteCarloApp: App {
                         }
                 }
 
-                // For demonstration: We ALWAYS show the test screen if hasOnboarded
-                // (just so you can see if that line appears or not)
+                // If user already onboarded, go straight to ContentView; else OnboardingView
                 if didFinishOnboarding {
                     NavigationStack {
                         ContentView()
@@ -146,15 +145,6 @@ struct BTCMonteCarloApp: App {
                             .environmentObject(simChartSelection)
                             .environmentObject(coordinator)
                             .environmentObject(appViewModel)
-
-                        // If you want SwiftUI to style the nav bar further (color, etc.),
-                        // you can re-enable these lines. Be aware they can reintroduce
-                        // a hairline or mismatch if not carefully matched with the .backgroundColor:
-                        /*
-                        .navigationBarTitleDisplayMode(.inline)
-                        .toolbarBackground(Color(white: 0.12), for: .navigationBar)
-                        .toolbarBackground(.visible, for: .navigationBar)
-                        */
                     }
                     .preferredColorScheme(.dark)
 
@@ -168,12 +158,6 @@ struct BTCMonteCarloApp: App {
                             .environmentObject(simChartSelection)
                             .environmentObject(coordinator)
                             .environmentObject(appViewModel)
-
-                        /*
-                        .navigationBarTitleDisplayMode(.inline)
-                        .toolbarBackground(Color(white: 0.12), for: .navigationBar)
-                        .toolbarBackground(.visible, for: .navigationBar)
-                        */
                     }
                     .preferredColorScheme(.dark)
                 }
@@ -198,9 +182,9 @@ struct BTCMonteCarloApp: App {
 
                 // Load historical data
                 historicalBTCWeeklyReturns = loadAndAlignWeeklyData()
-                extendedWeeklyReturns = historicalBTCWeeklyReturns
+                extendedWeeklyReturns      = historicalBTCWeeklyReturns
                 historicalBTCMonthlyReturns = loadAndAlignMonthlyData()
-                extendedMonthlyReturns = historicalBTCMonthlyReturns
+                extendedMonthlyReturns      = historicalBTCMonthlyReturns
             }
             .onChange(of: scenePhase) { _, newPhase in
                 if newPhase == .inactive || newPhase == .background {
@@ -217,4 +201,3 @@ struct BTCMonteCarloApp: App {
 class AppViewModel: ObservableObject {
     @Published var windowSize: CGSize = .zero
 }
-

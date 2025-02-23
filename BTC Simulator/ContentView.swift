@@ -283,6 +283,7 @@ struct ContentView: View {
     @EnvironmentObject var inputManager: PersistentInputManager
     @EnvironmentObject var chartDataCache: ChartDataCache
     @EnvironmentObject var coordinator: SimulationCoordinator
+    @EnvironmentObject var simChartSelection: SimChartSelection
 
     var body: some View {
         NavigationStack {
@@ -312,7 +313,9 @@ struct ContentView: View {
                     coordinator: coordinator,
                     inputManager: inputManager,
                     monthlySimSettings: monthlySimSettings,
-                    simSettings: simSettings
+                    simSettings: simSettings,
+                    simChartSelection: simChartSelection,
+                    chartDataCache: chartDataCache
                 )
                 .fullBleedStyle() // Add this modifier here
                 .onAppear {

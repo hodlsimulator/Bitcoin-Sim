@@ -17,6 +17,8 @@ struct PinnedColumnBridgeRepresentableUIKit: UIViewControllerRepresentable {
     let inputManager: PersistentInputManager
     let monthlySimSettings: MonthlySimulationSettings
     let simSettings: SimulationSettings
+    let simChartSelection: SimChartSelection
+    let chartDataCache: ChartDataCache
 
     func makeUIViewController(context: Context) -> PinnedColumnBridgeViewController {
         let vc = PinnedColumnBridgeViewController()
@@ -26,7 +28,9 @@ struct PinnedColumnBridgeRepresentableUIKit: UIViewControllerRepresentable {
             coordinator: coordinator,
             inputManager: inputManager,
             monthlySimSettings: monthlySimSettings,
-            simSettings: simSettings
+            simSettings: simSettings,
+            simChartSelection: simChartSelection,
+            chartDataCache: chartDataCache
         )
 
         // Provide the SwiftUI binding for dismiss
@@ -42,7 +46,9 @@ struct PinnedColumnBridgeRepresentableUIKit: UIViewControllerRepresentable {
             coordinator: coordinator,
             inputManager: inputManager,
             monthlySimSettings: monthlySimSettings,
-            simSettings: simSettings
+            simSettings: simSettings,
+            simChartSelection: simChartSelection,
+            chartDataCache: chartDataCache
         )
     }
 }

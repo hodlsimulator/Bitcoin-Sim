@@ -14,22 +14,21 @@ struct BridgeContainer {
     let inputManager: PersistentInputManager
     let monthlySimSettings: MonthlySimulationSettings
     let simSettings: SimulationSettings
+    let simChartSelection: SimChartSelection
+    let chartDataCache: ChartDataCache    // <-- Ensure you have this
 }
 
 // MARK: - PinnedColumnBridgeViewController
 class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDelegate {
 
-    // MARK: - Properties
     var representableContainer: BridgeContainer?
     var dismissBinding: Binding<Bool>?
 
-    // We’ll use our own top bar instead of the system navigation bar
     private let customTopBar = UIView()
     private let titleLabel   = UILabel()
     private let backButton   = UIButton(type: .system)
     private let chartButton  = UIButton(type: .system)
 
-    // Bump this up to allow space for the status bar + room for buttons
     private let customNavBarHeight: CGFloat = 30
     private let summaryCardHeight:  CGFloat = 88
 
@@ -54,27 +53,19 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
 
     private var wasAtBottom = false
 
-    // MARK: - viewDidLoad
     override func viewDidLoad() {
         super.viewDidLoad()
-
-        // Extend layout behind status bar and bottom safe area
         edgesForExtendedLayout = .all
         extendedLayoutIncludesOpaqueBars = true
-
-        // Hide system navigation bar
         navigationController?.isNavigationBarHidden = true
 
-        // Re-enable edge-swipe pop gesture
         if let nav = navigationController {
             nav.interactivePopGestureRecognizer?.delegate = self
             nav.interactivePopGestureRecognizer?.isEnabled = true
         }
 
-        // 1) Setup custom top bar
         setupCustomTopBar()
 
-        // 2) Setup summaryCardContainer below the nav bar
         summaryCardContainer.backgroundColor = UIColor(white: 0.12, alpha: 1.0)
         summaryCardContainer.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(summaryCardContainer)
@@ -85,7 +76,6 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
             summaryCardContainer.heightAnchor.constraint(equalToConstant: summaryCardHeight)
         ])
 
-        // Embed SwiftUI summary card
         addChild(hostingController)
         summaryCardContainer.addSubview(hostingController.view)
         hostingController.view.translatesAutoresizingMaskIntoConstraints = false
@@ -97,7 +87,6 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         ])
         hostingController.didMove(toParent: self)
 
-        // 3) Pinned table area (extend to bottom)
         pinnedTablePlaceholder.backgroundColor = UIColor.darkGray.withAlphaComponent(0.2)
         pinnedTablePlaceholder.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(pinnedTablePlaceholder)
@@ -108,7 +97,6 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
             pinnedTablePlaceholder.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
 
-        // Embed pinnedColumnTablesVC
         addChild(pinnedColumnTablesVC)
         pinnedTablePlaceholder.addSubview(pinnedColumnTablesVC.view)
         pinnedColumnTablesVC.view.translatesAutoresizingMaskIntoConstraints = false
@@ -120,16 +108,12 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         ])
         pinnedColumnTablesVC.didMove(toParent: self)
         
-        // If pinnedColumnTablesVC has a UITableView, ensure no extra insets:
         if let tableView = pinnedColumnTablesVC.view.subviews.first as? UITableView {
-            // Stop iOS from adding extra “safe area” insets
             tableView.contentInsetAdjustmentBehavior = .never
-            // Optional: remove any existing insets if needed
             tableView.contentInset.bottom = 0
             tableView.verticalScrollIndicatorInsets.bottom = 0
         }
 
-        // 4) Scroll-to-bottom button
         view.addSubview(scrollToBottomButton)
         scrollToBottomButton.addTarget(self, action: #selector(handleScrollToBottom), for: .touchUpInside)
         NSLayoutConstraint.activate([
@@ -137,7 +121,6 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
             scrollToBottomButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16)
         ])
 
-        // Observe "at bottom" changes
         pinnedColumnTablesVC.onIsAtBottomChanged = { [weak self] isAtBottom in
             guard let self = self else { return }
             guard isAtBottom != self.wasAtBottom else { return }
@@ -165,7 +148,6 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         }
     }
 
-    // MARK: - viewWillAppear
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         navigationController?.setNavigationBarHidden(true, animated: false)
@@ -176,35 +158,28 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         populatePinnedTable()
     }
 
-    // MARK: - Setup Custom Bar
     private func setupCustomTopBar() {
         customTopBar.backgroundColor = UIColor(white: 0.12, alpha: 1.0)
         customTopBar.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(customTopBar)
 
-        // The nav bar extends from the very top to (safeArea + 30)
         NSLayoutConstraint.activate([
             customTopBar.topAnchor.constraint(equalTo: view.topAnchor),
             customTopBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             customTopBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            customTopBar.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor,
-                                                 constant: customNavBarHeight)
+            customTopBar.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: customNavBarHeight)
         ])
 
-        // Back button
         backButton.setImage(UIImage(systemName: "chevron.left"), for: .normal)
         backButton.tintColor = .white
         backButton.translatesAutoresizingMaskIntoConstraints = false
         customTopBar.addSubview(backButton)
         NSLayoutConstraint.activate([
-            // Bring it closer to the left edge
             backButton.leadingAnchor.constraint(equalTo: customTopBar.leadingAnchor, constant: 16),
-            // Slightly lower than absolute centre to avoid the status bar
             backButton.centerYAnchor.constraint(equalTo: customTopBar.centerYAnchor, constant: 30)
         ])
         backButton.addTarget(self, action: #selector(handleBack), for: .touchUpInside)
 
-        // Title label
         titleLabel.text = "Simulation Results"
         titleLabel.textColor = .white
         titleLabel.font = UIFont.boldSystemFont(ofSize: 17)
@@ -212,42 +187,46 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         customTopBar.addSubview(titleLabel)
         NSLayoutConstraint.activate([
             titleLabel.centerXAnchor.constraint(equalTo: customTopBar.centerXAnchor),
-            // Match backButton’s vertical offset
             titleLabel.centerYAnchor.constraint(equalTo: backButton.centerYAnchor)
         ])
 
-        // Chart button
         chartButton.setImage(UIImage(systemName: "chart.line.uptrend.xyaxis"), for: .normal)
         chartButton.tintColor = .white
         chartButton.translatesAutoresizingMaskIntoConstraints = false
         customTopBar.addSubview(chartButton)
         NSLayoutConstraint.activate([
-            // Bring it closer to the right edge
             chartButton.trailingAnchor.constraint(equalTo: customTopBar.trailingAnchor, constant: -16),
             chartButton.centerYAnchor.constraint(equalTo: backButton.centerYAnchor)
         ])
         chartButton.addTarget(self, action: #selector(handleChartButton), for: .touchUpInside)
     }
 
-    // MARK: - Edge-Swipe
     func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
         return navigationController?.viewControllers.count ?? 0 > 1
     }
 
-    // MARK: - Button Handlers
     @objc private func handleBack() {
         navigationController?.popViewController(animated: true)
     }
 
     @objc private func handleChartButton() {
-        print("PinnedColumnBridgeViewController: Chart icon tapped!")
+        guard let container = representableContainer else { return }
+
+        // *** The crucial line: .environmentObject(container.chartDataCache) ***
+        let chartView = MonteCarloResultsView()
+            .environmentObject(container.coordinator)
+            .environmentObject(container.simSettings)
+            .environmentObject(container.simChartSelection)
+            .environmentObject(container.chartDataCache)  // <-- Provide ChartDataCache
+
+        let chartHostingController = UIHostingController(rootView: chartView)
+        navigationController?.pushViewController(chartHostingController, animated: true)
     }
 
     @objc private func handleScrollToBottom() {
         pinnedColumnTablesVC.scrollToBottom()
     }
 
-    // MARK: - Populate
     private func refreshSummaryCard() {
         guard let container = representableContainer else { return }
         let coord = container.coordinator
@@ -256,7 +235,6 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
               let lastRow  = coord.monteCarloResults.last else { return }
 
         let finalBTC = lastRow.btcPriceUSD
-
         switch coord.simSettings.currencyPreference {
         case .usd:
             let finalPortfolio = lastRow.portfolioValueUSD
@@ -270,7 +248,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
                     growthPercent: growthPercentDouble,
                     currencySymbol: currencySymbol
                 )
-                .padding(.bottom, 8) // <— extra bottom padding
+                .padding(.bottom, 8)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color(UIColor(white: 0.12, alpha: 1.0)))
             )
@@ -368,7 +346,6 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         )
     }
 
-    // MARK: - Growth Calculation
     private func growthCalc(_ finalPortfolio: Decimal,
                             _ initialPortfolio: Decimal,
                             _ symbol: String) -> (Double, String) {

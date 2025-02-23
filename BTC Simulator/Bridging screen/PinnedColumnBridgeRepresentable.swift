@@ -14,6 +14,8 @@ struct PinnedColumnBridgeRepresentable: UIViewControllerRepresentable {
     @ObservedObject var inputManager: PersistentInputManager
     @ObservedObject var monthlySimSettings: MonthlySimulationSettings
     @ObservedObject var simSettings: SimulationSettings
+    @ObservedObject var simChartSelection: SimChartSelection
+    @ObservedObject var chartDataCache: ChartDataCache
 
     func makeUIViewController(context: Context) -> PinnedColumnBridgeViewController {
         let pinnedVC = PinnedColumnBridgeViewController()
@@ -21,7 +23,9 @@ struct PinnedColumnBridgeRepresentable: UIViewControllerRepresentable {
             coordinator: coordinator,
             inputManager: inputManager,
             monthlySimSettings: monthlySimSettings,
-            simSettings: simSettings
+            simSettings: simSettings,
+            simChartSelection: simChartSelection,
+            chartDataCache: chartDataCache
         )
         pinnedVC.dismissBinding = $isPresented
         return pinnedVC
@@ -32,7 +36,9 @@ struct PinnedColumnBridgeRepresentable: UIViewControllerRepresentable {
             coordinator: coordinator,
             inputManager: inputManager,
             monthlySimSettings: monthlySimSettings,
-            simSettings: simSettings
+            simSettings: simSettings,
+            simChartSelection: simChartSelection,
+            chartDataCache: chartDataCache
         )
     }
 }
