@@ -1,4 +1,3 @@
-//
 //  PinnedColumnBridgeViewController.swift
 //  BTCMonteCarlo
 //
@@ -21,7 +20,6 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
 
     // MARK: - Properties
     var representableContainer: BridgeContainer?
-    // Binding to let SwiftUI drive the dismissal
     var dismissBinding: Binding<Bool>?
 
     // We’ll use our own top bar instead of the system navigation bar
@@ -30,7 +28,8 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
     private let backButton   = UIButton(type: .system)
     private let chartButton  = UIButton(type: .system)
 
-    // Simple constants for layout
+    // The standard nav bar is 44pt plus the status-bar safe area on modern devices
+    // so we’ll just keep 44 as the “additional” nav bar height:
     private let customNavBarHeight: CGFloat = 44
     private let summaryCardHeight:  CGFloat = 80
 
@@ -53,15 +52,13 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         return btn
     }()
 
-    // Track previous "at bottom" state to avoid re-triggering fade
     private var wasAtBottom = false
 
     // MARK: - viewDidLoad
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .black
 
-        // Hide the system nav bar so we can do our custom top bar
+        // Hide the system nav bar
         navigationController?.isNavigationBarHidden = true
 
         // Re-enable edge-swipe pop
@@ -73,7 +70,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         // 1) Setup the custom top bar
         setupCustomTopBar()
 
-        // 2) Summary card container pinned below custom bar
+        // 2) Setup summaryCardContainer below the nav bar
         summaryCardContainer.backgroundColor = UIColor(white: 0.12, alpha: 1.0)
         summaryCardContainer.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(summaryCardContainer)
@@ -96,7 +93,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         ])
         hostingController.didMove(toParent: self)
 
-        // 3) Pinned table area, filling the rest
+        // 3) Pinned table area
         pinnedTablePlaceholder.backgroundColor = UIColor.darkGray.withAlphaComponent(0.2)
         pinnedTablePlaceholder.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(pinnedTablePlaceholder)
@@ -104,11 +101,10 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
             pinnedTablePlaceholder.topAnchor.constraint(equalTo: summaryCardContainer.bottomAnchor),
             pinnedTablePlaceholder.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             pinnedTablePlaceholder.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            // Pin the bottom to the safe area as well
             pinnedTablePlaceholder.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
         ])
 
-        // Embed pinnedColumnTablesVC in the table placeholder
+        // Embed pinnedColumnTablesVC
         addChild(pinnedColumnTablesVC)
         pinnedTablePlaceholder.addSubview(pinnedColumnTablesVC.view)
         pinnedColumnTablesVC.view.translatesAutoresizingMaskIntoConstraints = false
@@ -120,7 +116,15 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         ])
         pinnedColumnTablesVC.didMove(toParent: self)
 
-        // Observe "at bottom" changes for the scroll-to-bottom button
+        // 4) Scroll-to-bottom button
+        view.addSubview(scrollToBottomButton)
+        scrollToBottomButton.addTarget(self, action: #selector(handleScrollToBottom), for: .touchUpInside)
+        NSLayoutConstraint.activate([
+            scrollToBottomButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            scrollToBottomButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16)
+        ])
+
+        // Observe "at bottom" changes
         pinnedColumnTablesVC.onIsAtBottomChanged = { [weak self] isAtBottom in
             guard let self = self else { return }
             guard isAtBottom != self.wasAtBottom else { return }
@@ -146,41 +150,34 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
                 }
             }
         }
-
-        // 4) Scroll-to-bottom button
-        view.addSubview(scrollToBottomButton)
-        scrollToBottomButton.addTarget(self, action: #selector(handleScrollToBottom), for: .touchUpInside)
-        NSLayoutConstraint.activate([
-            scrollToBottomButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            scrollToBottomButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16)
-        ])
     }
 
     // MARK: - viewWillAppear
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-
         navigationController?.setNavigationBarHidden(true, animated: false)
         navigationController?.interactivePopGestureRecognizer?.delegate = self
         navigationController?.interactivePopGestureRecognizer?.isEnabled = true
 
-        // Re-populate with fresh data each time
         refreshSummaryCard()
         populatePinnedTable()
     }
 
     // MARK: - Setup Custom Bar
     private func setupCustomTopBar() {
-        // This bar sits at the safe area top, 44pt tall
         customTopBar.backgroundColor = UIColor(white: 0.12, alpha: 1.0)
         customTopBar.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(customTopBar)
 
+        // This anchors the bar from the very top of the screen
+        // down to safeAreaLayoutGuide.topAnchor + 44 points.
         NSLayoutConstraint.activate([
-            customTopBar.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            customTopBar.topAnchor.constraint(equalTo: view.topAnchor),
             customTopBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             customTopBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            customTopBar.heightAnchor.constraint(equalToConstant: customNavBarHeight)
+            // This bottom anchor makes the bar 44 points taller than the safe area’s top
+            customTopBar.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor,
+                                                 constant: customNavBarHeight)
         ])
 
         // Back button

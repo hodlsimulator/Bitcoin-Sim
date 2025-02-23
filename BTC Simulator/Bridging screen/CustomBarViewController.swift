@@ -15,7 +15,7 @@ class CustomBarViewController: UIViewController, UIGestureRecognizerDelegate {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        view.backgroundColor = .systemBackground
+        view.backgroundColor = .systemBackground 
         
         // 1) Hide the system nav bar
         navigationController?.isNavigationBarHidden = true
