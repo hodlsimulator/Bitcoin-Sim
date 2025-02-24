@@ -97,13 +97,6 @@ enum ChartType {
 
 // MARK: - MonteCarloChartView
 
-//
-//  MonteCarloChartView.swift
-//  BTCMonteCarlo
-//
-//  Created by Conor on 30/12/2024.
-//
-
 import SwiftUI
 import Charts
 
@@ -325,6 +318,7 @@ struct MonteCarloResultsView: View {
                 }
             }
             
+            // The drop-down menu that appears on tapping the arrow
             if !isLandscape && showChartMenu {
                 Color.black.opacity(0.3)
                     .ignoresSafeArea()
@@ -350,7 +344,8 @@ struct MonteCarloResultsView: View {
                 .buttonStyle(.plain)
                 .background(Color.black)
                 .edgesIgnoringSafeArea(.horizontal)
-                .padding(.top, 120)
+                // ↓↓↓ Changed from 120 to 15 so it appears closer to the title
+                .padding(.top, 15)
                 .transition(.move(edge: .top))
                 .zIndex(2)
             }
