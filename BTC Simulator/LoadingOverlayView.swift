@@ -24,16 +24,13 @@ struct LoadingOverlayView: View {
                 Color.black.opacity(0.6).ignoresSafeArea()
                 
                 if !isLandscape {
-                    // Render your original portrait code exactly
                     portraitOverlay
                 } else {
-                    // Render a custom landscape layout that pins to the bottom
                     landscapeOverlay
                 }
             }
         }
         .onAppear {
-            // Filter tips up front
             filteredTips = TipsData.filteredLoadingTips(for: simSettings)
             startTipCycle()
         }
@@ -42,13 +39,11 @@ struct LoadingOverlayView: View {
         }
     }
     
-    // MARK: - Portrait Overlay (Unchanged from your original)
+    // MARK: - Portrait Overlay
     private var portraitOverlay: some View {
         VStack(spacing: 0) {
-            // Original top spacer
             Spacer().frame(height: 250)
             
-            // Original HStack with offset
             HStack {
                 Spacer()
                 if coordinator.isLoading && !coordinator.isChartBuilding {
@@ -75,9 +70,9 @@ struct LoadingOverlayView: View {
                     
                     ProgressView(value: Double(coordinator.completedIterations),
                                  total: Double(coordinator.totalIterations))
-                    .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
-                    .scaleEffect(x: 1, y: 2, anchor: .center)
-                    .frame(width: 200)
+                        .tint(Color(red: 189/255, green: 213/255, blue: 234/255))
+                        .scaleEffect(x: 1, y: 2, anchor: .center)
+                        .frame(width: 200)
                 }
                 .padding(.bottom, 20)
                 
@@ -99,7 +94,8 @@ struct LoadingOverlayView: View {
                 Spacer().frame(height: 30)
             }
             
-            if showTip && (coordinator.isLoading || coordinator.isChartBuilding) {
+            // Only show tips if actually simulating (not while chart-building)
+            if showTip && coordinator.isLoading {
                 Text(currentTip)
                     .foregroundColor(.white)
                     .multilineTextAlignment(.center)
@@ -112,15 +108,12 @@ struct LoadingOverlayView: View {
         }
     }
     
-    // MARK: - Landscape Overlay (Pinned to bottom, no spinner if desired)
+    // MARK: - Landscape Overlay
     private var landscapeOverlay: some View {
         ZStack(alignment: .bottom) {
-            // Transparent background just to keep alignment references
             Color.clear.ignoresSafeArea()
 
-            // Main content pinned above the bottom so there's room for tips
             VStack(spacing: 16) {
-                // Top row: Cancel button
                 HStack {
                     Spacer()
                     if coordinator.isLoading && !coordinator.isChartBuilding {
@@ -135,11 +128,9 @@ struct LoadingOverlayView: View {
                     }
                 }
                 
-                Spacer()  // pushes progress or chart-building text closer to the bottom
+                Spacer()
                 
-                // If a simulation is running
                 if coordinator.isLoading {
-                    // (Hide spinner in landscape if you like)
                     VStack(spacing: 10) {
                         Text("Simulating: \(coordinator.completedIterations) / \(coordinator.totalIterations)")
                             .font(.body.monospacedDigit())
@@ -151,8 +142,6 @@ struct LoadingOverlayView: View {
                             .scaleEffect(x: 1, y: 2, anchor: .center)
                             .frame(width: 200)
                     }
-                    
-                // If charts are being built
                 } else if coordinator.isChartBuilding {
                     VStack(spacing: 12) {
                         Text("Generating Charts…")
@@ -168,24 +157,23 @@ struct LoadingOverlayView: View {
                     }
                 }
                 
-                // Add some space to ensure tips appear below
                 Spacer().frame(height: 50)
             }
-            .padding()  // left/right padding
+            .padding()
 
-            // The tip pinned at the very bottom
-            if showTip && (coordinator.isLoading || coordinator.isChartBuilding) {
+            // Again, only show tips during simulation
+            if showTip && coordinator.isLoading {
                 Text(currentTip)
                     .foregroundColor(.white)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: 300)
                     .transition(.opacity)
-                    .padding(.bottom, 20)  // spacing from screen bottom
+                    .padding(.bottom, 20)
             }
         }
     }
     
-    // MARK: - Timer logic (same as before)
+    // MARK: - Timer logic
     private func startTipCycle() {
         tipTimer?.invalidate()
         tipTimer = nil
