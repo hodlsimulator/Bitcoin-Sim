@@ -276,6 +276,8 @@ struct ContentView: View {
 
     // Whether we navigate to the pinned columns bridging screen
     @State private var showPinnedColumns = false
+    
+    @State private var lastViewedRow: Int = 0
 
     // MARK: - Environment Objects
     @EnvironmentObject var simSettings: SimulationSettings
@@ -310,6 +312,7 @@ struct ContentView: View {
             .navigationDestination(isPresented: $showPinnedColumns) {
                 PinnedColumnBridgeRepresentable(
                     isPresented: $showPinnedColumns,
+                    lastViewedRow: $lastViewedRow,
                     coordinator: coordinator,
                     inputManager: inputManager,
                     monthlySimSettings: monthlySimSettings,

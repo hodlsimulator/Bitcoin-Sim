@@ -24,6 +24,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
     // MARK: - Properties
     var representableContainer: BridgeContainer?
     var dismissBinding: Binding<Bool>?
+    var lastViewedRowBinding: Binding<Int>?  // Added to hold the last viewed row binding
     var previousColumnIndex: Int? = nil
 
     private let customTopBar = UIView()
@@ -34,7 +35,6 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
     private let customNavBarHeight: CGFloat = 30
     private let summaryCardHeight:  CGFloat = 88
 
-    // We use our own hosting controller for the summary card
     private let hostingController      = UIHostingController(rootView: AnyView(EmptyView()))
     private let summaryCardContainer   = UIView()
     private let pinnedTablePlaceholder = UIView()
@@ -467,7 +467,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
             pinnedColumnTitle: "Week",
             pinnedColumnKeyPath: \.week,
             columns: columns,
-            lastViewedRow: .constant(0),
+            lastViewedRow: lastViewedRowBinding ?? .constant(0),  // Use the binding
             scrollToBottomFlag: .constant(false),
             isAtBottom: .constant(false)
         )

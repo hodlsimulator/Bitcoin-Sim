@@ -10,6 +10,7 @@ import UIKit
 
 struct PinnedColumnBridgeRepresentable: UIViewControllerRepresentable {
     @Binding var isPresented: Bool
+    @Binding var lastViewedRow: Int  // Added to track the last viewed row
     @ObservedObject var coordinator: SimulationCoordinator
     @ObservedObject var inputManager: PersistentInputManager
     @ObservedObject var monthlySimSettings: MonthlySimulationSettings
@@ -28,6 +29,7 @@ struct PinnedColumnBridgeRepresentable: UIViewControllerRepresentable {
             chartDataCache: chartDataCache
         )
         pinnedVC.dismissBinding = $isPresented
+        pinnedVC.lastViewedRowBinding = $lastViewedRow  // Pass the binding
         return pinnedVC
     }
 
@@ -40,6 +42,7 @@ struct PinnedColumnBridgeRepresentable: UIViewControllerRepresentable {
             simChartSelection: simChartSelection,
             chartDataCache: chartDataCache
         )
+        uiViewController.lastViewedRowBinding = $lastViewedRow  // Update the binding
     }
 }
 

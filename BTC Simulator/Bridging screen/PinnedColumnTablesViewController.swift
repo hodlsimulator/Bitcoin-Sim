@@ -245,6 +245,12 @@ class PinnedColumnTablesViewController: UIViewController {
                let headersCV = self.columnHeadersVC.collectionView {
                 headersCV.contentOffset.x = dataCV.contentOffset.x
             }
+            // Restore scroll position to last viewed row
+            if let rep = self.representable, rep.displayedData.count > 0 {
+                let row = min(rep.lastViewedRow, rep.displayedData.count - 1)
+                let indexPath = IndexPath(row: row, section: 0)
+                self.pinnedTableView.scrollToRow(at: indexPath, at: .top, animated: false)
+            }
         }
         
         // **Reload pinned table** so it doesn't start off empty
@@ -330,6 +336,11 @@ extension PinnedColumnTablesViewController: UITableViewDelegate, UICollectionVie
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         if scrollView == pinnedTableView {
+            // Update lastViewedRow with the topmost visible row
+            if let indexPaths = pinnedTableView.indexPathsForVisibleRows,
+               let firstIndexPath = indexPaths.first {
+                representable?.lastViewedRow = firstIndexPath.row
+            }
             guard let rep = representable else { return }
             
             let offsetY       = scrollView.contentOffset.y
