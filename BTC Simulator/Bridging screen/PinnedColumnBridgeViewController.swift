@@ -24,6 +24,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
     // MARK: - Properties
     var representableContainer: BridgeContainer?
     var dismissBinding: Binding<Bool>?
+    var previousColumnIndex: Int? = nil
 
     private let customTopBar = UIView()
     private let titleLabel   = UILabel()
@@ -33,7 +34,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
     private let customNavBarHeight: CGFloat = 30
     private let summaryCardHeight:  CGFloat = 88
 
-    // Notice we keep using our own hosting controller here, that’s fine.
+    // We use our own hosting controller for the summary card
     private let hostingController      = UIHostingController(rootView: AnyView(EmptyView()))
     private let summaryCardContainer   = UIView()
     private let pinnedTablePlaceholder = UIView()
@@ -159,6 +160,25 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
                     }
                 }
             }
+        }
+        
+        // --- New: Slide-based column header changes ---
+        // Listen for centered column changes from the child’s collection view.
+        pinnedColumnTablesVC.columnsCollectionVC.onCenteredColumnChanged = { [weak pinnedColumnTablesVC] newIndex in
+            guard let vc = pinnedColumnTablesVC else { return }
+            let direction: CGFloat
+            if let oldIndex = vc.previousColumnIndex {
+                direction = (newIndex > oldIndex) ? -1 : 1
+            } else {
+                direction = -1
+            }
+            vc.previousColumnIndex = newIndex
+
+            let allCols = vc.columnsCollectionVC.columnsData
+            let newText1 = (newIndex < allCols.count) ? allCols[newIndex].0 : nil
+            let newText2 = (newIndex + 1 < allCols.count) ? allCols[newIndex + 1].0 : nil
+
+            vc.slideHeaders(newText1: newText1, newText2: newText2, direction: direction)
         }
     }
     
@@ -318,7 +338,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
             // Sum all weekly contributions (USD) as Decimal
             var totalContributed = Decimal(0)
             for row in coord.monteCarloResults {
-                totalContributed += Decimal(row.contributionUSD) // <–– wrap in Decimal()
+                totalContributed += Decimal(row.contributionUSD)
             }
             
             // Convert the Double startingBalance to Decimal
@@ -348,7 +368,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
             
             var totalContributed = Decimal(0)
             for row in coord.monteCarloResults {
-                totalContributed += Decimal(row.contributionEUR) // <–– wrap in Decimal()
+                totalContributed += Decimal(row.contributionEUR)
             }
             
             // If startingBalance is in USD, you might convert it,
@@ -378,7 +398,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
 
             var totalContributed = Decimal(0)
             for row in coord.monteCarloResults {
-                totalContributed += Decimal(row.contributionUSD) // <–– wrap in Decimal()
+                totalContributed += Decimal(row.contributionUSD)
             }
             
             totalContributed += Decimal(coord.simSettings.startingBalance)
@@ -479,7 +499,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         }
     }
 
-    // MARK: - Growth Calculation
+    // MARK: - Growth Calculation (Legacy)
     private func growthCalc(_ finalPortfolio: Decimal,
                             _ initialPortfolio: Decimal,
                             _ symbol: String) -> (Double, String) {

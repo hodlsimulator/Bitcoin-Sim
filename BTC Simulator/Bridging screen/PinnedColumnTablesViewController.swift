@@ -14,16 +14,15 @@ class PinnedColumnTablesViewController: UIViewController {
     
     // If needed: onIsAtBottomChanged from the representable
     var onIsAtBottomChanged: ((Bool) -> Void)?
-
+    
     var currentVerticalOffset: CGPoint = .zero
     
     // Left table for the pinned (e.g. "Week") column
     let pinnedTableView = UITableView(frame: .zero, style: .plain)
     
     // Our single-column-collection to the right
-    // (renamed for clarity, but you can keep the old name if you like)
     let columnsCollectionVC = TwoColumnCollectionViewController()
-
+    
     // Labels for pinned column header & the two dynamic column titles
     private let pinnedHeaderLabel = UILabel()
     private let col1Label         = UILabel()
@@ -31,6 +30,9 @@ class PinnedColumnTablesViewController: UIViewController {
     
     // Prevent infinite scroll-callback loops
     private var isSyncingScroll = false
+    
+    // Track the previously centered column index for sliding animation
+    var previousColumnIndex: Int? = nil
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -131,7 +133,7 @@ class PinnedColumnTablesViewController: UIViewController {
         pinnedTableView.backgroundColor = .clear
         pinnedTableView.showsVerticalScrollIndicator = false
         pinnedTableView.register(PinnedColumnCell.self, forCellReuseIdentifier: "PinnedColumnCell")
-
+        
         // Remove table insets
         pinnedTableView.cellLayoutMarginsFollowReadableWidth = false
         pinnedTableView.layoutMargins = .zero
@@ -139,7 +141,7 @@ class PinnedColumnTablesViewController: UIViewController {
         if #available(iOS 15.0, *) {
             pinnedTableView.sectionHeaderTopPadding = 0
         }
-
+        
         view.addSubview(pinnedTableView)
         NSLayoutConstraint.activate([
             pinnedTableView.topAnchor.constraint(equalTo: headersContainer.bottomAnchor),
@@ -166,29 +168,28 @@ class PinnedColumnTablesViewController: UIViewController {
         // ----------------------------------------------------------------
         // 4) Vertical scroll sync callback
         // ----------------------------------------------------------------
-        // If the user scrolls inside a OneColumnCell, we unify offsets:
         columnsCollectionVC.onScrollSync = { [weak self] scrollView in
             self?.syncAllTables(with: scrollView)
         }
         
-        // 5) Which column is centered?
+        // ----------------------------------------------------------------
+        // 5) Which column is centered? – Use sliding animation on user swipes.
+        // For the initial load, we'll update the headers statically.
         columnsCollectionVC.onCenteredColumnChanged = { [weak self] columnIndex in
             guard let self = self else { return }
-            
-            // Update col1Label/col2Label based on the centered column + 1
-            let allColumns = self.columnsCollectionVC.columnsData
-            
-            if columnIndex < allColumns.count {
-                self.col1Label.text = allColumns[columnIndex].0  // the "title"
+            // If this is the initial call, update without animation.
+            if self.previousColumnIndex == nil {
+                self.previousColumnIndex = columnIndex
+                let allColumns = self.columnsCollectionVC.columnsData
+                self.col1Label.text = (columnIndex < allColumns.count) ? allColumns[columnIndex].0 : nil
+                self.col2Label.text = (columnIndex + 1 < allColumns.count) ? allColumns[columnIndex + 1].0 : nil
             } else {
-                self.col1Label.text = nil
-            }
-            
-            let secondIndex = columnIndex + 1
-            if secondIndex < allColumns.count {
-                self.col2Label.text = allColumns[secondIndex].0
-            } else {
-                self.col2Label.text = nil
+                let direction: CGFloat = (columnIndex > self.previousColumnIndex!) ? -1 : 1
+                self.previousColumnIndex = columnIndex
+                let allColumns = self.columnsCollectionVC.columnsData
+                let newText1 = (columnIndex < allColumns.count) ? allColumns[columnIndex].0 : nil
+                let newText2 = (columnIndex + 1 < allColumns.count) ? allColumns[columnIndex + 1].0 : nil
+                self.slideHeaders(newText1: newText1, newText2: newText2, direction: direction)
             }
         }
     }
@@ -202,13 +203,14 @@ class PinnedColumnTablesViewController: UIViewController {
         columnsCollectionVC.displayedData = rep.displayedData
         columnsCollectionVC.reloadData()
         
-        // Scroll the collection to column 2
+        // Scroll the collection to column 2 and set header text statically without animation.
         DispatchQueue.main.async {
             self.columnsCollectionVC.scrollToColumnIndex(2)
-            
-            // Now manually call onCenteredColumnChanged so col1/col2 appear immediately:
-            let desiredIndex = 2
-            self.columnsCollectionVC.onCenteredColumnChanged?(desiredIndex)
+            let allCols = self.columnsCollectionVC.columnsData
+            let index = 2
+            self.col1Label.text = (index < allCols.count) ? allCols[index].0 : nil
+            self.col2Label.text = (index + 1 < allCols.count) ? allCols[index + 1].0 : nil
+            self.previousColumnIndex = index
         }
     }
     
@@ -222,16 +224,15 @@ class PinnedColumnTablesViewController: UIViewController {
             pinnedTableView.scrollToRow(at: pinnedPath, at: .bottom, animated: true)
         }
     }
-
+    
     func scrollToTop() {
         guard let rep = representable else { return }
         if rep.displayedData.count > 0 {
             let topIndex = IndexPath(row: 0, section: 0)
             pinnedTableView.scrollToRow(at: topIndex, at: .top, animated: true)
-
+            
             // After the table view finishes animating, update offsets
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                // This ensures pinnedTableView.contentOffset is fresh
                 self.syncAllTables(with: self.pinnedTableView)
             }
         }
@@ -239,44 +240,37 @@ class PinnedColumnTablesViewController: UIViewController {
     
     /// Sync pinned table & all visible single-column cells
     private func syncAllTables(with sourceScrollView: UIScrollView) {
-            guard !isSyncingScroll else { return }
-            isSyncingScroll = true
-            
-            let newOffset = sourceScrollView.contentOffset
-            
-            if sourceScrollView != pinnedTableView {
-                pinnedTableView.contentOffset = newOffset
-            }
-            
-            // Update each visible OneColumnCell
-            if let cv = columnsCollectionVC.internalCollectionView {
-                for cell in cv.visibleCells {
-                    if let oneColCell = cell as? OneColumnCell {
-                        // We can’t do oneColCell.tableView directly if it's private
-                        // So either make tableView internal or add a method:
-                        oneColCell.setVerticalOffset(newOffset)
-                    }
+        guard !isSyncingScroll else { return }
+        isSyncingScroll = true
+        
+        let newOffset = sourceScrollView.contentOffset
+        
+        if sourceScrollView != pinnedTableView {
+            pinnedTableView.contentOffset = newOffset
+        }
+        
+        if let cv = columnsCollectionVC.internalCollectionView {
+            for cell in cv.visibleCells {
+                if let oneColCell = cell as? OneColumnCell {
+                    oneColCell.setVerticalOffset(newOffset)
                 }
             }
-        
-            currentVerticalOffset = newOffset
-            
-            isSyncingScroll = false
         }
+        
+        currentVerticalOffset = newOffset
+        isSyncingScroll = false
+    }
     
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         
         let bottomSafeArea = view.safeAreaInsets.bottom
-        
         pinnedTableView.contentInset.bottom = bottomSafeArea
         
-        // For iOS 13+:
         if #available(iOS 13.0, *) {
             pinnedTableView.verticalScrollIndicatorInsets =
                 UIEdgeInsets(top: 0, left: 0, bottom: bottomSafeArea, right: 0)
         } else {
-            // Fallback if you need iOS < 13 support
             pinnedTableView.scrollIndicatorInsets.bottom = bottomSafeArea
         }
     }
@@ -295,21 +289,16 @@ extension PinnedColumnTablesViewController: UITableViewDataSource, UITableViewDe
     
     func tableView(_ tableView: UITableView,
                    cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        
         guard let rep = representable else {
             return UITableViewCell()
         }
         
         let rowData = rep.displayedData[indexPath.row]
         
-        guard let cell = tableView.dequeueReusableCell(
-            withIdentifier: "PinnedColumnCell",
-            for: indexPath
-        ) as? PinnedColumnCell else {
+        guard let cell = tableView.dequeueReusableCell(withIdentifier: "PinnedColumnCell", for: indexPath) as? PinnedColumnCell else {
             return UITableViewCell()
         }
         
-        // The pinned column is "week" (or "month" or something else)
         let pinnedValue = rowData[keyPath: rep.pinnedColumnKeyPath]
         cell.configure(pinnedValue: pinnedValue, backgroundIndex: indexPath.row)
         return cell
@@ -321,15 +310,10 @@ extension PinnedColumnTablesViewController: UITableViewDataSource, UITableViewDe
     }
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        // Don’t do anything if we’re already syncing
         guard !isSyncingScroll else { return }
-
-        // Sync pinned + visible column offsets
         syncAllTables(with: scrollView)
-
-        // near-bottom detection
-        guard let rep = representable else { return }
         
+        guard let rep = representable else { return }
         let offsetY       = scrollView.contentOffset.y
         let contentHeight = scrollView.contentSize.height
         let frameHeight   = scrollView.frame.size.height
@@ -337,17 +321,13 @@ extension PinnedColumnTablesViewController: UITableViewDataSource, UITableViewDe
         let nearBottomThreshold: CGFloat = 50
         let distanceFromBottom = contentHeight - (offsetY + frameHeight)
         let atBottom = (distanceFromBottom < nearBottomThreshold)
-
-        // Pass that to SwiftUI or your parent
+        
         rep.isAtBottom = atBottom
         onIsAtBottomChanged?(atBottom)
     }
-
     
-    // In PinnedColumnTablesViewController:
     private func checkIfNearBottom(_ scrollView: UIScrollView) {
         guard let rep = representable else { return }
-
         let offsetY       = scrollView.contentOffset.y
         let contentHeight = scrollView.contentSize.height
         let frameHeight   = scrollView.frame.size.height
@@ -355,9 +335,28 @@ extension PinnedColumnTablesViewController: UITableViewDataSource, UITableViewDe
         let nearBottomThreshold: CGFloat = 50
         let distanceFromBottom = contentHeight - (offsetY + frameHeight)
         let atBottom = (distanceFromBottom < nearBottomThreshold)
-
-        // Pass that to SwiftUI or your parent callback
+        
         rep.isAtBottom = atBottom
         onIsAtBottomChanged?(atBottom)
+    }
+}
+
+extension PinnedColumnTablesViewController {
+    /// Animate header labels sliding out, swapping text, then sliding back in.
+    func slideHeaders(newText1: String?, newText2: String?, direction: CGFloat) {
+        let offsetX: CGFloat = 100 * direction
+        UIView.animate(withDuration: 0.25, animations: {
+            self.col1Label.transform = CGAffineTransform(translationX: offsetX, y: 0)
+            self.col2Label.transform = CGAffineTransform(translationX: offsetX, y: 0)
+        }, completion: { _ in
+            self.col1Label.text = newText1
+            self.col2Label.text = newText2
+            self.col1Label.transform = CGAffineTransform(translationX: -offsetX, y: 0)
+            self.col2Label.transform = CGAffineTransform(translationX: -offsetX, y: 0)
+            UIView.animate(withDuration: 0.25) {
+                self.col1Label.transform = .identity
+                self.col2Label.transform = .identity
+            }
+        })
     }
 }
