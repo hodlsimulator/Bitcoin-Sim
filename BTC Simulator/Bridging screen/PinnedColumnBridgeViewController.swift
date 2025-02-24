@@ -178,7 +178,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
             let newText1 = (newIndex < allCols.count) ? allCols[newIndex].0 : nil
             let newText2 = (newIndex + 1 < allCols.count) ? allCols[newIndex + 1].0 : nil
 
-            vc.slideHeaders(newText1: newText1, newText2: newText2, direction: direction)
+            // vc.slideHeaders(newText1: newText1, newText2: newText2, direction: direction)
         }
     }
     
