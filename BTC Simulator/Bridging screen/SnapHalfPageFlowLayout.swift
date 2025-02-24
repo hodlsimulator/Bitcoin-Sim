@@ -10,7 +10,18 @@ import UIKit
 /// A layout that displays 2 columns across the full width
 /// (each item is half the view width), but snaps horizontally
 /// in half-width increments, so each swipe slides over by 1 column.
+///
+/// To align with a pinned column (70pt), you can either:
+/// (1) Subtract 70 from the collection view’s frame so itemSize
+///     is truly half the *remaining* width, or
+/// (2) Let the collection view fill the screen and rely on a top-level
+///     layout guide so the collection starts at X=70. This code below
+///     demonstrates approach (1).
 class SnapHalfPageFlowLayout: UICollectionViewFlowLayout {
+
+    /// Adjust this if you have a pinned column of a fixed width
+    /// and you want the 'snapping' columns to fill (screenWidth - pinnedWidth).
+    var pinnedColumnWidth: CGFloat = 0
 
     override func prepare() {
         super.prepare()
@@ -20,12 +31,17 @@ class SnapHalfPageFlowLayout: UICollectionViewFlowLayout {
         sectionInset   = .zero
         minimumLineSpacing = 0
 
-        // Each column is half the total width => 2 columns fill the screen
-        let halfWidth = floor(cv.bounds.width / 2)
+        // If the pinned column is separate, you might do:
+        // let availableWidth = cv.bounds.width - pinnedColumnWidth
+        // But if your collection view is itself sized to exclude the pinned column,
+        // then you can just do:
+        let availableWidth = cv.bounds.width
+
+        let halfWidth = floor(availableWidth / 2)
         let height    = cv.bounds.height
         itemSize      = CGSize(width: halfWidth, height: height)
 
-        // For strong snapping
+        // Strong snapping so it locks to each half-width.
         cv.decelerationRate = .fast
 
         // Clip so partial columns never peek
@@ -33,16 +49,21 @@ class SnapHalfPageFlowLayout: UICollectionViewFlowLayout {
     }
 
     /// Snaps to multiples of half the screen width => each 'page' shifts by one column.
-    /// E.g. if columns (2,3) are in view, next swipe shows (3,4).
+    /// e.g. if columns (2,3) are in view, next swipe reveals (3,4).
     override func targetContentOffset(
         forProposedContentOffset proposedContentOffset: CGPoint,
         withScrollingVelocity velocity: CGPoint
     ) -> CGPoint {
         guard let cv = collectionView else {
-            return super.targetContentOffset(forProposedContentOffset: proposedContentOffset, withScrollingVelocity: velocity)
+            return super.targetContentOffset(
+                forProposedContentOffset: proposedContentOffset,
+                withScrollingVelocity: velocity
+            )
         }
 
-        let halfWidth = cv.bounds.width / 2.0
+        let availableWidth = cv.bounds.width
+        let halfWidth      = availableWidth / 2.0
+        
         // rawPage = how many half-widths the user scrolled
         let rawPage   = proposedContentOffset.x / halfWidth
         let nearest   = round(rawPage)

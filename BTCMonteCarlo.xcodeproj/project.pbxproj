@@ -65,6 +65,7 @@
 		E18B2D692D6BE0B2005E5EDE /* ChartHostingController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E18B2D682D6BE0B0005E5EDE /* ChartHostingController.swift */; };
 		E18B2D6B2D6C1C7F005E5EDE /* SnapOneColumnFlowLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = E18B2D6A2D6C1C7D005E5EDE /* SnapOneColumnFlowLayout.swift */; };
 		E18B2D6D2D6C2153005E5EDE /* SnapHalfPageFlowLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = E18B2D6C2D6C2151005E5EDE /* SnapHalfPageFlowLayout.swift */; };
+		E18B2D6F2D6C40D9005E5EDE /* SnapFixedWidthFlowLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = E18B2D6E2D6C40D3005E5EDE /* SnapFixedWidthFlowLayout.swift */; };
 		E18C2BE12D259248006E7438 /* ChartSnapshotView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E18C2BE02D259245006E7438 /* ChartSnapshotView.swift */; };
 		E191AD5D2D1B06E600020DBE /* BitcoinHistoricalData.swift in Sources */ = {isa = PBXBuildFile; fileRef = E191AD5C2D1B06E000020DBE /* BitcoinHistoricalData.swift */; };
 		E191AD5F2D1B07BC00020DBE /* CSVLoaderHistorical.swift in Sources */ = {isa = PBXBuildFile; fileRef = E191AD5E2D1B07B800020DBE /* CSVLoaderHistorical.swift */; };
@@ -195,6 +196,7 @@
 		E18B2D682D6BE0B0005E5EDE /* ChartHostingController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartHostingController.swift; sourceTree = "<group>"; };
 		E18B2D6A2D6C1C7D005E5EDE /* SnapOneColumnFlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnapOneColumnFlowLayout.swift; sourceTree = "<group>"; };
 		E18B2D6C2D6C2151005E5EDE /* SnapHalfPageFlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnapHalfPageFlowLayout.swift; sourceTree = "<group>"; };
+		E18B2D6E2D6C40D3005E5EDE /* SnapFixedWidthFlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnapFixedWidthFlowLayout.swift; sourceTree = "<group>"; };
 		E18C2BE02D259245006E7438 /* ChartSnapshotView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartSnapshotView.swift; sourceTree = "<group>"; };
 		E191AD5C2D1B06E000020DBE /* BitcoinHistoricalData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BitcoinHistoricalData.swift; sourceTree = "<group>"; };
 		E191AD5E2D1B07B800020DBE /* CSVLoaderHistorical.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVLoaderHistorical.swift; sourceTree = "<group>"; };
@@ -417,6 +419,7 @@
 				E1942C9A2D63FD7300F5B9A1 /* PinnedColumnCell.swift */,
 				E1942C962D63FD0900F5B9A1 /* PinnedColumnTablesRepresentable.swift */,
 				E1942C982D63FD5E00F5B9A1 /* PinnedColumnTablesViewController.swift */,
+				E18B2D6E2D6C40D3005E5EDE /* SnapFixedWidthFlowLayout.swift */,
 				E18B2D6C2D6C2151005E5EDE /* SnapHalfPageFlowLayout.swift */,
 				E18B2D6A2D6C1C7D005E5EDE /* SnapOneColumnFlowLayout.swift */,
 				E14AED7F2D69606F0068B2A5 /* SnapTwoColumnsFlowLayout.swift */,
@@ -606,6 +609,7 @@
 				E1B7B09D2D44E0D000B60EC6 /* BullishFactorsSection.swift in Sources */,
 				E14AED7E2D686A400068B2A5 /* NumericExtensions.swift in Sources */,
 				E19D10EF2D40290A00E3A55E /* SimulationSettings+RestoreDefaults.swift in Sources */,
+				E18B2D6F2D6C40D9005E5EDE /* SnapFixedWidthFlowLayout.swift in Sources */,
 				E1883F3C2D1DDC78007AA90B /* ParametersFormView.swift in Sources */,
 				E18C2BE12D259248006E7438 /* ChartSnapshotView.swift in Sources */,
 				E14AED6E2D684D040068B2A5 /* ColumnsCollectionViewController.swift in Sources */,

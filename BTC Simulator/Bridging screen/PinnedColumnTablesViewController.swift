@@ -12,11 +12,9 @@ class ColumnHeadersCollectionVC: UICollectionViewController {
     var columnsData: [(String, PartialKeyPath<SimulationData>)] = []
     
     init() {
-        let layout = UICollectionViewFlowLayout()
-        layout.scrollDirection = .horizontal
-        layout.minimumLineSpacing = 0
-        layout.sectionInset = .zero
-        layout.itemSize = CGSize(width: 150, height: 40)
+        // Replace the normal layout with SnapHalfPageFlowLayout
+        let layout = SnapHalfPageFlowLayout()
+        // optional: layout.pinnedColumnWidth = 0 // if you have that property
         super.init(collectionViewLayout: layout)
     }
     
