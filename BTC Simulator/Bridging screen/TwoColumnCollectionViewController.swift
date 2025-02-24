@@ -30,7 +30,7 @@ class TwoColumnCollectionViewController: UIViewController {
         super.viewDidLoad()
         view.backgroundColor = .clear
 
-        // Use SnapHalfPageFlowLayout => 2 columns visible, shifts by 1 column each swipe
+        // (A) Set up snap layout => 2 columns per screen
         let layout = SnapHalfPageFlowLayout()
 
         let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
@@ -53,8 +53,13 @@ class TwoColumnCollectionViewController: UIViewController {
             cv.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             cv.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
-
         self.internalCollectionView = cv
+
+        // (B) Add a tap gesture so tapping left side => page left, right side => page right
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleTapToPage(_:)))
+        // Attach the gesture to the entire controller’s view
+        // (so it sees taps anywhere within the full area):
+        view.addGestureRecognizer(tapGesture)
     }
 
     func reloadData() {
@@ -94,20 +99,15 @@ extension TwoColumnCollectionViewController: UICollectionViewDataSource, UIColle
             return UICollectionViewCell()
         }
         
-        // Extract both the title and the partial key from columnsData
         let (title, partial) = columnsData[indexPath.item]
-
-        // Pass columnTitle now that you've re-added that parameter
         cell.configure(
             columnTitle: title,
             partialKey: partial,
             displayedData: displayedData
         )
 
-        // Store reference so we can sync off-screen columns
         columnCells[indexPath.item] = cell
 
-        // Bubble up scroll events
         cell.onScroll = { [weak self] scrollView in
             self?.onScrollSync?(scrollView)
             if let pinnedVC = self?.parent as? PinnedColumnTablesViewController {
@@ -121,7 +121,6 @@ extension TwoColumnCollectionViewController: UICollectionViewDataSource, UIColle
     func collectionView(_ collectionView: UICollectionView,
                         willDisplay cell: UICollectionViewCell,
                         forItemAt indexPath: IndexPath) {
-        
         if let oneColCell = cell as? OneColumnCell,
            let parentVC    = self.parent as? PinnedColumnTablesViewController {
             oneColCell.setVerticalOffset(parentVC.currentVerticalOffset)
@@ -132,7 +131,6 @@ extension TwoColumnCollectionViewController: UICollectionViewDataSource, UIColle
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
         identifyLeftColumn(in: scrollView)
     }
-
     func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate: Bool) {
         if !willDecelerate {
             identifyLeftColumn(in: scrollView)
@@ -165,5 +163,36 @@ extension TwoColumnCollectionViewController {
 
         let indexPath = IndexPath(item: columnIndex, section: 0)
         cv.scrollToItem(at: indexPath, at: .left, animated: false)
+    }
+}
+
+// MARK: - Tap-to-Page Implementation
+extension TwoColumnCollectionViewController {
+
+    // This is the code you provided
+    @objc private func handleTapToPage(_ gesture: UITapGestureRecognizer) {
+        guard let cv = internalCollectionView else { return }
+
+        // 1) Where the user tapped in *this VC’s* coordinate space
+        let pointInSelf = gesture.location(in: self.view)
+        let screenHalf  = self.view.bounds.width / 2.0
+
+        // 2) Identify the current column via content offset
+        let halfWidth = cv.bounds.width / 2.0
+        let rawPage   = cv.contentOffset.x / halfWidth
+        var currentPage = Int(round(rawPage))
+
+        // 3) If the user tapped the left half of the screen => -1, else => +1
+        if pointInSelf.x < screenHalf {
+            currentPage -= 1
+        } else {
+            currentPage += 1
+        }
+
+        // 4) Clamp
+        currentPage = max(0, min(currentPage, columnsData.count - 1))
+
+        // 5) Scroll
+        scrollToColumnIndex(currentPage)
     }
 }
