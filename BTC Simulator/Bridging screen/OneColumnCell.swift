@@ -23,13 +23,17 @@ class OneColumnCell: UICollectionViewCell, UITableViewDelegate, UITableViewDataS
         super.init(frame: frame)
         backgroundColor = UIColor(white: 0.15, alpha: 1.0)
         
+        // Table setup
         tableView.translatesAutoresizingMaskIntoConstraints = false
-        tableView.delegate = self
+        tableView.delegate   = self
         tableView.dataSource = self
         tableView.backgroundColor = .clear
         tableView.showsVerticalScrollIndicator = false
         tableView.register(OneColumnRowCell.self, forCellReuseIdentifier: "OneColumnRowCell")
+        
+        // Lock row height to avoid drifting
         tableView.rowHeight = 44
+        tableView.estimatedRowHeight = 0
         
         // Make sure content inset isn't automatically adjusted
         tableView.contentInsetAdjustmentBehavior = .never
@@ -44,6 +48,7 @@ class OneColumnCell: UICollectionViewCell, UITableViewDelegate, UITableViewDataS
             tableView.sectionHeaderTopPadding = 0
         }
 
+        // Add tableView to cell content
         contentView.addSubview(tableView)
         NSLayoutConstraint.activate([
             tableView.topAnchor.constraint(equalTo: contentView.topAnchor),
@@ -60,8 +65,8 @@ class OneColumnCell: UICollectionViewCell, UITableViewDelegate, UITableViewDataS
     func configure(columnTitle: String,
                    partialKey: PartialKeyPath<SimulationData>,
                    displayedData: [SimulationData]) {
-        self.columnTitle = columnTitle
-        self.partialKey = partialKey
+        self.columnTitle   = columnTitle
+        self.partialKey    = partialKey
         self.displayedData = displayedData
         tableView.reloadData()
     }
@@ -153,8 +158,7 @@ class OneColumnRowCell: UITableViewCell {
         // ------------------------------------
         if let kp = pk as? KeyPath<SimulationData, Decimal> {
             let val = rowData[keyPath: kp]
-            // All your Decimals here default to 2 decimals unless you do custom logic
-            // If you ever have a BTC value stored as Decimal, you can do:
+            // e.g. 2-decimals or however you want to format it
             label.text = val.formattedWithSeparator()
         }
         // ------------------------------------
@@ -174,11 +178,10 @@ class OneColumnRowCell: UITableViewCell {
                 formatter.groupingSeparator = ","
                 formatter.minimumFractionDigits = 8
                 formatter.maximumFractionDigits = 8
-                
                 label.text = formatter.string(from: NSNumber(value: val)) ?? "\(val)"
             }
             else {
-                // Otherwise, default to your 2-decimal extension
+                // Otherwise, default to e.g. 2 decimals:
                 label.text = val.formattedWithSeparator()
             }
         }

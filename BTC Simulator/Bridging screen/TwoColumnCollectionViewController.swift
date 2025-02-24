@@ -39,6 +39,7 @@ class TwoColumnCollectionViewController: UIViewController {
         let layout = SnapTwoColumnsFlowLayout()
         let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
         cv.backgroundColor = .clear
+        cv.clipsToBounds = true  // So off-screen columns don't peek out
         cv.showsHorizontalScrollIndicator = false
         cv.translatesAutoresizingMaskIntoConstraints = false
         cv.contentInsetAdjustmentBehavior = .never

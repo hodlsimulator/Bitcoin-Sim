@@ -101,7 +101,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         hostingController.didMove(toParent: self)
 
         // 2) Pinned table area
-        pinnedTablePlaceholder.backgroundColor = UIColor.darkGray.withAlphaComponent(0.2)
+        pinnedTablePlaceholder.backgroundColor = .clear  // was .darkGray.withAlphaComponent(0.2)
         pinnedTablePlaceholder.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(pinnedTablePlaceholder)
         NSLayoutConstraint.activate([
@@ -121,12 +121,6 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
             pinnedColumnTablesVC.view.bottomAnchor.constraint(equalTo: pinnedTablePlaceholder.bottomAnchor)
         ])
         pinnedColumnTablesVC.didMove(toParent: self)
-
-        if let tableView = pinnedColumnTablesVC.view.subviews.first as? UITableView {
-            tableView.contentInsetAdjustmentBehavior = .never
-            tableView.contentInset.bottom = 0
-            tableView.verticalScrollIndicatorInsets.bottom = 0
-        }
 
         // 3) Scroll-to-bottom button
         view.addSubview(scrollToBottomButton)
@@ -163,7 +157,6 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         }
         
         // --- New: Slide-based column header changes ---
-        // Listen for centered column changes from the child’s collection view.
         pinnedColumnTablesVC.columnsCollectionVC.onCenteredColumnChanged = { [weak pinnedColumnTablesVC] newIndex in
             guard let vc = pinnedColumnTablesVC else { return }
             let direction: CGFloat
@@ -178,6 +171,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
             let newText1 = (newIndex < allCols.count) ? allCols[newIndex].0 : nil
             let newText2 = (newIndex + 1 < allCols.count) ? allCols[newIndex + 1].0 : nil
 
+            // The slide animation code would go here if desired.
             // vc.slideHeaders(newText1: newText1, newText2: newText2, direction: direction)
         }
     }
@@ -328,26 +322,18 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         let finalBTC = lastRow.btcPriceUSD
 
         switch coord.simSettings.currencyPreference {
-
-        // -------------------------------------------------------------
-        // 1) USD branch
-        // -------------------------------------------------------------
         case .usd:
             let finalPortfolio = lastRow.portfolioValueUSD
             
-            // Sum all weekly contributions (USD) as Decimal
             var totalContributed = Decimal(0)
             for row in coord.monteCarloResults {
                 totalContributed += Decimal(row.contributionUSD)
             }
-            
-            // Convert the Double startingBalance to Decimal
             totalContributed += Decimal(coord.simSettings.startingBalance)
             
             let (growthPercentDouble, currencySymbol) =
                 growthCalcWithContributions(finalPortfolio, totalContributed, symbol: "$")
             
-            // Pass the computed growth into SwiftUI
             hostingController.rootView = AnyView(
                 SimulationSummaryCardView(
                     finalBTCPrice: Double(truncating: finalBTC as NSNumber),
@@ -360,9 +346,6 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
                 .background(Color(UIColor(white: 0.12, alpha: 1.0)))
             )
 
-        // -------------------------------------------------------------
-        // 2) EUR branch
-        // -------------------------------------------------------------
         case .eur:
             let finalPortfolio = lastRow.portfolioValueEUR
             
@@ -370,9 +353,6 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
             for row in coord.monteCarloResults {
                 totalContributed += Decimal(row.contributionEUR)
             }
-            
-            // If startingBalance is in USD, you might convert it,
-            // but here's a direct Decimal() for simplicity:
             totalContributed += Decimal(coord.simSettings.startingBalance)
             
             let (growthPercentDouble, currencySymbol) =
@@ -389,18 +369,13 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
                 .background(Color(UIColor(white: 0.12, alpha: 1.0)))
             )
 
-        // -------------------------------------------------------------
-        // 3) Both branch
-        // -------------------------------------------------------------
         case .both:
-            // We'll just display USD for the final portfolio
             let finalPortfolio = lastRow.portfolioValueUSD
 
             var totalContributed = Decimal(0)
             for row in coord.monteCarloResults {
                 totalContributed += Decimal(row.contributionUSD)
             }
-            
             totalContributed += Decimal(coord.simSettings.startingBalance)
             
             let (growthPercentDouble, currencySymbol) =
@@ -419,17 +394,14 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         }
     }
 
-    // MARK: - Growth Calculation Helper
     private func growthCalcWithContributions(
         _ finalValue: Decimal,
         _ totalContributed: Decimal,
         symbol: String
     ) -> (Double, String) {
         guard totalContributed > 0 else {
-            // Avoid divide by zero if user contributed nothing
             return (0.0, symbol)
         }
-        // ratio = final / total
         let ratio = NSDecimalNumber(decimal: finalValue / totalContributed).doubleValue
         let growthDouble = (ratio - 1.0) * 100.0
         return (growthDouble, symbol)
@@ -492,14 +464,12 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
             isAtBottom: .constant(false)
         )
         
-        // Force layout on next tick:
         DispatchQueue.main.async {
             self.pinnedColumnTablesVC.view.setNeedsLayout()
             self.pinnedColumnTablesVC.view.layoutIfNeeded()
         }
     }
-
-    // MARK: - Growth Calculation (Legacy)
+    
     private func growthCalc(_ finalPortfolio: Decimal,
                             _ initialPortfolio: Decimal,
                             _ symbol: String) -> (Double, String) {

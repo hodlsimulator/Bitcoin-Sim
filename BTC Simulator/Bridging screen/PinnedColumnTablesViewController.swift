@@ -28,6 +28,9 @@ class ColumnHeadersCollectionVC: UICollectionViewController {
         collectionView?.backgroundColor = .black
         collectionView?.showsHorizontalScrollIndicator = false
         collectionView?.register(HeaderCell.self, forCellWithReuseIdentifier: "HeaderCell")
+        
+        // Ensure no off-screen titles peek through
+        collectionView?.clipsToBounds = true
     }
     
     override func collectionView(_ cv: UICollectionView, numberOfItemsInSection section: Int) -> Int {
@@ -104,6 +107,12 @@ class PinnedColumnTablesViewController: UIViewController {
         pinnedTableView.contentInset = .zero
         pinnedTableView.scrollIndicatorInsets = .zero
         pinnedTableView.backgroundColor = .clear
+        
+        // Force pinned table row heights so it lines up with the column tables
+        pinnedTableView.estimatedRowHeight = 0
+        pinnedTableView.rowHeight = 44
+        pinnedTableView.tableFooterView = UIView()
+
         pinnedTableView.register(PinnedColumnCell.self, forCellReuseIdentifier: "PinnedColumnCell")
         
         // We'll set dataSource & delegate in our extensions
@@ -195,15 +204,12 @@ class PinnedColumnTablesViewController: UIViewController {
         columnsCollectionVC.onScrollSync = { [weak self] scrollView in
             self?.syncVerticalTables(with: scrollView)
         }
-        
-        // We'll set the collection view delegates in viewDidAppear or later
     }
     
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
         // Now that subviews exist, assign delegates to self.
-        // (We need to do it after the views are loaded so there's no crash.)
         pinnedTableView.dataSource = self
         pinnedTableView.delegate   = self
         
