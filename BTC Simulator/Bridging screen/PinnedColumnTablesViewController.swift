@@ -103,7 +103,7 @@ class PinnedColumnTablesViewController: UIViewController {
         pinnedTableView.contentInsetAdjustmentBehavior = .never
         pinnedTableView.contentInset = .zero
         pinnedTableView.scrollIndicatorInsets = .zero
-        pinnedTableView.backgroundColor = .red
+        pinnedTableView.backgroundColor = .clear
         pinnedTableView.register(PinnedColumnCell.self, forCellReuseIdentifier: "PinnedColumnCell")
         
         // We'll set dataSource & delegate in our extensions

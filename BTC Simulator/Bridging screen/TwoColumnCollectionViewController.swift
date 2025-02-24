@@ -27,6 +27,13 @@ class TwoColumnCollectionViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .clear
+        
+        if let layout = internalCollectionView?.collectionViewLayout as? UICollectionViewFlowLayout {
+            layout.sectionInset = .zero
+            layout.minimumLineSpacing = 0
+        }
+        internalCollectionView?.contentInset = .zero
+        internalCollectionView?.contentInsetAdjustmentBehavior = .never
 
         // e.g. SnapTwoColumnsFlowLayout so 2 columns fit side by side
         let layout = SnapTwoColumnsFlowLayout()
