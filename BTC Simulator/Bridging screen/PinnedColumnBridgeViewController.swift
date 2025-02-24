@@ -7,7 +7,7 @@
 
 import UIKit
 import SwiftUI
-    
+
 // MARK: - BridgeContainer
 struct BridgeContainer {
     let coordinator: SimulationCoordinator
@@ -101,7 +101,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         hostingController.didMove(toParent: self)
 
         // 2) Pinned table area
-        pinnedTablePlaceholder.backgroundColor = .clear  // was .darkGray.withAlphaComponent(0.2)
+        pinnedTablePlaceholder.backgroundColor = .clear
         pinnedTablePlaceholder.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(pinnedTablePlaceholder)
         NSLayoutConstraint.activate([
@@ -156,7 +156,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
             }
         }
         
-        // --- New: Slide-based column header changes ---
+        // Slide-based column header changes
         pinnedColumnTablesVC.columnsCollectionVC.onCenteredColumnChanged = { [weak pinnedColumnTablesVC] newIndex in
             guard let vc = pinnedColumnTablesVC else { return }
             let direction: CGFloat
@@ -233,6 +233,12 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         // Back button (our custom one)
         backButton.setImage(UIImage(systemName: "chevron.left"), for: .normal)
         backButton.tintColor = .white
+
+        // -- Increase hit area without enlarging icon --
+        backButton.contentEdgeInsets = UIEdgeInsets(top: 10, left: 10, bottom: 10, right: 10)
+        backButton.contentHorizontalAlignment = .leading
+        // ----------------------------------------------
+
         backButton.translatesAutoresizingMaskIntoConstraints = false
         customTopBar.addSubview(backButton)
         NSLayoutConstraint.activate([

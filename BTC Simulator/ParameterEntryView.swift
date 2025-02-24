@@ -76,15 +76,14 @@ struct ParameterEntryView: View {
             // 2) The forward chevron if there's at least 1 simulation result
             if !coordinator.monteCarloResults.isEmpty {
                 Button {
-                    // Tapping this sets showPinnedColumns -> triggers navigation in ContentView
                     showPinnedColumns = true
                 } label: {
                     Image(systemName: "chevron.right")
-                        .font(.title)          // bigger icon
+                        .font(.title2)            // slightly larger than .headline
                         .foregroundColor(.white)
-                        .padding()
+                        .padding()                // keep padding for a larger tap area
+                        .contentShape(Rectangle())// ensures the entire padded area is tappable
                 }
-                // Some spacing so it appears just below the nav bar
                 .padding(.top, 8)
                 .padding(.trailing, 16)
             }
