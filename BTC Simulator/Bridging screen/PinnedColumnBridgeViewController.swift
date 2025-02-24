@@ -82,11 +82,12 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         summaryCardContainer.backgroundColor = UIColor(white: 0.12, alpha: 1.0)
         summaryCardContainer.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(summaryCardContainer)
+
+        // Use center + a width equal to the screen
         NSLayoutConstraint.activate([
             summaryCardContainer.topAnchor.constraint(equalTo: customTopBar.bottomAnchor),
-            // Give left/right padding so it’s visually “centred”:
-            summaryCardContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
-            summaryCardContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
+            summaryCardContainer.centerXAnchor.constraint(equalTo: view.centerXAnchor, constant: -2.5),
+            summaryCardContainer.widthAnchor.constraint(equalTo: view.widthAnchor),
             summaryCardContainer.heightAnchor.constraint(equalToConstant: summaryCardHeight)
         ])
 
@@ -235,9 +236,11 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         backButton.setImage(UIImage(systemName: "chevron.left"), for: .normal)
         backButton.tintColor = .white
 
-        // Increase hit area without enlarging icon
+        // -- Increase hit area without enlarging icon --
         backButton.contentEdgeInsets = UIEdgeInsets(top: 10, left: 10, bottom: 10, right: 10)
         backButton.contentHorizontalAlignment = .leading
+        // ----------------------------------------------
+
         backButton.translatesAutoresizingMaskIntoConstraints = false
         customTopBar.addSubview(backButton)
         NSLayoutConstraint.activate([
@@ -252,8 +255,6 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         titleLabel.font = UIFont.boldSystemFont(ofSize: 17)
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         customTopBar.addSubview(titleLabel)
-
-        // *** SHIFT the label left by 8 points (or 16, etc.) or remove the constant if you want it perfectly centred. ***
         NSLayoutConstraint.activate([
             titleLabel.centerXAnchor.constraint(equalTo: customTopBar.centerXAnchor, constant: -2.5),
             titleLabel.centerYAnchor.constraint(equalTo: backButton.centerYAnchor)
