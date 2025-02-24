@@ -23,7 +23,6 @@ class OneColumnCell: UICollectionViewCell, UITableViewDelegate, UITableViewDataS
         super.init(frame: frame)
         backgroundColor = UIColor(white: 0.15, alpha: 1.0)
         
-        // Table setup
         tableView.translatesAutoresizingMaskIntoConstraints = false
         tableView.delegate   = self
         tableView.dataSource = self
@@ -34,7 +33,7 @@ class OneColumnCell: UICollectionViewCell, UITableViewDelegate, UITableViewDataS
         // Lock row height to avoid drifting
         tableView.rowHeight = 44
         tableView.estimatedRowHeight = 0
-        
+
         // Make sure content inset isn't automatically adjusted
         tableView.contentInsetAdjustmentBehavior = .never
 
@@ -48,7 +47,6 @@ class OneColumnCell: UICollectionViewCell, UITableViewDelegate, UITableViewDataS
             tableView.sectionHeaderTopPadding = 0
         }
 
-        // Add tableView to cell content
         contentView.addSubview(tableView)
         NSLayoutConstraint.activate([
             tableView.topAnchor.constraint(equalTo: contentView.topAnchor),
@@ -108,7 +106,7 @@ class OneColumnCell: UICollectionViewCell, UITableViewDelegate, UITableViewDataS
         onScroll?(scrollView)
     }
     
-    // Just expose a setter for the offset:
+    // Let the parent sync this table’s offset
     func setVerticalOffset(_ offset: CGPoint) {
         tableView.contentOffset = offset
     }
@@ -130,13 +128,11 @@ class OneColumnRowCell: UITableViewCell {
         separatorInset = .zero
         
         label.textColor = .white
-        // Use 17-pt font to match pinned column
         label.font = UIFont.systemFont(ofSize: 17)
         label.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(label)
         
         NSLayoutConstraint.activate([
-            // Reintroduce 18 points to match pinned table alignment
             label.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 18),
             label.centerYAnchor.constraint(equalTo: contentView.centerYAnchor)
         ])
@@ -153,20 +149,14 @@ class OneColumnRowCell: UITableViewCell {
             return
         }
         
-        // ------------------------------------
         // 1) If key path is a Decimal property
-        // ------------------------------------
         if let kp = pk as? KeyPath<SimulationData, Decimal> {
             let val = rowData[keyPath: kp]
-            // e.g. 2-decimals or however you want to format it
             label.text = val.formattedWithSeparator()
         }
-        // ------------------------------------
         // 2) If key path is a Double property
-        // ------------------------------------
         else if let kp = pk as? KeyPath<SimulationData, Double> {
             let val = rowData[keyPath: kp]
-            
             // If it's one of the three BTC fields:
             if kp == \SimulationData.startingBTC ||
                kp == \SimulationData.netBTCHoldings ||
@@ -178,23 +168,20 @@ class OneColumnRowCell: UITableViewCell {
                 formatter.groupingSeparator = ","
                 formatter.minimumFractionDigits = 8
                 formatter.maximumFractionDigits = 8
+                
                 label.text = formatter.string(from: NSNumber(value: val)) ?? "\(val)"
             }
             else {
-                // Otherwise, default to e.g. 2 decimals:
+                // Otherwise, default to 2 decimals
                 label.text = val.formattedWithSeparator()
             }
         }
-        // ------------------------------------
         // 3) If key path is an Int property
-        // ------------------------------------
         else if let kp = pk as? KeyPath<SimulationData, Int> {
             let val = rowData[keyPath: kp]
             label.text = val.formattedWithSeparator()
         }
-        // ------------------------------------
         // 4) Anything else
-        // ------------------------------------
         else {
             label.text = "-"
         }

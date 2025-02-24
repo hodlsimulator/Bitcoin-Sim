@@ -27,19 +27,18 @@ class TwoColumnCollectionViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .clear
-        
-        if let layout = internalCollectionView?.collectionViewLayout as? UICollectionViewFlowLayout {
-            layout.sectionInset = .zero
-            layout.minimumLineSpacing = 0
-        }
-        internalCollectionView?.contentInset = .zero
-        internalCollectionView?.contentInsetAdjustmentBehavior = .never
 
-        // e.g. SnapTwoColumnsFlowLayout so 2 columns fit side by side
-        let layout = SnapTwoColumnsFlowLayout()
+        // Layout: ensure no inset or spacing
+        let layout = UICollectionViewFlowLayout()
+        layout.scrollDirection = .horizontal
+        layout.minimumLineSpacing = 0
+        layout.sectionInset = .zero
+        // Example: each column is 150 wide, full height
+        layout.itemSize = CGSize(width: 150, height: view.bounds.height)
+
         let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
         cv.backgroundColor = .clear
-        cv.clipsToBounds = true  // So off-screen columns don't peek out
+        cv.clipsToBounds = true  // Hide partial off-screen columns
         cv.showsHorizontalScrollIndicator = false
         cv.translatesAutoresizingMaskIntoConstraints = false
         cv.contentInsetAdjustmentBehavior = .never
@@ -67,13 +66,17 @@ class TwoColumnCollectionViewController: UIViewController {
 
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        internalCollectionView?.collectionViewLayout.invalidateLayout()
+        // Update itemSize so each column is as tall as the view
+        if let layout = internalCollectionView?.collectionViewLayout as? UICollectionViewFlowLayout {
+            layout.itemSize = CGSize(width: 150, height: view.bounds.height)
+            layout.invalidateLayout()
+        }
     }
 
-    // MARK: - New code to ensure we scroll horizontally after layout is ready
+    // MARK: - Ensure we scroll horizontally after layout is ready
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        // If "BTC Price" is at index 2, call the helper so that columns 2 & 3 are visible
+        // If "BTC Price" is at index 2, call the helper so columns 2 & 3 show
         scrollToColumnIndex(2)
     }
 }
@@ -82,13 +85,11 @@ class TwoColumnCollectionViewController: UIViewController {
 
 extension TwoColumnCollectionViewController: UICollectionViewDataSource, UICollectionViewDelegate {
 
-    // 1) Required data source method
     func collectionView(_ collectionView: UICollectionView,
                         numberOfItemsInSection section: Int) -> Int {
         return columnsData.count
     }
 
-    // 2) Required data source method
     func collectionView(_ collectionView: UICollectionView,
                         cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         guard let cell = collectionView.dequeueReusableCell(
@@ -112,6 +113,7 @@ extension TwoColumnCollectionViewController: UICollectionViewDataSource, UIColle
             }
         }
 
+        // Bubble up vertical scroll to parent
         cell.onScroll = { [weak self] scrollView in
             self?.onScrollSync?(scrollView)
             if let pinnedVC = self?.parent as? PinnedColumnTablesViewController {
@@ -122,14 +124,12 @@ extension TwoColumnCollectionViewController: UICollectionViewDataSource, UIColle
         return cell
     }
 
-    // 3) Optional but helpful: triggers right before a cell becomes visible
+    // Make sure newly displayed cells start at the correct offset
     func collectionView(_ collectionView: UICollectionView,
                         willDisplay cell: UICollectionViewCell,
                         forItemAt indexPath: IndexPath) {
-        
         if let oneColCell = cell as? OneColumnCell,
            let parentVC = self.parent as? PinnedColumnTablesViewController {
-            // Make sure newly displayed cells start at the correct vertical offset
             oneColCell.setVerticalOffset(parentVC.currentVerticalOffset)
         }
     }
@@ -172,7 +172,6 @@ extension TwoColumnCollectionViewController {
         guard let cv = internalCollectionView else { return }
         guard columnIndex >= 0 && columnIndex < columnsData.count else { return }
 
-        // Easiest approach: scroll-to-item with .left alignment
         let indexPath = IndexPath(item: columnIndex, section: 0)
         cv.scrollToItem(at: indexPath, at: .left, animated: false)
     }
