@@ -20,6 +20,9 @@ class TwoColumnCollectionViewController: UIViewController {
 
     // Called when the user horizontally snaps so we can get the new left column index
     var onCenteredColumnChanged: ((Int) -> Void)?
+    
+    // Store references so off-screen columns can also sync
+    private var columnCells: [Int: OneColumnCell] = [:]
 
     var internalCollectionView: UICollectionView?
 
@@ -58,6 +61,13 @@ class TwoColumnCollectionViewController: UIViewController {
         internalCollectionView?.reloadData()
     }
 
+    // Sync all columns (including off-screen)
+    func updateAllColumnsVerticalOffset(_ offset: CGPoint) {
+        for (_, cell) in columnCells {
+            cell.setVerticalOffset(offset)
+        }
+    }
+
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
@@ -76,22 +86,26 @@ extension TwoColumnCollectionViewController: UICollectionViewDataSource, UIColle
 
     func collectionView(_ collectionView: UICollectionView,
                         cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        
         guard let cell = collectionView.dequeueReusableCell(
             withReuseIdentifier: "OneColumnCell",
             for: indexPath
         ) as? OneColumnCell else {
             return UICollectionViewCell()
         }
-
+        
+        // Extract both the title and the partial key from columnsData
         let (title, partial) = columnsData[indexPath.item]
-        cell.configure(columnTitle: title, partialKey: partial, displayedData: displayedData)
 
-        // Sync pinned offset
-        if let parentVC = self.parent as? PinnedColumnTablesViewController {
-            DispatchQueue.main.async {
-                cell.setVerticalOffset(parentVC.currentVerticalOffset)
-            }
-        }
+        // Pass columnTitle now that you've re-added that parameter
+        cell.configure(
+            columnTitle: title,
+            partialKey: partial,
+            displayedData: displayedData
+        )
+
+        // Store reference so we can sync off-screen columns
+        columnCells[indexPath.item] = cell
 
         // Bubble up scroll events
         cell.onScroll = { [weak self] scrollView in
@@ -104,12 +118,12 @@ extension TwoColumnCollectionViewController: UICollectionViewDataSource, UIColle
         return cell
     }
 
-    // Also ensure newly displayed columns pick up the pinned offset
     func collectionView(_ collectionView: UICollectionView,
                         willDisplay cell: UICollectionViewCell,
                         forItemAt indexPath: IndexPath) {
+        
         if let oneColCell = cell as? OneColumnCell,
-           let parentVC = self.parent as? PinnedColumnTablesViewController {
+           let parentVC    = self.parent as? PinnedColumnTablesViewController {
             oneColCell.setVerticalOffset(parentVC.currentVerticalOffset)
         }
     }
@@ -125,12 +139,11 @@ extension TwoColumnCollectionViewController: UICollectionViewDataSource, UIColle
         }
     }
 
-    /// Identify which column index is on the left side of this 2-col half-page
     private func identifyLeftColumn(in scrollView: UIScrollView) {
         guard let cv = internalCollectionView else { return }
 
-        // Because each page is half the width (one-column shift),
-        // we shift the detection point by 1/4 the screen so we pick the left item.
+        // Because each 'page' is half the width (1-column shift),
+        // we shift the detection point by 1/4 the screen to pick the left item.
         let quarterWidth = scrollView.bounds.width / 4.0
         let offsetX = scrollView.contentOffset.x + quarterWidth
         let offsetY = scrollView.bounds.height / 2.0

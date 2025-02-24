@@ -12,7 +12,6 @@ class OneColumnCell: UICollectionViewCell, UITableViewDelegate, UITableViewDataS
     private let tableView = UITableView(frame: .zero, style: .plain)
 
     // Data for this single column
-    private var columnTitle: String = ""
     private var partialKey: PartialKeyPath<SimulationData>?
     private var displayedData: [SimulationData] = []
     
@@ -23,26 +22,29 @@ class OneColumnCell: UICollectionViewCell, UITableViewDelegate, UITableViewDataS
         super.init(frame: frame)
         backgroundColor = UIColor(white: 0.15, alpha: 1.0)
         
+        // Don’t let iOS adjust the insets
+        tableView.contentInsetAdjustmentBehavior = .never
         tableView.translatesAutoresizingMaskIntoConstraints = false
         tableView.delegate   = self
         tableView.dataSource = self
         tableView.backgroundColor = .clear
         tableView.showsVerticalScrollIndicator = false
+
+        // Register row cell
         tableView.register(OneColumnRowCell.self, forCellReuseIdentifier: "OneColumnRowCell")
         
-        // Lock row height to avoid drifting
+        // Lock row height so columns don’t drift
         tableView.rowHeight = 44
         tableView.estimatedRowHeight = 0
-
-        // Make sure content inset isn't automatically adjusted
-        tableView.contentInsetAdjustmentBehavior = .never
-
+        
         // Remove extra margins and insets
         tableView.cellLayoutMarginsFollowReadableWidth = false
         tableView.layoutMargins = .zero
         tableView.separatorInset = .zero
         tableView.contentInset = .zero
         tableView.scrollIndicatorInsets = .zero
+        tableView.separatorStyle = .none
+        
         if #available(iOS 15.0, *) {
             tableView.sectionHeaderTopPadding = 0
         }
@@ -63,8 +65,8 @@ class OneColumnCell: UICollectionViewCell, UITableViewDelegate, UITableViewDataS
     func configure(columnTitle: String,
                    partialKey: PartialKeyPath<SimulationData>,
                    displayedData: [SimulationData]) {
-        self.columnTitle   = columnTitle
-        self.partialKey    = partialKey
+        // e.g. self.columnTitle = columnTitle
+        self.partialKey = partialKey
         self.displayedData = displayedData
         tableView.reloadData()
     }
@@ -95,14 +97,13 @@ class OneColumnCell: UICollectionViewCell, UITableViewDelegate, UITableViewDataS
         
         // Show row’s numeric value
         cell.configure(rowData, partialKey: partialKey)
-        
         return cell
     }
     
     // MARK: - TableView Delegate
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        // bubble up so pinned table can sync
+        // Bubble up so pinned table can sync
         onScroll?(scrollView)
     }
     
@@ -121,8 +122,6 @@ class OneColumnRowCell: UITableViewCell {
         
         backgroundColor = .clear
         selectionStyle  = .none
-        
-        // Remove margins
         preservesSuperviewLayoutMargins = false
         layoutMargins = .zero
         separatorInset = .zero
@@ -133,6 +132,7 @@ class OneColumnRowCell: UITableViewCell {
         contentView.addSubview(label)
         
         NSLayoutConstraint.activate([
+            // 18 matches the leading used elsewhere for alignment
             label.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 18),
             label.centerYAnchor.constraint(equalTo: contentView.centerYAnchor)
         ])
@@ -157,12 +157,11 @@ class OneColumnRowCell: UITableViewCell {
         // 2) If key path is a Double property
         else if let kp = pk as? KeyPath<SimulationData, Double> {
             let val = rowData[keyPath: kp]
-            // If it's one of the three BTC fields:
+            // For BTC fields => 8 decimals
             if kp == \SimulationData.startingBTC ||
                kp == \SimulationData.netBTCHoldings ||
                kp == \SimulationData.netContributionBTC {
                 
-                // Format with 8 decimals
                 let formatter = NumberFormatter()
                 formatter.numberStyle = .decimal
                 formatter.groupingSeparator = ","
@@ -172,7 +171,7 @@ class OneColumnRowCell: UITableViewCell {
                 label.text = formatter.string(from: NSNumber(value: val)) ?? "\(val)"
             }
             else {
-                // Otherwise, default to 2 decimals
+                // Otherwise 2 decimals
                 label.text = val.formattedWithSeparator()
             }
         }
@@ -181,7 +180,6 @@ class OneColumnRowCell: UITableViewCell {
             let val = rowData[keyPath: kp]
             label.text = val.formattedWithSeparator()
         }
-        // 4) Anything else
         else {
             label.text = "-"
         }
