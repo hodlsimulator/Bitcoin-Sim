@@ -9,17 +9,16 @@ import UIKit
 
 class TwoColumnCollectionViewController: UIViewController {
 
-    // The array of rows to populate each column's table
+    // The array of rows for each column's table
     var displayedData: [SimulationData] = []
 
-    // Instead of pairs, we just have an array of columns
+    // The columns, e.g. [("BTC Price", ...), ("Portfolio", ...), etc.]
     var columnsData: [(String, PartialKeyPath<SimulationData>)] = []
 
-    // Called whenever one of the single-column tables scrolls vertically
+    // Called whenever a table scrolls vertically
     var onScrollSync: ((UIScrollView) -> Void)?
 
-    // Called when the user scrolls horizontally and a new column is centred,
-    // passing the index of the centred column
+    // Called when the user horizontally snaps so we can get the new left column index
     var onCenteredColumnChanged: ((Int) -> Void)?
 
     var internalCollectionView: UICollectionView?
@@ -28,17 +27,12 @@ class TwoColumnCollectionViewController: UIViewController {
         super.viewDidLoad()
         view.backgroundColor = .clear
 
-        // Layout: ensure no inset or spacing
-        let layout = UICollectionViewFlowLayout()
-        layout.scrollDirection = .horizontal
-        layout.minimumLineSpacing = 0
-        layout.sectionInset = .zero
-        // Example: each column is 150 wide, full height
-        layout.itemSize = CGSize(width: 150, height: view.bounds.height)
+        // Use SnapHalfPageFlowLayout => 2 columns visible, shifts by 1 column each swipe
+        let layout = SnapHalfPageFlowLayout()
 
         let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
         cv.backgroundColor = .clear
-        cv.clipsToBounds = true  // Hide partial off-screen columns
+        cv.clipsToBounds   = true
         cv.showsHorizontalScrollIndicator = false
         cv.translatesAutoresizingMaskIntoConstraints = false
         cv.contentInsetAdjustmentBehavior = .never
@@ -46,7 +40,7 @@ class TwoColumnCollectionViewController: UIViewController {
         cv.dataSource = self
         cv.delegate   = self
 
-        // Register the single‑column cell
+        // Register your OneColumnCell
         cv.register(OneColumnCell.self, forCellWithReuseIdentifier: "OneColumnCell")
 
         view.addSubview(cv)
@@ -64,25 +58,15 @@ class TwoColumnCollectionViewController: UIViewController {
         internalCollectionView?.reloadData()
     }
 
-    override func viewDidLayoutSubviews() {
-        super.viewDidLayoutSubviews()
-        // Update itemSize so each column is as tall as the view
-        if let layout = internalCollectionView?.collectionViewLayout as? UICollectionViewFlowLayout {
-            layout.itemSize = CGSize(width: 150, height: view.bounds.height)
-            layout.invalidateLayout()
-        }
-    }
-
-    // MARK: - Ensure we scroll horizontally after layout is ready
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        // If "BTC Price" is at index 2, call the helper so columns 2 & 3 show
+        
+        // Example: if col 2 is "BTC Price", scroll so we see columns (2,3)
         scrollToColumnIndex(2)
     }
 }
 
 // MARK: - UICollectionViewDataSource & Delegate
-
 extension TwoColumnCollectionViewController: UICollectionViewDataSource, UICollectionViewDelegate {
 
     func collectionView(_ collectionView: UICollectionView,
@@ -100,20 +84,16 @@ extension TwoColumnCollectionViewController: UICollectionViewDataSource, UIColle
         }
 
         let (title, partial) = columnsData[indexPath.item]
-        cell.configure(
-            columnTitle: title,
-            partialKey: partial,
-            displayedData: displayedData
-        )
+        cell.configure(columnTitle: title, partialKey: partial, displayedData: displayedData)
 
-        // Sync vertical offset asynchronously
+        // Sync pinned offset
         if let parentVC = self.parent as? PinnedColumnTablesViewController {
             DispatchQueue.main.async {
                 cell.setVerticalOffset(parentVC.currentVerticalOffset)
             }
         }
 
-        // Bubble up vertical scroll to parent
+        // Bubble up scroll events
         cell.onScroll = { [weak self] scrollView in
             self?.onScrollSync?(scrollView)
             if let pinnedVC = self?.parent as? PinnedColumnTablesViewController {
@@ -124,7 +104,7 @@ extension TwoColumnCollectionViewController: UICollectionViewDataSource, UIColle
         return cell
     }
 
-    // Make sure newly displayed cells start at the correct offset
+    // Also ensure newly displayed columns pick up the pinned offset
     func collectionView(_ collectionView: UICollectionView,
                         willDisplay cell: UICollectionViewCell,
                         forItemAt indexPath: IndexPath) {
@@ -134,40 +114,38 @@ extension TwoColumnCollectionViewController: UICollectionViewDataSource, UIColle
         }
     }
 
-    // Snap-based “center” detection
+    // Snap-based detection of the left column index
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
-        handleCenteredColumn(in: scrollView)
+        identifyLeftColumn(in: scrollView)
     }
 
     func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate: Bool) {
         if !willDecelerate {
-            handleCenteredColumn(in: scrollView)
+            identifyLeftColumn(in: scrollView)
         }
     }
 
-    private func handleCenteredColumn(in scrollView: UIScrollView) {
+    /// Identify which column index is on the left side of this 2-col half-page
+    private func identifyLeftColumn(in scrollView: UIScrollView) {
         guard let cv = internalCollectionView else { return }
 
-        // Shift the 'centre' 1/4 screen to the left so we pick the left column
-        let offsetX = scrollView.contentOffset.x + (scrollView.bounds.width / 4.0)
+        // Because each page is half the width (one-column shift),
+        // we shift the detection point by 1/4 the screen so we pick the left item.
+        let quarterWidth = scrollView.bounds.width / 4.0
+        let offsetX = scrollView.contentOffset.x + quarterWidth
         let offsetY = scrollView.bounds.height / 2.0
-        let adjustedCenterPoint = CGPoint(x: offsetX, y: offsetY)
+        let point   = CGPoint(x: offsetX, y: offsetY)
 
-        if let indexPath = cv.indexPathForItem(at: adjustedCenterPoint),
+        if let indexPath = cv.indexPathForItem(at: point),
            indexPath.item < columnsData.count {
-            
-            let leftColumnIndex = indexPath.item
-            onCenteredColumnChanged?(leftColumnIndex)
+            onCenteredColumnChanged?(indexPath.item)
         }
     }
 }
 
-// MARK: - Helper for scrolling horizontally to a column index
-
+// MARK: - Helper for scrolling so columns [columnIndex, columnIndex+1] fill the screen
 extension TwoColumnCollectionViewController {
 
-    /// Scroll so that the item at `columnIndex` is on the left side,
-    /// showing columns `columnIndex` and `columnIndex + 1`.
     func scrollToColumnIndex(_ columnIndex: Int) {
         guard let cv = internalCollectionView else { return }
         guard columnIndex >= 0 && columnIndex < columnsData.count else { return }

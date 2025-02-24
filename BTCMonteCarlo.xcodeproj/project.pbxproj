@@ -63,6 +63,8 @@
 		E1883F522D1FDDB2007AA90B /* BitcoinShapes.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1883F512D1FDDB0007AA90B /* BitcoinShapes.swift */; };
 		E18B2D5F2D6A7ACC005E5EDE /* CustomBarViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E18B2D5E2D6A7ACA005E5EDE /* CustomBarViewController.swift */; };
 		E18B2D692D6BE0B2005E5EDE /* ChartHostingController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E18B2D682D6BE0B0005E5EDE /* ChartHostingController.swift */; };
+		E18B2D6B2D6C1C7F005E5EDE /* SnapOneColumnFlowLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = E18B2D6A2D6C1C7D005E5EDE /* SnapOneColumnFlowLayout.swift */; };
+		E18B2D6D2D6C2153005E5EDE /* SnapHalfPageFlowLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = E18B2D6C2D6C2151005E5EDE /* SnapHalfPageFlowLayout.swift */; };
 		E18C2BE12D259248006E7438 /* ChartSnapshotView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E18C2BE02D259245006E7438 /* ChartSnapshotView.swift */; };
 		E191AD5D2D1B06E600020DBE /* BitcoinHistoricalData.swift in Sources */ = {isa = PBXBuildFile; fileRef = E191AD5C2D1B06E000020DBE /* BitcoinHistoricalData.swift */; };
 		E191AD5F2D1B07BC00020DBE /* CSVLoaderHistorical.swift in Sources */ = {isa = PBXBuildFile; fileRef = E191AD5E2D1B07B800020DBE /* CSVLoaderHistorical.swift */; };
@@ -191,6 +193,8 @@
 		E1883F512D1FDDB0007AA90B /* BitcoinShapes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BitcoinShapes.swift; sourceTree = "<group>"; };
 		E18B2D5E2D6A7ACA005E5EDE /* CustomBarViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomBarViewController.swift; sourceTree = "<group>"; };
 		E18B2D682D6BE0B0005E5EDE /* ChartHostingController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartHostingController.swift; sourceTree = "<group>"; };
+		E18B2D6A2D6C1C7D005E5EDE /* SnapOneColumnFlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnapOneColumnFlowLayout.swift; sourceTree = "<group>"; };
+		E18B2D6C2D6C2151005E5EDE /* SnapHalfPageFlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnapHalfPageFlowLayout.swift; sourceTree = "<group>"; };
 		E18C2BE02D259245006E7438 /* ChartSnapshotView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartSnapshotView.swift; sourceTree = "<group>"; };
 		E191AD5C2D1B06E000020DBE /* BitcoinHistoricalData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BitcoinHistoricalData.swift; sourceTree = "<group>"; };
 		E191AD5E2D1B07B800020DBE /* CSVLoaderHistorical.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVLoaderHistorical.swift; sourceTree = "<group>"; };
@@ -413,6 +417,8 @@
 				E1942C9A2D63FD7300F5B9A1 /* PinnedColumnCell.swift */,
 				E1942C962D63FD0900F5B9A1 /* PinnedColumnTablesRepresentable.swift */,
 				E1942C982D63FD5E00F5B9A1 /* PinnedColumnTablesViewController.swift */,
+				E18B2D6C2D6C2151005E5EDE /* SnapHalfPageFlowLayout.swift */,
+				E18B2D6A2D6C1C7D005E5EDE /* SnapOneColumnFlowLayout.swift */,
 				E14AED7F2D69606F0068B2A5 /* SnapTwoColumnsFlowLayout.swift */,
 				E14AED712D6857820068B2A5 /* TwoColumnChunker.swift */,
 				E14AED752D6857C40068B2A5 /* TwoColumnCollectionViewController.swift */,
@@ -559,6 +565,7 @@
 				E191AD5D2D1B06E600020DBE /* BitcoinHistoricalData.swift in Sources */,
 				E1883F482D1E8E21007AA90B /* AboutView.swift in Sources */,
 				E112E3742D58B2EB00167E92 /* ConsentView.swift in Sources */,
+				E18B2D6B2D6C1C7F005E5EDE /* SnapOneColumnFlowLayout.swift in Sources */,
 				E15DDF492D5AD0F100CDD30A /* MonthlySimulationSettings+FactorSync.swift in Sources */,
 				E17B2F282D27505300ECE087 /* LandscapePlaceholderView.swift in Sources */,
 				E166A8B22CF85B2B0003F518 /* ContentView.swift in Sources */,
@@ -585,6 +592,7 @@
 				E15DDF4F2D5B3AC500CDD30A /* ParameterEntryView.swift in Sources */,
 				E1942C912D628F2600F5B9A1 /* LoadingOverlayView.swift in Sources */,
 				E14344DE2D545CA600225A49 /* ApplyDictionaryFactorsToSim.swift in Sources */,
+				E18B2D6D2D6C2153005E5EDE /* SnapHalfPageFlowLayout.swift in Sources */,
 				E166A8B92CF955ED0003F518 /* ContentOffsetScrollView.swift in Sources */,
 				E14344D82D52DE5500225A49 /* FactorCatalog.swift in Sources */,
 				E19D10F32D4033D600E3A55E /* SimulationSettings+HashAndRun.swift in Sources */,
