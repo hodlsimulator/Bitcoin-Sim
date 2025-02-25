@@ -77,7 +77,7 @@ class TwoColumnCollectionViewController: UIViewController {
         super.viewDidAppear(animated)
         
         // Example: if col 2 is "BTC Price", scroll so we see columns (2,3)
-        scrollToColumnIndex(2)
+        // scrollToColumnIndex(2)
     }
 }
 
@@ -157,12 +157,10 @@ extension TwoColumnCollectionViewController: UICollectionViewDataSource, UIColle
 // MARK: - Helper for scrolling so columns [columnIndex, columnIndex+1] fill the screen
 extension TwoColumnCollectionViewController {
 
-    func scrollToColumnIndex(_ columnIndex: Int) {
-        guard let cv = internalCollectionView else { return }
-        guard columnIndex >= 0 && columnIndex < columnsData.count else { return }
-
-        let indexPath = IndexPath(item: columnIndex, section: 0)
-        cv.scrollToItem(at: indexPath, at: .left, animated: false)
+    func scrollToColumnIndex(_ index: Int) {
+        guard index >= 0 && index < columnsData.count else { return }
+        let indexPath = IndexPath(item: index, section: 0)
+        internalCollectionView?.scrollToItem(at: indexPath, at: UICollectionView.ScrollPosition.left, animated: false)
     }
 }
 

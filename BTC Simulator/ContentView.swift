@@ -278,6 +278,7 @@ struct ContentView: View {
     @State private var showPinnedColumns = false
     
     @State private var lastViewedRow: Int = 0
+    @State private var lastViewedColumnIndex: Int = 0
 
     // MARK: - Environment Objects
     @EnvironmentObject var simSettings: SimulationSettings
@@ -313,6 +314,7 @@ struct ContentView: View {
                 PinnedColumnBridgeRepresentable(
                     isPresented: $showPinnedColumns,
                     lastViewedRow: $lastViewedRow,
+                    lastViewedColumnIndex: $lastViewedColumnIndex,
                     coordinator: coordinator,
                     inputManager: inputManager,
                     monthlySimSettings: monthlySimSettings,

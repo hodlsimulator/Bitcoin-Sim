@@ -31,6 +31,8 @@ struct PinnedColumnTablesRepresentable: UIViewControllerRepresentable {
 
     /// Where we store or retrieve the user's last viewed row in the table.
     @Binding var lastViewedRow: Int
+    
+    @Binding var lastViewedColumnIndex: Int
 
     /// If set to true from SwiftUI, we scroll to the bottom row.
     @Binding var scrollToBottomFlag: Bool

@@ -28,14 +28,20 @@ class SnapHalfPageFlowLayout: UICollectionViewFlowLayout {
         guard let cv = collectionView else { return }
 
         scrollDirection = .horizontal
-        sectionInset   = .zero
+        sectionInset    = .zero
         minimumLineSpacing = 0
 
-        // If the pinned column is separate, you might do:
-        // let availableWidth = cv.bounds.width - pinnedColumnWidth
-        // But if your collection view is itself sized to exclude the pinned column,
-        // then you can just do:
+        // If your collection is sized to exclude the pinned column,
+        // you can just do:
         let availableWidth = cv.bounds.width
+
+        // --- IMPORTANT GUARD ---
+        // If the width or height is zero, skip setting item size
+        // so we don't trigger "Negative or zero item sizes."
+        if availableWidth <= 0 || cv.bounds.height <= 0 {
+            return
+        }
+        // -----------------------
 
         let halfWidth = floor(availableWidth / 2)
         let height    = cv.bounds.height
@@ -65,9 +71,9 @@ class SnapHalfPageFlowLayout: UICollectionViewFlowLayout {
         let halfWidth      = availableWidth / 2.0
         
         // rawPage = how many half-widths the user scrolled
-        let rawPage   = proposedContentOffset.x / halfWidth
-        let nearest   = round(rawPage)
-        let newX      = nearest * halfWidth
+        let rawPage = proposedContentOffset.x / halfWidth
+        let nearest = round(rawPage)
+        let newX    = nearest * halfWidth
 
         return CGPoint(x: newX, y: proposedContentOffset.y)
     }

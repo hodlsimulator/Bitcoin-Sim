@@ -25,6 +25,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
     var representableContainer: BridgeContainer?
     var dismissBinding: Binding<Bool>?
     var lastViewedRowBinding: Binding<Int>?  // Added to hold the last viewed row binding
+    var lastViewedColumnIndexBinding: Binding<Int>?
     var previousColumnIndex: Int? = nil
 
     private let customTopBar = UIView()
@@ -468,6 +469,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
             pinnedColumnKeyPath: \.week,
             columns: columns,
             lastViewedRow: lastViewedRowBinding ?? .constant(0),  // Use the binding
+            lastViewedColumnIndex: lastViewedColumnIndexBinding ?? .constant(0),
             scrollToBottomFlag: .constant(false),
             isAtBottom: .constant(false)
         )
