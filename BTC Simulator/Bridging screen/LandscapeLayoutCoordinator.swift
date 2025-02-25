@@ -29,7 +29,7 @@ class LandscapeLayoutCoordinator {
         
         vc.pinnedHeaderLabelLandscape.textColor = .orange
         vc.pinnedHeaderLabelLandscape.font      = .boldSystemFont(ofSize: 16)
-        vc.pinnedHeaderLabelLandscape.text      = cleanTitle + " (Landscape)"
+        vc.pinnedHeaderLabelLandscape.text      = cleanTitle
         
         // pinned table in landscape
         vc.pinnedTableWidthOverride = 120

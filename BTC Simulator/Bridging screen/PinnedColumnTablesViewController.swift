@@ -74,7 +74,7 @@ class HeaderCell: UICollectionViewCell {
 // MARK: - PinnedColumnTablesViewController
 class PinnedColumnTablesViewController: UIViewController {
     
-    // Provided by SwiftUI
+    // Provided by SwiftUI or bridging code
     var representable: PinnedColumnTablesRepresentable?
     
     // Called when near-bottom scrolling
@@ -96,7 +96,7 @@ class PinnedColumnTablesViewController: UIViewController {
     // The pinned header container
     internal let pinnedHeaderView = UIView()
     
-    // Portrait label
+    // Portrait label (the one showing "Week")
     internal let pinnedHeaderLabel = UILabel()
     
     // For bridging code
@@ -138,8 +138,6 @@ class PinnedColumnTablesViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        
-        // Removed edgesForExtendedLayout = [] so tapping the top/status bar works in landscape.
         
         view.backgroundColor = UIColor(white: 0.12, alpha: 1.0)
         
@@ -184,21 +182,24 @@ class PinnedColumnTablesViewController: UIViewController {
             pinnedHeaderView.widthAnchor.constraint(equalToConstant: pinnedTableWidth)
         ])
         
-        // portrait label
+        // portrait label (we want it left-aligned)
         pinnedHeaderLabel.textColor = .orange
         pinnedHeaderLabel.font = UIFont.boldSystemFont(ofSize: 14)
+        pinnedHeaderLabel.textAlignment = .left  // enforce left alignment
         pinnedHeaderLabel.translatesAutoresizingMaskIntoConstraints = false
         pinnedHeaderView.addSubview(pinnedHeaderLabel)
         NSLayoutConstraint.activate([
-            pinnedHeaderLabel.leadingAnchor.constraint(equalTo: pinnedHeaderView.leadingAnchor, constant: 18),
+            // leadingAnchor with constant = 0 means fully flush left
+            pinnedHeaderLabel.leadingAnchor.constraint(equalTo: pinnedHeaderView.leadingAnchor, constant: 8),
             pinnedHeaderLabel.centerYAnchor.constraint(equalTo: pinnedHeaderView.centerYAnchor)
         ])
         
         // landscape label (initially hidden)
+        pinnedHeaderLabelLandscape.textAlignment = .left
         pinnedHeaderLabelLandscape.translatesAutoresizingMaskIntoConstraints = false
         pinnedHeaderView.addSubview(pinnedHeaderLabelLandscape)
         NSLayoutConstraint.activate([
-            pinnedHeaderLabelLandscape.leadingAnchor.constraint(equalTo: pinnedHeaderView.leadingAnchor, constant: 18),
+            pinnedHeaderLabelLandscape.leadingAnchor.constraint(equalTo: pinnedHeaderView.leadingAnchor, constant: 8),
             pinnedHeaderLabelLandscape.centerYAnchor.constraint(equalTo: pinnedHeaderView.centerYAnchor)
         ])
         
@@ -259,7 +260,7 @@ class PinnedColumnTablesViewController: UIViewController {
             self?.syncVerticalTables(with: scrollView)
         }
         
-        // Add tap gesture on pinned header
+        // Tap gesture on pinned header => scrollToTop
         pinnedHeaderView.isUserInteractionEnabled = true
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handlePinnedHeaderTap))
         pinnedHeaderView.addGestureRecognizer(tapGesture)
@@ -295,6 +296,11 @@ class PinnedColumnTablesViewController: UIViewController {
         
         // We'll do restoreColumnIfNeeded once
         needsInitialColumnScroll = true
+        
+        // If a title is provided (e.g. "Week"), set it
+        if let rep = representable {
+            pinnedHeaderLabel.text = rep.pinnedColumnTitle
+        }
     }
     
     override func viewDidLayoutSubviews() {
