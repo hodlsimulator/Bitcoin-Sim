@@ -23,6 +23,10 @@ class TwoColumnCollectionViewController: UIViewController {
     
     // Store references so off-screen columns can also sync
     private var columnCells: [Int: OneColumnCell] = [:]
+    
+    /// NEW: We store the pinned table’s vertical offset here.
+    /// So that newly displayed columns also get the correct offset.
+    private var storedVerticalOffset: CGPoint = .zero
 
     var internalCollectionView: UICollectionView?
 
@@ -68,6 +72,7 @@ class TwoColumnCollectionViewController: UIViewController {
 
     // Sync all columns (including off-screen)
     func updateAllColumnsVerticalOffset(_ offset: CGPoint) {
+        storedVerticalOffset = offset
         for (_, cell) in columnCells {
             cell.setVerticalOffset(offset)
         }
@@ -105,6 +110,8 @@ extension TwoColumnCollectionViewController: UICollectionViewDataSource, UIColle
             partialKey: partial,
             displayedData: displayedData
         )
+        
+        cell.setVerticalOffset(storedVerticalOffset)
 
         columnCells[indexPath.item] = cell
 
