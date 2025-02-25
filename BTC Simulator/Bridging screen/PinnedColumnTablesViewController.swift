@@ -100,6 +100,12 @@ class PinnedColumnTablesViewController: UIViewController {
     // We'll do the "restore column" exactly once after layout
     private var needsInitialColumnScroll = true
 
+    // This lets us override the pinned table width in subclasses (e.g. for landscape).
+    // For portrait we keep it at 70 to stay exactly the same as before.
+    var pinnedTableWidth: CGFloat {
+        return 70
+    }
+
     override func viewDidLoad() {
         super.viewDidLoad()
         
@@ -145,7 +151,7 @@ class PinnedColumnTablesViewController: UIViewController {
             pinnedHeaderView.topAnchor.constraint(equalTo: headersContainer.topAnchor),
             pinnedHeaderView.bottomAnchor.constraint(equalTo: headersContainer.bottomAnchor),
             pinnedHeaderView.leadingAnchor.constraint(equalTo: headersContainer.leadingAnchor),
-            pinnedHeaderView.widthAnchor.constraint(equalToConstant: 70)
+            pinnedHeaderView.widthAnchor.constraint(equalToConstant: pinnedTableWidth)
         ])
         
         pinnedHeaderLabel.textColor = .orange
@@ -186,7 +192,7 @@ class PinnedColumnTablesViewController: UIViewController {
             pinnedTableView.topAnchor.constraint(equalTo: headersContainer.bottomAnchor),
             pinnedTableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             pinnedTableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            pinnedTableView.widthAnchor.constraint(equalToConstant: 70)
+            pinnedTableView.widthAnchor.constraint(equalToConstant: pinnedTableWidth)
         ])
         
         // (D) the main columns to the right
