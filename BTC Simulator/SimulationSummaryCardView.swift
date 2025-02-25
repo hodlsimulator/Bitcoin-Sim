@@ -15,8 +15,9 @@ struct SimulationSummaryCardView: View {
     
     var body: some View {
         GeometryReader { geometry in
+            // You can shift all content vertically by adjusting this offset.
+            // For example, offset(y: -10) moves everything up 10 points.
             ZStack {
-                // 1) The main HStack (price, portfolio, growth)
                 let horizontalPadding: CGFloat = 16
                 let totalWidth = geometry.size.width - (horizontalPadding * 2)
                 let columnWidth = totalWidth / 3
@@ -55,12 +56,15 @@ struct SimulationSummaryCardView: View {
                     }
                     .frame(width: columnWidth, alignment: .leading)
                 }
-                // Increase vertical padding to shift everything down
                 .padding(.horizontal, horizontalPadding)
                 .padding(.vertical, 16)
+                // This offset controls how high or low the text sits.
+                // Negative moves it up; positive moves it down.
+                .offset(y: -5)
             }
         }
-        // Match the card’s original vertical space (you could also bump this up if you want it taller)
+        // This fixed height sets the card's overall vertical space.
+        // If you need more or less space, adjust this number.
         .frame(height: 80)
     }
 }
@@ -70,7 +74,6 @@ private func abbreviateForCardV2(_ value: Double) -> String {
     let sign = (value < 0) ? "-" : ""
     let absVal = abs(value)
     
-    // For values under 1000, just show two decimals
     if absVal < 1000 {
         return sign + String(format: "%.2f", absVal)
     }

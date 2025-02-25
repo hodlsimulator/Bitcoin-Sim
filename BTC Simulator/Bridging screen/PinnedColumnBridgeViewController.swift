@@ -44,15 +44,20 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
     private let backButton   = UIButton(type: .system)
     private let chartButton  = UIButton(type: .system)
 
+    /// We’ll use these constraints for dynamic adjustments
+    private var customTopBarTopConstraint: NSLayoutConstraint?
+    private var summaryCardTopConstraint:  NSLayoutConstraint?
+
     /// Layout constants
-    private let customNavBarHeight: CGFloat = 30
-    private let summaryCardHeight:  CGFloat = 88
+    /// (You can tweak these heights if you want the nav bar to be bigger/smaller.)
+    private let customNavBarHeight: CGFloat = 110
+    private let summaryCardHeight:  CGFloat = 80
 
     /// SwiftUI hosting for the summary card
     private let hostingController    = UIHostingController(rootView: AnyView(EmptyView()))
     private let summaryCardContainer = UIView()
 
-    /// View placeholder for the pinned-column tables (defined in separate file)
+    /// View placeholder for the pinned-column tables
     private let pinnedTablePlaceholder = UIView()
     private let pinnedColumnTablesVC    = PinnedColumnTablesViewController()
 
@@ -76,7 +81,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
 
     /// Tracks if we’re already at bottom
     private var wasAtBottom = false
-
+    
     /// Keep track of the original edge-swipe gesture delegate
     private weak var originalGestureDelegate: UIGestureRecognizerDelegate?
 
@@ -165,73 +170,117 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         }
     }
 
+    /// Detect orientation and adjust constraints.
+    override func viewWillLayoutSubviews() {
+        super.viewWillLayoutSubviews()
+
+        let isPortrait = view.bounds.height > view.bounds.width
+
+        // Bring nav bar down in landscape, keep it at the top in portrait:
+        customTopBarTopConstraint?.constant = isPortrait ? 0 : 0
+
+        // For summary card: bring it up in landscape, keep it flush in portrait:
+        summaryCardTopConstraint?.constant = isPortrait ? 0 : -70
+
+        // Apply these changes
+        view.layoutIfNeeded()
+    }
+
     // MARK: - Setup UI
     private func setupCustomTopBar() {
         customTopBar.backgroundColor = UIColor(white: 0.12, alpha: 1.0)
         customTopBar.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(customTopBar)
 
+        // This constraint pins the nav bar to the top of the view.
+        // We keep it at 0 so the nav bar itself doesn’t move.
+        customTopBarTopConstraint = customTopBar.topAnchor.constraint(equalTo: view.topAnchor, constant: 0)
+        customTopBarTopConstraint?.isActive = true
+
         NSLayoutConstraint.activate([
-            customTopBar.topAnchor.constraint(equalTo: view.topAnchor),
             customTopBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             customTopBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            customTopBar.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor,
-                                                 constant: customNavBarHeight)
+            // Height of the nav bar; we keep this as-is.
+            customTopBar.heightAnchor.constraint(equalToConstant: customNavBarHeight),
         ])
 
-        // Back button
+        // ==================
+        // Back Button Setup
+        // ==================
         backButton.setImage(UIImage(systemName: "chevron.left"), for: .normal)
         backButton.tintColor = .white
         // Increase hit area
-        backButton.contentEdgeInsets = UIEdgeInsets(top: 10, left: 10, bottom: 10, right: 10)
+        backButton.contentEdgeInsets = UIEdgeInsets(top: 8, left: 10, bottom: 8, right: 10)
         backButton.contentHorizontalAlignment = .leading
         backButton.translatesAutoresizingMaskIntoConstraints = false
         customTopBar.addSubview(backButton)
 
+        // NOTE: The 'constant: 12' moves the button further down within the bar.
         NSLayoutConstraint.activate([
             backButton.leadingAnchor.constraint(equalTo: customTopBar.leadingAnchor, constant: 8),
-            backButton.centerYAnchor.constraint(equalTo: customTopBar.centerYAnchor, constant: 30)
+            backButton.topAnchor.constraint(equalTo: customTopBar.safeAreaLayoutGuide.topAnchor, constant: 4.5)
         ])
         backButton.addTarget(self, action: #selector(handleBackButton), for: .touchUpInside)
 
-        // Title label
+        // ==================
+        // Title Label Setup
+        // ==================
         titleLabel.text = "Simulation Results"
         titleLabel.textColor = .white
         titleLabel.font = UIFont.boldSystemFont(ofSize: 17)
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         customTopBar.addSubview(titleLabel)
 
+        // NOTE: The 'constant: 12' means it lines up with the back button's top offset.
         NSLayoutConstraint.activate([
-            titleLabel.centerXAnchor.constraint(equalTo: customTopBar.centerXAnchor, constant: 0),
-            titleLabel.centerYAnchor.constraint(equalTo: backButton.centerYAnchor)
+            titleLabel.centerXAnchor.constraint(equalTo: customTopBar.centerXAnchor),
+            titleLabel.topAnchor.constraint(equalTo: customTopBar.safeAreaLayoutGuide.topAnchor, constant: 12)
         ])
 
-        // Chart button
+        // ==================
+        // Chart Button Setup
+        // ==================
         chartButton.setImage(UIImage(systemName: "chart.line.uptrend.xyaxis"), for: .normal)
         chartButton.tintColor = .white
         chartButton.translatesAutoresizingMaskIntoConstraints = false
         customTopBar.addSubview(chartButton)
 
+        // NOTE: The 'constant: 12' to keep it aligned horizontally with the title & back button.
         NSLayoutConstraint.activate([
             chartButton.trailingAnchor.constraint(equalTo: customTopBar.trailingAnchor, constant: -16),
-            chartButton.centerYAnchor.constraint(equalTo: backButton.centerYAnchor)
+            chartButton.topAnchor.constraint(equalTo: customTopBar.safeAreaLayoutGuide.topAnchor, constant: 12)
         ])
         chartButton.addTarget(self, action: #selector(handleChartButton), for: .touchUpInside)
     }
 
     private func setupSummaryCardUI() {
+        // 1) Create the container view for the summary card
+        //    We set a dark background colour to visually match the custom top bar.
+        //    If you want a different colour or transparency, adjust the alpha or the .white component.
         summaryCardContainer.backgroundColor = UIColor(white: 0.12, alpha: 1.0)
         summaryCardContainer.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(summaryCardContainer)
 
+        // 2) This constraint (summaryCardTopConstraint) sets how far down
+        //    the summary card appears from the bottom of the customTopBar.
+        //    Currently set to 0, meaning it's flush. Increase to push it down (e.g. 10).
+        //    Decrease (negative) to pull it up under the top bar.
+        summaryCardTopConstraint =
+            summaryCardContainer.topAnchor.constraint(equalTo: customTopBar.bottomAnchor, constant: 0)
+        summaryCardTopConstraint?.isActive = true
+
+        // 3) These constraints centre the summary card horizontally
+        //    and make it the same width as the entire view.
+        //    The height is defined by summaryCardHeight (80f at present).
         NSLayoutConstraint.activate([
-            summaryCardContainer.topAnchor.constraint(equalTo: customTopBar.bottomAnchor),
-            summaryCardContainer.centerXAnchor.constraint(equalTo: view.centerXAnchor, constant: 0),
+            summaryCardContainer.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             summaryCardContainer.widthAnchor.constraint(equalTo: view.widthAnchor),
             summaryCardContainer.heightAnchor.constraint(equalToConstant: summaryCardHeight)
         ])
 
-        // Embed the SwiftUI hosting controller
+        // 4) Embed the SwiftUI hosting controller inside the summary card container.
+        //    hostingController.view is pinned to all edges of summaryCardContainer,
+        //    so any padding or spacing you want should be done inside your SwiftUI content.
         addChild(hostingController)
         summaryCardContainer.addSubview(hostingController.view)
         hostingController.view.translatesAutoresizingMaskIntoConstraints = false
@@ -242,6 +291,8 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
             hostingController.view.trailingAnchor.constraint(equalTo: summaryCardContainer.trailingAnchor),
             hostingController.view.bottomAnchor.constraint(equalTo: summaryCardContainer.bottomAnchor)
         ])
+
+        // 5) Finalise the embedding process in the parent view controller.
         hostingController.didMove(toParent: self)
     }
 
@@ -484,7 +535,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         // Assign them to pinnedColumnTablesVC
         pinnedColumnTablesVC.representable = PinnedColumnTablesRepresentable(
             displayedData: data,
-            pinnedColumnTitle: "Week", // <<-- This is the left-aligned title in the separate pinned file
+            pinnedColumnTitle: "Week", // <<-- left-aligned pinned title
             pinnedColumnKeyPath: \.week,
             columns: columns,
             lastViewedRow: lastViewedRowBinding ?? .constant(0),
