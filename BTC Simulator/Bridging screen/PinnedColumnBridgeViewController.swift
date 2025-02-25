@@ -189,7 +189,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         customTopBar.addSubview(backButton)
 
         NSLayoutConstraint.activate([
-            backButton.leadingAnchor.constraint(equalTo: customTopBar.leadingAnchor, constant: 16),
+            backButton.leadingAnchor.constraint(equalTo: customTopBar.leadingAnchor, constant: 8),
             backButton.centerYAnchor.constraint(equalTo: customTopBar.centerYAnchor, constant: 30)
         ])
         backButton.addTarget(self, action: #selector(handleBackButton), for: .touchUpInside)
