@@ -285,35 +285,34 @@ class PinnedColumnTablesViewController: UIViewController {
               !rep.columns.isEmpty,
               let dataCV = columnsCollectionVC.internalCollectionView else { return }
 
-        // If lastViewedColumnIndex == 0, interpret that as “no memory” => default to 2
+        // SUGGESTED DEBUG PRINT
+        print("Debug: lastViewedColumnIndex on first load is \(rep.lastViewedColumnIndex)")
+
+        // If lastViewedColumnIndex == -1, interpret that as “no memory” => default to 0
         var targetIndex = rep.lastViewedColumnIndex
-        if targetIndex == 0 {
-            targetIndex = 2
-            print("No stored column memory. Defaulting to column 2.")
+        if targetIndex == -1 {
+            targetIndex = 0
+            print("No stored column memory. Defaulting to BTC Price & Portfolio (column 0).")
         }
 
         // Clamp so we don’t go out of range
         let safeIndex = max(0, min(targetIndex, rep.columns.count - 1))
 
-        // Scroll to that column
+        // Perform the actual scroll now
         columnsCollectionVC.scrollToColumnIndex(safeIndex)
-
-        // Sync the header offset
         columnHeadersVC.collectionView?.contentOffset.x = dataCV.contentOffset.x
-        
+
         print("Restoring to lastViewedColumnIndex: \(rep.lastViewedColumnIndex) -> actually scrolling to \(safeIndex).")
     }
     
     // MARK: - Snap-based detection
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
         if scrollView == columnsCollectionVC.internalCollectionView {
-            print("scrollViewDidEndDecelerating called for collection view")
             identifyLeftColumn(in: scrollView)
         }
     }
     func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate: Bool) {
         if scrollView == columnsCollectionVC.internalCollectionView && !willDecelerate {
-            print("scrollViewDidEndDragging called for collection view")
             identifyLeftColumn(in: scrollView)
         }
     }
@@ -332,7 +331,6 @@ class PinnedColumnTablesViewController: UIViewController {
         if let indexPath = cv.indexPathForItem(at: point),
            indexPath.item < columnsCollectionVC.columnsData.count {
             rep.lastViewedColumnIndex = indexPath.item
-            print("Updating lastViewedColumnIndex to \(indexPath.item)")
         }
     }
 

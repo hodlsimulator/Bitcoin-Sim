@@ -31,27 +31,19 @@ class SnapHalfPageFlowLayout: UICollectionViewFlowLayout {
         sectionInset    = .zero
         minimumLineSpacing = 0
 
-        // If your collection is sized to exclude the pinned column,
-        // you can just do:
-        let availableWidth = cv.bounds.width
+        let width = cv.bounds.width
+        let height = cv.bounds.height
 
-        // --- IMPORTANT GUARD ---
-        // If the width or height is zero, skip setting item size
-        // so we don't trigger "Negative or zero item sizes."
-        if availableWidth <= 0 || cv.bounds.height <= 0 {
+        // Skip setting itemSize if either dimension is 0 or invalid
+        if width <= 0 || height <= 0 {
             return
         }
-        // -----------------------
 
-        let halfWidth = floor(availableWidth / 2)
-        let height    = cv.bounds.height
+        let halfWidth = floor(width / 2)
         itemSize      = CGSize(width: halfWidth, height: height)
 
-        // Strong snapping so it locks to each half-width.
         cv.decelerationRate = .fast
-
-        // Clip so partial columns never peek
-        cv.clipsToBounds = true
+        cv.clipsToBounds    = true
     }
 
     /// Snaps to multiples of half the screen width => each 'page' shifts by one column.

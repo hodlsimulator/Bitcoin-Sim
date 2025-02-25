@@ -278,7 +278,11 @@ struct ContentView: View {
     @State private var showPinnedColumns = false
     
     @State private var lastViewedRow: Int = 0
-    @State private var lastViewedColumnIndex: Int = 0
+    
+    @State private var lastViewedColumnIndex: Int = {
+        let stored = UserDefaults.standard.object(forKey: "LastViewedColumnIndex") as? Int
+        return stored ?? 2  // If no stored value, default to 2
+    }()
 
     // MARK: - Environment Objects
     @EnvironmentObject var simSettings: SimulationSettings
