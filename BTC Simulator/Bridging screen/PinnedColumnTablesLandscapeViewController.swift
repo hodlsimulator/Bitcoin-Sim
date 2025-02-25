@@ -16,9 +16,9 @@ class LandscapeTwoColumnFlowLayout: UICollectionViewFlowLayout {
         minimumLineSpacing = 0
         minimumInteritemSpacing = 0
         
+        // Two columns per full screen width
         let width  = cv.bounds.width
         let height = cv.bounds.height
-        // Two columns per full page width
         itemSize = CGSize(width: width / 2, height: height)
     }
     
@@ -33,10 +33,12 @@ class LandscapeTwoColumnFlowLayout: UICollectionViewFlowLayout {
             )
         }
         
-        let halfPageWidth = cv.bounds.width / 2
-        let rawOffsetX    = proposedContentOffset.x
-        let index         = round(rawOffsetX / halfPageWidth)
-        let snappedX      = index * halfPageWidth
+        let twoColWidth = cv.bounds.width / 2
+        let rawOffsetX = proposedContentOffset.x
+        let index = round(rawOffsetX / twoColWidth)
+        let clampedIndex = max(index, 0)
+        let snappedX = clampedIndex * twoColWidth
+        
         return CGPoint(x: snappedX, y: proposedContentOffset.y)
     }
 }
@@ -47,26 +49,18 @@ class PinnedColumnTablesLandscapeViewController: PinnedColumnTablesViewControlle
         return 120
     }
     
-    
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        // 1) Hide the parent’s label so it doesn’t appear in landscape
+        // 1) Hide the parent’s pinned header label (portrait)
         pinnedHeaderLabel.isHidden = true
         
-        // 2) Add our own pinned header label
-        pinnedHeaderView.addSubview(pinnedHeaderLabelLandscape)
-        NSLayoutConstraint.activate([
-            pinnedHeaderLabelLandscape.leadingAnchor.constraint(
-                equalTo: pinnedHeaderView.leadingAnchor,
-                constant: 10
-            ),
-            pinnedHeaderLabelLandscape.centerYAnchor.constraint(
-                equalTo: pinnedHeaderView.centerYAnchor
-            )
-        ])
+        // 2) Show the landscape label
+        pinnedHeaderLabelLandscape.isHidden = false
+        pinnedHeaderLabelLandscape.textColor = .orange
+        pinnedHeaderLabelLandscape.font = .boldSystemFont(ofSize: 16)
         
-        // 3) Use our 2-column layout
+        // 3) Use a 2-column layout
         let headersLayout = LandscapeTwoColumnFlowLayout()
         columnHeadersVC.collectionView?.setCollectionViewLayout(headersLayout, animated: false)
         
@@ -76,12 +70,16 @@ class PinnedColumnTablesLandscapeViewController: PinnedColumnTablesViewControlle
         }
     }
     
-    /// Completely skip the parent’s viewWillAppear logic
     override func viewWillAppear(_ animated: Bool) {
-        // no super.viewWillAppear
+        // Don’t call super
         guard let rep = representable else { return }
         
-        pinnedHeaderLabelLandscape.text = rep.pinnedColumnTitle + " (Landscape)"
+        // Clean up pinnedColumnTitle if trailing "("
+        var cleanTitle = rep.pinnedColumnTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        if cleanTitle.hasSuffix("(") {
+            cleanTitle.removeLast()
+        }
+        pinnedHeaderLabelLandscape.text = cleanTitle + " (Landscape)"
         
         // Reload pinned table
         pinnedTableView.reloadData()
@@ -93,31 +91,21 @@ class PinnedColumnTablesLandscapeViewController: PinnedColumnTablesViewControlle
             pinnedTableView.scrollToRow(at: IndexPath(row: safeRow, section: 0), at: .top, animated: false)
         }
         
-        // Just pick 2 columns
-        let twoColumns = Array(rep.columns.prefix(2))
-        
-        columnHeadersVC.columnsData         = twoColumns
-        columnsCollectionVC.columnsData     = twoColumns
-        columnsCollectionVC.displayedData   = rep.displayedData
+        // Show ALL columns (instead of prefix(2))
+        columnHeadersVC.columnsData       = rep.columns
+        columnsCollectionVC.columnsData   = rep.columns
+        columnsCollectionVC.displayedData = rep.displayedData
         
         columnHeadersVC.collectionView?.reloadData()
         columnsCollectionVC.reloadData()
     }
     
-    /// Prevent the parent from “restoring” 4 columns by skipping super
     override func viewDidLayoutSubviews() {
-        // Don’t call super.viewDidLayoutSubviews()
-        // so we do NOT run the parent's restoreColumnIfNeeded() code.
-        
-        // If you need to adjust pinnedTable insets or do any custom layout, do it here:
+        // Don’t call super
         let bottomSafeArea = view.safeAreaInsets.bottom
         pinnedTableView.contentInset.bottom = bottomSafeArea
         pinnedTableView.verticalScrollIndicatorInsets = UIEdgeInsets(
             top: 0, left: 0, bottom: bottomSafeArea, right: 0
         )
-        
-        // If you want a special “restore column” in landscape, do it manually:
-        // e.g. columnsCollectionVC.scrollToColumnIndex(0)
-        // Or just leave as-is if you always want to start with the first page.
     }
 }
