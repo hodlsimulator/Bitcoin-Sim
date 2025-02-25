@@ -104,7 +104,7 @@
          BreakpointExtensionID = "Xcode.Breakpoint.SymbolicBreakpoint">
          <BreakpointContent
             uuid = "FEF2F0EF-6347-40CA-AE52-A0D8098198B6"
-            shouldBeEnabled = "Yes"
+            shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             symbolName = "UIViewAlertForUnsatisfiableConstraints&#10;"
@@ -120,6 +120,230 @@
             </Actions>
             <Locations>
             </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "E92DD508-66EA-4FE8-B153-CA181CD68B8A"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "BTC Simulator/Bridging screen/PinnedColumnTablesLandscapeViewController.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "80"
+            endingLineNumber = "80"
+            landmarkName = "viewWillAppear(_:)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "CB7F2387-5E8C-42F2-8CA1-1B51BF090AE0"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "BTC Simulator/Bridging screen/PinnedColumnTablesLandscapeViewController.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "51"
+            endingLineNumber = "51"
+            landmarkName = "viewDidLoad()"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "ED4D84DB-A5A6-4148-8178-7917E3533862"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "BTC Simulator/Bridging screen/PinnedColumnTablesLandscapeViewController.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "44"
+            endingLineNumber = "44"
+            landmarkName = "PinnedColumnTablesLandscapeViewController"
+            landmarkType = "3">
+            <Locations>
+               <Location
+                  uuid = "ED4D84DB-A5A6-4148-8178-7917E3533862 - 2b9fd5a081d1fd90"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "BTC_Simulator.PinnedColumnTablesLandscapeViewController.__allocating_init(nibName: Swift.Optional&lt;Swift.String&gt;, bundle: Swift.Optional&lt;__C.NSBundle&gt;) -&gt; BTC_Simulator.PinnedColumnTablesLandscapeViewController"
+                  moduleName = "BTC Simulator.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/conor/Documents/BTCMonteCarlo/BTC%20Simulator/Bridging%20screen/PinnedColumnTablesLandscapeViewController.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "0"
+                  endingLineNumber = "0">
+               </Location>
+               <Location
+                  uuid = "ED4D84DB-A5A6-4148-8178-7917E3533862 - cbfba280e34b9f3a"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "BTC_Simulator.PinnedColumnTablesLandscapeViewController.__allocating_init(coder: __C.NSCoder) -&gt; Swift.Optional&lt;BTC_Simulator.PinnedColumnTablesLandscapeViewController&gt;"
+                  moduleName = "BTC Simulator.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/conor/Documents/BTCMonteCarlo/BTC%20Simulator/Bridging%20screen/PinnedColumnTablesLandscapeViewController.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "0"
+                  endingLineNumber = "0">
+               </Location>
+               <Location
+                  uuid = "ED4D84DB-A5A6-4148-8178-7917E3533862 - d421adcdcc9957b0"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "BTC_Simulator.PinnedColumnTablesLandscapeViewController.__deallocating_deinit"
+                  moduleName = "BTC Simulator.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/conor/Documents/BTCMonteCarlo/BTC%20Simulator/Bridging%20screen/PinnedColumnTablesLandscapeViewController.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "0"
+                  endingLineNumber = "0">
+               </Location>
+               <Location
+                  uuid = "ED4D84DB-A5A6-4148-8178-7917E3533862 - 4937ad93ce85b0a5"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "BTC_Simulator.PinnedColumnTablesLandscapeViewController.init(nibName: Swift.Optional&lt;Swift.String&gt;, bundle: Swift.Optional&lt;__C.NSBundle&gt;) -&gt; BTC_Simulator.PinnedColumnTablesLandscapeViewController"
+                  moduleName = "BTC Simulator.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/conor/Documents/BTCMonteCarlo/BTC%20Simulator/Bridging%20screen/PinnedColumnTablesLandscapeViewController.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "44"
+                  endingLineNumber = "44">
+               </Location>
+               <Location
+                  uuid = "ED4D84DB-A5A6-4148-8178-7917E3533862 - 6430b9eef249fb53"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "BTC_Simulator.PinnedColumnTablesLandscapeViewController.init(coder: __C.NSCoder) -&gt; Swift.Optional&lt;BTC_Simulator.PinnedColumnTablesLandscapeViewController&gt;"
+                  moduleName = "BTC Simulator.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/conor/Documents/BTCMonteCarlo/BTC%20Simulator/Bridging%20screen/PinnedColumnTablesLandscapeViewController.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "44"
+                  endingLineNumber = "44">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "682340E4-5736-4A86-80C3-DF62A4F567AF"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "BTC Simulator/Bridging screen/PinnedColumnTablesLandscapeViewController.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "10"
+            endingLineNumber = "10"
+            landmarkName = "LandscapeTwoColumnFlowLayout"
+            landmarkType = "3">
+            <Locations>
+               <Location
+                  uuid = "682340E4-5736-4A86-80C3-DF62A4F567AF - 1ea58d912efc2390"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "BTC_Simulator.LandscapeTwoColumnFlowLayout.__allocating_init() -&gt; BTC_Simulator.LandscapeTwoColumnFlowLayout"
+                  moduleName = "BTC Simulator.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/conor/Documents/BTCMonteCarlo/BTC%20Simulator/Bridging%20screen/PinnedColumnTablesLandscapeViewController.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "0"
+                  endingLineNumber = "0">
+               </Location>
+               <Location
+                  uuid = "682340E4-5736-4A86-80C3-DF62A4F567AF - 9bea9cf7d0387db4"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "BTC_Simulator.LandscapeTwoColumnFlowLayout.init() -&gt; BTC_Simulator.LandscapeTwoColumnFlowLayout"
+                  moduleName = "BTC Simulator.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/conor/Documents/BTCMonteCarlo/%3Cstdin%3E"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "0"
+                  endingLineNumber = "0">
+               </Location>
+               <Location
+                  uuid = "682340E4-5736-4A86-80C3-DF62A4F567AF - e2e8705b8ea78fc0"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "BTC_Simulator.LandscapeTwoColumnFlowLayout.__allocating_init(coder: __C.NSCoder) -&gt; Swift.Optional&lt;BTC_Simulator.LandscapeTwoColumnFlowLayout&gt;"
+                  moduleName = "BTC Simulator.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/conor/Documents/BTCMonteCarlo/BTC%20Simulator/Bridging%20screen/PinnedColumnTablesLandscapeViewController.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "0"
+                  endingLineNumber = "0">
+               </Location>
+               <Location
+                  uuid = "682340E4-5736-4A86-80C3-DF62A4F567AF - a426880398eee37f"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "BTC_Simulator.LandscapeTwoColumnFlowLayout.init(coder: __C.NSCoder) -&gt; Swift.Optional&lt;BTC_Simulator.LandscapeTwoColumnFlowLayout&gt;"
+                  moduleName = "BTC Simulator.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/conor/Documents/BTCMonteCarlo/BTC%20Simulator/Bridging%20screen/PinnedColumnTablesLandscapeViewController.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "10"
+                  endingLineNumber = "10">
+               </Location>
+               <Location
+                  uuid = "682340E4-5736-4A86-80C3-DF62A4F567AF - ccdebce665a2eb9f"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "BTC_Simulator.LandscapeTwoColumnFlowLayout.__deallocating_deinit"
+                  moduleName = "BTC Simulator.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/conor/Documents/BTCMonteCarlo/BTC%20Simulator/Bridging%20screen/PinnedColumnTablesLandscapeViewController.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "0"
+                  endingLineNumber = "0">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "560A7CD2-D578-4008-891A-3F170B20B313"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "BTC Simulator/Bridging screen/PinnedColumnTablesLandscapeViewController.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "108"
+            endingLineNumber = "108"
+            landmarkName = "viewDidLayoutSubviews()"
+            landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
    </Breakpoints>

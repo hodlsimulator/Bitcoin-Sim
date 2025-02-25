@@ -15,7 +15,9 @@
 		E12CCD8B2CF8235F0059931D /* BTC_SimulatorApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E12CCD8A2CF8235F0059931D /* BTC_SimulatorApp.swift */; };
 		E12CCD8F2CF823610059931D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E12CCD8E2CF823610059931D /* Assets.xcassets */; };
 		E12CCD922CF823610059931D /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E12CCD912CF823610059931D /* Preview Assets.xcassets */; };
-		E130932F2D6D816E00DA6418 /* PinnedColumnTablesLandscapeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E130932E2D6D816B00DA6418 /* PinnedColumnTablesLandscapeViewController.swift */; };
+		E13093312D6D8AFC00DA6418 /* PortraitLayoutCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = E13093302D6D8AFA00DA6418 /* PortraitLayoutCoordinator.swift */; };
+		E13093332D6D8B1D00DA6418 /* LandscapeLayoutCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = E13093322D6D8B1B00DA6418 /* LandscapeLayoutCoordinator.swift */; };
+		E13093352D6D8CA300DA6418 /* PinnedColumnTablesLandscapeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E13093342D6D8CA300DA6418 /* PinnedColumnTablesLandscapeViewController.swift */; };
 		E14344D62D52D85600225A49 /* FactorState.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14344D52D52D85400225A49 /* FactorState.swift */; };
 		E14344D82D52DE5500225A49 /* FactorCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14344D72D52DE5300225A49 /* FactorCatalog.swift */; };
 		E14344DA2D53553D00225A49 /* SimulationSettings+FactorSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14344D92D53553800225A49 /* SimulationSettings+FactorSync.swift */; };
@@ -147,7 +149,9 @@
 		E12CCD8A2CF8235F0059931D /* BTC_SimulatorApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BTC_SimulatorApp.swift; sourceTree = "<group>"; };
 		E12CCD8E2CF823610059931D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		E12CCD912CF823610059931D /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
-		E130932E2D6D816B00DA6418 /* PinnedColumnTablesLandscapeViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinnedColumnTablesLandscapeViewController.swift; sourceTree = "<group>"; };
+		E13093302D6D8AFA00DA6418 /* PortraitLayoutCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortraitLayoutCoordinator.swift; sourceTree = "<group>"; };
+		E13093322D6D8B1B00DA6418 /* LandscapeLayoutCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LandscapeLayoutCoordinator.swift; sourceTree = "<group>"; };
+		E13093342D6D8CA300DA6418 /* PinnedColumnTablesLandscapeViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinnedColumnTablesLandscapeViewController.swift; sourceTree = "<group>"; };
 		E14344D52D52D85400225A49 /* FactorState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FactorState.swift; sourceTree = "<group>"; };
 		E14344D72D52DE5300225A49 /* FactorCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FactorCatalog.swift; sourceTree = "<group>"; };
 		E14344D92D53553800225A49 /* SimulationSettings+FactorSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SimulationSettings+FactorSync.swift"; sourceTree = "<group>"; };
@@ -414,14 +418,16 @@
 				E14AED6D2D684D020068B2A5 /* ColumnsCollectionViewController.swift */,
 				E166A8B82CF955E80003F518 /* ContentOffsetScrollView.swift */,
 				E18B2D5E2D6A7ACA005E5EDE /* CustomBarViewController.swift */,
+				E13093322D6D8B1B00DA6418 /* LandscapeLayoutCoordinator.swift */,
 				E14AED812D6960E00068B2A5 /* OneColumnCell.swift */,
 				E1942CA02D64331900F5B9A1 /* PinnedColumnBridgeRepresentable.swift */,
 				E14AED842D69A2780068B2A5 /* PinnedColumnBridgeRepresentableUIKit.swift */,
 				E1942CA22D64334B00F5B9A1 /* PinnedColumnBridgeViewController.swift */,
 				E1942C9A2D63FD7300F5B9A1 /* PinnedColumnCell.swift */,
 				E1942C962D63FD0900F5B9A1 /* PinnedColumnTablesRepresentable.swift */,
-				E130932E2D6D816B00DA6418 /* PinnedColumnTablesLandscapeViewController.swift */,
+				E13093342D6D8CA300DA6418 /* PinnedColumnTablesLandscapeViewController.swift */,
 				E1942C982D63FD5E00F5B9A1 /* PinnedColumnTablesViewController.swift */,
+				E13093302D6D8AFA00DA6418 /* PortraitLayoutCoordinator.swift */,
 				E18B2D6E2D6C40D3005E5EDE /* SnapFixedWidthFlowLayout.swift */,
 				E18B2D6C2D6C2151005E5EDE /* SnapHalfPageFlowLayout.swift */,
 				E18B2D6A2D6C1C7D005E5EDE /* SnapOneColumnFlowLayout.swift */,
@@ -590,7 +596,6 @@
 				E19D113C2D42F81C00E3A55E /* UtilityExtensions.swift in Sources */,
 				E19D113A2D42F75000E3A55E /* MarketRegime.swift in Sources */,
 				E14AED742D6857A50068B2A5 /* CenterSnapFlowLayout.swift in Sources */,
-				E130932F2D6D816E00DA6418 /* PinnedColumnTablesLandscapeViewController.swift in Sources */,
 				E19D10F92D40E66200E3A55E /* InMemorySettings.swift in Sources */,
 				E1883F402D1E0DCB007AA90B /* InputManager.swift in Sources */,
 				E191AD672D1B764400020DBE /* CSVLoaderBTC.swift in Sources */,
@@ -634,12 +639,14 @@
 				E15DDF4B2D5AE1F700CDD30A /* RestoreDefaultsMonthly.swift in Sources */,
 				E12CCD8B2CF8235F0059931D /* BTC_SimulatorApp.swift in Sources */,
 				E1A1E5272D2E371D008F7658 /* TipsData.swift in Sources */,
+				E13093312D6D8AFC00DA6418 /* PortraitLayoutCoordinator.swift in Sources */,
 				E1E31C4F2D4349E000ED22E6 /* DataLoader.swift in Sources */,
 				E1B7B0A72D4753CF00B60EC6 /* ShiftFactors.swift in Sources */,
 				E14D240B2D3A698A007CC11A /* SimulationSettingsInit.swift in Sources */,
 				E1E31C512D438DD900ED22E6 /* GarchCalibrator.swift in Sources */,
 				E1942CA32D64334D00F5B9A1 /* PinnedColumnBridgeViewController.swift in Sources */,
 				E1F1CB622D4F081D003DB24F /* HalvingHistoricalManager.swift in Sources */,
+				E13093352D6D8CA300DA6418 /* PinnedColumnTablesLandscapeViewController.swift in Sources */,
 				E1883F3E2D1E0D7A007AA90B /* ActiveField.swift in Sources */,
 				E14AED852D69A27B0068B2A5 /* PinnedColumnBridgeRepresentableUIKit.swift in Sources */,
 				E1942C992D63FD6200F5B9A1 /* PinnedColumnTablesViewController.swift in Sources */,
@@ -659,6 +666,7 @@
 				E1883F382D1DD4C8007AA90B /* SettingsView.swift in Sources */,
 				E1B7B0A52D47532D00B60EC6 /* UIComponents.swift in Sources */,
 				E1942C9D2D63FD9200F5B9A1 /* ColumnsCell.swift in Sources */,
+				E13093332D6D8B1D00DA6418 /* LandscapeLayoutCoordinator.swift in Sources */,
 				E15DDF472D5A5A3A00CDD30A /* MonthlySimulationSettings.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
