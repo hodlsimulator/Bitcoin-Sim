@@ -202,7 +202,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         customTopBar.addSubview(titleLabel)
 
         NSLayoutConstraint.activate([
-            titleLabel.centerXAnchor.constraint(equalTo: customTopBar.centerXAnchor, constant: -2.5),
+            titleLabel.centerXAnchor.constraint(equalTo: customTopBar.centerXAnchor, constant: 0),
             titleLabel.centerYAnchor.constraint(equalTo: backButton.centerYAnchor)
         ])
 
@@ -226,7 +226,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
 
         NSLayoutConstraint.activate([
             summaryCardContainer.topAnchor.constraint(equalTo: customTopBar.bottomAnchor),
-            summaryCardContainer.centerXAnchor.constraint(equalTo: view.centerXAnchor, constant: -2.5),
+            summaryCardContainer.centerXAnchor.constraint(equalTo: view.centerXAnchor, constant: 0),
             summaryCardContainer.widthAnchor.constraint(equalTo: view.widthAnchor),
             summaryCardContainer.heightAnchor.constraint(equalToConstant: summaryCardHeight)
         ])
