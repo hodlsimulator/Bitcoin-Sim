@@ -24,8 +24,7 @@ class TwoColumnCollectionViewController: UIViewController {
     // Store references so off-screen columns can also sync
     private var columnCells: [Int: OneColumnCell] = [:]
     
-    /// NEW: We store the pinned table’s vertical offset here.
-    /// So that newly displayed columns also get the correct offset.
+    /// We store the pinned table’s vertical offset here.
     private var storedVerticalOffset: CGPoint = .zero
 
     var internalCollectionView: UICollectionView?
@@ -61,8 +60,6 @@ class TwoColumnCollectionViewController: UIViewController {
 
         // (B) Add a tap gesture so tapping left side => page left, right side => page right
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleTapToPage(_:)))
-        // Attach the gesture to the entire controller’s view
-        // (so it sees taps anywhere within the full area):
         view.addGestureRecognizer(tapGesture)
     }
 
@@ -80,9 +77,8 @@ class TwoColumnCollectionViewController: UIViewController {
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        
-        // Example: if col 2 is "BTC Price", scroll so we see columns (2,3)
-        // scrollToColumnIndex(2)
+        // Example usage:
+        // scrollToColumnIndex(2) // if you wanted to jump to column #2
     }
 }
 
@@ -163,18 +159,19 @@ extension TwoColumnCollectionViewController: UICollectionViewDataSource, UIColle
 
 // MARK: - Helper for scrolling so columns [columnIndex, columnIndex+1] fill the screen
 extension TwoColumnCollectionViewController {
-
     func scrollToColumnIndex(_ index: Int) {
         guard index >= 0 && index < columnsData.count else { return }
         let indexPath = IndexPath(item: index, section: 0)
-        internalCollectionView?.scrollToItem(at: indexPath, at: UICollectionView.ScrollPosition.left, animated: false)
+        internalCollectionView?.scrollToItem(
+            at: indexPath,
+            at: .left,
+            animated: false
+        )
     }
 }
 
 // MARK: - Tap-to-Page Implementation
 extension TwoColumnCollectionViewController {
-
-    // This is the code you provided
     @objc private func handleTapToPage(_ gesture: UITapGestureRecognizer) {
         guard let cv = internalCollectionView else { return }
 
@@ -187,7 +184,7 @@ extension TwoColumnCollectionViewController {
         let rawPage   = cv.contentOffset.x / halfWidth
         var currentPage = Int(round(rawPage))
 
-        // 3) If the user tapped the left half of the screen => -1, else => +1
+        // 3) If the user tapped the left half => -1, otherwise => +1
         if pointInSelf.x < screenHalf {
             currentPage -= 1
         } else {

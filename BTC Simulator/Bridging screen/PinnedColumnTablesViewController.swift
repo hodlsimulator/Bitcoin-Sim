@@ -125,7 +125,6 @@ class PinnedColumnTablesViewController: UIViewController {
     // Track previous orientation
     private var previousSizeClass: UIUserInterfaceSizeClass?
 
-    // ❶ -- Moved this function above its first use --
     func applyLayoutForCurrentOrientation() {
         guard representable != nil else { return }
         
@@ -139,7 +138,9 @@ class PinnedColumnTablesViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        edgesForExtendedLayout = []
+        
+        // Removed edgesForExtendedLayout = [] so tapping the top/status bar works in landscape.
+        
         view.backgroundColor = UIColor(white: 0.12, alpha: 1.0)
         
         // (A) pinned table
@@ -263,7 +264,7 @@ class PinnedColumnTablesViewController: UIViewController {
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handlePinnedHeaderTap))
         pinnedHeaderView.addGestureRecognizer(tapGesture)
         
-        // ❷ -- Now the compiler sees the function --
+        // Apply layout for current orientation
         applyLayoutForCurrentOrientation()
     }
     
