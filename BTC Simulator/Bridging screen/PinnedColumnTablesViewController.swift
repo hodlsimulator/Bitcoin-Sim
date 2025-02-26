@@ -32,7 +32,7 @@ class ColumnHeadersCollectionVC: UICollectionViewController {
     }
     
     override func collectionView(_ cv: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return columnsData.count
+        columnsData.count
     }
     
     override func collectionView(_ cv: UICollectionView,
@@ -84,42 +84,18 @@ class PinnedColumnTablesViewController: UIViewController {
     var currentVerticalOffset: CGPoint = .zero
     private var isSyncingScroll = false
     
-    // ------------------------------------------------------------------------
     // Orientation & Layout Coordinators
-    // (You can modify these or remove them if you prefer a simpler approach.)
-    // ------------------------------------------------------------------------
-    // Exposed so your portrait/landscape coordinators can set it
     internal var pinnedTableWidthOverride: CGFloat = 70
-    
-    // If you switch between portrait & landscape layouts, these coordinators
-    // can contain code like "applyPortraitLayout()" and "applyLandscapeLayout()"
-    // referencing pinnedHeaderLabel, pinnedHeaderLabelLandscape, etc.
     lazy var portraitCoordinator = PortraitLayoutCoordinator(vc: self)
     lazy var landscapeCoordinator = LandscapeLayoutCoordinator(vc: self)
-    
-    // We'll detect size class changes
     private var previousSizeClass: UIUserInterfaceSizeClass?
     
-    // ------------------------------------------------------------------------
     // UI Elements
-    // ------------------------------------------------------------------------
-    
-    // The pinned table on the left
     let pinnedTableView = UITableView(frame: .zero, style: .plain)
-    
-    // The horizontally scrollable columns on the right
     let columnsCollectionVC = TwoColumnCollectionViewController()
-    
-    // The separate horizontal collection for the column headers
     let columnHeadersVC = ColumnHeadersCollectionVC()
-    
-    // A container for the pinned (left) column's header area
     internal let pinnedHeaderView = UIView()
-    
-    // The label that shows the pinned column's title (like "Week")
     internal let pinnedHeaderLabel = UILabel()
-    
-    // Optionally, a second label for landscape
     internal let pinnedHeaderLabelLandscape: UILabel = {
         let lbl = UILabel()
         lbl.isHidden = true
@@ -128,7 +104,6 @@ class PinnedColumnTablesViewController: UIViewController {
         return lbl
     }()
     
-    // For bridging code (column memory)
     internal var previousColumnIndex: Int? = nil
     
     // We'll restore the column once each time we appear
@@ -138,7 +113,7 @@ class PinnedColumnTablesViewController: UIViewController {
         super.viewDidLoad()
         view.backgroundColor = UIColor(white: 0.12, alpha: 1.0)
         
-        // The pinned table
+        // (A) pinned table
         pinnedTableView.contentInsetAdjustmentBehavior = .never
         pinnedTableView.backgroundColor = .clear
         pinnedTableView.dataSource = self
@@ -154,7 +129,7 @@ class PinnedColumnTablesViewController: UIViewController {
             pinnedTableView.sectionHeaderTopPadding = 0
         }
         
-        // (1) The top headers container
+        // 1) The top headers container
         let headersContainer = UIView()
         headersContainer.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(headersContainer)
@@ -167,7 +142,7 @@ class PinnedColumnTablesViewController: UIViewController {
             headersContainer.heightAnchor.constraint(equalToConstant: headerHeight)
         ])
         
-        // (2) The pinned header area
+        // 2) The pinned header area
         pinnedHeaderView.backgroundColor = .black
         pinnedHeaderView.translatesAutoresizingMaskIntoConstraints = false
         headersContainer.addSubview(pinnedHeaderView)
@@ -196,7 +171,7 @@ class PinnedColumnTablesViewController: UIViewController {
             pinnedHeaderLabelLandscape.centerYAnchor.constraint(equalTo: pinnedHeaderView.centerYAnchor)
         ])
         
-        // (3) The dynamic headers container
+        // 3) The dynamic headers container
         let dynamicHeadersContainer = UIView()
         dynamicHeadersContainer.translatesAutoresizingMaskIntoConstraints = false
         headersContainer.addSubview(dynamicHeadersContainer)
@@ -218,7 +193,7 @@ class PinnedColumnTablesViewController: UIViewController {
             columnHeadersVC.view.trailingAnchor.constraint(equalTo: dynamicHeadersContainer.trailingAnchor)
         ])
         
-        // (4) Pinned table below the header
+        // 4) Pinned table below
         pinnedTableView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(pinnedTableView)
         NSLayoutConstraint.activate([
@@ -228,7 +203,7 @@ class PinnedColumnTablesViewController: UIViewController {
             pinnedTableView.widthAnchor.constraint(equalToConstant: pinnedTableWidthOverride)
         ])
         
-        // (5) The main columns to the right
+        // 5) The main columns to the right
         addChild(columnsCollectionVC)
         columnsCollectionVC.view.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(columnsCollectionVC.view)
@@ -244,7 +219,7 @@ class PinnedColumnTablesViewController: UIViewController {
         view.bringSubviewToFront(pinnedTableView)
         pinnedTableView.layer.zPosition = 9999
         
-        // Let pinned table scroll to top, not the columns
+        // Let pinned table scroll to top, not columns
         columnHeadersVC.collectionView?.scrollsToTop = false
         columnsCollectionVC.internalCollectionView?.scrollsToTop = false
         
@@ -269,24 +244,32 @@ class PinnedColumnTablesViewController: UIViewController {
         }
     }
     
+    // (Row Memory) => restore the pinned table's row
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
 
         // Re-apply orientation logic
         applyLayoutForCurrentOrientation()
         
-        // Reload pinned table & columns
+        // 1) Reload pinned table & columns
         pinnedTableView.reloadData()
         columnHeadersVC.collectionView?.reloadData()
         columnsCollectionVC.reloadData()
         
-        // We'll do the column restore once after layout
-        needsInitialColumnScroll = true
-        
-        // If a pinned column title is provided, set it
+        // 2) If we have row memory, clamp & scroll
         if let rep = representable {
             pinnedHeaderLabel.text = rep.pinnedColumnTitle
+            
+            let rowCount = rep.displayedData.count
+            if rowCount > 0 {
+                let safeRow = min(rep.lastViewedRow, rowCount - 1)
+                print("Restoring pinned table to row = \(rep.lastViewedRow) => clamped => \(safeRow)")
+                pinnedTableView.scrollToRow(at: IndexPath(row: safeRow, section: 0), at: .top, animated: false)
+            }
         }
+        
+        // We'll do the column restore once after layout
+        needsInitialColumnScroll = true
     }
     
     override func viewDidLayoutSubviews() {
@@ -336,10 +319,7 @@ class PinnedColumnTablesViewController: UIViewController {
               let dataCV = columnsCollectionVC.internalCollectionView else { return }
         
         let colCount = rep.columns.count
-        // If no memory, default to col 0 or col 2, etc.:
         let fallbackIndex = (colCount >= 3) ? 2 : 0
-        
-        // If rep.lastViewedColumnIndex is zero or negative, use fallback
         let targetIndex = (rep.lastViewedColumnIndex <= 0) ? fallbackIndex : rep.lastViewedColumnIndex
         
         DispatchQueue.main.async {
@@ -387,7 +367,7 @@ class PinnedColumnTablesViewController: UIViewController {
 
 // MARK: - UITableViewDataSource
 extension PinnedColumnTablesViewController: UITableViewDataSource {
-    func numberOfSections(in tableView: UITableView) -> Int { return 1 }
+    func numberOfSections(in tableView: UITableView) -> Int { 1 }
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         representable?.displayedData.count ?? 0
@@ -414,11 +394,12 @@ extension PinnedColumnTablesViewController: UITableViewDelegate, UICollectionVie
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         if scrollView == pinnedTableView {
-            // (Row Memory) => store lastViewedRow
+            // (Row Memory) => store lastViewedRow = top visible row
             if let rep = representable,
                let visibleRows = pinnedTableView.indexPathsForVisibleRows,
                let firstIP = visibleRows.first {
                 rep.lastViewedRow = firstIP.row
+                print("Storing lastViewedRow = \(firstIP.row)")
             }
             
             // near-bottom detection
@@ -432,7 +413,7 @@ extension PinnedColumnTablesViewController: UITableViewDelegate, UICollectionVie
             rep.isAtBottom = atBottom
             onIsAtBottomChanged?(atBottom)
             
-            // sync vertical offset
+            // Sync vertical offset across columns
             syncVerticalTables(with: scrollView)
         }
         else if let dataCV = columnsCollectionVC.internalCollectionView,
@@ -464,7 +445,7 @@ extension PinnedColumnTablesViewController: UITableViewDelegate, UICollectionVie
               scrollView == columnsCollectionVC.internalCollectionView,
               let cv = columnsCollectionVC.internalCollectionView else { return }
         
-        // Because each 'page' is half the width, we shift by 1/4 the width
+        // Because each 'page' is half the width, shift by 1/4 the width
         let quarter = scrollView.bounds.width / 4.0
         let offsetX = scrollView.contentOffset.x + quarter
         let offsetY = scrollView.bounds.height / 2.0
@@ -472,9 +453,8 @@ extension PinnedColumnTablesViewController: UITableViewDelegate, UICollectionVie
         
         if let indexPath = cv.indexPathForItem(at: point),
            indexPath.item < columnsCollectionVC.columnsData.count {
-            // store the user’s new column index
             rep.lastViewedColumnIndex = indexPath.item
-            print("Updating lastViewedColumnIndex to \(indexPath.item)")
+            print("Storing lastViewedColumnIndex => \(indexPath.item)")
         }
     }
 }
