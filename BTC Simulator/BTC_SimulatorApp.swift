@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import Sentry
 
 class SimChartSelection: ObservableObject {
     @Published var selectedChart: ChartType = .btcPrice
@@ -84,15 +83,6 @@ struct BTCMonteCarloApp: App {
         let localMonthlySimSettings = MonthlySimulationSettings(loadDefaults: true)
         let localChartDataCache     = ChartDataCache()
         let localSimChartSelection  = SimChartSelection()
-
-        SentrySDK.start { options in
-            options.dsn                            = "https://examplePublicKey.ingest.sentry.io/exampleProjectID"
-            options.attachViewHierarchy            = false
-            options.enableMetricKit                = true
-            options.enableTimeToFullDisplayTracing = true
-            options.swiftAsyncStacktraces          = true
-            options.enableAppLaunchProfiling       = true
-        }
 
         let localCoordinator = SimulationCoordinator(
             chartDataCache: localChartDataCache,
@@ -197,4 +187,3 @@ struct BTCMonteCarloApp: App {
 class AppViewModel: ObservableObject {
     @Published var windowSize: CGSize = .zero
 }
-

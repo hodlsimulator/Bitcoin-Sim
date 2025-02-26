@@ -7,7 +7,6 @@
 
 import SwiftUI
 import MessageUI
-import Sentry
 
 struct SettingsView: View {
     @EnvironmentObject var simSettings: SimulationSettings
@@ -72,7 +71,7 @@ struct SettingsView: View {
             // 2) Factor intensity section (slider + extreme toggles)
             factorIntensitySection
             
-            // 3) Toggle-all section (changed here)
+            // 3) Toggle-all section
             SettingsSections.toggleAllSection(
                 simSettings: simSettings,
                 monthlySimSettings: monthlySimSettings
@@ -167,12 +166,7 @@ struct SettingsView: View {
                     Text("Send Feedback")
                         .foregroundColor(.white)
                 }
-                Button(action: {
-                    showFeedbackConsent = true
-                }) {
-                    Text("Change Data Collection Consent")
-                        .foregroundColor(.white)
-                }
+                // Removed "Change Data Collection Consent" entirely
             }
             .listRowBackground(Color(white: 0.15))
         }
@@ -196,7 +190,7 @@ struct SettingsView: View {
             UnifiedValueWatchersA(simSettings: simSettings)
             UnifiedValueWatchersB(simSettings: simSettings)
             UnifiedValueWatchersC(simSettings: simSettings)
-            // For monthly watchers, you might do:
+            // For monthly watchers:
             // MonthlyValueWatchers(simSettings: simSettings, monthlySimSettings: monthlySimSettings)
         }
         .onAppear {
@@ -232,26 +226,7 @@ struct SettingsView: View {
                     .background(Color.black)
             }
         }
-        // Present the consent change alert using a standard iOS alert.
-        .alert("Data Collection Consent", isPresented: $showFeedbackConsent) {
-            Button("No", role: .cancel) {
-                UserDefaults.standard.set(false, forKey: "SentryConsentGiven")
-            }
-            Button("Yes") {
-                UserDefaults.standard.set(true, forKey: "SentryConsentGiven")
-                SentrySDK.start { options in
-                    options.dsn = "https://3ca36373246f91c44a0733a5d9489f52@o4508788421623808.ingest.de.sentry.io/4508788424376400"
-                    options.attachViewHierarchy = false
-                    options.enableMetricKit = true
-                    options.enableTimeToFullDisplayTracing = true
-                    options.swiftAsyncStacktraces = true
-                    options.enableAppLaunchProfiling = true
-                }
-            }
-        } message: {
-            Text("We collect error logs and usage data to improve the app. Do you consent to share this data?")
-                .foregroundColor(.white)
-        }
+        // No data-collection alert because the button is removed
     }
 
     // MARK: - Tilt Computation

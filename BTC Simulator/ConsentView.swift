@@ -4,7 +4,7 @@
 //
 //  Created by . . on 09/02/2025.
 //
-
+/*
 import SwiftUI
 import Sentry
 
@@ -68,3 +68,4 @@ struct ConsentView: View {
         .padding(40)
     }
 }
+*/
