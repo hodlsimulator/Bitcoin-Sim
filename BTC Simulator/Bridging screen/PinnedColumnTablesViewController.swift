@@ -320,7 +320,7 @@ class PinnedColumnTablesViewController: UIViewController {
         
         let colCount = rep.columns.count
         let fallbackIndex = (colCount >= 3) ? 2 : 0
-        let targetIndex = (rep.lastViewedColumnIndex <= 0) ? fallbackIndex : rep.lastViewedColumnIndex
+        let targetIndex = (rep.lastViewedColumnIndex < 0) ? fallbackIndex : rep.lastViewedColumnIndex
         
         DispatchQueue.main.async {
             let safeIndex = max(0, min(targetIndex, colCount - 1))
