@@ -19,7 +19,7 @@ struct BTCMonteCarloApp: App {
     @AppStorage("hasOnboarded") private var didFinishOnboarding = false
     @AppStorage("isMonthlyMode") private var isMonthlyMode = false
 
-    // MARK: - StateObjects (so they live for the life of the app)
+    // MARK: - StateObjects
     @StateObject private var appViewModel: AppViewModel
     @StateObject private var inputManager: PersistentInputManager
     @StateObject private var weeklySimSettings: SimulationSettings
@@ -29,29 +29,22 @@ struct BTCMonteCarloApp: App {
     @StateObject private var coordinator: SimulationCoordinator
 
     init() {
-        // 1) Global navigation bar styling
         let navBarAppearance = UINavigationBarAppearance()
         navBarAppearance.configureWithOpaqueBackground()
         navBarAppearance.backgroundColor = UIColor(white: 0.12, alpha: 1.0)
-        navBarAppearance.shadowColor = .clear // remove the thin hairline
+        navBarAppearance.shadowColor = .clear
         navBarAppearance.titleTextAttributes = [.foregroundColor: UIColor.white]
 
         UINavigationBar.appearance().standardAppearance   = navBarAppearance
         UINavigationBar.appearance().compactAppearance    = navBarAppearance
         UINavigationBar.appearance().scrollEdgeAppearance = navBarAppearance
-        
-        // Make arrows and bar buttons white.
         UINavigationBar.appearance().tintColor = .white
-            
         if #available(iOS 15.0, *) {
             UINavigationBar.appearance().compactScrollEdgeAppearance = navBarAppearance
         }
-
-        // Old style approach (extra measure to remove hairline):
         UINavigationBar.appearance().shadowImage = UIImage()
         UINavigationBar.appearance().setBackgroundImage(UIImage(), for: .default)
 
-        // 2) Register any default toggles/values
         let defaultToggles: [String: Any] = [
             // Weekly toggles
             "lockedRandomSeed": false,
@@ -85,7 +78,6 @@ struct BTCMonteCarloApp: App {
         ]
         UserDefaults.standard.register(defaults: defaultToggles)
 
-        // 3) Create local objects
         let localAppViewModel       = AppViewModel()
         let localInputManager       = PersistentInputManager()
         let localWeeklySimSettings  = SimulationSettings(loadDefaults: true)
@@ -93,7 +85,6 @@ struct BTCMonteCarloApp: App {
         let localChartDataCache     = ChartDataCache()
         let localSimChartSelection  = SimChartSelection()
 
-        // 4) Initialize Sentry
         SentrySDK.start { options in
             options.dsn                            = "https://examplePublicKey.ingest.sentry.io/exampleProjectID"
             options.attachViewHierarchy            = false
@@ -103,7 +94,6 @@ struct BTCMonteCarloApp: App {
             options.enableAppLaunchProfiling       = true
         }
 
-        // 5) Create the SimulationCoordinator
         let localCoordinator = SimulationCoordinator(
             chartDataCache: localChartDataCache,
             simSettings: localWeeklySimSettings,
@@ -112,7 +102,6 @@ struct BTCMonteCarloApp: App {
             simChartSelection: localSimChartSelection
         )
 
-        // 6) Assign objects to @StateObject wrappers
         _appViewModel       = StateObject(wrappedValue: localAppViewModel)
         _inputManager       = StateObject(wrappedValue: localInputManager)
         _weeklySimSettings  = StateObject(wrappedValue: localWeeklySimSettings)
@@ -120,9 +109,17 @@ struct BTCMonteCarloApp: App {
         _chartDataCache     = StateObject(wrappedValue: localChartDataCache)
         _simChartSelection  = StateObject(wrappedValue: localSimChartSelection)
         _coordinator        = StateObject(wrappedValue: localCoordinator)
+        
+        #if DEBUG
+        // Wipe monthly keys only while running in Debug mode from Xcode
+        UserDefaults.standard.removeObject(forKey: "savedUserPeriodsMonthly")
+        UserDefaults.standard.removeObject(forKey: "savedInitialBTCPriceUSDMonthly")
+        UserDefaults.standard.removeObject(forKey: "savedStartingBalanceMonthly")
+        UserDefaults.standard.removeObject(forKey: "savedAverageCostBasisMonthly")
+        UserDefaults.standard.synchronize()
+        #endif
     }
 
-    // MARK: - Main Scene
     var body: some Scene {
         WindowGroup {
             ZStack {
@@ -138,7 +135,6 @@ struct BTCMonteCarloApp: App {
                         }
                 }
 
-                // If user already onboarded, go straight to ContentView; else OnboardingView
                 if didFinishOnboarding {
                     NavigationStack {
                         ContentView()
@@ -150,7 +146,7 @@ struct BTCMonteCarloApp: App {
                             .environmentObject(coordinator)
                             .environmentObject(appViewModel)
                     }
-                    .tint(.white) // <–– SwiftUI override so the arrow is never blue.
+                    .tint(.white)
                     .preferredColorScheme(.dark)
 
                 } else {
@@ -178,22 +174,17 @@ struct BTCMonteCarloApp: App {
                     UserDefaults.standard.set(true, forKey: "hasLaunchedBefore")
                 }
 
-                // Check if monthly or weekly mode is in use
                 monthlySimSettings.loadFromUserDefaultsMonthly()
                 coordinator.useMonthly = (monthlySimSettings.periodUnitMonthly == .months)
-
-                // Onboarding
                 weeklySimSettings.isOnboarding = !didFinishOnboarding
 
-                // Load historical data
-                historicalBTCWeeklyReturns = loadAndAlignWeeklyData()
-                extendedWeeklyReturns      = historicalBTCWeeklyReturns
-                historicalBTCMonthlyReturns = loadAndAlignMonthlyData()
-                extendedMonthlyReturns      = historicalBTCMonthlyReturns
+                historicalBTCWeeklyReturns   = loadAndAlignWeeklyData()
+                extendedWeeklyReturns        = historicalBTCWeeklyReturns
+                historicalBTCMonthlyReturns  = loadAndAlignMonthlyData()
+                extendedMonthlyReturns       = historicalBTCMonthlyReturns
             }
             .onChange(of: scenePhase) { _, newPhase in
                 if newPhase == .inactive || newPhase == .background {
-                    // Save sim settings on background
                     weeklySimSettings.saveToUserDefaults()
                     monthlySimSettings.saveToUserDefaultsMonthly()
                 }
@@ -206,3 +197,4 @@ struct BTCMonteCarloApp: App {
 class AppViewModel: ObservableObject {
     @Published var windowSize: CGSize = .zero
 }
+
