@@ -114,20 +114,11 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         // Listen for pinned VC’s column snapping
         pinnedColumnTablesVC.columnsCollectionVC.onCenteredColumnChanged = { [weak pinnedColumnTablesVC] newIndex in
             guard let vc = pinnedColumnTablesVC else { return }
-
-            let direction: CGFloat
-            if let oldIndex = vc.previousColumnIndex {
-                direction = (newIndex > oldIndex) ? -1 : 1
-            } else {
-                direction = -1
-            }
             vc.previousColumnIndex = newIndex
-
-            // Optional: animate column header text changes, etc.
-            let allCols = vc.columnsCollectionVC.columnsData
-            let newText1 = (newIndex < allCols.count) ? allCols[newIndex].0 : nil
-            let newText2 = (newIndex + 1 < allCols.count) ? allCols[newIndex + 1].0 : nil
-            // vc.slideHeaders(newText1: newText1, newText2: newText2, direction: direction)
+            
+            // If needed in the future, animate header changes here using newIndex.
+            // Example (currently commented out):
+            // vc.slideHeaders(newText1: someNewText1, newText2: someNewText2, direction: someDirection)
             
             // <-- ADDED HERE: Store the new column index in the SwiftUI binding so row/column memory persists
             if let rep = vc.representable {
@@ -206,11 +197,12 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
             customTopBar.heightAnchor.constraint(equalToConstant: customNavBarHeight),
         ])
 
-        // Back Button
-        backButton.setImage(UIImage(systemName: "chevron.left"), for: .normal)
+        // Back Button using UIButtonConfiguration (contentEdgeInsets is deprecated)
+        var backConfig = UIButton.Configuration.plain()
+        backConfig.image = UIImage(systemName: "chevron.left")
+        backConfig.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 10, bottom: 8, trailing: 10)
+        backButton.configuration = backConfig
         backButton.tintColor = .white
-        backButton.contentEdgeInsets = UIEdgeInsets(top: 8, left: 10, bottom: 8, right: 10)
-        backButton.contentHorizontalAlignment = .leading
         backButton.translatesAutoresizingMaskIntoConstraints = false
         customTopBar.addSubview(backButton)
         NSLayoutConstraint.activate([
