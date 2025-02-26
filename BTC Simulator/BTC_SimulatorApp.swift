@@ -89,7 +89,7 @@ struct BTCMonteCarloApp: App {
             simSettings: localWeeklySimSettings,
             monthlySimSettings: localMonthlySimSettings,
             inputManager: localInputManager,
-            simChartSelection: localSimChartSelection
+            simChartSelection: localSimChartSelection               
         )
 
         _appViewModel       = StateObject(wrappedValue: localAppViewModel)

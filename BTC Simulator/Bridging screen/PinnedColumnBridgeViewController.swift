@@ -218,7 +218,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         customTopBar.addSubview(titleLabel)
         NSLayoutConstraint.activate([
-            titleLabel.centerXAnchor.constraint(equalTo: customTopBar.centerXAnchor),
+            titleLabel.centerXAnchor.constraint(equalTo: customTopBar.centerXAnchor, constant: -2.5),
             titleLabel.topAnchor.constraint(equalTo: customTopBar.safeAreaLayoutGuide.topAnchor, constant: 12)
         ])
 

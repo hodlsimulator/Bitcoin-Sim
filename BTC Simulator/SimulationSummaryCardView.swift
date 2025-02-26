@@ -15,8 +15,6 @@ struct SimulationSummaryCardView: View {
     
     var body: some View {
         GeometryReader { geometry in
-            // You can shift all content vertically by adjusting this offset.
-            // For example, offset(y: -10) moves everything up 10 points.
             ZStack {
                 let horizontalPadding: CGFloat = 16
                 let totalWidth = geometry.size.width - (horizontalPadding * 2)
@@ -58,13 +56,11 @@ struct SimulationSummaryCardView: View {
                 }
                 .padding(.horizontal, horizontalPadding)
                 .padding(.vertical, 16)
-                // This offset controls how high or low the text sits.
-                // Negative moves it up; positive moves it down.
-                .offset(y: -5)
+                // The 'x: -2.5' moves everything left by 2.5 points,
+                // 'y: -5' moves it up by 5 points.
+                .offset(x: -2.5, y: -5)
             }
         }
-        // This fixed height sets the card's overall vertical space.
-        // If you need more or less space, adjust this number.
         .frame(height: 80)
     }
 }
