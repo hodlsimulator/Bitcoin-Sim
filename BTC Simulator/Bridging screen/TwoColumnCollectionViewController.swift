@@ -196,5 +196,8 @@ extension TwoColumnCollectionViewController {
 
         // 5) Scroll
         scrollToColumnIndex(currentPage)
+
+        // 6) Immediately notify the bridging code so it can update memory:
+        onCenteredColumnChanged?(currentPage)
     }
 }
