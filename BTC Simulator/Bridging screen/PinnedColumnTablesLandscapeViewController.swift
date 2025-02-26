@@ -45,7 +45,7 @@ class LandscapeTwoColumnFlowLayout: UICollectionViewFlowLayout {
 
 class PinnedColumnTablesLandscapeViewController: PinnedColumnTablesViewController {
     
-    override var pinnedTableWidth: CGFloat {
+    var pinnedTableWidth: CGFloat {
         return 120
     }
     
