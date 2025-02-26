@@ -7,10 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		E112E3662D58ACB900167E92 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = E112E3652D58ACB900167E92 /* Sentry */; };
-		E112E36C2D58AD1600167E92 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = E112E36B2D58AD1600167E92 /* Sentry */; };
 		E112E3712D58B00F00167E92 /* PocketSVG in Embed Frameworks */ = {isa = PBXBuildFile; productRef = E17DDF9B2D1BD13E008700A8 /* PocketSVG */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		E112E3742D58B2EB00167E92 /* ConsentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E112E3732D58B2E700167E92 /* ConsentView.swift */; };
 		E112E3762D58B73A00167E92 /* MailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E112E3752D58B73800167E92 /* MailView.swift */; };
 		E12CCD8B2CF8235F0059931D /* BTC_SimulatorApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E12CCD8A2CF8235F0059931D /* BTC_SimulatorApp.swift */; };
 		E12CCD8F2CF823610059931D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E12CCD8E2CF823610059931D /* Assets.xcassets */; };
@@ -142,7 +139,6 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		E112E3732D58B2E700167E92 /* ConsentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConsentView.swift; sourceTree = "<group>"; };
 		E112E3752D58B73800167E92 /* MailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailView.swift; sourceTree = "<group>"; };
 		E11B459A2CEE8D53006B0594 /* BTCMonteCarlo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BTCMonteCarlo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E12CCD882CF8235F0059931D /* BTC Simulator.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "BTC Simulator.app"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -273,9 +269,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				E112E36C2D58AD1600167E92 /* Sentry in Frameworks */,
 				E17DDF9C2D1BD13E008700A8 /* PocketSVG in Frameworks */,
-				E112E3662D58ACB900167E92 /* Sentry in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -321,7 +315,6 @@
 				E18C2BE02D259245006E7438 /* ChartSnapshotView.swift */,
 				E1A1E5282D2E38F9008F7658 /* CheckboxToggleStyle.swift */,
 				E1942C9C2D63FD9000F5B9A1 /* ColumnsCell.swift */,
-				E112E3732D58B2E700167E92 /* ConsentView.swift */,
 				E166A8B12CF85B2B0003F518 /* ContentView.swift */,
 				E191AD662D1B763E00020DBE /* CSVLoaderBTC.swift */,
 				E191AD5E2D1B07B800020DBE /* CSVLoaderHistorical.swift */,
@@ -513,7 +506,6 @@
 			packageReferences = (
 				E17A48022CF17A0300AAC885 /* XCRemoteSwiftPackageReference "swiftplot" */,
 				E17DDF9A2D1BD13E008700A8 /* XCRemoteSwiftPackageReference "PocketSVG" */,
-				E112E3642D58ABC100167E92 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
 			);
 			productRefGroup = E11B459B2CEE8D53006B0594 /* Products */;
 			projectDirPath = "";
@@ -576,7 +568,6 @@
 				E1B7B0A92D47575400B60EC6 /* SettingsSections.swift in Sources */,
 				E191AD5D2D1B06E600020DBE /* BitcoinHistoricalData.swift in Sources */,
 				E1883F482D1E8E21007AA90B /* AboutView.swift in Sources */,
-				E112E3742D58B2EB00167E92 /* ConsentView.swift in Sources */,
 				E18B2D6B2D6C1C7F005E5EDE /* SnapOneColumnFlowLayout.swift in Sources */,
 				E15DDF492D5AD0F100CDD30A /* MonthlySimulationSettings+FactorSync.swift in Sources */,
 				E17B2F282D27505300ECE087 /* LandscapePlaceholderView.swift in Sources */,
@@ -952,14 +943,6 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		E112E3642D58ABC100167E92 /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/getsentry/sentry-cocoa.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 8.44.0;
-			};
-		};
 		E17A48022CF17A0300AAC885 /* XCRemoteSwiftPackageReference "swiftplot" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/KarthikRIyer/swiftplot";
@@ -979,16 +962,6 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		E112E3652D58ACB900167E92 /* Sentry */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = E112E3642D58ABC100167E92 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
-			productName = Sentry;
-		};
-		E112E36B2D58AD1600167E92 /* Sentry */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = E112E3642D58ABC100167E92 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
-			productName = Sentry;
-		};
 		E17DDF9B2D1BD13E008700A8 /* PocketSVG */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = E17DDF9A2D1BD13E008700A8 /* XCRemoteSwiftPackageReference "PocketSVG" */;
