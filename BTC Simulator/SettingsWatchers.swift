@@ -25,19 +25,19 @@ struct UnifiedValueWatchersA: View {
     
     private var watchersA1: some View {
         EmptyView()
-            .onChange(of: simSettings.halvingBumpUnified) { newVal in
+            .onChange(of: simSettings.halvingBumpUnified) { newVal, _ in
                 guard simSettings.periodUnit == .weeks else { return }
                 updateFactor("Halving", newVal,
                              minVal: 0.2773386887,
                              maxVal: 0.3823386887)
             }
-            .onChange(of: simSettings.maxDemandBoostUnified) { newVal in
+            .onChange(of: simSettings.maxDemandBoostUnified) { newVal, _ in
                 guard simSettings.periodUnit == .weeks else { return }
                 updateFactor("InstitutionalDemand", newVal,
                              minVal: 0.00105315,
                              maxVal: 0.00142485)
             }
-            .onChange(of: simSettings.maxCountryAdBoostUnified) { newVal in
+            .onChange(of: simSettings.maxCountryAdBoostUnified) { newVal, _ in
                 guard simSettings.periodUnit == .weeks else { return }
                 updateFactor("CountryAdoption", newVal,
                              minVal: 0.0009882799977,
@@ -47,25 +47,25 @@ struct UnifiedValueWatchersA: View {
     
     private var watchersA2: some View {
         EmptyView()
-            .onChange(of: simSettings.maxClarityBoostUnified) { newVal in
+            .onChange(of: simSettings.maxClarityBoostUnified) { newVal, _ in
                 guard simSettings.periodUnit == .weeks else { return }
                 updateFactor("RegulatoryClarity", newVal,
                              minVal: 0.0005979474861605167,
                              maxVal: 0.0008361034861605167)
             }
-            .onChange(of: simSettings.maxEtfBoostUnified) { newVal in
+            .onChange(of: simSettings.maxEtfBoostUnified) { newVal, _ in
                 guard simSettings.periodUnit == .weeks else { return }
                 updateFactor("EtfApproval", newVal,
                              minVal: 0.0014880183160305023,
                              maxVal: 0.0020880183160305023)
             }
-            .onChange(of: simSettings.maxTechBoostUnified) { newVal in
+            .onChange(of: simSettings.maxTechBoostUnified) { newVal, _ in
                 guard simSettings.periodUnit == .weeks else { return }
                 updateFactor("TechBreakthrough", newVal,
                              minVal: 0.0005015753579173088,
                              maxVal: 0.0007150633579173088)
             }
-            .onChange(of: simSettings.maxScarcityBoostUnified) { newVal in
+            .onChange(of: simSettings.maxScarcityBoostUnified) { newVal, _ in
                 guard simSettings.periodUnit == .weeks else { return }
                 updateFactor("ScarcityEvents", newVal,
                              minVal: 0.00035112353681182863,
@@ -128,13 +128,13 @@ struct UnifiedValueWatchersB: View {
     
     private var watchersB1a: some View {
         EmptyView()
-            .onChange(of: simSettings.maxMacroBoostUnified) { newVal in
+            .onChange(of: simSettings.maxMacroBoostUnified) { newVal, _ in
                 guard simSettings.periodUnit == .weeks else { return }
                 updateFactor("GlobalMacroHedge", newVal,
                              minVal: 0.0002868789724932909,
                              maxVal: 0.0004126829724932909)
             }
-            .onChange(of: simSettings.maxStablecoinBoostUnified) { newVal in
+            .onChange(of: simSettings.maxStablecoinBoostUnified) { newVal, _ in
                 guard simSettings.periodUnit == .weeks else { return }
                 updateFactor("StablecoinShift", newVal,
                              minVal: 0.0002704809116327763,
@@ -144,13 +144,13 @@ struct UnifiedValueWatchersB: View {
     
     private var watchersB1b: some View {
         EmptyView()
-            .onChange(of: simSettings.maxDemoBoostUnified) { newVal in
+            .onChange(of: simSettings.maxDemoBoostUnified) { newVal, _ in
                 guard simSettings.periodUnit == .weeks else { return }
                 updateFactor("DemographicAdoption", newVal,
                              minVal: 0.0008661432036626339,
                              maxVal: 0.0012578432036626339)
             }
-            .onChange(of: simSettings.maxAltcoinBoostUnified) { newVal in
+            .onChange(of: simSettings.maxAltcoinBoostUnified) { newVal, _ in
                 guard simSettings.periodUnit == .weeks else { return }
                 updateFactor("AltcoinFlight", newVal,
                              minVal: 0.0002381864461803342,
@@ -160,19 +160,19 @@ struct UnifiedValueWatchersB: View {
     
     private var watchersB2: some View {
         EmptyView()
-            .onChange(of: simSettings.adoptionBaseFactorUnified) { newVal in
+            .onChange(of: simSettings.adoptionBaseFactorUnified) { newVal, _ in
                 guard simSettings.periodUnit == .weeks else { return }
                 updateFactor("AdoptionFactor", newVal,
                              minVal: 0.0013638349088897705,
                              maxVal: 0.0018451869088897705)
             }
-            .onChange(of: simSettings.maxClampDownUnified) { newVal in
+            .onChange(of: simSettings.maxClampDownUnified) { newVal, _ in
                 guard simSettings.periodUnit == .weeks else { return }
                 updateFactor("RegClampdown", newVal,
                              minVal: -0.0014273392243542672,
                              maxVal: -0.0008449512243542672)
             }
-            .onChange(of: simSettings.maxCompetitorBoostUnified) { newVal in
+            .onChange(of: simSettings.maxCompetitorBoostUnified) { newVal, _ in
                 guard simSettings.periodUnit == .weeks else { return }
                 updateFactor("CompetitorCoin", newVal,
                              minVal: -0.0011842141746411323,
@@ -235,13 +235,13 @@ struct UnifiedValueWatchersC: View {
     
     private var watchersC1a: some View {
         EmptyView()
-            .onChange(of: simSettings.breachImpactUnified) { newVal in
+            .onChange(of: simSettings.breachImpactUnified) { newVal, _ in
                 guard simSettings.periodUnit == .weeks else { return }
                 updateFactor("SecurityBreach", newVal,
                              minVal: -0.0012819675168380737,
                              maxVal: -0.0009009755168380737)
             }
-            .onChange(of: simSettings.maxPopDropUnified) { newVal in
+            .onChange(of: simSettings.maxPopDropUnified) { newVal, _ in
                 guard simSettings.periodUnit == .weeks else { return }
                 updateFactor("BubblePop", newVal,
                              minVal: -0.002244817890762329,
@@ -251,13 +251,13 @@ struct UnifiedValueWatchersC: View {
     
     private var watchersC1b: some View {
         EmptyView()
-            .onChange(of: simSettings.maxMeltdownDropUnified) { newVal in
+            .onChange(of: simSettings.maxMeltdownDropUnified) { newVal, _ in
                 guard simSettings.periodUnit == .weeks else { return }
                 updateFactor("StablecoinMeltdown", newVal,
                              minVal: -0.0009681346159477233,
                              maxVal: -0.0004600706159477233)
             }
-            .onChange(of: simSettings.blackSwanDropUnified) { newVal in
+            .onChange(of: simSettings.blackSwanDropUnified) { newVal, _ in
                 guard simSettings.periodUnit == .weeks else { return }
                 updateFactor("BlackSwan", newVal,
                              minVal: -0.478662,
@@ -267,19 +267,19 @@ struct UnifiedValueWatchersC: View {
     
     private var watchersC2: some View {
         EmptyView()
-            .onChange(of: simSettings.bearWeeklyDriftUnified) { newVal in
+            .onChange(of: simSettings.bearWeeklyDriftUnified) { newVal, _ in
                 guard simSettings.periodUnit == .weeks else { return }
                 updateFactor("BearMarket", newVal,
                              minVal: -0.0010278802752494812,
                              maxVal: -0.0007278802752494812)
             }
-            .onChange(of: simSettings.maxMaturingDropUnified) { newVal in
+            .onChange(of: simSettings.maxMaturingDropUnified) { newVal, _ in
                 guard simSettings.periodUnit == .weeks else { return }
                 updateFactor("MaturingMarket", newVal,
                              minVal: -0.0020343461055486196,
                              maxVal: -0.0010537001055486196)
             }
-            .onChange(of: simSettings.maxRecessionDropUnified) { newVal in
+            .onChange(of: simSettings.maxRecessionDropUnified) { newVal, _ in
                 guard simSettings.periodUnit == .weeks else { return }
                 updateFactor("Recession", newVal,
                              minVal: -0.0010516462467487811,
@@ -345,19 +345,19 @@ struct MonthlyValueWatchers: View {
     
     private var monthlyWatchersA1: some View {
         EmptyView()
-            .onChange(of: simSettings.halvingBumpUnified) { newVal in
+            .onChange(of: simSettings.halvingBumpUnified) { newVal, _ in
                 guard simSettings.periodUnit == .months else { return }
                 updateFactor("Halving", newVal,
                              minVal: 0.2975,
                              maxVal: 0.4025)
             }
-            .onChange(of: simSettings.maxDemandBoostUnified) { newVal in
+            .onChange(of: simSettings.maxDemandBoostUnified) { newVal, _ in
                 guard simSettings.periodUnit == .months else { return }
                 updateFactor("InstitutionalDemand", newVal,
                              minVal: 0.0048101384,
                              maxVal: 0.0065078326)
             }
-            .onChange(of: simSettings.maxCountryAdBoostUnified) { newVal in
+            .onChange(of: simSettings.maxCountryAdBoostUnified) { newVal, _ in
                 guard simSettings.periodUnit == .months else { return }
                 updateFactor("CountryAdoption", newVal,
                              minVal: 0.004688188952320099,
@@ -367,25 +367,25 @@ struct MonthlyValueWatchers: View {
     
     private var monthlyWatchersA2: some View {
         EmptyView()
-            .onChange(of: simSettings.maxClarityBoostUnified) { newVal in
+            .onChange(of: simSettings.maxClarityBoostUnified) { newVal, _ in
                 guard simSettings.periodUnit == .months else { return }
                 updateFactor("RegulatoryClarity", newVal,
                              minVal: 0.0034626727,
                              maxVal: 0.0046847927)
             }
-            .onChange(of: simSettings.maxEtfBoostUnified) { newVal in
+            .onChange(of: simSettings.maxEtfBoostUnified) { newVal, _ in
                 guard simSettings.periodUnit == .months else { return }
                 updateFactor("EtfApproval", newVal,
                              minVal: 0.0048571421,
                              maxVal: 0.0065714281)
             }
-            .onChange(of: simSettings.maxTechBoostUnified) { newVal in
+            .onChange(of: simSettings.maxTechBoostUnified) { newVal, _ in
                 guard simSettings.periodUnit == .months else { return }
                 updateFactor("TechBreakthrough", newVal,
                              minVal: 0.0024129091,
                              maxVal: 0.0032645091)
             }
-            .onChange(of: simSettings.maxScarcityBoostUnified) { newVal in
+            .onChange(of: simSettings.maxScarcityBoostUnified) { newVal, _ in
                 guard simSettings.periodUnit == .months else { return }
                 updateFactor("ScarcityEvents", newVal,
                              minVal: 0.0027989405475521085,
@@ -403,13 +403,13 @@ struct MonthlyValueWatchers: View {
     
     private var monthlyWatchersB1: some View {
         EmptyView()
-            .onChange(of: simSettings.maxMacroBoostUnified) { newVal in
+            .onChange(of: simSettings.maxMacroBoostUnified) { newVal, _ in
                 guard simSettings.periodUnit == .months else { return }
                 updateFactor("GlobalMacroHedge", newVal,
                              minVal: 0.0027576037,
                              maxVal: 0.0037308757)
             }
-            .onChange(of: simSettings.maxStablecoinBoostUnified) { newVal in
+            .onChange(of: simSettings.maxStablecoinBoostUnified) { newVal, _ in
                 guard simSettings.periodUnit == .months else { return }
                 updateFactor("StablecoinShift", newVal,
                              minVal: 0.0019585255,
@@ -419,13 +419,13 @@ struct MonthlyValueWatchers: View {
     
     private var monthlyWatchersB2: some View {
         EmptyView()
-            .onChange(of: simSettings.maxDemoBoostUnified) { newVal in
+            .onChange(of: simSettings.maxDemoBoostUnified) { newVal, _ in
                 guard simSettings.periodUnit == .months else { return }
                 updateFactor("DemographicAdoption", newVal,
                              minVal: 0.006197455714649915,
                              maxVal: 0.008384793714649915)
             }
-            .onChange(of: simSettings.maxAltcoinBoostUnified) { newVal in
+            .onChange(of: simSettings.maxAltcoinBoostUnified) { newVal, _ in
                 guard simSettings.periodUnit == .months else { return }
                 updateFactor("AltcoinFlight", newVal,
                              minVal: 0.0018331797,
@@ -443,13 +443,13 @@ struct MonthlyValueWatchers: View {
     
     private var monthlyWatchersC1: some View {
         EmptyView()
-            .onChange(of: simSettings.breachImpactUnified) { newVal in
+            .onChange(of: simSettings.breachImpactUnified) { newVal, _ in
                 guard simSettings.periodUnit == .months else { return }
                 updateFactor("SecurityBreach", newVal,
                              minVal: -0.00805,
                              maxVal: -0.00595)
             }
-            .onChange(of: simSettings.maxPopDropUnified) { newVal in
+            .onChange(of: simSettings.maxPopDropUnified) { newVal, _ in
                 guard simSettings.periodUnit == .months else { return }
                 updateFactor("BubblePop", newVal,
                              minVal: -0.0115,
@@ -459,31 +459,31 @@ struct MonthlyValueWatchers: View {
     
     private var monthlyWatchersC2: some View {
         EmptyView()
-            .onChange(of: simSettings.maxMeltdownDropUnified) { newVal in
+            .onChange(of: simSettings.maxMeltdownDropUnified) { newVal, _ in
                 guard simSettings.periodUnit == .months else { return }
                 updateFactor("StablecoinMeltdown", newVal,
                              minVal: -0.013,
                              maxVal: -0.007)
             }
-            .onChange(of: simSettings.blackSwanDropUnified) { newVal in
+            .onChange(of: simSettings.blackSwanDropUnified) { newVal, _ in
                 guard simSettings.periodUnit == .months else { return }
                 updateFactor("BlackSwan", newVal,
                              minVal: -0.48,
                              maxVal: -0.32)
             }
-            .onChange(of: simSettings.bearWeeklyDriftUnified) { newVal in
+            .onChange(of: simSettings.bearWeeklyDriftUnified) { newVal, _ in
                 guard simSettings.periodUnit == .months else { return }
                 updateFactor("BearMarket", newVal,
                              minVal: -0.013,
                              maxVal: -0.007)
             }
-            .onChange(of: simSettings.maxMaturingDropUnified) { newVal in
+            .onChange(of: simSettings.maxMaturingDropUnified) { newVal, _ in
                 guard simSettings.periodUnit == .months else { return }
                 updateFactor("MaturingMarket", newVal,
                              minVal: -0.013,
                              maxVal: -0.007)
             }
-            .onChange(of: simSettings.maxRecessionDropUnified) { newVal in
+            .onChange(of: simSettings.maxRecessionDropUnified) { newVal, _ in
                 guard simSettings.periodUnit == .months else { return }
                 updateFactor("Recession", newVal,
                              minVal: -0.0015958890,
