@@ -19,7 +19,7 @@ struct AboutView: View {
                 
                 // Short Overview
                 Text("""
-HODL Simulator is a forward-looking modelling tool for exploring Bitcoin’s potential price paths over about 20 years. It draws on historical BTC returns, applies a range of bullish and bearish factors, and uses a unique tilt bar to visually summarise the net market sentiment.
+HODL Simulator is a forward-looking modelling tool for exploring Bitcoin’s potential price paths over a user-defined timeframe (20 years by default). It draws on historical BTC returns, applies a range of bullish and bearish factors, and uses a unique tilt bar to visually summarise the net market sentiment.
 """)
                 
                 // Tilt Bar Explanation
@@ -44,7 +44,7 @@ You can also track a hypothetical portfolio by setting an initial balance and pe
                 
                 // Wrap Up
                 Text("""
-With its simple interface, flexible settings, and the intuitive tilt bar, HODL Simulator offers a data-driven way to explore how Bitcoin’s future might unfold.
+With its simple interface, flexible settings, and the intuitive tilt bar, HODL Simulator offers a data-driven way to explore how Bitcoin’s future might unfold—whether for 20 years or any timeframe you prefer.
 """)
             }
             .foregroundColor(.white)
