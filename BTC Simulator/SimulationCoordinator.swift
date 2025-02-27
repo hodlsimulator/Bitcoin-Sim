@@ -33,7 +33,10 @@ class SimulationCoordinator: ObservableObject {
     @Published var stepMedianBTCs: [Decimal] = []
     
     @Published var useMonthly: Bool = false
-
+    
+    @Published var isNewSimulation: Bool = false
+    @Published var shouldResetMemory: Bool = false
+    
     var chartDataCache: ChartDataCache
     var mempoolDataManager: MempoolDataManager?
     private(set) var simSettings: SimulationSettings
@@ -79,6 +82,12 @@ class SimulationCoordinator: ObservableObject {
         }
         
         let newHash = computeInputsHash()
+        
+        if newHash != chartDataCache.storedInputsHash {
+            isNewSimulation = true
+        }
+        chartDataCache.storedInputsHash = newHash
+
         simSettings.printAllSettings()
         
         // 3) Load monthly or weekly returns as needed
@@ -254,9 +263,9 @@ class SimulationCoordinator: ObservableObject {
                 return
             }
             
-            // Build results on main queue
+            // Build results on main thread
             DispatchQueue.main.async {
-                self.isLoading = false
+                self.isLoading      = false
                 self.isChartBuilding = true
                 
                 let finalRuns = allIterations.enumerated().map {
@@ -292,7 +301,6 @@ class SimulationCoordinator: ObservableObject {
                 for row in self.monteCarloResults.prefix(20) {
                     // ...
                 }
-                
                 print("// DEBUG: 'median final BTC' => iteration #\(sortedRuns[medianIndex].0), final BTC => \(sortedRuns[medianIndex].1)")
                 print("// DEBUG: bestFitRun => iteration #\(bestFitRunIndex) chosen by distance.")
                 print("// DEBUG: bestFitRun => final BTC => \(bestFitRun.last?.btcPriceUSD ?? 0)")
@@ -301,8 +309,8 @@ class SimulationCoordinator: ObservableObject {
                 self.allSimData = allIterations
                 
                 // Convert runs to chart lines
-                let allSimsAsWeekPoints = self.convertAllSimsToWeekPoints()
-                let allSimsAsPortfolioPoints = self.convertAllSimsToPortfolioWeekPoints()
+                let allSimsAsWeekPoints       = self.convertAllSimsToWeekPoints()
+                let allSimsAsPortfolioPoints  = self.convertAllSimsToPortfolioWeekPoints()
                 
                 // Best-fit lines
                 let bestFitBTCPoints = bestFitRun.map { row in
@@ -323,18 +331,17 @@ class SimulationCoordinator: ObservableObject {
                 self.chartDataCache.chartSnapshotPortfolioLandscape = nil
                 
                 // Store faint lines & best fit lines
-                self.chartDataCache.allRuns = allSimsAsWeekPoints
-                self.chartDataCache.portfolioRuns = allSimsAsPortfolioPoints
-                self.chartDataCache.bestFitRun = [ SimulationRun(points: bestFitBTCPoints) ]
+                self.chartDataCache.allRuns            = allSimsAsWeekPoints
+                self.chartDataCache.portfolioRuns      = allSimsAsPortfolioPoints
+                self.chartDataCache.bestFitRun         = [ SimulationRun(points: bestFitBTCPoints) ]
                 self.chartDataCache.bestFitPortfolioRun = [ SimulationRun(points: bestFitPortfolioPoints) ]
-                self.chartDataCache.storedInputsHash = newHash
+                self.chartDataCache.storedInputsHash   = newHash
                 
                 let oldSelection = self.simChartSelection.selectedChart
                 
                 // If user doesn’t want graphs, skip chart building
                 if !generateGraphs {
                     self.isChartBuilding = false
-                    // self.isSimulationRun = true
                     return
                 }
                 
@@ -376,13 +383,19 @@ class SimulationCoordinator: ObservableObject {
                             self.chartDataCache.chartSnapshotPortfolio = portfolioSnapshot
                             self.simChartSelection.selectedChart = oldSelection
                             
+                            // 9) Mark building done
                             self.isChartBuilding = false
-                            // self.isSimulationRun = true
+                            
+                            // ----------------------
+                            // (A) Reset row/column memory:
+                            self.shouldResetMemory = true
+                            print("[SimulationCoordinator] runSimulation => set shouldResetMemory = true")
+                            // ----------------------
                         }
                     }
                 }
                 
-                // Extra background processing
+                // Optional: background processing
                 DispatchQueue.global(qos: .background).async {
                     self.processAllResults(allIterations)
                 }

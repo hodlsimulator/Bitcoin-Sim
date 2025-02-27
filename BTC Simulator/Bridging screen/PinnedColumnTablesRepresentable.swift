@@ -16,6 +16,7 @@ struct PinnedColumnTablesRepresentable: UIViewControllerRepresentable {
     let pinnedColumnTitle: String
     let pinnedColumnKeyPath: KeyPath<SimulationData, Int>
     let columns: [(String, PartialKeyPath<SimulationData>)]
+    let coordinator: SimulationCoordinator
 
     @Binding var lastViewedRow: Int
     @Binding var lastViewedColumnIndex: Int

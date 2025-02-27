@@ -10,8 +10,9 @@ import UIKit
 
 struct PinnedColumnBridgeRepresentable: UIViewControllerRepresentable {
     @Binding var isPresented: Bool
-    @Binding var lastViewedRow: Int  // Added to track the last viewed row
+    @Binding var lastViewedRow: Int  // Tracks the last viewed row
     @Binding var lastViewedColumnIndex: Int
+
     @ObservedObject var coordinator: SimulationCoordinator
     @ObservedObject var inputManager: PersistentInputManager
     @ObservedObject var monthlySimSettings: MonthlySimulationSettings
@@ -29,13 +30,14 @@ struct PinnedColumnBridgeRepresentable: UIViewControllerRepresentable {
             simChartSelection: simChartSelection,
             chartDataCache: chartDataCache
         )
-        pinnedVC.dismissBinding = $isPresented
-        pinnedVC.lastViewedRowBinding = $lastViewedRow  // Pass the binding
+        pinnedVC.dismissBinding              = $isPresented
+        pinnedVC.lastViewedRowBinding        = $lastViewedRow
         pinnedVC.lastViewedColumnIndexBinding = $lastViewedColumnIndex
         return pinnedVC
     }
 
     func updateUIViewController(_ uiViewController: PinnedColumnBridgeViewController, context: Context) {
+        // Always keep references up to date
         uiViewController.representableContainer = .init(
             coordinator: coordinator,
             inputManager: inputManager,
@@ -44,8 +46,22 @@ struct PinnedColumnBridgeRepresentable: UIViewControllerRepresentable {
             simChartSelection: simChartSelection,
             chartDataCache: chartDataCache
         )
-        uiViewController.lastViewedRowBinding = $lastViewedRow  // Update the binding
+        uiViewController.lastViewedRowBinding         = $lastViewedRow
         uiViewController.lastViewedColumnIndexBinding = $lastViewedColumnIndex
+
+        // EXAMPLE: If your coordinator sets a flag after each new simulation,
+        // we can reset the row/column memory here:
+        if coordinator.shouldResetMemory {
+            print("[PinnedColumnBridgeRepresentable] Resetting memory now.")
+            // Reset row to 0, column to -1 (meaning "no memory" => fallback logic)
+            lastViewedRow = 0
+            lastViewedColumnIndex = -1
+
+            // Clear the flag so we don't keep resetting
+            coordinator.shouldResetMemory = false
+
+            print("[PinnedColumnBridgeRepresentable] Reset row/column memory after new simulation.")
+        }
     }
 }
 
@@ -54,6 +70,6 @@ extension PinnedColumnBridgeRepresentable {
         self
             .navigationBarHidden(true)           // Hide SwiftUI's navigation bar
             .navigationBarBackButtonHidden(true) // Prevent back button interference
-            .ignoresSafeArea(.all, edges: .top)  // Allow content to extend to top edge
+            .ignoresSafeArea(.all, edges: .top)  // Extend content under the top edge
     }
 }

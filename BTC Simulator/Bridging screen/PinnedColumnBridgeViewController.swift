@@ -440,6 +440,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         let data = container.coordinator.monteCarloResults
         let pref = container.simSettings.currencyPreference
 
+        // 1) Build the columns as you already do
         let columns: [(String, PartialKeyPath<SimulationData>)]
         switch pref {
         case .usd:
@@ -482,18 +483,37 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
             ]
         }
 
+        // 2) If it's truly a new simulation, force row=1 and col=2 in the memory bindings
+        if container.coordinator.isNewSimulation {
+            // Safely clamp row=1 if we have fewer rows
+            let safeRow = min(1, max(0, data.count - 1))
+            lastViewedRowBinding?.wrappedValue = safeRow
+            
+            // Safely clamp col=2 if we have fewer columns
+            let safeCol = min(2, max(0, columns.count - 1))
+            lastViewedColumnIndexBinding?.wrappedValue = safeCol
+            
+            container.coordinator.isNewSimulation = false
+            
+            print("Forcing row=1 => \(safeRow), col=2 => \(safeCol) for new simulation.")
+        }
+
+        // 3) Now create the representable using the updated row/col bindings
         pinnedColumnTablesVC.representable = PinnedColumnTablesRepresentable(
             displayedData: data,
             pinnedColumnTitle: "Week",
             pinnedColumnKeyPath: \.week,
             columns: columns,
-            // Pass in the user’s row/col memory bindings
+            coordinator: container.coordinator,
             lastViewedRow: lastViewedRowBinding ?? .constant(0),
             lastViewedColumnIndex: lastViewedColumnIndexBinding ?? .constant(0),
             scrollToBottomFlag: .constant(false),
             isAtBottom: .constant(false)
+            // If your struct now requires `coordinator`, add it here:
+            // coordinator: container.coordinator
         )
 
+        // 4) Just for safety, trigger a layout update on the pinned columns
         DispatchQueue.main.async {
             self.pinnedColumnTablesVC.view.setNeedsLayout()
             self.pinnedColumnTablesVC.view.layoutIfNeeded()

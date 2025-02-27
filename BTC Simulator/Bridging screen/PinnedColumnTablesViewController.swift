@@ -394,22 +394,23 @@ extension PinnedColumnTablesViewController: UITableViewDelegate, UICollectionVie
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         if scrollView == pinnedTableView {
-            // (Row Memory) => store lastViewedRow = top visible row
+            // (Row Memory) => store lastViewedRow = topmost visible row
             if let rep = representable,
                let visibleRows = pinnedTableView.indexPathsForVisibleRows,
                let firstIP = visibleRows.first {
                 rep.lastViewedRow = firstIP.row
-                print("Storing lastViewedRow = \(firstIP.row)")
+                // Debug logging if needed:
+                // print("Updating row memory => \(firstIP.row)")
             }
             
             // near-bottom detection
             guard let rep = representable else { return }
-            let offsetY  = scrollView.contentOffset.y
-            let contentH = scrollView.contentSize.height
-            let frameH   = scrollView.frame.size.height
+            let offsetY       = scrollView.contentOffset.y
+            let contentHeight = scrollView.contentSize.height
+            let frameHeight   = scrollView.frame.size.height
             let threshold: CGFloat = 50
-            let distance = contentH - (offsetY + frameH)
-            let atBottom = (distance < threshold)
+            let distanceFromBottom = contentHeight - (offsetY + frameHeight)
+            let atBottom = (distanceFromBottom < threshold)
             rep.isAtBottom = atBottom
             onIsAtBottomChanged?(atBottom)
             
@@ -419,12 +420,14 @@ extension PinnedColumnTablesViewController: UITableViewDelegate, UICollectionVie
         else if let dataCV = columnsCollectionVC.internalCollectionView,
                 scrollView == dataCV,
                 let headersCV = columnHeadersVC.collectionView {
+            
             // columns scrolled => match header offset
             headersCV.contentOffset.x = dataCV.contentOffset.x
         }
         else if let headersCV = columnHeadersVC.collectionView,
                 scrollView == headersCV,
                 let dataCV = columnsCollectionVC.internalCollectionView {
+            
             // header scrolled => match columns offset
             dataCV.contentOffset.x = headersCV.contentOffset.x
         }
@@ -444,6 +447,17 @@ extension PinnedColumnTablesViewController: UITableViewDelegate, UICollectionVie
         guard let rep = representable,
               scrollView == columnsCollectionVC.internalCollectionView,
               let cv = columnsCollectionVC.internalCollectionView else { return }
+        
+        // If this is a brand-new simulation, override column=2 just once, then stop
+        if rep.coordinator.isNewSimulation {
+            rep.lastViewedColumnIndex = 2
+            rep.coordinator.isNewSimulation = false
+            
+            // Optionally scroll to column=2 immediately:
+            columnsCollectionVC.scrollToColumnIndex(2)
+            print("Forcing lastViewedColumnIndex=2 due to new simulation.")
+            return
+        }
         
         // Because each 'page' is half the width, shift by 1/4 the width
         let quarter = scrollView.bounds.width / 4.0

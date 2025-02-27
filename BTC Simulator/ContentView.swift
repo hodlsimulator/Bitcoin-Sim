@@ -464,49 +464,49 @@ struct ContentView: View {
 
     // MARK: - Example Columns
     // If needed for something else, you can pass this to the bridging representable
-    private var columns: [(String, PartialKeyPath<SimulationData>)] {
-        switch simSettings.currencyPreference {
-        case .usd:
-            return [
-                ("Starting BTC (BTC)", \SimulationData.startingBTC),
-                ("Net BTC Holdings (BTC)", \SimulationData.netBTCHoldings),
-                ("BTC Price (USD)", \SimulationData.btcPriceUSD),
-                ("Portfolio (USD)", \SimulationData.portfolioValueUSD),
-                ("Contrib (USD)", \SimulationData.contributionUSD),
-                ("Fee (USD)", \SimulationData.transactionFeeUSD),
-                ("Net Contrib BTC", \SimulationData.netContributionBTC),
-                ("Withdraw (USD)", \SimulationData.withdrawalUSD)
-            ]
-        case .eur:
-            return [
-                ("Starting BTC (BTC)", \SimulationData.startingBTC),
-                ("Net BTC Holdings (BTC)", \SimulationData.netBTCHoldings),
-                ("BTC Price (EUR)", \SimulationData.btcPriceEUR),
-                ("Portfolio (EUR)", \SimulationData.portfolioValueEUR),
-                ("Contrib (EUR)", \SimulationData.contributionEUR),
-                ("Fee (EUR)", \SimulationData.transactionFeeEUR),
-                ("Net Contrib BTC", \SimulationData.netContributionBTC),
-                ("Withdraw (EUR)", \SimulationData.withdrawalEUR)
-            ]
-        case .both:
-            return [
-                ("Starting BTC (BTC)", \SimulationData.startingBTC),
-                ("Net BTC Holdings (BTC)", \SimulationData.netBTCHoldings),
-                ("BTC Price USD", \SimulationData.btcPriceUSD),
-                ("BTC Price EUR", \SimulationData.btcPriceEUR),
-                ("Portfolio USD", \SimulationData.portfolioValueUSD),
-                ("Portfolio EUR", \SimulationData.portfolioValueEUR),
-                ("Contrib USD", \SimulationData.contributionUSD),
-                ("Contrib EUR", \SimulationData.contributionEUR),
-                ("Fee USD", \SimulationData.transactionFeeUSD),
-                ("Fee EUR", \SimulationData.transactionFeeEUR),
-                ("Net Contrib BTC", \SimulationData.netContributionBTC),
-                ("Withdraw USD", \SimulationData.withdrawalUSD),
-                ("Withdraw EUR", \SimulationData.withdrawalEUR)
-            ]
+        private var columns: [(String, PartialKeyPath<SimulationData>)] {
+            switch simSettings.currencyPreference {
+            case .usd:
+                return [
+                    ("Starting BTC (BTC)", \SimulationData.startingBTC),
+                    ("Net BTC Holdings (BTC)", \SimulationData.netBTCHoldings),
+                    ("BTC Price (USD)", \SimulationData.btcPriceUSD),
+                    ("Portfolio (USD)", \SimulationData.portfolioValueUSD),
+                    ("Contrib (USD)", \SimulationData.contributionUSD),
+                    ("Fee (USD)", \SimulationData.transactionFeeUSD),
+                    ("Net Contrib BTC", \SimulationData.netContributionBTC),
+                    ("Withdraw (USD)", \SimulationData.withdrawalUSD)
+                ]
+            case .eur:
+                return [
+                    ("Starting BTC (BTC)", \SimulationData.startingBTC),
+                    ("Net BTC Holdings (BTC)", \SimulationData.netBTCHoldings),
+                    ("BTC Price (EUR)", \SimulationData.btcPriceEUR),
+                    ("Portfolio (EUR)", \SimulationData.portfolioValueEUR),
+                    ("Contrib (EUR)", \SimulationData.contributionEUR),
+                    ("Fee (EUR)", \SimulationData.transactionFeeEUR),
+                    ("Net Contrib BTC", \SimulationData.netContributionBTC),
+                    ("Withdraw (EUR)", \SimulationData.withdrawalEUR)
+                ]
+            case .both:
+                return [
+                    ("Starting BTC (BTC)", \SimulationData.startingBTC),
+                    ("Net BTC Holdings (BTC)", \SimulationData.netBTCHoldings),
+                    ("BTC Price USD", \SimulationData.btcPriceUSD),
+                    ("BTC Price EUR", \SimulationData.btcPriceEUR),
+                    ("Portfolio USD", \SimulationData.portfolioValueUSD),
+                    ("Portfolio EUR", \SimulationData.portfolioValueEUR),
+                    ("Contrib USD", \SimulationData.contributionUSD),
+                    ("Contrib EUR", \SimulationData.contributionEUR),
+                    ("Fee USD", \SimulationData.transactionFeeUSD),
+                    ("Fee EUR", \SimulationData.transactionFeeEUR),
+                    ("Net Contrib BTC", \SimulationData.netContributionBTC),
+                    ("Withdraw USD", \SimulationData.withdrawalUSD),
+                    ("Withdraw EUR", \SimulationData.withdrawalEUR)
+                ]
+            }
         }
     }
-}
 
 extension View {
     @ViewBuilder
