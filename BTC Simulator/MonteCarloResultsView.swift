@@ -95,35 +95,29 @@ enum ChartType {
     case cumulativePortfolio
 }
 
-// MARK: - MonteCarloChartView
+// MARK: - MonteCarloChartView (Static)
 
 struct MonteCarloChartView: View {
     @EnvironmentObject var orientationObserver: OrientationObserver
     @EnvironmentObject var chartDataCache: ChartDataCache
     @EnvironmentObject var simSettings: SimulationSettings
     
-    @State private var zoomFactor: CGFloat = 1.0
-    
     var verticalScale: CGFloat {
         orientationObserver.isLandscape ? 1.0 : 0.92
     }
     
     var body: some View {
-        // Pull in all runs plus a single best-fit
         let simulations = chartDataCache.allRuns ?? []
         let bestFit = chartDataCache.bestFitRun?.first
         
-        // Filter out the best-fit so we don’t draw it twice
         let normalSimulations = simulations.filter { $0.id != bestFit?.id }
         
-        // Flattened array to find min & max
         let allPoints = simulations.flatMap { $0.points }
         let decimalValues = allPoints.map { $0.value }
         
         let minVal = decimalValues.min().map { NSDecimalNumber(decimal: $0).doubleValue } ?? 1.0
         let maxVal = decimalValues.max().map { NSDecimalNumber(decimal: $0).doubleValue } ?? 2.0
         
-        // Build log-scale domain in case you want log-spaced ticks
         var bottomExp = floor(log10(minVal))
         if minVal <= pow(10, bottomExp), bottomExp > 0 {
             bottomExp -= 1
@@ -158,10 +152,8 @@ struct MonteCarloChartView: View {
         }
         let xStride = dynamicXStride(totalYears)
         
-        // We'll use the total # of runs (including best-fit) to adjust best-fit thickness & darkness
         let iterationCount = normalSimulations.count + 1
         
-        // Precompute stride values for x-axis
         let xAxisStrideValues = Array(stride(from: 0.0, through: totalYears, by: xStride))
         
         return GeometryReader { geo in
@@ -170,16 +162,12 @@ struct MonteCarloChartView: View {
                 
                 VStack(spacing: 0) {
                     Chart {
-                        // 1) Faint lines for normal runs
+                        // Faint lines for normal runs
                         simulationLines(simulations: normalSimulations, simSettings: simSettings)
                         
-                        // 2) Overlaid bold orange best-fit
+                        // Overlaid bold orange best-fit
                         if let bestFitRun = bestFit {
-                            bestFitLine(
-                                bestFitRun,
-                                simSettings: simSettings,
-                                iterationCount: iterationCount
-                            )
+                            bestFitLine(bestFitRun, simSettings: simSettings, iterationCount: iterationCount)
                         }
                     }
                     .chartLegend(.hidden)
@@ -222,7 +210,6 @@ struct MonteCarloChartView: View {
         }
     }
     
-    // Helper function for x-axis labels
     func xAxisLabel(for axisValue: AxisValue, totalYears: Double) -> String {
         if let dblVal = axisValue.as(Double.self), dblVal > 0 {
             if totalYears <= 2.0 {
@@ -232,6 +219,138 @@ struct MonteCarloChartView: View {
             }
         } else {
             return ""
+        }
+    }
+}
+
+// MARK: - InteractiveMonteCarloChartView (Pinch-to-Zoom)
+
+struct InteractiveMonteCarloChartView: View {
+    @EnvironmentObject var orientationObserver: OrientationObserver
+    @EnvironmentObject var chartDataCache: ChartDataCache
+    @EnvironmentObject var simSettings: SimulationSettings
+    
+    // We’ll store the domain for the X-axis here and update it as the user pinches
+    @State private var currentXDomain: ClosedRange<Double> = 0.0...1.0
+    @State private var lastMagnificationValue: CGFloat = 1.0
+    
+    var body: some View {
+        let simulations = chartDataCache.allRuns ?? []
+        let bestFit = chartDataCache.bestFitRun?.first
+        
+        let normalSimulations = simulations.filter { $0.id != bestFit?.id }
+        
+        let allPoints = simulations.flatMap { $0.points }
+        let decimalValues = allPoints.map { $0.value }
+        
+        let minVal = decimalValues.min().map { NSDecimalNumber(decimal: $0).doubleValue } ?? 1.0
+        let maxVal = decimalValues.max().map { NSDecimalNumber(decimal: $0).doubleValue } ?? 2.0
+        
+        var bottomExp = floor(log10(minVal))
+        if minVal <= pow(10, bottomExp), bottomExp > 0 {
+            bottomExp -= 1
+        }
+        let domainMin = max(pow(10.0, bottomExp), 1.0)
+        
+        var topExp = floor(log10(maxVal))
+        if maxVal >= pow(10.0, topExp) {
+            topExp += 1
+        }
+        let domainMax = pow(10.0, topExp)
+        
+        let intBottom = Int(bottomExp)
+        let intTop    = Int(topExp)
+        let yTickValues = (intBottom...intTop).map { pow(10.0, Double($0)) }
+        
+        // We still calculate total years for an initial domain
+        let totalPeriods = Double(simSettings.userPeriods)
+        let totalYears = (simSettings.periodUnit == .weeks)
+            ? totalPeriods / 52.0
+            : totalPeriods / 12.0
+        
+        let iterationCount = normalSimulations.count + 1
+        
+        // Set the domain if not set yet
+        // We do this once on appear, so we have a correct starting domain
+        return GeometryReader { geo in
+            Chart {
+                // Faint lines for normal runs
+                simulationLines(simulations: normalSimulations, simSettings: simSettings)
+                
+                // Overlaid bold orange best-fit
+                if let bestFitRun = bestFit {
+                    bestFitLine(bestFitRun, simSettings: simSettings, iterationCount: iterationCount)
+                }
+            }
+            .chartLegend(.hidden)
+            // Use the domain from our @State variable
+            .chartXScale(domain: currentXDomain, type: .linear)
+            .chartYScale(domain: domainMin...domainMax, type: .log)
+            .chartYAxis {
+                AxisMarks(position: .leading, values: yTickValues) { axisValue in
+                    AxisGridLine().foregroundStyle(.white.opacity(0.3))
+                    AxisTick().foregroundStyle(.white.opacity(0.3))
+                    AxisValueLabel {
+                        if let dblVal = axisValue.as(Double.self) {
+                            let exponent = Int(log10(dblVal))
+                            Text(formatPowerOfTenLabel(exponent))
+                                .foregroundColor(.white)
+                        } else {
+                            Text("")
+                        }
+                    }
+                }
+            }
+            .chartXAxis {
+                AxisMarks() { axisValue in
+                    AxisGridLine().foregroundStyle(.white.opacity(0.3))
+                    AxisTick().foregroundStyle(.white.opacity(0.3))
+                    AxisValueLabel {
+                        if let dblVal = axisValue.as(Double.self) {
+                            if totalYears <= 2.0 {
+                                Text("\(Int(dblVal * 12))M").foregroundColor(.white)
+                            } else {
+                                Text("\(Int(dblVal))Y").foregroundColor(.white)
+                            }
+                        }
+                    }
+                }
+            }
+            .background(Color.black)
+            .gesture(
+                MagnificationGesture()
+                    .onChanged { value in
+                        // value is the new pinch scale
+                        let delta = value / lastMagnificationValue
+                        
+                        // Current range of the domain
+                        let oldRange = currentXDomain.upperBound - currentXDomain.lowerBound
+                        let mid = (currentXDomain.upperBound + currentXDomain.lowerBound) / 2
+                        
+                        // We shrink or expand the old range by delta
+                        let newRange = oldRange / delta
+                        let lower = mid - (newRange / 2)
+                        let upper = mid + (newRange / 2)
+                        
+                        // Stop if we get too zoomed in or out
+                        let maxRange = totalYears
+                        let minRange = totalYears / 10000.0 // just a random floor so we don't over-zoom
+                        
+                        if newRange >= minRange && newRange <= maxRange {
+                            currentXDomain = max(lower, 0.0)...min(upper, totalYears)
+                        }
+                        lastMagnificationValue = value
+                    }
+                    .onEnded { _ in
+                        lastMagnificationValue = 1.0
+                    }
+            )
+            .onAppear {
+                // Only set the domain on first appear
+                if currentXDomain == 0.0...1.0 {
+                    currentXDomain = 0.0...totalYears
+                }
+            }
         }
     }
 }
@@ -249,6 +368,9 @@ struct MonteCarloResultsView: View {
     @State private var brandNewLandscapeSnapshot: UIImage? = nil
     @State private var isGeneratingLandscape = false
     @State private var showChartMenu = false
+    
+    // NEW: Toggle between static/snapshot chart and dynamic chart
+    @State private var showDynamicChart = false
     
     private var portraitSnapshot: UIImage? {
         switch simChartSelection.selectedChart {
@@ -276,7 +398,23 @@ struct MonteCarloResultsView: View {
         ZStack(alignment: .top) {
             Color.black.ignoresSafeArea()
             
-            contentView
+            if showDynamicChart {
+                // Show the new pinch-to-zoom chart
+                if simChartSelection.selectedChart == .btcPrice {
+                    InteractiveMonteCarloChartView()
+                        .environmentObject(orientationObserver)
+                        .environmentObject(chartDataCache)
+                        .environmentObject(simSettings)
+                } else {
+                    InteractivePortfolioChartView()
+                        .environmentObject(orientationObserver)
+                        .environmentObject(chartDataCache)
+                        .environmentObject(simSettings)
+                }
+            } else {
+                // Original code
+                contentView
+            }
             
             if isGeneratingLandscape {
                 Color.black.opacity(0.6).ignoresSafeArea()
@@ -329,6 +467,7 @@ struct MonteCarloResultsView: View {
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarHidden(isLandscape)
         .toolbar {
+            // Existing chart menu toggle (top trailing)
             if !isLandscape {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
@@ -341,9 +480,18 @@ struct MonteCarloResultsView: View {
                     }
                 }
             }
+            
+            // NEW: “Dynamic Chart” button (top leading)
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button {
+                    showDynamicChart.toggle()
+                } label: {
+                    Text(showDynamicChart ? "Static Chart" : "Dynamic Chart")
+                        .foregroundColor(.white)
+                }
+            }
         }
         .onAppear {
-            // Force the back button title offscreen if iOS < 16
             UIBarButtonItem.appearance().setBackButtonTitlePositionAdjustment(
                 UIOffset(horizontal: -1000, vertical: 0),
                 for: .default
@@ -406,17 +554,14 @@ struct MonteCarloResultsView: View {
                         .interpolation(.none)
                         .antialiased(false)
                         .aspectRatio(contentMode: .fill)
-                    
                 } else if let squished = squishedLandscape {
                     Image(uiImage: squished)
                         .resizable()
                         .interpolation(.none)
                         .antialiased(false)
                         .aspectRatio(contentMode: .fill)
-                    
                 } else if let portrait = portraitSnapshot {
                     SquishedLandscapePlaceholderView(image: portrait)
-                    
                 } else {
                     if simChartSelection.selectedChart == .btcPrice {
                         MonteCarloChartView()
@@ -535,7 +680,7 @@ struct ForceReflowView<Content: View>: View {
     }
     
     @State private var orientationID = UUID()
-
+    
     var body: some View {
         content
             .id(orientationID)
@@ -546,5 +691,73 @@ struct ForceReflowView<Content: View>: View {
             ) { _ in
                 orientationID = UUID()
             }
+    }
+}
+
+func convertWeeksToYears(_ week: Int, simSettings: SimulationSettings) -> Double {
+    if simSettings.periodUnit == .weeks {
+        return Double(week) / 52.0
+    } else {
+        return Double(week) / 12.0
+    }
+}
+
+// MARK: - (Optional) Dynamic version of PortfolioChartView
+
+struct InteractivePortfolioChartView: View {
+    @EnvironmentObject var orientationObserver: OrientationObserver
+    @EnvironmentObject var chartDataCache: ChartDataCache
+    @EnvironmentObject var simSettings: SimulationSettings
+    
+    // Do the same pinch-to-zoom logic or adapt as needed
+    @State private var currentXDomain: ClosedRange<Double> = 0.0...1.0
+    @State private var lastMagnificationValue: CGFloat = 1.0
+    
+    var body: some View {
+        // If you have a separate dataset for portfolio, adapt as needed.
+        // Here we just pretend it's the same data for demonstration.
+        let simulations = chartDataCache.allRuns ?? []
+        
+        let totalPeriods = Double(simSettings.userPeriods)
+        let totalYears = (simSettings.periodUnit == .weeks)
+            ? totalPeriods / 52.0
+            : totalPeriods / 12.0
+        
+        return Chart {
+            // ... place your portfolio data lines here ...
+            // For example:
+            simulationLines(simulations: simulations, simSettings: simSettings)
+        }
+        .chartLegend(.hidden)
+        .chartXScale(domain: currentXDomain)
+        .chartYScale(domain: 1.0...10_000.0, type: .log) // example domain
+        .background(Color.black)
+        .gesture(
+            MagnificationGesture()
+                .onChanged { value in
+                    let delta = value / lastMagnificationValue
+                    let oldRange = currentXDomain.upperBound - currentXDomain.lowerBound
+                    let mid = (currentXDomain.upperBound + currentXDomain.lowerBound) / 2
+                    let newRange = oldRange / delta
+                    let lower = mid - (newRange / 2)
+                    let upper = mid + (newRange / 2)
+                    
+                    let maxRange = totalYears
+                    let minRange = totalYears / 10000.0
+                    
+                    if newRange >= minRange && newRange <= maxRange {
+                        currentXDomain = max(lower, 0.0)...min(upper, totalYears)
+                    }
+                    lastMagnificationValue = value
+                }
+                .onEnded { _ in
+                    lastMagnificationValue = 1.0
+                }
+        )
+        .onAppear {
+            if currentXDomain == 0.0...1.0 {
+                currentXDomain = 0.0...totalYears
+            }
+        }
     }
 }
