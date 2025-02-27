@@ -19,6 +19,10 @@
 		E13093402D70360500DA6418 /* InteractiveMonteCarloChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E130933F2D70360200DA6418 /* InteractiveMonteCarloChartView.swift */; };
 		E13093422D703BFE00DA6418 /* ChartShaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = E13093412D703BFE00DA6418 /* ChartShaders.metal */; };
 		E13093442D70601700DA6418 /* SimulationRun.swift in Sources */ = {isa = PBXBuildFile; fileRef = E13093432D70601200DA6418 /* SimulationRun.swift */; };
+		E13093462D7076BA00DA6418 /* MetalChartContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E13093452D7076B700DA6418 /* MetalChartContainerView.swift */; };
+		E13093482D7076E200DA6418 /* MetalChartUIView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E13093472D7076E000DA6418 /* MetalChartUIView.swift */; };
+		E130934B2D70773D00DA6418 /* MetalChartGestureCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = E130934A2D70773B00DA6418 /* MetalChartGestureCoordinator.swift */; };
+		E130934D2D70779500DA6418 /* MetalChartRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = E130934C2D70779300DA6418 /* MetalChartRenderer.swift */; };
 		E14344D62D52D85600225A49 /* FactorState.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14344D52D52D85400225A49 /* FactorState.swift */; };
 		E14344D82D52DE5500225A49 /* FactorCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14344D72D52DE5300225A49 /* FactorCatalog.swift */; };
 		E14344DA2D53553D00225A49 /* SimulationSettings+FactorSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14344D92D53553800225A49 /* SimulationSettings+FactorSync.swift */; };
@@ -156,6 +160,10 @@
 		E130933F2D70360200DA6418 /* InteractiveMonteCarloChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InteractiveMonteCarloChartView.swift; sourceTree = "<group>"; };
 		E13093412D703BFE00DA6418 /* ChartShaders.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = ChartShaders.metal; sourceTree = "<group>"; };
 		E13093432D70601200DA6418 /* SimulationRun.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulationRun.swift; sourceTree = "<group>"; };
+		E13093452D7076B700DA6418 /* MetalChartContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalChartContainerView.swift; sourceTree = "<group>"; };
+		E13093472D7076E000DA6418 /* MetalChartUIView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalChartUIView.swift; sourceTree = "<group>"; };
+		E130934A2D70773B00DA6418 /* MetalChartGestureCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalChartGestureCoordinator.swift; sourceTree = "<group>"; };
+		E130934C2D70779300DA6418 /* MetalChartRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalChartRenderer.swift; sourceTree = "<group>"; };
 		E14344D52D52D85400225A49 /* FactorState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FactorState.swift; sourceTree = "<group>"; };
 		E14344D72D52DE5300225A49 /* FactorCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FactorCatalog.swift; sourceTree = "<group>"; };
 		E14344D92D53553800225A49 /* SimulationSettings+FactorSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SimulationSettings+FactorSync.swift"; sourceTree = "<group>"; };
@@ -320,7 +328,6 @@
 				E1B7B09C2D44E0CE00B60EC6 /* BullishFactorsSection.swift */,
 				E1F1CB5F2D4EF177003DB24F /* CalibrationManager.swift */,
 				E1CFF0262D30D07800D9D044 /* ChartBuilders.swift */,
-				E13093412D703BFE00DA6418 /* ChartShaders.metal */,
 				E18C2BE02D259245006E7438 /* ChartSnapshotView.swift */,
 				E130933D2D70150F00DA6418 /* ChartUtilities.swift */,
 				E1A1E5282D2E38F9008F7658 /* CheckboxToggleStyle.swift */,
@@ -352,6 +359,7 @@
 				E112E3752D58B73800167E92 /* MailView.swift */,
 				E19D11392D42F74E00E3A55E /* MarketRegime.swift */,
 				E19D10EA2D3EF69200E3A55E /* MempoolDataManager.swift */,
+				E13093492D7076F400DA6418 /* MetalChart */,
 				E166A8AD2CF855BF0003F518 /* MonteCarloSimulator.swift */,
 				E1C543B72D224D21005E416D /* MonteCarloResultsView.swift */,
 				E15DDF462D5A5A3700CDD30A /* MonthlySimulationSettings.swift */,
@@ -412,6 +420,18 @@
 				E12CCD912CF823610059931D /* Preview Assets.xcassets */,
 			);
 			path = "Preview Content";
+			sourceTree = "<group>";
+		};
+		E13093492D7076F400DA6418 /* MetalChart */ = {
+			isa = PBXGroup;
+			children = (
+				E13093412D703BFE00DA6418 /* ChartShaders.metal */,
+				E13093452D7076B700DA6418 /* MetalChartContainerView.swift */,
+				E130934A2D70773B00DA6418 /* MetalChartGestureCoordinator.swift */,
+				E130934C2D70779300DA6418 /* MetalChartRenderer.swift */,
+				E13093472D7076E000DA6418 /* MetalChartUIView.swift */,
+			);
+			path = MetalChart;
 			sourceTree = "<group>";
 		};
 		E14AED832D69794A0068B2A5 /* Bridging screen */ = {
@@ -577,6 +597,7 @@
 				E191AD5F2D1B07BC00020DBE /* CSVLoaderHistorical.swift in Sources */,
 				E14AED722D6857840068B2A5 /* TwoColumnChunker.swift in Sources */,
 				E166A8B02CF855C20003F518 /* SimulationData.swift in Sources */,
+				E130934B2D70773D00DA6418 /* MetalChartGestureCoordinator.swift in Sources */,
 				E19D10F12D402BDC00E3A55E /* SimulationSettings+ToggleAll.swift in Sources */,
 				E1B7B0A92D47575400B60EC6 /* SettingsSections.swift in Sources */,
 				E191AD5D2D1B06E600020DBE /* BitcoinHistoricalData.swift in Sources */,
@@ -589,6 +610,7 @@
 				E1C543B82D224D23005E416D /* MonteCarloResultsView.swift in Sources */,
 				E14AED802D6960730068B2A5 /* SnapTwoColumnsFlowLayout.swift in Sources */,
 				E1942C9B2D63FD7500F5B9A1 /* PinnedColumnCell.swift in Sources */,
+				E130934D2D70779500DA6418 /* MetalChartRenderer.swift in Sources */,
 				E1C543BA2D2283A2005E416D /* YearlyPercentileData.swift in Sources */,
 				E1883F502D1FCEBD007AA90B /* OnboardingView.swift in Sources */,
 				E19D11442D42FA6800E3A55E /* RNGHelpers.swift in Sources */,
@@ -603,6 +625,7 @@
 				E14AED742D6857A50068B2A5 /* CenterSnapFlowLayout.swift in Sources */,
 				E19D10F92D40E66200E3A55E /* InMemorySettings.swift in Sources */,
 				E1883F402D1E0DCB007AA90B /* InputManager.swift in Sources */,
+				E13093462D7076BA00DA6418 /* MetalChartContainerView.swift in Sources */,
 				E191AD672D1B764400020DBE /* CSVLoaderBTC.swift in Sources */,
 				E1A1E5292D2E38FA008F7658 /* CheckboxToggleStyle.swift in Sources */,
 				E19D11422D42F9E600E3A55E /* NetDeposit.swift in Sources */,
@@ -675,6 +698,7 @@
 				E1942C9D2D63FD9200F5B9A1 /* ColumnsCell.swift in Sources */,
 				E13093332D6D8B1D00DA6418 /* LandscapeLayoutCoordinator.swift in Sources */,
 				E15DDF472D5A5A3A00CDD30A /* MonthlySimulationSettings.swift in Sources */,
+				E13093482D7076E200DA6418 /* MetalChartUIView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
