@@ -138,8 +138,11 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             )
             
             // optional: tweak axis styling
-            pinnedAxesRenderer?.axisColor  = SIMD4<Float>(1, 1, 1, 1)
-            pinnedAxesRenderer?.labelColor = SIMD4<Float>(0.8, 0.8, 0.8, 1.0)
+            // pinnedAxesRenderer?.axisColor  = SIMD4<Float>(1, 1, 1, 1)
+            // pinnedAxesRenderer?.labelColor = SIMD4<Float>(0.8, 0.8, 0.8, 1.0)
+            // For testing
+            pinnedAxesRenderer?.axisColor  = SIMD4<Float>(1, 0, 0, 1)  // bright red
+            pinnedAxesRenderer?.labelColor = SIMD4<Float>(1, 1, 0, 1)  // bright yellow
         }
         
         // If your pinned axes approach uses “screen space” vertices and a specialized vertex shader:
@@ -261,12 +264,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             return
         }
         
-        // --- Optional: Recompute visible data range from transform (so xMinVis, etc. are accurate) ---
-        // updateVisibleRangeFromTransform()
-        // (This method, if implemented, would invert your transform matrix or track bounding boxes to find
-        //  the portion of the data currently in view.)
-        
-        // --- 1) Draw Chart Lines ---
+        // --- 1) Draw your chart lines ---
         renderEncoder.setRenderPipelineState(pipelineState)
         renderEncoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
         
@@ -275,7 +273,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             renderEncoder.setVertexBuffer(transformBuffer, offset: 0, index: 1)
         }
         
-        // For each simulation run’s line data, draw it as a line strip
+        // Draw each simulation run’s line data
         var offsetIndex = 0
         for count in lineSizes {
             renderEncoder.drawPrimitives(type: .lineStrip, vertexStart: offsetIndex, vertexCount: count)
@@ -284,10 +282,14 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         
         // --- 2) Update and Draw Pinned Axes ---
         if let pinnedAxes = pinnedAxesRenderer {
-            // Pass the screen size to pinnedAxes, so it knows how big the view is
+            // Pass the screen size to pinnedAxes, so it knows the viewport
             pinnedAxes.viewportSize = view.bounds.size
             
-            // Suppose xMinVis..yMaxVis are manually set or computed from inverse transform
+            // Compute visible ranges (in data space) by inverting the chart transform
+            let (xMinVis, xMaxVis) = computeVisibleRangeX()
+            let (yMinVis, yMaxVis) = computeVisibleRangeY()
+            
+            // Update pinned axes with the new visible data range + current transform
             pinnedAxes.updateAxes(
                 minX: xMinVis,
                 maxX: xMaxVis,
@@ -304,7 +306,6 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         renderEncoder.endEncoding()
         commandBuffer.present(drawable)
         commandBuffer.commit()
-        
     }
     
     // MARK: - Build Vertex Data
@@ -385,5 +386,41 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         uiColor.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
         alpha *= CGFloat(opacity)
         return (Float(red), Float(green), Float(blue), Float(alpha))
+    }
+    
+    // Helper functions to compute visible ranges
+    /// Returns the (minX, maxX) in data space currently visible on screen.
+    func computeVisibleRangeX() -> (Float, Float) {
+        // We'll invert the transform for screenX=0 and screenX=view.width
+        let inv = simd_inverse(currentTransformMatrix())
+        
+        // bottom-left in screen coords => NDC => data
+        let leftNDC  = SIMD4<Float>(-1, 0, 0, 1)  // ignoring Y here, or use corners
+        let rightNDC = SIMD4<Float>(+1, 0, 0, 1)
+        
+        // transform them
+        let leftData  = inv * leftNDC
+        let rightData = inv * rightNDC
+        
+        // The x-component is our data X
+        let xMinVis = min(leftData.x / leftData.w, rightData.x / rightData.w)
+        let xMaxVis = max(leftData.x / leftData.w, rightData.x / rightData.w)
+        return (xMinVis, xMaxVis)
+    }
+
+    /// Returns the (minY, maxY) in data space currently visible on screen.
+    func computeVisibleRangeY() -> (Float, Float) {
+        let inv = simd_inverse(currentTransformMatrix())
+        
+        // For Y, consider the top vs. bottom edges of NDC space
+        let bottomNDC = SIMD4<Float>(0, -1, 0, 1)
+        let topNDC    = SIMD4<Float>(0, +1, 0, 1)
+        
+        let bottomData = inv * bottomNDC
+        let topData    = inv * topNDC
+        
+        let yMinVis = min(bottomData.y / bottomData.w, topData.y / topData.w)
+        let yMaxVis = max(bottomData.y / bottomData.w, topData.y / topData.w)
+        return (yMinVis, yMaxVis)
     }
 }

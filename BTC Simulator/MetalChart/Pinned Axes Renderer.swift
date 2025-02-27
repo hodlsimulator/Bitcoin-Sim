@@ -9,6 +9,10 @@ import MetalKit
 import simd
 import UIKit
 
+struct ViewportSize {
+    var size: SIMD2<Float>
+}
+
 /// A simple class that draws pinned x and y axes in screen space:
 ///  - X-axis pinned at the bottom
 ///  - Y-axis pinned at the left
@@ -68,13 +72,13 @@ class PinnedAxesRenderer {
         // Vertex/fragment for lines (you can reuse your chart pipeline if it’s the same layout)
         let vertexFunction = library.makeFunction(name: "axisVertexShader_screenSpace")
         let fragmentFunction = library.makeFunction(name: "axisFragmentShader")
-
+        
         descriptor.vertexFunction = vertexFunction
         descriptor.fragmentFunction = fragmentFunction
         
         // If you're using MSAA in the main pass:
         descriptor.rasterSampleCount = 4 // or match your actual sample count
-    
+        
         // Vertex descriptor: position float4, color float4
         let vertexDescriptor = MTLVertexDescriptor()
         vertexDescriptor.attributes[0].format = .float4 // position
@@ -115,6 +119,8 @@ class PinnedAxesRenderer {
         // Build pinned x-axis line at bottom
         // We'll position it, say, 50px from the bottom. Tweak as desired.
         let bottomScreenY: Float = Float(viewportSize.height - 40)  // 40 px from top
+        print(">> viewportSize.height =", viewportSize.height, "=> bottomScreenY =", bottomScreenY)
+        
         let xLineVerts = buildXAxisLine(minDataX: minX,
                                         maxDataX: maxX,
                                         transform: chartTransform,
@@ -129,6 +135,8 @@ class PinnedAxesRenderer {
         
         // Build pinned y-axis at left
         let leftScreenX: Float = 50 // pinned 50 px from left
+        print(">> viewportSize.width =", viewportSize.width, "=> leftScreenX =", leftScreenX)
+        
         let yLineVerts = buildYAxisLine(minDataY: minY,
                                         maxDataY: maxY,
                                         transform: chartTransform,
@@ -153,6 +161,8 @@ class PinnedAxesRenderer {
             let labelY = bottomScreenY - 15 // place label just below the axis line
             let labelStr = formatTick(floatVal)
             
+            print(">> xTick =", floatVal, "=> screenX =", screenX, "labelY =", labelY, "labelStr =", labelStr)
+            
             let (buf, count) = textRenderer.buildTextVertices(
                 string: labelStr,
                 x: screenX,
@@ -171,6 +181,8 @@ class PinnedAxesRenderer {
             let labelX = leftScreenX // pinned to left
             let labelStr = formatTick(floatVal)
             
+            print(">> yTick =", floatVal, "=> screenY =", screenY, "labelX =", labelX, "labelStr =", labelStr)
+            
             let (buf, count) = textRenderer.buildTextVertices(
                 string: labelStr,
                 x: labelX,
@@ -188,39 +200,44 @@ class PinnedAxesRenderer {
     func drawAxes(renderEncoder: MTLRenderCommandEncoder) {
         guard let axisPipeline = axisPipelineState else { return }
         
-        // 1) Draw pinned x-axis line
+        // Create a ViewportSize instance matching the current viewport dimensions.
+        var vp = ViewportSize(size: SIMD2<Float>(Float(viewportSize.width), Float(viewportSize.height)))
+        guard let vpBuffer = device.makeBuffer(bytes: &vp, length: MemoryLayout<ViewportSize>.size, options: .storageModeShared) else {
+            print("Failed to create viewport buffer")
+            return
+        }
+        
+        // Set the viewport buffer at vertex buffer index 1 (expected by your screen-space vertex shader)
+        renderEncoder.setVertexBuffer(vpBuffer, offset: 0, index: 1)
+        
+        // Draw pinned x-axis line
         if let xBuf = xAxisLineBuffer, xAxisLineVertexCount > 0 {
             renderEncoder.setRenderPipelineState(axisPipeline)
             renderEncoder.setVertexBuffer(xBuf, offset: 0, index: 0)
-            // We’re in screen space, so no transform buffer needed if the vertex shader is identity
             renderEncoder.drawPrimitives(type: .line, vertexStart: 0, vertexCount: xAxisLineVertexCount)
         }
         
-        // 2) Draw pinned y-axis line
+        // Draw pinned y-axis line
         if let yBuf = yAxisLineBuffer, yAxisLineVertexCount > 0 {
             renderEncoder.setRenderPipelineState(axisPipeline)
             renderEncoder.setVertexBuffer(yBuf, offset: 0, index: 0)
             renderEncoder.drawPrimitives(type: .line, vertexStart: 0, vertexCount: yAxisLineVertexCount)
         }
         
-        // 3) Draw x-axis labels
+        // Draw x-axis tick labels (already built in screen space)
         for label in xTickLabels {
-            textRenderer.drawText(
-                encoder: renderEncoder,
-                vertexBuffer: label.buffer,
-                vertexCount: label.vertexCount,
-                transformBuffer: nil // screen coords => identity transform
-            )
+            textRenderer.drawText(encoder: renderEncoder,
+                                  vertexBuffer: label.buffer,
+                                  vertexCount: label.vertexCount,
+                                  transformBuffer: nil)
         }
         
-        // 4) Draw y-axis labels
+        // Draw y-axis tick labels
         for label in yTickLabels {
-            textRenderer.drawText(
-                encoder: renderEncoder,
-                vertexBuffer: label.buffer,
-                vertexCount: label.vertexCount,
-                transformBuffer: nil
-            )
+            textRenderer.drawText(encoder: renderEncoder,
+                                  vertexBuffer: label.buffer,
+                                  vertexCount: label.vertexCount,
+                                  transformBuffer: nil)
         }
     }
 }
@@ -238,6 +255,8 @@ extension PinnedAxesRenderer {
         
         let leftX = dataXtoScreenX(dataX: minDataX, transform: transform)
         let rightX = dataXtoScreenX(dataX: maxDataX, transform: transform)
+        
+        print(">> X-axis line from (", leftX, ",", pinnedScreenY, ") to (", rightX, ",", pinnedScreenY, ")")
         
         var verts: [Float] = []
         

@@ -117,20 +117,25 @@ public class RuntimeGPUTextRenderer {
                          vertexBuffer: MTLBuffer,
                          vertexCount: Int,
                          transformBuffer: MTLBuffer? = nil) {
-        
         guard let pipelineState = pipelineState else { return }
         encoder.setRenderPipelineState(pipelineState)
         
+        // Bind the vertex buffer for text geometry at index 0.
         encoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
         
-        // If you want a transform uniform buffer (like MVP), pass it here as index 1, if your vertex shader is set up for it:
+        // If a transform buffer is provided, use it; otherwise, create an identity matrix buffer.
         if let transformBuffer = transformBuffer {
             encoder.setVertexBuffer(transformBuffer, offset: 0, index: 1)
+        } else {
+            var identity = matrix_identity_float4x4
+            let identityBuffer = device.makeBuffer(bytes: &identity, length: MemoryLayout<matrix_float4x4>.size, options: .storageModeShared)
+            encoder.setVertexBuffer(identityBuffer, offset: 0, index: 1)
         }
         
-        // Font atlas as the fragment texture
+        // Set the font atlas texture for the fragment shader.
         encoder.setFragmentTexture(atlas.texture, index: 0)
         
+        // Draw the text primitives.
         encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: vertexCount)
     }
 }
