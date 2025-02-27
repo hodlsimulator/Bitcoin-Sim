@@ -8,7 +8,7 @@
 import Foundation
 import MetalKit
 import simd
-import SwiftUI  // for Color
+import SwiftUI // for Color
 
 class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     var device: MTLDevice!
@@ -26,6 +26,17 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     var translation = SIMD2<Float>(0, 0)
     var transformBuffer: MTLBuffer?
     
+    // (NEW) A pinned axes renderer
+    var pinnedAxesRenderer: PinnedAxesRenderer?
+    
+    // (OPTIONAL) Example visible min/max (for pinned axes)
+    var xMinVis: Float = 0
+    var xMaxVis: Float = 10
+    var yMinVis: Float = 1
+    var yMaxVis: Float = 1_000_000
+    
+    // MARK: - Setup
+    
     func setupMetal(
         in size: CGSize,
         chartDataCache: ChartDataCache,
@@ -34,23 +45,26 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         self.chartDataCache = chartDataCache
         self.simSettings = simSettings
         
-        device = MTLCreateSystemDefaultDevice()
-        guard let device = device else {
+        guard let device = MTLCreateSystemDefaultDevice() else {
             print("Metal not supported on this machine.")
             return
         }
+        
+        self.device = device
         commandQueue = device.makeCommandQueue()
         
+        // Build the main chart pipeline
         let library = device.makeDefaultLibrary()
         let vertexFunction = library?.makeFunction(name: "vertexShader")
         let fragmentFunction = library?.makeFunction(name: "fragmentShader")
         
         let vertexDescriptor = MTLVertexDescriptor()
-        vertexDescriptor.attributes[0].format = .float4 // position
+        // position float4
+        vertexDescriptor.attributes[0].format = .float4
         vertexDescriptor.attributes[0].offset = 0
         vertexDescriptor.attributes[0].bufferIndex = 0
-        
-        vertexDescriptor.attributes[1].format = .float4 // colour
+        // color float4
+        vertexDescriptor.attributes[1].format = .float4
         vertexDescriptor.attributes[1].offset = MemoryLayout<Float>.size * 4
         vertexDescriptor.attributes[1].bufferIndex = 0
         
@@ -84,7 +98,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             pipelineState = nil
         }
         
-        // Build the static vertex buffer using full data
+        // Build the static vertex buffer for your lines
         buildLineBuffer()
         
         // Create the transform uniform buffer
@@ -93,7 +107,35 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             options: .storageModeShared
         )
         updateTransform()
+        
+        // (NEW) Create a pinned axes renderer + text renderer for axis labels
+        // 1) Build a GPU font atlas
+        let fontSize: CGFloat = 14
+        if let fontAtlas = generateFontAtlas(
+            device: device,
+            font: UIFont.systemFont(ofSize: fontSize)
+        ) {
+            // 2) Create a GPU text renderer
+            let textRenderer = RuntimeGPUTextRenderer(
+                device: device,
+                atlas: fontAtlas,
+                library: library!
+            )
+            
+            // 3) Create a pinned axes renderer
+            pinnedAxesRenderer = PinnedAxesRenderer(
+                device: device,
+                textRenderer: textRenderer,
+                library: library!
+            )
+            
+            // optional: tweak axis styling
+            pinnedAxesRenderer?.axisColor  = SIMD4<Float>(1, 1, 1, 1)
+            pinnedAxesRenderer?.labelColor = SIMD4<Float>(0.8, 0.8, 0.8, 1.0)
+        }
     }
+    
+    // MARK: - Building Line Data
     
     func buildLineBuffer() {
         guard let cache = chartDataCache,
@@ -101,7 +143,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         
         let simulations = cache.allRuns ?? []
         
-        // Build the vertex data (positions + colours) for all lines
+        // Build vertex data for your lines
         let (vertexData, lineSizes) = buildLineVertexData(
             simulations: simulations,
             simSettings: simSettings,
@@ -109,8 +151,8 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             xMax: (simSettings.periodUnit == .weeks)
                 ? Double(simSettings.userPeriods) / 52.0
                 : Double(simSettings.userPeriods) / 12.0,
-            yMin: 1.0,                   // minimum Y
-            yMax: 1_000_000_000_000.0,   // maximum Y
+            yMin: 1.0,
+            yMax: 1_000_000_000_000.0,
             customPalette: customPalette,
             chartDataCache: cache
         )
@@ -123,6 +165,8 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         )
         self.lineSizes = lineSizes
     }
+    
+    // MARK: - Updating Transform
     
     func updateTransform() {
         // The final transform is translation * scale
@@ -147,14 +191,6 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         print(">> updateViewport() - new size: \(size)")
     }
     
-    /// Converts a screen point (UIKit coords) to normalised device coords [-1..1].
-    func convertPointToNDC(_ point: CGPoint, viewSize: CGSize) -> SIMD2<Float> {
-        let ndx = Float(point.x / viewSize.width) * 2.0 - 1.0
-        let ndy = Float((viewSize.height - point.y) / viewSize.height) * 2.0 - 1.0
-        return SIMD2<Float>(ndx, ndy)
-    }
-    
-    /// Returns the current transform matrix: (translation * scale).
     private func currentTransformMatrix() -> matrix_float4x4 {
         let scaleMatrix = matrix_float4x4(diagonal: SIMD4<Float>(scale, scale, 1, 1))
         let translationMatrix = matrix_float4x4(columns: (
@@ -166,9 +202,14 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         return matrix_multiply(translationMatrix, scaleMatrix)
     }
     
-    /// Converts a screen point to "data space" by:
-    /// 1) Converting screen -> NDC.
-    /// 2) Applying the inverse transform so we get data coords.
+    // MARK: - Coordinate Conversion
+    
+    func convertPointToNDC(_ point: CGPoint, viewSize: CGSize) -> SIMD2<Float> {
+        let ndx = Float(point.x / viewSize.width) * 2.0 - 1.0
+        let ndy = Float((viewSize.height - point.y) / viewSize.height) * 2.0 - 1.0
+        return SIMD2<Float>(ndx, ndy)
+    }
+    
     func convertPointToData(_ point: CGPoint, viewSize: CGSize) -> SIMD2<Float> {
         let ndc = convertPointToNDC(point, viewSize: viewSize)
         let ndcVec = SIMD4<Float>(ndc.x, ndc.y, 0, 1)
@@ -177,9 +218,6 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         return SIMD2<Float>(dataVec.x, dataVec.y)
     }
     
-    /// Converts a data-space coordinate back to screen coords:
-    /// 1) Multiply by the forward transform to get NDC.
-    /// 2) Map NDC to screen.
     func convertDataToPoint(_ dataCoord: SIMD2<Float>, viewSize: CGSize) -> CGPoint {
         let dataVec = SIMD4<Float>(dataCoord.x, dataCoord.y, 0, 1)
         let ndcVec = matrix_multiply(currentTransformMatrix(), dataVec)
@@ -204,6 +242,10 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             return
         }
         
+        // (Optional) If you want to compute visible min/max from your current transform each frame:
+        // updateVisibleRangeFromTransform()
+        
+        // 1) Draw chart lines
         renderEncoder.setRenderPipelineState(pipelineState)
         renderEncoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
         
@@ -217,6 +259,21 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             offsetIndex += count
         }
         
+        // 2) Update & draw pinned axes (like TradingView),
+        //    if pinnedAxesRenderer is available
+        if let pinnedAxes = pinnedAxesRenderer {
+            pinnedAxes.viewportSize = view.bounds.size
+            pinnedAxes.updateAxes(
+                minX: xMinVis,       // or from an inverse transform
+                maxX: xMaxVis,
+                minY: yMinVis,
+                maxY: yMaxVis,
+                chartTransform: currentTransformMatrix()
+            )
+            pinnedAxes.drawAxes(renderEncoder: renderEncoder)
+        }
+        
+        // 3) End encoding & present
         renderEncoder.endEncoding()
         commandBuffer.present(drawable)
         commandBuffer.commit()

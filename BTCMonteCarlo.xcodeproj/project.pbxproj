@@ -23,6 +23,14 @@
 		E13093482D7076E200DA6418 /* MetalChartUIView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E13093472D7076E000DA6418 /* MetalChartUIView.swift */; };
 		E130934B2D70773D00DA6418 /* MetalChartGestureCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = E130934A2D70773B00DA6418 /* MetalChartGestureCoordinator.swift */; };
 		E130934D2D70779500DA6418 /* MetalChartRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = E130934C2D70779300DA6418 /* MetalChartRenderer.swift */; };
+		E130934F2D709B5F00DA6418 /* TTFParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = E130934E2D709B5E00DA6418 /* TTFParser.swift */; };
+		E13093532D709BB000DA6418 /* SDFGenerator.metal in Sources */ = {isa = PBXBuildFile; fileRef = E13093522D709BB000DA6418 /* SDFGenerator.metal */; };
+		E13093552D709BCA00DA6418 /* GPUFontAtlas.swift in Sources */ = {isa = PBXBuildFile; fileRef = E13093542D709BC800DA6418 /* GPUFontAtlas.swift */; };
+		E13093572D709BF400DA6418 /* GPUTextRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = E13093562D709BF200DA6418 /* GPUTextRenderer.swift */; };
+		E13093592D709C1300DA6418 /* TextSDFShaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = E13093582D709C1300DA6418 /* TextSDFShaders.metal */; };
+		E130935B2D709E6400DA6418 /* Pinned Axes Renderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = E130935A2D709E6200DA6418 /* Pinned Axes Renderer.swift */; };
+		E130935D2D70A0A800DA6418 /* FontAtlasGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = E130935C2D70A0A600DA6418 /* FontAtlasGenerator.swift */; };
+		E130935F2D70A0E000DA6418 /* RuntimeGPUTextRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = E130935E2D70A0DE00DA6418 /* RuntimeGPUTextRenderer.swift */; };
 		E14344D62D52D85600225A49 /* FactorState.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14344D52D52D85400225A49 /* FactorState.swift */; };
 		E14344D82D52DE5500225A49 /* FactorCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14344D72D52DE5300225A49 /* FactorCatalog.swift */; };
 		E14344DA2D53553D00225A49 /* SimulationSettings+FactorSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14344D92D53553800225A49 /* SimulationSettings+FactorSync.swift */; };
@@ -164,6 +172,14 @@
 		E13093472D7076E000DA6418 /* MetalChartUIView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalChartUIView.swift; sourceTree = "<group>"; };
 		E130934A2D70773B00DA6418 /* MetalChartGestureCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalChartGestureCoordinator.swift; sourceTree = "<group>"; };
 		E130934C2D70779300DA6418 /* MetalChartRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalChartRenderer.swift; sourceTree = "<group>"; };
+		E130934E2D709B5E00DA6418 /* TTFParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TTFParser.swift; sourceTree = "<group>"; };
+		E13093522D709BB000DA6418 /* SDFGenerator.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = SDFGenerator.metal; sourceTree = "<group>"; };
+		E13093542D709BC800DA6418 /* GPUFontAtlas.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GPUFontAtlas.swift; sourceTree = "<group>"; };
+		E13093562D709BF200DA6418 /* GPUTextRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GPUTextRenderer.swift; sourceTree = "<group>"; };
+		E13093582D709C1300DA6418 /* TextSDFShaders.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = TextSDFShaders.metal; sourceTree = "<group>"; };
+		E130935A2D709E6200DA6418 /* Pinned Axes Renderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Pinned Axes Renderer.swift"; sourceTree = "<group>"; };
+		E130935C2D70A0A600DA6418 /* FontAtlasGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FontAtlasGenerator.swift; sourceTree = "<group>"; };
+		E130935E2D70A0DE00DA6418 /* RuntimeGPUTextRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuntimeGPUTextRenderer.swift; sourceTree = "<group>"; };
 		E14344D52D52D85400225A49 /* FactorState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FactorState.swift; sourceTree = "<group>"; };
 		E14344D72D52DE5300225A49 /* FactorCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FactorCatalog.swift; sourceTree = "<group>"; };
 		E14344D92D53553800225A49 /* SimulationSettings+FactorSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SimulationSettings+FactorSync.swift"; sourceTree = "<group>"; };
@@ -426,10 +442,18 @@
 			isa = PBXGroup;
 			children = (
 				E13093412D703BFE00DA6418 /* ChartShaders.metal */,
+				E130935C2D70A0A600DA6418 /* FontAtlasGenerator.swift */,
+				E13093542D709BC800DA6418 /* GPUFontAtlas.swift */,
+				E13093562D709BF200DA6418 /* GPUTextRenderer.swift */,
 				E13093452D7076B700DA6418 /* MetalChartContainerView.swift */,
 				E130934A2D70773B00DA6418 /* MetalChartGestureCoordinator.swift */,
 				E130934C2D70779300DA6418 /* MetalChartRenderer.swift */,
 				E13093472D7076E000DA6418 /* MetalChartUIView.swift */,
+				E130935A2D709E6200DA6418 /* Pinned Axes Renderer.swift */,
+				E130935E2D70A0DE00DA6418 /* RuntimeGPUTextRenderer.swift */,
+				E13093522D709BB000DA6418 /* SDFGenerator.metal */,
+				E13093582D709C1300DA6418 /* TextSDFShaders.metal */,
+				E130934E2D709B5E00DA6418 /* TTFParser.swift */,
 			);
 			path = MetalChart;
 			sourceTree = "<group>";
@@ -620,6 +644,8 @@
 				E13093402D70360500DA6418 /* InteractiveMonteCarloChartView.swift in Sources */,
 				E1A1E52F2D2E3A40008F7658 /* RowOffsetHelpers.swift in Sources */,
 				E17B2F802D2800D400ECE087 /* OrientationObserver.swift in Sources */,
+				E130935B2D709E6400DA6418 /* Pinned Axes Renderer.swift in Sources */,
+				E13093532D709BB000DA6418 /* SDFGenerator.metal in Sources */,
 				E19D113C2D42F81C00E3A55E /* UtilityExtensions.swift in Sources */,
 				E19D113A2D42F75000E3A55E /* MarketRegime.swift in Sources */,
 				E14AED742D6857A50068B2A5 /* CenterSnapFlowLayout.swift in Sources */,
@@ -643,6 +669,7 @@
 				E1B7B0AB2D4759D800B60EC6 /* SettingsWatchers.swift in Sources */,
 				E1F1CB642D4F2F0E003DB24F /* HistoricalDataCache.swift in Sources */,
 				E19D10E72D3ED96200E3A55E /* GARCHHelper.swift in Sources */,
+				E130934F2D709B5F00DA6418 /* TTFParser.swift in Sources */,
 				E1B7B09D2D44E0D000B60EC6 /* BullishFactorsSection.swift in Sources */,
 				E14AED7E2D686A400068B2A5 /* NumericExtensions.swift in Sources */,
 				E19D10EF2D40290A00E3A55E /* SimulationSettings+RestoreDefaults.swift in Sources */,
@@ -665,9 +692,12 @@
 				E1F1CB602D4EF179003DB24F /* CalibrationManager.swift in Sources */,
 				E14344D62D52D85600225A49 /* FactorState.swift in Sources */,
 				E19D11402D42F97700E3A55E /* DampenOutliers.swift in Sources */,
+				E130935F2D70A0E000DA6418 /* RuntimeGPUTextRenderer.swift in Sources */,
 				E15DDF4B2D5AE1F700CDD30A /* RestoreDefaultsMonthly.swift in Sources */,
 				E12CCD8B2CF8235F0059931D /* BTC_SimulatorApp.swift in Sources */,
+				E13093552D709BCA00DA6418 /* GPUFontAtlas.swift in Sources */,
 				E1A1E5272D2E371D008F7658 /* TipsData.swift in Sources */,
+				E13093592D709C1300DA6418 /* TextSDFShaders.metal in Sources */,
 				E13093312D6D8AFC00DA6418 /* PortraitLayoutCoordinator.swift in Sources */,
 				E1E31C4F2D4349E000ED22E6 /* DataLoader.swift in Sources */,
 				E1B7B0A72D4753CF00B60EC6 /* ShiftFactors.swift in Sources */,
@@ -682,6 +712,7 @@
 				E1942C8F2D61C50A00F5B9A1 /* OnboardingSteps.swift in Sources */,
 				E19D10F52D40D10E00E3A55E /* SimulationSettings+BullishFactors.swift in Sources */,
 				E1942C972D63FD0C00F5B9A1 /* PinnedColumnTablesRepresentable.swift in Sources */,
+				E13093572D709BF400DA6418 /* GPUTextRenderer.swift in Sources */,
 				E1A1E52B2D2E3975008F7658 /* InteractiveBitcoinSymbol3DSpinner.swift in Sources */,
 				E1B7B0A12D44FD3600B60EC6 /* BigNumberExtensions.swift in Sources */,
 				E1E31C4D2D433DB800ED22E6 /* BlockBootstrapSimulator.swift in Sources */,
@@ -691,6 +722,7 @@
 				E13093422D703BFE00DA6418 /* ChartShaders.metal in Sources */,
 				E1883F422D1E43DB007AA90B /* VisualEffectBlur.swift in Sources */,
 				E166A8AE2CF855BF0003F518 /* MonteCarloSimulator.swift in Sources */,
+				E130935D2D70A0A800DA6418 /* FontAtlasGenerator.swift in Sources */,
 				E1942CA12D64331C00F5B9A1 /* PinnedColumnBridgeRepresentable.swift in Sources */,
 				E1CFF0272D30D07A00D9D044 /* ChartBuilders.swift in Sources */,
 				E1883F382D1DD4C8007AA90B /* SettingsView.swift in Sources */,
