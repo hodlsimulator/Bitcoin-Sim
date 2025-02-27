@@ -68,6 +68,10 @@ class SimulationCoordinator: ObservableObject {
     
     func runSimulation(generateGraphs: Bool, lockRandomSeed: Bool) {
         print("Coordinator ID in runSimulation =>", ObjectIdentifier(self))
+        
+        // Debug prints for column debugging
+        print("DEBUG: runSimulation() - current simChartSelection.selectedChart = \(simChartSelection.selectedChart)")
+        
         // 1) Apply any dictionary-based factor tweaks
         simSettings.applyDictionaryFactorsToSim()
         
@@ -137,6 +141,15 @@ class SimulationCoordinator: ObservableObject {
         isChartBuilding = false
         monteCarloResults = []
         completedIterations = 0
+        
+        // ----------------------------------------------------------------
+        // FORCIBLY RESET THE PINNED TABLE TO COLUMN 0 (or whichever default)
+        // (Only if you have a binding or a known property to set here.)
+        // Example pseudo-code:
+        //
+        // pinnedColumnIndexBinding?.wrappedValue = 0
+        // print("DEBUG: Forcing pinned table column to 0 on new simulation.")
+        // ----------------------------------------------------------------
         
         // 5) Determine final seed (weekly vs monthly)
         let finalSeed: UInt64?
@@ -335,6 +348,8 @@ class SimulationCoordinator: ObservableObject {
                 if !generateGraphs {
                     self.isChartBuilding = false
                     // self.isSimulationRun = true
+                    print("DEBUG: runSimulation complete. Not generating charts. Potentially reset row/col memory here if desired.")
+                    print("DEBUG: runSimulation FINISHED - selectedChart still = \(self.simChartSelection.selectedChart)")
                     return
                 }
                 
@@ -378,6 +393,8 @@ class SimulationCoordinator: ObservableObject {
                             
                             self.isChartBuilding = false
                             // self.isSimulationRun = true
+                            print("DEBUG: runSimulation finished successfully.")
+                            print("DEBUG: runSimulation FINISHED - final simChartSelection.selectedChart = \(self.simChartSelection.selectedChart)")
                         }
                     }
                 }

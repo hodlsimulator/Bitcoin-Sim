@@ -116,15 +116,16 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
             guard let vc = pinnedColumnTablesVC else { return }
             vc.previousColumnIndex = newIndex
             
-            // If needed in the future, animate header changes here using newIndex.
-            // Example (currently commented out):
-            // vc.slideHeaders(newText1: someNewText1, newText2: someNewText2, direction: someDirection)
+            // Debug
+            print("DEBUG: PinnedColumnBridgeViewController detected column snap to index => \(newIndex)")
             
             // <-- ADDED HERE: Store the new column index in the SwiftUI binding so row/column memory persists
             if let rep = vc.representable {
                 rep.lastViewedColumnIndex = newIndex
             }
         }
+        
+        print("DEBUG: PinnedColumnBridgeViewController didLoad. lastViewedRow=\(lastViewedRowBinding?.wrappedValue ?? -999), lastViewedColumnIndex=\(lastViewedColumnIndexBinding?.wrappedValue ?? -999)")
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -149,6 +150,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         }
 
         // Refresh data
+        print("DEBUG: PinnedColumnBridgeViewController viewWillAppear => Refreshing summary card and pinned table.")
         refreshSummaryCard()
         populatePinnedTable()
     }
@@ -439,6 +441,9 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         guard let container = representableContainer else { return }
         let data = container.coordinator.monteCarloResults
         let pref = container.simSettings.currencyPreference
+
+        // Debug
+        print("DEBUG: populatePinnedTable => data count = \(data.count). Passing row=\(lastViewedRowBinding?.wrappedValue ?? -999), col=\(lastViewedColumnIndexBinding?.wrappedValue ?? -999) to pinnedColumnTablesVC.")
 
         let columns: [(String, PartialKeyPath<SimulationData>)]
         switch pref {
