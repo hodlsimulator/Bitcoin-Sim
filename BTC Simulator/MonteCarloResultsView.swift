@@ -107,14 +107,10 @@ struct MonteCarloChartView: View {
     }
     
     var body: some View {
-        // Pull in all runs plus a single best-fit
         let simulations = chartDataCache.allRuns ?? []
         let bestFit = chartDataCache.bestFitRun?.first
         
-        // Filter out the best-fit so we don’t draw it twice
         let normalSimulations = simulations.filter { $0.id != bestFit?.id }
-        
-        // Flattened array to find min & max
         let allPoints = simulations.flatMap { $0.points }
         let decimalValues = allPoints.map { $0.value }
         
@@ -157,8 +153,6 @@ struct MonteCarloChartView: View {
         let xStride = dynamicXStride(totalYears)
         
         let iterationCount = normalSimulations.count + 1
-        
-        // Precompute stride values for x-axis
         let xAxisStrideValues = Array(stride(from: 0.0, through: totalYears, by: xStride))
         
         return GeometryReader { geo in
@@ -167,10 +161,10 @@ struct MonteCarloChartView: View {
                 
                 VStack(spacing: 0) {
                     Chart {
-                        // 1) Faint lines for normal runs
+                        // Faint lines for normal runs
                         simulationLines(simulations: normalSimulations, simSettings: simSettings)
                         
-                        // 2) Overlaid bold orange best-fit
+                        // Bold orange best-fit
                         if let bestFitRun = bestFit {
                             bestFitLine(bestFitRun, simSettings: simSettings, iterationCount: iterationCount)
                         }
@@ -203,7 +197,8 @@ struct MonteCarloChartView: View {
                             AxisGridLine().foregroundStyle(.white.opacity(0.3))
                             AxisTick().foregroundStyle(.white.opacity(0.3))
                             AxisValueLabel {
-                                Text(xAxisLabel(for: axisValue, totalYears: totalYears)).foregroundColor(.white)
+                                Text(xAxisLabel(for: axisValue, totalYears: totalYears))
+                                    .foregroundColor(.white)
                             }
                         }
                     }
@@ -215,7 +210,6 @@ struct MonteCarloChartView: View {
         }
     }
     
-    // Helper function for x-axis labels
     func xAxisLabel(for axisValue: AxisValue, totalYears: Double) -> String {
         if let dblVal = axisValue.as(Double.self), dblVal > 0 {
             if totalYears <= 2.0 {
@@ -229,7 +223,7 @@ struct MonteCarloChartView: View {
     }
 }
 
-// MARK: - InteractiveMonteCarloChartView (Pinch-to-Zoom Example)
+// MARK: - InteractiveMonteCarloChartView (Pinch-to-Zoom)
 
 struct InteractiveMonteCarloChartView: View {
     @EnvironmentObject var orientationObserver: OrientationObserver
@@ -357,9 +351,10 @@ struct MonteCarloResultsView: View {
     @State private var squishedLandscape: UIImage? = nil
     @State private var brandNewLandscapeSnapshot: UIImage? = nil
     @State private var isGeneratingLandscape = false
-    @State private var showChartMenu = false
     
-    // Add a toggle for showing dynamic vs. static chart
+    // The drop-down menu
+    @State private var showChartMenu = false
+    // Toggle for dynamic vs. static chart
     @State private var showDynamicChart = false
     
     private var portraitSnapshot: UIImage? {
@@ -386,19 +381,17 @@ struct MonteCarloResultsView: View {
     
     var body: some View {
         ZStack(alignment: .top) {
-            Color.black.ignoresSafeArea()
-            
+            // Show either the dynamic or the static content
             if showDynamicChart {
-                // Show dynamic pinch-zoom chart
                 InteractiveMonteCarloChartView()
                     .environmentObject(orientationObserver)
                     .environmentObject(chartDataCache)
                     .environmentObject(simSettings)
             } else {
-                // Original static content
                 contentView
             }
             
+            // Dim overlay while generating snapshot
             if isGeneratingLandscape {
                 Color.black.opacity(0.6).ignoresSafeArea()
                 VStack(spacing: 20) {
@@ -408,55 +401,13 @@ struct MonteCarloResultsView: View {
                         .foregroundColor(.white)
                 }
             }
-            
+        }
+        // Overlay the drop-down menu on top
+        .overlay(alignment: .top) {
             if !isLandscape && showChartMenu {
-                Color.black.opacity(0.3)
-                    .ignoresSafeArea()
-                    .onTapGesture {
-                        withAnimation { showChartMenu = false }
-                    }
-                    .zIndex(1)
-                
-                VStack(spacing: 0) {
-                    // Button to toggle between BTC Price and Portfolio
-                    Button {
-                        withAnimation {
-                            simChartSelection.selectedChart =
-                                (simChartSelection.selectedChart == .cumulativePortfolio
-                                 ? .btcPrice : .cumulativePortfolio)
-                            showChartMenu = false
-                        }
-                    } label: {
-                        Text(simChartSelection.selectedChart == .cumulativePortfolio
-                             ? "BTC Price Chart" : "Cumulative Portfolio")
-                            .foregroundColor(.white)
-                            .font(.headline)
-                            .multilineTextAlignment(.center)
-                            .frame(maxWidth: .infinity, minHeight: 50)
-                    }
-                    .buttonStyle(.plain)
-                    .background(Color.black)
-                    
-                    // NEW: Button for Dynamic Chart
-                    Button {
-                        withAnimation {
-                            showDynamicChart.toggle()
-                            showChartMenu = false
-                        }
-                    } label: {
-                        Text(showDynamicChart ? "Show Static Chart" : "Dynamic Chart")
-                            .foregroundColor(.white)
-                            .font(.headline)
-                            .multilineTextAlignment(.center)
-                            .frame(maxWidth: .infinity, minHeight: 50)
-                    }
-                    .buttonStyle(.plain)
-                    .background(Color.black)
-                }
-                .edgesIgnoringSafeArea(.horizontal)
-                .padding(.top, 120)
-                .transition(.move(edge: .top))
-                .zIndex(2)
+                dropDownMenuOverlay()
+                    .transition(.move(edge: .top))
+                    .zIndex(2)
             }
         }
         .navigationTitle(
@@ -469,7 +420,7 @@ struct MonteCarloResultsView: View {
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarHidden(isLandscape)
         .toolbar {
-            // Toggle the drop-down menu
+            // The button that toggles the drop-down
             if !isLandscape {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
@@ -484,12 +435,13 @@ struct MonteCarloResultsView: View {
             }
         }
         .onAppear {
-            // Force the back button title offscreen if iOS < 16
+            // Hide the default "Back" text if iOS < 16:
             UIBarButtonItem.appearance().setBackButtonTitlePositionAdjustment(
                 UIOffset(horizontal: -1000, vertical: 0),
                 for: .default
             )
             
+            // Generate the landscape snapshot if we appear in landscape
             if isLandscape, let portrait = portraitSnapshot {
                 squishedLandscape = squishPortraitImage(portrait)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
@@ -508,6 +460,7 @@ struct MonteCarloResultsView: View {
             }
         }
         .onChange(of: isLandscape, initial: false) { _, newVal in
+            // If we rotate to landscape, generate new snapshot
             if newVal {
                 if let portrait = portraitSnapshot {
                     DispatchQueue.main.async {
@@ -534,7 +487,71 @@ struct MonteCarloResultsView: View {
             }
         }
     }
+
+    // The drop-down menu overlay
+    @ViewBuilder
+    private func dropDownMenuOverlay() -> some View {
+        GeometryReader { geo in
+            ZStack {
+                // Dimmed background that dismisses the menu
+                Color.black.opacity(0.3)
+                    .ignoresSafeArea()
+                    .onTapGesture {
+                        withAnimation { showChartMenu = false }
+                    }
+                
+                // The menu with two buttons
+                VStack(spacing: 0) {
+                    // 1) Toggle BTC vs. Portfolio
+                    Button {
+                        withAnimation {
+                            simChartSelection.selectedChart =
+                                (simChartSelection.selectedChart == .cumulativePortfolio
+                                 ? .btcPrice : .cumulativePortfolio)
+                            showChartMenu = false
+                        }
+                    } label: {
+                        Text(
+                            simChartSelection.selectedChart == .cumulativePortfolio
+                            ? "BTC Price Chart"
+                            : "Cumulative Portfolio"
+                        )
+                        .foregroundColor(.white)
+                        .font(.headline)
+                        .frame(maxWidth: .infinity, minHeight: 50)
+                    }
+                    .buttonStyle(.plain)
+                    .background(Color.black)
+                    
+                    // 2) Toggle Static vs. Dynamic
+                    Button {
+                        withAnimation {
+                            showDynamicChart.toggle()
+                            showChartMenu = false
+                        }
+                    } label: {
+                        Text(showDynamicChart ? "Show Static Chart" : "Dynamic Chart")
+                            .foregroundColor(.white)
+                            .font(.headline)
+                            .frame(maxWidth: .infinity, minHeight: 50)
+                    }
+                    .buttonStyle(.plain)
+                    .background(Color.black)
+                }
+                // Full width
+                .frame(width: geo.size.width)
+                // Position near the top, under the nav bar
+                .position(
+                    x: geo.size.width / 2,
+                    y: geo.safeAreaInsets.top + 160
+                )
+            }
+            .transition(.move(edge: .top))
+            .zIndex(999)
+        }
+    }
     
+    // Show chart snapshot or live chart depending on orientation
     @ViewBuilder
     private var contentView: some View {
         if isLandscape {
@@ -547,17 +564,14 @@ struct MonteCarloResultsView: View {
                         .interpolation(.none)
                         .antialiased(false)
                         .aspectRatio(contentMode: .fill)
-                    
                 } else if let squished = squishedLandscape {
                     Image(uiImage: squished)
                         .resizable()
                         .interpolation(.none)
                         .antialiased(false)
                         .aspectRatio(contentMode: .fill)
-                    
                 } else if let portrait = portraitSnapshot {
                     SquishedLandscapePlaceholderView(image: portrait)
-                    
                 } else {
                     if simChartSelection.selectedChart == .btcPrice {
                         MonteCarloChartView()
@@ -595,6 +609,7 @@ struct MonteCarloResultsView: View {
         }
     }
     
+    // Build a new wide snapshot for landscape
     private func buildTrueLandscapeSnapshot(completion: @escaping (UIImage) -> Void) {
         let desiredSize = CGSize(width: 800, height: 400)
         

@@ -52,7 +52,7 @@ struct ParametersFormView: View {
                                         VStack(alignment: .leading, spacing: 4) {
                                             Text("Iterations")
                                                 .foregroundColor(.white)
-                                            TextField("100", text: $inputManager.iterations)
+                                            TextField("50", text: $inputManager.iterations)
                                                 .keyboardType(.numberPad)
                                                 .foregroundColor(.white)
                                                 .focused($activeField, equals: .iterations)
@@ -82,7 +82,7 @@ struct ParametersFormView: View {
                                     HStack {
                                         Text("Iterations")
                                             .foregroundColor(.white)
-                                        TextField("100", text: $inputManager.iterations)
+                                        TextField("50", text: $inputManager.iterations)
                                             .keyboardType(.numberPad)
                                             .foregroundColor(.white)
                                             .focused($activeField, equals: .iterations)

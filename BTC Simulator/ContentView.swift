@@ -81,7 +81,7 @@ class PersistentInputManager: ObservableObject {
         }
         
         self.firstYearContribution    = UserDefaults.standard.string(forKey: "firstYearContribution") ?? "100"
-        self.iterations              = UserDefaults.standard.string(forKey: "iterations") ?? "100"
+        self.iterations              = UserDefaults.standard.string(forKey: "iterations") ?? "50"
         self.annualCAGR              = UserDefaults.standard.string(forKey: "annualCAGR") ?? "30"
         self.annualVolatility        = UserDefaults.standard.string(forKey: "annualVolatility") ?? "80"
         self.standardDeviation       = UserDefaults.standard.string(forKey: "standardDeviation") ?? "150"

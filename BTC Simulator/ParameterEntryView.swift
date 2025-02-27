@@ -28,7 +28,7 @@ struct ParameterEntryView: View {
     @Binding var showPinnedColumns: Bool
 
     // Local copies
-    @State private var localIterations: String = "100"
+    @State private var localIterations: String = "50"
     @State private var localAnnualCAGR: String = "30"
     @State private var localAnnualVolatility: String = "80"
     @State private var localStandardDev: String = "150"
@@ -292,7 +292,7 @@ struct ParameterEntryView: View {
         VStack(spacing: 4) {
             Text("Iterations")
                 .foregroundColor(.white)
-            TextField("100", text: $ephemeralIterations)
+            TextField("50", text: $ephemeralIterations)
                 .keyboardType(.numberPad)
                 .padding(8)
                 .frame(width: 80)
