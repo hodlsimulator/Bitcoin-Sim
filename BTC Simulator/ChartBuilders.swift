@@ -7,7 +7,7 @@
 
 import SwiftUI
 import Charts
-
+/*
 @ChartContentBuilder
 func simulationLines(
     simulations: [SimulationRun],
@@ -263,4 +263,4 @@ func convertPeriodToYears(
         return Double(periodIndex) / 12.0
     }
 }
-    
+*/

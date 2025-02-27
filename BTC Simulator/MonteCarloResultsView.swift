@@ -160,9 +160,10 @@ struct MonteCarloChartView: View {
                 Color.black.ignoresSafeArea()
                 
                 VStack(spacing: 0) {
+                    /*
                     Chart {
                         // Faint lines for normal runs
-                        simulationLines(simulations: normalSimulations, simSettings: simSettings)
+                        // simulationLines(simulations: normalSimulations, simSettings: simSettings)
                         
                         // Bold orange best-fit
                         if let bestFitRun = bestFit {
@@ -177,6 +178,8 @@ struct MonteCarloChartView: View {
                             .padding(.horizontal, 0)
                             .padding(.vertical, 10)
                     }
+                    
+                    // Y-axis => powers of ten
                     .chartYAxis {
                         AxisMarks(position: .leading, values: yTickValues) { axisValue in
                             AxisGridLine().foregroundStyle(.white.opacity(0.3))
@@ -192,6 +195,8 @@ struct MonteCarloChartView: View {
                             }
                         }
                     }
+                    
+                    // X-axis => months if <=2 years, else years
                     .chartXAxis {
                         AxisMarks(values: xAxisStrideValues) { axisValue in
                             AxisGridLine().foregroundStyle(.white.opacity(0.3))
@@ -203,6 +208,9 @@ struct MonteCarloChartView: View {
                         }
                     }
                     .frame(width: geo.size.width, height: geo.size.height)
+                    */
+                    
+                    // === With the above Chart code commented out, this section remains intact for future use or modifications ===
                 }
                 .padding(.top, orientationObserver.isLandscape ? 20 : 0)
                 .scaleEffect(x: 1.0, y: verticalScale, anchor: .bottom)

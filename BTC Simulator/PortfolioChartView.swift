@@ -79,9 +79,10 @@ struct PortfolioChartView: View {
                 Color.black.ignoresSafeArea()
                 
                 VStack(spacing: 0) {
+                    /*
                     Chart {
                         // 1) The “spaghetti” lines
-                        simulationLines(simulations: normalSimulations, simSettings: simSettings)
+                        // simulationLines(simulations: normalSimulations, simSettings: simSettings)
                         
                         // 2) Optionally remove median lines if desired
                         // medianLines(simulations: normalSimulations, simSettings: simSettings)
@@ -137,10 +138,13 @@ struct PortfolioChartView: View {
                             }
                         }
                     }
-                    
                     // Slightly squash vertically if in portrait
                     .scaleEffect(x: 1.0, y: scaleY, anchor: .bottom)
                     .frame(width: geo.size.width, height: geo.size.height)
+                    */
+                    
+                    // === With the above Chart code commented out, there's no Swift Charts usage. ===
+                    // This VStack is effectively empty now, but your layout remains intact.
                 }
             }
         }
