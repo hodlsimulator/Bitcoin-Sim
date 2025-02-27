@@ -7,25 +7,65 @@
 
 import SwiftUI
 import UIKit
+import MetalKit
 
 /// A UIViewRepresentable that hosts our Metal chart and adds custom UIKit gestures.
 struct MetalChartContainerView: UIViewRepresentable {
+    let metalChart: MetalChartRenderer
     
     func makeUIView(context: Context) -> MetalChartUIView {
-        let metalView = MetalChartUIView()
+        let metalView = MetalChartUIView(frame: .zero, renderer: metalChart)
+        let coordinator = context.coordinator
         
-        // Attach gesture recognizers
+        //
+        // 1) Single-finger pan gesture
+        //
+        let singleFingerPan = UIPanGestureRecognizer(
+            target: coordinator,
+            action: #selector(coordinator.handleSingleFingerPan(_:))
+        )
+        // Restrict it to exactly one finger
+        singleFingerPan.maximumNumberOfTouches = 1
+        
+        //
+        // 2) Two-finger pan for trackpad-like zoom
+        //
+        let twoFingerPan = UIPanGestureRecognizer(
+            target: coordinator,
+            action: #selector(coordinator.handleTwoFingerPanToZoom(_:))
+        )
+        twoFingerPan.minimumNumberOfTouches = 2
+        twoFingerPan.maximumNumberOfTouches = 2
+        
+        //
+        // 3) Pinch to zoom
+        //
         let pinchGR = UIPinchGestureRecognizer(
-            target: context.coordinator,
-            action: #selector(context.coordinator.handlePinch(_:))
-        )
-        let panGR = UIPanGestureRecognizer(
-            target: context.coordinator,
-            action: #selector(context.coordinator.handlePan(_:))
+            target: coordinator,
+            action: #selector(coordinator.handlePinch(_:))
         )
         
+        //
+        // 4) Double-tap to zoom
+        //
+        let doubleTapGR = UITapGestureRecognizer(
+            target: coordinator,
+            action: #selector(coordinator.handleDoubleTap(_:))
+        )
+        doubleTapGR.numberOfTapsRequired = 2
+        
+        //
+        // Allow them to recognize simultaneously
+        //
+        coordinator.configureRecognizerForSimultaneous(singleFingerPan)
+        coordinator.configureRecognizerForSimultaneous(twoFingerPan)
+        coordinator.configureRecognizerForSimultaneous(pinchGR)
+        coordinator.configureRecognizerForSimultaneous(doubleTapGR)
+        
+        metalView.addGestureRecognizer(singleFingerPan)
+        metalView.addGestureRecognizer(twoFingerPan)
         metalView.addGestureRecognizer(pinchGR)
-        metalView.addGestureRecognizer(panGR)
+        metalView.addGestureRecognizer(doubleTapGR)
         
         return metalView
     }

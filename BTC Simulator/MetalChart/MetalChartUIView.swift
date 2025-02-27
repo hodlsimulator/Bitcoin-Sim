@@ -8,33 +8,34 @@
 import UIKit
 import MetalKit
 
-/// Subclass of MTKView (or a UIView that contains an MTKView), ready for advanced gestures.
-class MetalChartUIView: MTKView {
+/// A plain UIView that hosts the MTKView and holds a reference to your renderer.
+class MetalChartUIView: UIView {
+    let renderer: MetalChartRenderer
+    let mtkView: MTKView
     
-    /// The Metal renderer that handles drawing.
-    let renderer = MetalChartRenderer()
-    
-    override init(frame: CGRect, device: MTLDevice?) {
-        let defaultDevice = device ?? MTLCreateSystemDefaultDevice()
-        super.init(frame: frame, device: defaultDevice)
+    init(frame: CGRect, renderer: MetalChartRenderer) {
+        self.renderer = renderer
         
-        self.device = defaultDevice
-        self.delegate = renderer
-        self.clearColor = MTLClearColorMake(0, 0, 0, 1)
-        self.preferredFramesPerSecond = 60
-        self.sampleCount = 4
+        // Create an MTKView, wire it to your renderer
+        mtkView = MTKView(frame: frame, device: renderer.device ?? MTLCreateSystemDefaultDevice())
+        super.init(frame: frame)
         
-        // If you need any special init logic, do it here.
-        // For example: renderer.setupMetal(...) once the size is known, etc.
+        mtkView.delegate = renderer
+        mtkView.clearColor = MTLClearColorMake(0, 0, 0, 1)
+        mtkView.sampleCount = 4
+        mtkView.preferredFramesPerSecond = 60
+        
+        // Add the MTKView as a subview
+        addSubview(mtkView)
     }
     
-    required init(coder: NSCoder) {
+    required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
-    // Optionally override layoutSubviews if you want to update viewport on size changes:
     override func layoutSubviews() {
         super.layoutSubviews()
-        renderer.updateViewport(to: bounds.size)
+        // Ensure MTKView always matches our bounds
+        mtkView.frame = self.bounds
     }
 }
