@@ -8,6 +8,7 @@
 import SwiftUI
 import MetalKit
 import simd
+import UIKit
 
 struct InteractiveMonteCarloChartView: View {
     @EnvironmentObject var orientationObserver: OrientationObserver
@@ -16,17 +17,20 @@ struct InteractiveMonteCarloChartView: View {
     
     @State private var metalChart = MetalChartRenderer()
     
-    // We store the “base” scale/translation from previous gestures,
-    // plus an anchor for pinch (approx midpoint of the two touch points).
-    @State private var baseScale: Float = 1.0
+    // Pan state
     @State private var baseTranslation = SIMD2<Float>(0, 0)
     
-    @State private var pinchAnchor: CGPoint = .zero
+    // Zoom state
+    @State private var baseScale: Float = 1.0
+    
+    // We track the user’s last known finger location (for double-tap anchoring).
+    @State private var lastTouchLocation: CGPoint = .zero
     
     var body: some View {
         GeometryReader { geo in
             ZStack {
                 Color.black.ignoresSafeArea()
+                
                 MTKViewWrapper(metalChart: metalChart)
                     .frame(width: geo.size.width, height: geo.size.height)
                     .onAppear {
@@ -41,72 +45,125 @@ struct InteractiveMonteCarloChartView: View {
                         metalChart.viewportSize = newSize
                         metalChart.updateViewport(to: newSize)
                     }
-                    // Use SimultaneousGesture to track pinch (for scale) + drag (for anchor).
+                    
+                    // We'll combine single-finger pan + two-finger pinch in one SimultaneousGesture,
+                    // then add a "track location" gesture (to keep lastTouchLocation up to date),
+                    // and also a double-tap gesture for zooming at that location.
+                    
                     .gesture(
                         SimultaneousGesture(
-                            pinchGesture(geoSize: geo.size),
-                            dragGesture(geoSize: geo.size)
+                            // Single-finger pan + pinch
+                            SimultaneousGesture(
+                                panGesture(geoSize: geo.size),
+                                pinchGesture(geoSize: geo.size)
+                            ),
+                            // Track location with a minimal-distance drag (doesn't move chart).
+                            trackTouchLocationGesture
                         )
+                    )
+                    // Add double tap on top (another simultaneous gesture).
+                    .simultaneousGesture(
+                        doubleTapGesture(geoSize: geo.size)
                     )
             }
         }
     }
     
-    // MARK: - Pinch Gesture
+    // MARK: - Single-finger Pan Gesture
+    func panGesture(geoSize: CGSize) -> some Gesture {
+        DragGesture(minimumDistance: 5, coordinateSpace: .local)
+            .onChanged { dragValue in
+                // If user is using one finger, we'll treat it as a chart pan.
+                // The ratio from points -> [-1..1] is (drag / viewSize * 2).
+                let dx = Float(dragValue.translation.width) / Float(geoSize.width) * 2.0
+                let dy = Float(dragValue.translation.height) / Float(geoSize.height) * 2.0
+                
+                // Start from the base translation
+                metalChart.translation.x = baseTranslation.x + dx
+                // Invert Y so dragging up moves the chart up
+                metalChart.translation.y = baseTranslation.y - dy
+                
+                metalChart.updateTransform()
+            }
+            .onEnded { dragValue in
+                // Lock in the final translation as our new "base"
+                let dx = Float(dragValue.translation.width) / Float(geoSize.width) * 2.0
+                let dy = Float(dragValue.translation.height) / Float(geoSize.height) * 2.0
+                baseTranslation.x += dx
+                baseTranslation.y -= dy
+            }
+    }
+    
+    // MARK: - Two-finger Pinch Gesture
     func pinchGesture(geoSize: CGSize) -> some Gesture {
         MagnificationGesture()
-            .onChanged { currentMagnification in
-                // currentMagnification is how much the user is pinching at this moment.
-                // We'll interpret pinchAnchor as the "focus point" for the scaling.
-                
-                // The new scale is baseScale * current pinch factor.
-                // Then we figure out how much we’ve changed from the old scale
-                // so we can anchor around pinchAnchor in NDC.
+            .onChanged { pinchValue in
+                // pinchValue is relative (e.g. 1.0 -> 2.0).
                 let oldScale = metalChart.scale
-                let newScale = baseScale * Float(currentMagnification)
+                let newScale = baseScale * Float(pinchValue)
                 let scaleRatio = newScale / oldScale
                 
-                // Convert pinchAnchor from view coords to Normalised Device Coords
-                let anchorNDC = metalChart.convertPointToNDC(pinchAnchor, geoSize: geoSize)
+                // We'll anchor the zoom around the lastTouchLocation (approx midpoint of two fingers).
+                let anchorNDC = metalChart.convertPointToNDC(lastTouchLocation, geoSize: geoSize)
                 
-                // Shift translation so that anchorNDC remains in the same place
-                // while scaling around it.
+                // Because we might also be panning, we start from baseTranslation:
+                metalChart.translation = baseTranslation
+                
+                // Adjust translation so anchor remains pinned
                 metalChart.translation.x -= anchorNDC.x * (scaleRatio - 1)
                 metalChart.translation.y -= anchorNDC.y * (scaleRatio - 1)
                 
                 metalChart.scale = newScale
                 metalChart.updateTransform()
             }
-            .onEnded { finalMagnification in
-                // Lock in the new base scale.
-                baseScale *= Float(finalMagnification)
+            .onEnded { finalVal in
+                // Lock in the final scale as our new "base" scale
+                baseScale = metalChart.scale
+                // Also update baseTranslation from whatever we ended with
+                baseTranslation = metalChart.translation
             }
     }
     
-    // MARK: - Drag Gesture
-    func dragGesture(geoSize: CGSize) -> some Gesture {
+    // MARK: - Track Touch Location
+    // This is purely to track finger location for double-tap or pinch anchoring.
+    // It sets lastTouchLocation, but does NOT move the chart.
+    var trackTouchLocationGesture: some Gesture {
         DragGesture(minimumDistance: 0, coordinateSpace: .local)
-            .onChanged { drag in
-                // If user is pinching, this roughly tracks two-finger midpoint.
-                // Even a one-finger drag also sets pinchAnchor,
-                // so consider ignoring single-finger drags if you want.
-                pinchAnchor = drag.location
-                
-                // For normal dragging (panning), we also want to move the chart.
-                // The difference from baseTranslation is how far we drag in NDC.
-                let dx = Float(drag.translation.width) / Float(geoSize.width) * 2.0
-                let dy = Float(drag.translation.height) / Float(geoSize.height) * 2.0
-                
-                metalChart.translation.x = baseTranslation.x + dx
-                metalChart.translation.y = baseTranslation.y - dy  // invert Y
-                metalChart.updateTransform()
+            .onChanged { dragValue in
+                lastTouchLocation = dragValue.location
             }
-            .onEnded { final in
-                // Finalise the pan movement.
-                let dx = Float(final.translation.width) / Float(geoSize.width) * 2.0
-                let dy = Float(final.translation.height) / Float(geoSize.height) * 2.0
-                baseTranslation.x += dx
-                baseTranslation.y -= dy
+            .onEnded { _ in
+                // No-op
+            }
+    }
+    
+    // MARK: - Double-tap to Zoom
+    func doubleTapGesture(geoSize: CGSize) -> some Gesture {
+        TapGesture(count: 2)
+            .onEnded {
+                // Zoom in around lastTouchLocation by some factor
+                let anchorNDC = metalChart.convertPointToNDC(lastTouchLocation, geoSize: geoSize)
+                let zoomFactor: Float = 1.5
+                
+                let oldScale = metalChart.scale
+                let newScale = oldScale * zoomFactor
+                let scaleRatio = newScale / oldScale
+                
+                // Start from current translation (since user may have panned).
+                var newTranslation = metalChart.translation
+                
+                // Keep anchor pinned
+                newTranslation.x -= anchorNDC.x * (scaleRatio - 1)
+                newTranslation.y -= anchorNDC.y * (scaleRatio - 1)
+                
+                // Update
+                metalChart.scale = newScale
+                metalChart.translation = newTranslation
+                metalChart.updateTransform()
+                
+                // Save these as new base
+                baseScale = newScale
+                baseTranslation = newTranslation
             }
     }
 }
@@ -153,7 +210,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         vertexDescriptor.attributes[0].offset = 0
         vertexDescriptor.attributes[0].bufferIndex = 0
         
-        vertexDescriptor.attributes[1].format = .float4 // color
+        vertexDescriptor.attributes[1].format = .float4 // colour
         vertexDescriptor.attributes[1].offset = MemoryLayout<Float>.size * 4
         vertexDescriptor.attributes[1].bufferIndex = 0
         
@@ -215,6 +272,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             customPalette: customPalette,
             chartDataCache: cache
         )
+        
         let byteCount = vertexData.count * MemoryLayout<Float>.size
         vertexBuffer = device.makeBuffer(
             bytes: vertexData,
@@ -225,6 +283,8 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     }
     
     func updateTransform() {
+        // The final transform is translation * scale
+        // (applied in the vertex shader).
         let scaleMatrix = matrix_float4x4(diagonal: SIMD4<Float>(scale, scale, 1, 1))
         let translationMatrix = matrix_float4x4(columns: (
             SIMD4<Float>(1, 0, 0, 0),
@@ -246,11 +306,11 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         print(">> updateViewport() - new size: \(size)")
     }
     
-    // We need a helper to convert a tap/pinch location from view coords
-    // to Normalised Device Coords ([-1,1] range in X/Y).
+    // Convert a screen point (top-left origin in UIKit coords)
+    // into Normalised Device Coords in Metal space ([-1..1]).
     func convertPointToNDC(_ point: CGPoint, geoSize: CGSize) -> SIMD2<Float> {
         let ndx = Float(point.x / geoSize.width) * 2.0 - 1.0
-        // Flip y because in Metal’s NDC, +1 is top
+        // Flip Y for Metal’s coordinate system
         let ndy = Float((geoSize.height - point.y) / geoSize.height) * 2.0 - 1.0
         return SIMD2<Float>(ndx, ndy)
     }
@@ -266,7 +326,8 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
               let drawable = view.currentDrawable,
               let rpd = view.currentRenderPassDescriptor,
               let commandBuffer = commandQueue.makeCommandBuffer(),
-              let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: rpd) else {
+              let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: rpd)
+        else {
             return
         }
         
@@ -326,13 +387,11 @@ func buildLineVertexData(
             let ratioY = (logVal - logMin) / (logMax - logMin)
             let ny = Float(ratioY * 2.0 - 1.0)
             
-            // Position
             vertexData.append(nx)
             vertexData.append(ny)
             vertexData.append(0.0)
             vertexData.append(1.0)
             
-            // Colour
             vertexData.append(r)
             vertexData.append(g)
             vertexData.append(b)
@@ -381,6 +440,6 @@ struct MTKViewWrapper: UIViewRepresentable {
     }
     
     func updateUIView(_ uiView: MTKView, context: Context) {
-        // No update needed
+        // Nothing needed
     }
 }
