@@ -1,6 +1,6 @@
 //
-//  ChartShaders.metal
-//  BTC Simulator
+// ChartShaders.metal
+// BTC Simulator
 //
 //  Created by . . on 27/02/2025.
 //
@@ -18,16 +18,25 @@ struct VertexOut {
     float4 color;
 };
 
-vertex VertexOut vertexShader(VertexIn inVertex [[stage_in]])
+/// We'll store a transformMatrix in this uniform struct.
+struct TransformUniform {
+    float4x4 transformMatrix;
+};
+
+vertex VertexOut vertexShader(
+    VertexIn inVertex [[stage_in]],
+    constant TransformUniform &uniforms [[buffer(1)]]
+)
 {
     VertexOut out;
-    out.position = inVertex.position;
+    // Apply the transform to the vertex position
+    out.position = uniforms.transformMatrix * inVertex.position;
     out.color = inVertex.color;
     return out;
 }
 
 fragment float4 fragmentShader(VertexOut inVertex [[stage_in]])
 {
+    // Pass the color through as the fragment output
     return inVertex.color;
 }
-

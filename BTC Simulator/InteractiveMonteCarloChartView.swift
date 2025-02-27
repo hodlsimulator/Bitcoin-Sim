@@ -7,56 +7,95 @@
 
 import SwiftUI
 import MetalKit
+import simd
 
 struct InteractiveMonteCarloChartView: View {
     @EnvironmentObject var orientationObserver: OrientationObserver
     @EnvironmentObject var chartDataCache: ChartDataCache
     @EnvironmentObject var simSettings: SimulationSettings
-    
+
     @State private var metalChart = MetalChartRenderer()
+    
+    // Gesture states for pinch and pan
+    @GestureState private var gestureScale: CGFloat = 1.0
+    @GestureState private var gestureTranslation: CGSize = .zero
 
     var body: some View {
         GeometryReader { geo in
             ZStack {
                 Color.black.ignoresSafeArea()
-                
-                // The MTKView embedded in SwiftUI
                 MTKViewWrapper(metalChart: metalChart)
                     .frame(width: geo.size.width, height: geo.size.height)
                     .onAppear {
-                        print(">> onAppear() - Setting up Metal")
+                        metalChart.viewportSize = geo.size
                         metalChart.setupMetal(
                             in: geo.size,
                             chartDataCache: chartDataCache,
                             simSettings: simSettings
                         )
                     }
-                    // iOS 17 approach: (oldValue, newValue)
-                    .onChange(of: geo.size) { oldSize, newSize in
+                    .onChange(of: geo.size) { _, newSize in
+                        metalChart.viewportSize = newSize
                         metalChart.updateViewport(to: newSize)
                     }
+                    .gesture(combinedGesture(geoSize: geo.size))
             }
         }
     }
+    
+    func combinedGesture(geoSize: CGSize) -> some Gesture {
+        // Pinch gesture updates the scale factor.
+        let pinch = MagnificationGesture()
+            .updating($gestureScale) { current, state, _ in
+                state = current
+            }
+            .onEnded { finalScale in
+                // Update the GPU transform matrix
+                metalChart.scale *= Float(finalScale)
+                metalChart.updateTransform()
+            }
+        
+        // Drag gesture updates the translation.
+        let drag = DragGesture()
+            .updating($gestureTranslation) { current, state, _ in
+                state = current.translation
+            }
+            .onEnded { final in
+                // Convert drag (in points) to normalized device translation:
+                let dx = Float(final.translation.width) / Float(geoSize.width) * 2.0
+                let dy = Float(final.translation.height) / Float(geoSize.height) * 2.0
+                // Note: Screen Y is inverted relative to Metal's NDC
+                metalChart.translation.x += dx
+                metalChart.translation.y -= dy
+                metalChart.updateTransform()
+            }
+        
+        return SimultaneousGesture(pinch, drag)
+    }
 }
 
-// MARK: - Metal Renderer
+// MARK: - Metal Renderer with GPU Transform
 
-class MetalChartRenderer: NSObject, MTKViewDelegate {
+class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     var device: MTLDevice!
     var commandQueue: MTLCommandQueue!
     var pipelineState: MTLRenderPipelineState!
     
     var vertexBuffer: MTLBuffer?
     var lineSizes: [Int] = []
-    
     var chartDataCache: ChartDataCache?
     var simSettings: SimulationSettings?
     
-    var domainMin: Double = 1.0
-    var domainMax: Double = 2.0
-    var totalYears: Double = 1.0
-
+    // Static vertex data: built once from the full data range.
+    // (We assume that all vertex positions are computed using the full domain.)
+    
+    // GPU-side transform properties
+    var viewportSize: CGSize = .zero
+    var scale: Float = 1.0
+    var translation = SIMD2<Float>(0, 0)
+    var transformBuffer: MTLBuffer?
+    
+    // We'll build the vertex buffer once.
     func setupMetal(
         in size: CGSize,
         chartDataCache: ChartDataCache,
@@ -65,27 +104,23 @@ class MetalChartRenderer: NSObject, MTKViewDelegate {
         self.chartDataCache = chartDataCache
         self.simSettings = simSettings
         
-        // 1) Prepare the Metal device
         device = MTLCreateSystemDefaultDevice()
         guard let device = device else {
             print("Metal not supported on this machine.")
             return
         }
-        
         commandQueue = device.makeCommandQueue()
         
-        // 2) Load shaders
         let library = device.makeDefaultLibrary()
         let vertexFunction = library?.makeFunction(name: "vertexShader")
         let fragmentFunction = library?.makeFunction(name: "fragmentShader")
         
-        // 3) Create a vertex descriptor (position + color)
         let vertexDescriptor = MTLVertexDescriptor()
-        vertexDescriptor.attributes[0].format = .float4
+        vertexDescriptor.attributes[0].format = .float4 // position
         vertexDescriptor.attributes[0].offset = 0
         vertexDescriptor.attributes[0].bufferIndex = 0
         
-        vertexDescriptor.attributes[1].format = .float4
+        vertexDescriptor.attributes[1].format = .float4 // color
         vertexDescriptor.attributes[1].offset = MemoryLayout<Float>.size * 4
         vertexDescriptor.attributes[1].bufferIndex = 0
         
@@ -99,7 +134,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate {
         pipelineDescriptor.vertexDescriptor = vertexDescriptor
         pipelineDescriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
         
-        // Enable alpha blending:
+        // Enable blending
         pipelineDescriptor.colorAttachments[0].isBlendingEnabled = true
         pipelineDescriptor.colorAttachments[0].rgbBlendOperation = .add
         pipelineDescriptor.colorAttachments[0].alphaBlendOperation = .add
@@ -107,6 +142,9 @@ class MetalChartRenderer: NSObject, MTKViewDelegate {
         pipelineDescriptor.colorAttachments[0].destinationRGBBlendFactor = .oneMinusSourceAlpha
         pipelineDescriptor.colorAttachments[0].sourceAlphaBlendFactor = .one
         pipelineDescriptor.colorAttachments[0].destinationAlphaBlendFactor = .oneMinusSourceAlpha
+        
+        // Enable MSAA for smoother lines
+        pipelineDescriptor.rasterSampleCount = 4
         
         do {
             pipelineState = try device.makeRenderPipelineState(descriptor: pipelineDescriptor)
@@ -116,100 +154,55 @@ class MetalChartRenderer: NSObject, MTKViewDelegate {
             pipelineState = nil
         }
         
-        // 4) Prepare the domain
-        setupDomainValues()
-        
-        // 5) Build the GPU buffer
+        // Build the static vertex buffer using full data.
         buildLineBuffer()
+        
+        // Create the transform uniform buffer.
+        transformBuffer = device.makeBuffer(length: MemoryLayout<matrix_float4x4>.size, options: .storageModeShared)
+        updateTransform()
     }
     
+    // Build the vertex buffer only once from full data.
     func buildLineBuffer() {
         guard let cache = chartDataCache,
-              let simSettings = simSettings else {
-            print(">> buildLineBuffer() - No chartDataCache or simSettings.")
-            return
-        }
+              let simSettings = simSettings else { return }
         
         let simulations = cache.allRuns ?? []
-        print(">> buildLineBuffer() - simulations.count = \(simulations.count)")
-        
-        if simulations.isEmpty {
-            print(">> Warning: No simulations => No data to draw => Black screen likely.")
-        }
-        
-        // Create vertex data
         let (vertexData, lineSizes) = buildLineVertexData(
             simulations: simulations,
             simSettings: simSettings,
-            domainMin: domainMin,
-            domainMax: domainMax,
-            totalYears: totalYears,
+            xMin: 0.0,
+            xMax: (simSettings.periodUnit == .weeks) ? Double(simSettings.userPeriods)/52.0 : Double(simSettings.userPeriods)/12.0,
+            yMin: 1.0,
+            yMax: 1000000000000.0,
             customPalette: customPalette,
             chartDataCache: cache
         )
-        
-        print(">> buildLineBuffer() - vertexData.count = \(vertexData.count), lineSizes.count = \(lineSizes.count)")
-        
-        if vertexData.isEmpty {
-            print(">> Warning: Vertex data is empty => No lines will be drawn.")
-        }
-        
-        // Make buffer
         let byteCount = vertexData.count * MemoryLayout<Float>.size
-        if byteCount > 0 {
-            vertexBuffer = device.makeBuffer(bytes: vertexData,
-                                             length: byteCount,
-                                             options: .storageModeShared)
-            print(">> buildLineBuffer() - vertexBuffer created, length = \(byteCount)")
-        } else {
-            vertexBuffer = nil
-            print(">> buildLineBuffer() - vertexBuffer is nil (no data).")
-        }
-        
+        vertexBuffer = device.makeBuffer(bytes: vertexData, length: byteCount, options: .storageModeShared)
         self.lineSizes = lineSizes
     }
     
-    func setupDomainValues() {
-        guard let cache = chartDataCache,
-              let settings = simSettings else {
-            print(">> setupDomainValues() - chartDataCache or simSettings is nil.")
-            return
-        }
-        
-        let simulations = cache.allRuns ?? []
-        let allPoints = simulations.flatMap { $0.points }
-        let decimalValues = allPoints.map { $0.value }
-        
-        if decimalValues.isEmpty {
-            print(">> setupDomainValues() - No data points found.")
-        }
-        
-        let minVal = decimalValues.min().map { NSDecimalNumber(decimal: $0).doubleValue } ?? 1.0
-        let maxVal = decimalValues.max().map { NSDecimalNumber(decimal: $0).doubleValue } ?? 2.0
-        
-        // Log-scale domain logic
-        var bottomExp = floor(log10(minVal))
-        if minVal <= pow(10, bottomExp), bottomExp > 0 {
-            bottomExp -= 1
-        }
-        domainMin = max(pow(10.0, bottomExp), 1.0)
-        
-        var topExp = floor(log10(maxVal))
-        if maxVal >= pow(10.0, topExp) {
-            topExp += 1
-        }
-        domainMax = pow(10.0, topExp)
-        
-        let totalPeriods = Double(settings.userPeriods)
-        let yrs = (settings.periodUnit == .weeks)
-            ? totalPeriods / 52.0
-            : totalPeriods / 12.0
-        totalYears = (yrs < 1e-9) ? 1.0 : yrs
-        
-        print(">> setupDomainValues() - domainMin = \(domainMin), domainMax = \(domainMax), totalYears = \(totalYears)")
+    // Update the transformation matrix uniform based on scale and translation.
+    func updateTransform() {
+        // Build an orthographic projection matrix in NDC.
+        // Our vertex data is already in [-1, 1] space.
+        // We simply apply a scale and translation.
+        let scaleMatrix = matrix_float4x4(diagonal: SIMD4<Float>(scale, scale, 1, 1))
+        let translationMatrix = matrix_float4x4(columns: (
+            SIMD4<Float>(1, 0, 0, 0),
+            SIMD4<Float>(0, 1, 0, 0),
+            SIMD4<Float>(0, 0, 1, 0),
+            SIMD4<Float>(translation.x, translation.y, 0, 1)
+        ))
+        let transform = matrix_multiply(translationMatrix, scaleMatrix)
+        // Write transform to the buffer.
+        let bufferPointer = transformBuffer?.contents().bindMemory(to: matrix_float4x4.self, capacity: 1)
+        bufferPointer?.pointee = transform
     }
     
     func updateViewport(to size: CGSize) {
+        viewportSize = size
         print(">> updateViewport() - new size: \(size)")
     }
     
@@ -220,38 +213,29 @@ class MetalChartRenderer: NSObject, MTKViewDelegate {
     }
     
     func draw(in view: MTKView) {
-        guard let pipelineState = pipelineState else {
-            print(">> draw() - pipelineState is nil => nothing to draw.")
+        guard let pipelineState = pipelineState,
+              let drawable = view.currentDrawable,
+              let rpd = view.currentRenderPassDescriptor,
+              let commandBuffer = commandQueue.makeCommandBuffer(),
+              let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: rpd)
+        else {
             return
         }
-        guard let drawable = view.currentDrawable else { return }
-        guard let rpd = view.currentRenderPassDescriptor else { return }
-        guard let commandBuffer = commandQueue.makeCommandBuffer(),
-              let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: rpd) else { return }
         
         renderEncoder.setRenderPipelineState(pipelineState)
+        renderEncoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
+        // Pass the transform uniform at buffer index 1.
+        if let transformBuffer = transformBuffer {
+            renderEncoder.setVertexBuffer(transformBuffer, offset: 0, index: 1)
+        }
         
-        if let vb = vertexBuffer {
-            renderEncoder.setVertexBuffer(vb, offset: 0, index: 0)
-            
-            // Draw each line strip
-            var offsetIndex = 0
-            for (i, count) in lineSizes.enumerated() {
-                if count == 0 {
-                    print(">> draw() - lineSizes[\(i)] is 0 => skipping.")
-                    continue
-                }
-                renderEncoder.drawPrimitives(type: .lineStrip,
-                                             vertexStart: offsetIndex,
-                                             vertexCount: count)
-                offsetIndex += count
-            }
-        } else {
-            print(">> draw() - vertexBuffer is nil => no data to draw.")
+        var offsetIndex = 0
+        for count in lineSizes {
+            renderEncoder.drawPrimitives(type: .lineStrip, vertexStart: offsetIndex, vertexCount: count)
+            offsetIndex += count
         }
         
         renderEncoder.endEncoding()
-        
         commandBuffer.present(drawable)
         commandBuffer.commit()
     }
@@ -262,52 +246,43 @@ class MetalChartRenderer: NSObject, MTKViewDelegate {
 func buildLineVertexData(
     simulations: [SimulationRun],
     simSettings: SimulationSettings,
-    domainMin: Double,
-    domainMax: Double,
-    totalYears: Double,
+    xMin: Double,
+    xMax: Double,
+    yMin: Double,
+    yMax: Double,
     customPalette: [Color],
-    chartDataCache: ChartDataCache // only if you need to check bestFit
+    chartDataCache: ChartDataCache
 ) -> ([Float], [Int]) {
     
     var vertexData: [Float] = []
     var lineSizes: [Int] = []
-    
-    // Grab the ID of your best-fit run, if it exists
     let bestFitId = chartDataCache.bestFitRun?.first?.id
     
     for (runIndex, sim) in simulations.enumerated() {
-        // Check if this simulation is the best-fit
         let isBestFit = (sim.id == bestFitId)
-        
-        // Default to multi-colour from the palette
-        var chosenColor = customPalette[runIndex % customPalette.count]
-        var chosenOpacity: Float = 0.3
-        
-        if isBestFit {
-            // Make best fit line orange & more opaque
-            chosenColor = .orange
-            chosenOpacity = 1.0
-        }
-        
-        // Convert SwiftUI Color to RGBA floats
+        var chosenColor: Color = isBestFit ? .orange : customPalette[runIndex % customPalette.count]
+        var chosenOpacity: Float = isBestFit ? 1.0 : 0.2
         let (r, g, b, a) = colorToFloats(chosenColor, opacity: Double(chosenOpacity))
         
         var vertexCount = 0
         for pt in sim.points {
             let rawX = convertPeriodToYears(pt.week, simSettings)
             let rawY = NSDecimalNumber(decimal: pt.value).doubleValue
+            // Normalize using full domain for static data.
+            let ratioX = (rawX - xMin) / (xMax - xMin)
+            let nx = Float(ratioX * 2.0 - 1.0)
             
-            // Normalise X, Y
-            let nx = normalizedX(rawX, totalYears: totalYears)
-            let ny = normalizedYLog(rawY, domainMin: domainMin, domainMax: domainMax)
+            let logVal = log10(rawY)
+            let logMin = log10(yMin)
+            let logMax = log10(yMax)
+            let ratioY = (logVal - logMin) / (logMax - logMin)
+            let ny = Float(ratioY * 2.0 - 1.0)
             
-            // Position (x,y,z,w)
             vertexData.append(nx)
             vertexData.append(ny)
             vertexData.append(0.0)
             vertexData.append(1.0)
             
-            // Colour (r,g,b,a)
             vertexData.append(r)
             vertexData.append(g)
             vertexData.append(b)
@@ -315,56 +290,27 @@ func buildLineVertexData(
             
             vertexCount += 1
         }
-        
         lineSizes.append(vertexCount)
     }
-    
     return (vertexData, lineSizes)
 }
 
 // MARK: - Helpers
 
 let customPalette: [Color] = [
-    .white, .yellow, .red, .blue, .green,
-    // etc...
+    .white, .yellow, .red, .blue, .green
 ]
 
 func colorToFloats(_ swiftColor: Color, opacity: Double) -> (Float, Float, Float, Float) {
     let uiColor = UIColor(swiftColor)
-    var red: CGFloat = 0
-    var green: CGFloat = 0
-    var blue: CGFloat = 0
-    var alpha: CGFloat = 0
-    
+    var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
     uiColor.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
     alpha *= CGFloat(opacity)
-    
     return (Float(red), Float(green), Float(blue), Float(alpha))
 }
 
 func convertPeriodToYears(_ week: Int, _ simSettings: SimulationSettings) -> Double {
-    if simSettings.periodUnit == .weeks {
-        return Double(week) / 52.0
-    } else {
-        return Double(week) / 12.0
-    }
-}
-
-func normalizedX(_ rawYear: Double, totalYears: Double) -> Float {
-    let ratio = rawYear / totalYears
-    return Float(ratio * 2.0 - 1.0)
-}
-
-func normalizedYLog(_ value: Double, domainMin: Double, domainMax: Double) -> Float {
-    let valLog = log10(value)
-    let minLog = log10(domainMin)
-    let maxLog = log10(domainMax)
-    
-    guard maxLog > minLog else {
-        return 0
-    }
-    let ratio = (valLog - minLog) / (maxLog - minLog)
-    return Float(ratio * 2.0 - 1.0)
+    return simSettings.periodUnit == .weeks ? Double(week) / 52.0 : Double(week) / 12.0
 }
 
 // MARK: - Wrapper for the MTKView
@@ -377,10 +323,9 @@ struct MTKViewWrapper: UIViewRepresentable {
         mtkView.device = metalChart.device ?? MTLCreateSystemDefaultDevice()
         mtkView.delegate = metalChart
         mtkView.clearColor = MTLClearColorMake(0, 0, 0, 1)
+        mtkView.sampleCount = 4  // For MSAA
         return mtkView
     }
     
-    func updateUIView(_ uiView: MTKView, context: Context) {
-        // If SwiftUI state changes, handle if needed
-    }
+    func updateUIView(_ uiView: MTKView, context: Context) { }
 }
