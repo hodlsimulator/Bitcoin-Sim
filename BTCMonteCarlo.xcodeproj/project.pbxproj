@@ -16,6 +16,8 @@
 		E13093332D6D8B1D00DA6418 /* LandscapeLayoutCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = E13093322D6D8B1B00DA6418 /* LandscapeLayoutCoordinator.swift */; };
 		E13093352D6D8CA300DA6418 /* PinnedColumnTablesLandscapeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E13093342D6D8CA300DA6418 /* PinnedColumnTablesLandscapeViewController.swift */; };
 		E130933E2D70151100DA6418 /* ChartUtilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = E130933D2D70150F00DA6418 /* ChartUtilities.swift */; };
+		E13093402D70360500DA6418 /* InteractiveMonteCarloChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E130933F2D70360200DA6418 /* InteractiveMonteCarloChartView.swift */; };
+		E13093422D703BFE00DA6418 /* ChartShaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = E13093412D703BFE00DA6418 /* ChartShaders.metal */; };
 		E14344D62D52D85600225A49 /* FactorState.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14344D52D52D85400225A49 /* FactorState.swift */; };
 		E14344D82D52DE5500225A49 /* FactorCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14344D72D52DE5300225A49 /* FactorCatalog.swift */; };
 		E14344DA2D53553D00225A49 /* SimulationSettings+FactorSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14344D92D53553800225A49 /* SimulationSettings+FactorSync.swift */; };
@@ -150,6 +152,8 @@
 		E13093322D6D8B1B00DA6418 /* LandscapeLayoutCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LandscapeLayoutCoordinator.swift; sourceTree = "<group>"; };
 		E13093342D6D8CA300DA6418 /* PinnedColumnTablesLandscapeViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinnedColumnTablesLandscapeViewController.swift; sourceTree = "<group>"; };
 		E130933D2D70150F00DA6418 /* ChartUtilities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartUtilities.swift; sourceTree = "<group>"; };
+		E130933F2D70360200DA6418 /* InteractiveMonteCarloChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InteractiveMonteCarloChartView.swift; sourceTree = "<group>"; };
+		E13093412D703BFE00DA6418 /* ChartShaders.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = ChartShaders.metal; sourceTree = "<group>"; };
 		E14344D52D52D85400225A49 /* FactorState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FactorState.swift; sourceTree = "<group>"; };
 		E14344D72D52DE5300225A49 /* FactorCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FactorCatalog.swift; sourceTree = "<group>"; };
 		E14344D92D53553800225A49 /* SimulationSettings+FactorSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SimulationSettings+FactorSync.swift"; sourceTree = "<group>"; };
@@ -314,6 +318,7 @@
 				E1B7B09C2D44E0CE00B60EC6 /* BullishFactorsSection.swift */,
 				E1F1CB5F2D4EF177003DB24F /* CalibrationManager.swift */,
 				E1CFF0262D30D07800D9D044 /* ChartBuilders.swift */,
+				E13093412D703BFE00DA6418 /* ChartShaders.metal */,
 				E18C2BE02D259245006E7438 /* ChartSnapshotView.swift */,
 				E130933D2D70150F00DA6418 /* ChartUtilities.swift */,
 				E1A1E5282D2E38F9008F7658 /* CheckboxToggleStyle.swift */,
@@ -339,6 +344,7 @@
 				E19D10F82D40E66100E3A55E /* InMemorySettings.swift */,
 				E1883F3F2D1E0DC8007AA90B /* InputManager.swift */,
 				E1A1E52A2D2E3967008F7658 /* InteractiveBitcoinSymbol3DSpinner.swift */,
+				E130933F2D70360200DA6418 /* InteractiveMonteCarloChartView.swift */,
 				E17B2F272D27505100ECE087 /* LandscapePlaceholderView.swift */,
 				E1942C902D628F2400F5B9A1 /* LoadingOverlayView.swift */,
 				E112E3752D58B73800167E92 /* MailView.swift */,
@@ -586,6 +592,7 @@
 				E14344DA2D53553D00225A49 /* SimulationSettings+FactorSync.swift in Sources */,
 				E18B2D5F2D6A7ACC005E5EDE /* CustomBarViewController.swift in Sources */,
 				E112E3762D58B73A00167E92 /* MailView.swift in Sources */,
+				E13093402D70360500DA6418 /* InteractiveMonteCarloChartView.swift in Sources */,
 				E1A1E52F2D2E3A40008F7658 /* RowOffsetHelpers.swift in Sources */,
 				E17B2F802D2800D400ECE087 /* OrientationObserver.swift in Sources */,
 				E19D113C2D42F81C00E3A55E /* UtilityExtensions.swift in Sources */,
@@ -654,6 +661,7 @@
 				E1883F3A2D1DD94F007AA90B /* SimulationSettings.swift in Sources */,
 				E1B7B09B2D44DEAF00B60EC6 /* AdvancedSettingsSection.swift in Sources */,
 				E14D24092D3A677F007CC11A /* SettingsPrinter.swift in Sources */,
+				E13093422D703BFE00DA6418 /* ChartShaders.metal in Sources */,
 				E1883F422D1E43DB007AA90B /* VisualEffectBlur.swift in Sources */,
 				E166A8AE2CF855BF0003F518 /* MonteCarloSimulator.swift in Sources */,
 				E1942CA12D64331C00F5B9A1 /* PinnedColumnBridgeRepresentable.swift in Sources */,
