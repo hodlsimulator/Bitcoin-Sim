@@ -535,8 +535,10 @@ struct MonteCarloResultsView: View {
                 // Make it full width
                 .frame(width: geo.size.width)
                 // Hard-code an absolute Y to keep consistent
-                .position(x: geo.size.width / 2, y: 160)
-            }
+                .position(
+                    x: geo.size.width / 2,
+                    y: showDynamicChart ? 50 : 160
+                )            }
             .transition(.move(edge: .top))
             .zIndex(999)
         }
