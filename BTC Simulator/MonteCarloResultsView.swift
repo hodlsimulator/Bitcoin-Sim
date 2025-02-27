@@ -454,7 +454,7 @@ struct MonteCarloResultsView: View {
                     .background(Color.black)
                 }
                 .edgesIgnoringSafeArea(.horizontal)
-                .padding(.top, 15)
+                .padding(.top, 120)
                 .transition(.move(edge: .top))
                 .zIndex(2)
             }

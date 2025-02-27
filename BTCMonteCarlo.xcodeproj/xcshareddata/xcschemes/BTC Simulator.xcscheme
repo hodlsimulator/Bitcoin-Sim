@@ -16,7 +16,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "E12CCD872CF8235F0059931D"
-               BuildableName = "BTC Simulator.app"
+               BuildableName = "Bitcoin HODL Simulator.app"
                BlueprintName = "BTC Simulator"
                ReferencedContainer = "container:BTCMonteCarlo.xcodeproj">
             </BuildableReference>
@@ -45,7 +45,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "E12CCD872CF8235F0059931D"
-            BuildableName = "BTC Simulator.app"
+            BuildableName = "Bitcoin HODL Simulator.app"
             BlueprintName = "BTC Simulator"
             ReferencedContainer = "container:BTCMonteCarlo.xcodeproj">
          </BuildableReference>
@@ -62,7 +62,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "E12CCD872CF8235F0059931D"
-            BuildableName = "BTC Simulator.app"
+            BuildableName = "Bitcoin HODL Simulator.app"
             BlueprintName = "BTC Simulator"
             ReferencedContainer = "container:BTCMonteCarlo.xcodeproj">
          </BuildableReference>
