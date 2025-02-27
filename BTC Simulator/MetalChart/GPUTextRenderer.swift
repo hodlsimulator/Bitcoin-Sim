@@ -28,6 +28,8 @@ public class GPUTextRenderer {
         descriptor.vertexFunction   = vertexFunc
         descriptor.fragmentFunction = fragmentFunc
         
+        descriptor.rasterSampleCount = 4
+        
         let vertexDescriptor = MTLVertexDescriptor()
         // position
         vertexDescriptor.attributes[0].format = .float2

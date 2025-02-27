@@ -41,3 +41,12 @@ func bestFitLine(
         )
     }
 }
+
+/// Converts a 'week' (or month) index to years, based on user settings.
+func convertPeriodToYears(_ week: Int, _ simSettings: SimulationSettings) -> Double {
+    if simSettings.periodUnit == .weeks {
+        return Double(week) / 52.0
+    } else {
+        return Double(week) / 12.0
+    }
+}

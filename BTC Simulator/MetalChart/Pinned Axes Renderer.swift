@@ -5,66 +5,77 @@
 //  Created by . . on 27/02/2025.
 //
 
-import Foundation
 import MetalKit
 import simd
+import UIKit
 
+/// A simple class that draws pinned x and y axes in screen space:
+///  - X-axis pinned at the bottom
+///  - Y-axis pinned at the left
+/// It also draws tick labels using the RuntimeGPUTextRenderer.
 class PinnedAxesRenderer {
     
-    // The device and a reference to your text renderer
+    // MARK: - Properties
+    
+    /// Device and text renderer
     private let device: MTLDevice
     private let textRenderer: RuntimeGPUTextRenderer
     
-    // Pipelines for lines (or reuse existing)
+    /// Pipeline state for axis lines (we can reuse or create a small one).
     private var axisPipelineState: MTLRenderPipelineState?
     
-    // Axes geometry buffers
+    /// The size of the screen in pixels. Set each frame in your draw call.
+    var viewportSize: CGSize = .zero
+    
+    /// If you want to style your axis lines
+    var axisColor = SIMD4<Float>(1, 1, 1, 1)
+    
+    /// If you want to style your label text
+    var labelColor = SIMD4<Float>(0.8, 0.8, 0.8, 1.0)
+    
+    // Axis line buffers
     private var xAxisLineBuffer: MTLBuffer?
     private var xAxisLineVertexCount: Int = 0
-    
     private var yAxisLineBuffer: MTLBuffer?
     private var yAxisLineVertexCount: Int = 0
     
     // Tick label buffers
-    private struct TickLabel {
+    struct TickLabelBuffer {
         let buffer: MTLBuffer
-        let count: Int
+        let vertexCount: Int
     }
-    private var xTickLabels: [TickLabel] = []
-    private var yTickLabels: [TickLabel] = []
+    private var xTickLabels: [TickLabelBuffer] = []
+    private var yTickLabels: [TickLabelBuffer] = []
     
-    // Axis color, label color, etc.
-    var axisColor = SIMD4<Float>(1, 1, 1, 1)
-    var labelColor = SIMD4<Float>(1, 1, 1, 1)
-    
-    // The size of the viewport in screen pixels (needed for pinned transforms)
-    var viewportSize: CGSize = .zero
+    // MARK: - Init
     
     init(device: MTLDevice,
          textRenderer: RuntimeGPUTextRenderer,
          library: MTLLibrary) {
+        
         self.device = device
         self.textRenderer = textRenderer
         
-        buildPipeline(library: library)
+        // Build a minimal pipeline for the axes lines
+        buildAxisPipeline(library: library)
     }
     
-    private func buildPipeline(library: MTLLibrary) {
-        // Similar to your chart’s pipeline, or you can reuse it
+    // MARK: - Pipeline
+    
+    private func buildAxisPipeline(library: MTLLibrary) {
         let descriptor = MTLRenderPipelineDescriptor()
-        descriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
-        descriptor.colorAttachments[0].isBlendingEnabled = true
-        descriptor.colorAttachments[0].sourceRGBBlendFactor = .sourceAlpha
-        descriptor.colorAttachments[0].destinationRGBBlendFactor = .oneMinusSourceAlpha
         
-        guard let vertexFunc = library.makeFunction(name: "axisVertexShader"),
-              let fragFunc   = library.makeFunction(name: "axisFragmentShader")
-        else { return }
+        // Vertex/fragment for lines (you can reuse your chart pipeline if it’s the same layout)
+        let vertexFunction = library.makeFunction(name: "axisVertexShader_screenSpace")
+        let fragmentFunction = library.makeFunction(name: "axisFragmentShader")
+
+        descriptor.vertexFunction = vertexFunction
+        descriptor.fragmentFunction = fragmentFunction
         
-        descriptor.vertexFunction   = vertexFunc
-        descriptor.fragmentFunction = fragFunc
-        
-        // If you store position+color in a single buffer
+        // If you're using MSAA in the main pass:
+        descriptor.rasterSampleCount = 4 // or match your actual sample count
+    
+        // Vertex descriptor: position float4, color float4
         let vertexDescriptor = MTLVertexDescriptor()
         vertexDescriptor.attributes[0].format = .float4 // position
         vertexDescriptor.attributes[0].offset = 0
@@ -77,99 +88,97 @@ class PinnedAxesRenderer {
         vertexDescriptor.layouts[0].stride = MemoryLayout<Float>.size * 8
         
         descriptor.vertexDescriptor = vertexDescriptor
+        descriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
+        descriptor.colorAttachments[0].isBlendingEnabled = true
+        descriptor.colorAttachments[0].sourceRGBBlendFactor = .sourceAlpha
+        descriptor.colorAttachments[0].destinationRGBBlendFactor = .oneMinusSourceAlpha
         
         do {
             axisPipelineState = try device.makeRenderPipelineState(descriptor: descriptor)
         } catch {
-            print("Error building pinned axis pipeline: \(error)")
+            print("Error building axis pipeline: \(error)")
         }
     }
     
-    // MARK: - Update & Generate
+    // MARK: - Update & Build Buffers
     
-    /// Call this each frame or whenever you need to update axis geometry
-    /// minX/maxX come from your visible data range in X
-    /// minY/maxY come from your visible data range in Y
-    /// transform is your chart data transform (which we partially use)
+    /// Updates the pinned axes lines + tick labels.
+    /// - Parameters:
+    ///   - minX, maxX, minY, maxY: the currently *visible* data range
+    ///   - chartTransform: the matrix you use to convert data -> NDC
     func updateAxes(minX: Float,
                     maxX: Float,
                     minY: Float,
                     maxY: Float,
                     chartTransform: matrix_float4x4) {
         
-        // 1) Build line for X axis pinned at bottom (y = bottom of screen).
-        //    But we want the data-based horizontal range to match the chart’s x-range.
-        //    That means we apply the chart’s scale/translation *only* in X dimension,
-        //    while forcing Y to a specific screen coordinate.
-        
-        // The simplest approach: we build the “pinned line” in **screen space** directly.
-        // Then we skip any transformation in the vertex shader (or pass an identity MVP).
-        
-        // Let’s say the bottom edge is at y = viewportSize.height - 1 px offset?
-        let bottomY: Float = Float(viewportSize.height - 30) // e.g., 30 px from bottom if you want spacing
-        // Convert x data coords -> screen coords, but y is pinned
+        // Build pinned x-axis line at bottom
+        // We'll position it, say, 50px from the bottom. Tweak as desired.
+        let bottomScreenY: Float = Float(viewportSize.height - 40)  // 40 px from top
         let xLineVerts = buildXAxisLine(minDataX: minX,
                                         maxDataX: maxX,
-                                        chartTransform: chartTransform,
-                                        pinnedScreenY: bottomY,
+                                        transform: chartTransform,
+                                        pinnedScreenY: bottomScreenY,
                                         color: axisColor)
         xAxisLineVertexCount = xLineVerts.count / 8
-        xAxisLineBuffer = device.makeBuffer(bytes: xLineVerts,
-                                            length: xLineVerts.count * MemoryLayout<Float>.size,
-                                            options: .storageModeShared)
+        if let buf = device.makeBuffer(bytes: xLineVerts,
+                                       length: xLineVerts.count * MemoryLayout<Float>.size,
+                                       options: .storageModeShared) {
+            xAxisLineBuffer = buf
+        }
         
-        // 2) Build line for Y axis pinned at left
-        let leftX: Float = 50 // e.g. pinned 50 px from left
+        // Build pinned y-axis at left
+        let leftScreenX: Float = 50 // pinned 50 px from left
         let yLineVerts = buildYAxisLine(minDataY: minY,
                                         maxDataY: maxY,
-                                        chartTransform: chartTransform,
-                                        pinnedScreenX: leftX,
+                                        transform: chartTransform,
+                                        pinnedScreenX: leftScreenX,
                                         color: axisColor)
         yAxisLineVertexCount = yLineVerts.count / 8
-        yAxisLineBuffer = device.makeBuffer(bytes: yLineVerts,
-                                            length: yLineVerts.count * MemoryLayout<Float>.size,
-                                            options: .storageModeShared)
+        if let buf = device.makeBuffer(bytes: yLineVerts,
+                                       length: yLineVerts.count * MemoryLayout<Float>.size,
+                                       options: .storageModeShared) {
+            yAxisLineBuffer = buf
+        }
         
-        // 3) Build tick labels (x)
-        xTickLabels.removeAll()
+        // Generate ticks. This is just a simplistic “nice ticks” approach:
         let xTicks = generateNiceTicks(minVal: Double(minX), maxVal: Double(maxX), desiredCount: 5)
-        for tickVal in xTicks {
-            let floatVal = Float(tickVal)
+        let yTicks = generateNiceTicks(minVal: Double(minY), maxVal: Double(maxY), desiredCount: 5)
+        
+        // Build label buffers
+        xTickLabels.removeAll()
+        for tick in xTicks {
+            let floatVal = Float(tick)
             let screenX = dataXtoScreenX(dataX: floatVal, transform: chartTransform)
-            // pinned at the bottom
-            let screenY = bottomY - 15 // e.g. put label slightly below axis line
+            let labelY = bottomScreenY - 15 // place label just below the axis line
             let labelStr = formatTick(floatVal)
             
-            // Build text in screen coords (so no transform in the vertex shader).
-            // Usually, you store those coords in data space. But here we want pinned screen space.
             let (buf, count) = textRenderer.buildTextVertices(
                 string: labelStr,
                 x: screenX,
-                y: screenY,
+                y: labelY,
                 color: labelColor
             )
             if let b = buf {
-                xTickLabels.append(TickLabel(buffer: b, count: count))
+                xTickLabels.append(TickLabelBuffer(buffer: b, vertexCount: count))
             }
         }
         
-        // 4) Build tick labels (y)
         yTickLabels.removeAll()
-        let yTicks = generateNiceTicks(minVal: Double(minY), maxVal: Double(maxY), desiredCount: 5)
-        for tickVal in yTicks {
-            let floatVal = Float(tickVal)
+        for tick in yTicks {
+            let floatVal = Float(tick)
             let screenY = dataYtoScreenY(dataY: floatVal, transform: chartTransform)
-            let screenX = leftX // pinned to left
+            let labelX = leftScreenX // pinned to left
             let labelStr = formatTick(floatVal)
             
             let (buf, count) = textRenderer.buildTextVertices(
                 string: labelStr,
-                x: screenX,
+                x: labelX,
                 y: screenY,
                 color: labelColor
             )
             if let b = buf {
-                yTickLabels.append(TickLabel(buffer: b, count: count))
+                yTickLabels.append(TickLabelBuffer(buffer: b, vertexCount: count))
             }
         }
     }
@@ -177,149 +186,138 @@ class PinnedAxesRenderer {
     // MARK: - Drawing
     
     func drawAxes(renderEncoder: MTLRenderCommandEncoder) {
-        guard let pso = axisPipelineState else { return }
+        guard let axisPipeline = axisPipelineState else { return }
         
-        renderEncoder.setRenderPipelineState(pso)
-        
-        // 1) Draw x-axis line
-        if let xBuf = xAxisLineBuffer {
+        // 1) Draw pinned x-axis line
+        if let xBuf = xAxisLineBuffer, xAxisLineVertexCount > 0 {
+            renderEncoder.setRenderPipelineState(axisPipeline)
             renderEncoder.setVertexBuffer(xBuf, offset: 0, index: 0)
-            // We’re drawing in screen space, so we might pass an identity MVP or
-            // handle it in the vertex shader. For now, assume identity transform:
+            // We’re in screen space, so no transform buffer needed if the vertex shader is identity
             renderEncoder.drawPrimitives(type: .line, vertexStart: 0, vertexCount: xAxisLineVertexCount)
         }
         
-        // 2) Draw y-axis line
-        if let yBuf = yAxisLineBuffer {
+        // 2) Draw pinned y-axis line
+        if let yBuf = yAxisLineBuffer, yAxisLineVertexCount > 0 {
+            renderEncoder.setRenderPipelineState(axisPipeline)
             renderEncoder.setVertexBuffer(yBuf, offset: 0, index: 0)
             renderEncoder.drawPrimitives(type: .line, vertexStart: 0, vertexCount: yAxisLineVertexCount)
         }
         
         // 3) Draw x-axis labels
         for label in xTickLabels {
-            textRenderer.drawText(encoder: renderEncoder,
-                                  vertexBuffer: label.buffer,
-                                  vertexCount: label.count,
-                                  transformBuffer: nil /* identity, screen space */)
+            textRenderer.drawText(
+                encoder: renderEncoder,
+                vertexBuffer: label.buffer,
+                vertexCount: label.vertexCount,
+                transformBuffer: nil // screen coords => identity transform
+            )
         }
         
         // 4) Draw y-axis labels
         for label in yTickLabels {
-            textRenderer.drawText(encoder: renderEncoder,
-                                  vertexBuffer: label.buffer,
-                                  vertexCount: label.count,
-                                  transformBuffer: nil)
+            textRenderer.drawText(
+                encoder: renderEncoder,
+                vertexBuffer: label.buffer,
+                vertexCount: label.vertexCount,
+                transformBuffer: nil
+            )
         }
     }
+}
+
+// MARK: - Helper Methods
+
+extension PinnedAxesRenderer {
     
-    // MARK: - Helpers
+    /// Build a line from (xMinData, pinnedScreenY) to (xMaxData, pinnedScreenY) in *screen space*.
+    private func buildXAxisLine(minDataX: Float,
+                                maxDataX: Float,
+                                transform: matrix_float4x4,
+                                pinnedScreenY: Float,
+                                color: SIMD4<Float>) -> [Float] {
+        
+        let leftX = dataXtoScreenX(dataX: minDataX, transform: transform)
+        let rightX = dataXtoScreenX(dataX: maxDataX, transform: transform)
+        
+        var verts: [Float] = []
+        
+        // vertex #1
+        verts.append(leftX)
+        verts.append(pinnedScreenY)
+        verts.append(0)   // z
+        verts.append(1)   // w
+        verts.append(color.x)
+        verts.append(color.y)
+        verts.append(color.z)
+        verts.append(color.w)
+        
+        // vertex #2
+        verts.append(rightX)
+        verts.append(pinnedScreenY)
+        verts.append(0)
+        verts.append(1)
+        verts.append(color.x)
+        verts.append(color.y)
+        verts.append(color.z)
+        verts.append(color.w)
+        
+        return verts
+    }
     
-    /// Convert data X to screen X using the chart’s transform.
-    /// We only extract the relevant scale/translation from the transform’s first column/last column, etc.
+    /// Build a line from (pinnedScreenX, yMinData) to (pinnedScreenX, yMaxData) in screen space.
+    private func buildYAxisLine(minDataY: Float,
+                                maxDataY: Float,
+                                transform: matrix_float4x4,
+                                pinnedScreenX: Float,
+                                color: SIMD4<Float>) -> [Float] {
+        
+        let bottomY = dataYtoScreenY(dataY: minDataY, transform: transform)
+        let topY    = dataYtoScreenY(dataY: maxDataY, transform: transform)
+        
+        var verts: [Float] = []
+        
+        // vertex #1
+        verts.append(pinnedScreenX)
+        verts.append(bottomY)
+        verts.append(0)
+        verts.append(1)
+        verts.append(color.x)
+        verts.append(color.y)
+        verts.append(color.z)
+        verts.append(color.w)
+        
+        // vertex #2
+        verts.append(pinnedScreenX)
+        verts.append(topY)
+        verts.append(0)
+        verts.append(1)
+        verts.append(color.x)
+        verts.append(color.y)
+        verts.append(color.z)
+        verts.append(color.w)
+        
+        return verts
+    }
+    
+    /// Convert a data X coordinate to screen X, ignoring Y (which is pinned).
     private func dataXtoScreenX(dataX: Float, transform: matrix_float4x4) -> Float {
-        // Apply your transform but ignore Y
-        // Alternatively, you can transform a 4D vector (dataX, 0, 0, 1) and take the clip space to screen routine.
-        
-        // For demonstration, let's assume your transform is typical (scale, then translate)
-        // We'll do a simplified approach:
-        // m[3].x is translation.x, m[0].x is scale.x, etc. This is pseudo.
-        
-        // In reality, you might do the full multiply:
-        // let v = float4(dataX, 0, 0, 1)
-        // let clip = transform * v
-        // let ndcX = clip.x / clip.w
-        // let screenX = (ndcX * 0.5 + 0.5) * viewportSize.width
-        // That’s the precise way. Here is a shorter approach if your transform is purely 2D scale+translate:
-        
-        let sx = transform.columns.0.x   // scaleX
-        let tx = transform.columns.3.x   // translateX
-        
-        // dataX -> scaledX
-        let scaledX = dataX * sx + tx
-        
-        // scaledX is in clip space [-1..1], map to screen
-        let screenX = (scaledX * 0.5 + 0.5) * Float(viewportSize.width)
+        // Full approach: multiply by transform and convert to screen space
+        let clip = transform * float4(dataX, 0, 0, 1)
+        let ndcX = clip.x / clip.w
+        let screenX = (ndcX * 0.5 + 0.5) * Float(viewportSize.width)
         return screenX
     }
     
+    /// Convert a data Y coordinate to screen Y, ignoring X.
     private func dataYtoScreenY(dataY: Float, transform: matrix_float4x4) -> Float {
-        let sy = transform.columns.1.y
-        let ty = transform.columns.3.y
-        
-        let scaledY = dataY * sy + ty
-        let screenY = (1.0 - (scaledY * 0.5 + 0.5)) * Float(viewportSize.height)
+        let clip = transform * float4(0, dataY, 0, 1)
+        let ndcY = clip.y / clip.w
+        let screenY = (1 - (ndcY * 0.5 + 0.5)) * Float(viewportSize.height)
         return screenY
     }
     
-    private func buildXAxisLine(minDataX: Float, maxDataX: Float,
-                                chartTransform: matrix_float4x4,
-                                pinnedScreenY: Float,
-                                color: SIMD4<Float>) -> [Float] {
-        let leftScreenX = dataXtoScreenX(dataX: minDataX, transform: chartTransform)
-        let rightScreenX = dataXtoScreenX(dataX: maxDataX, transform: chartTransform)
-        
-        // We store in screen space (x,y,0,1)
-        var verts: [Float] = []
-        // Start
-        verts.append(leftScreenX)
-        verts.append(pinnedScreenY)
-        verts.append(0)
-        verts.append(1)
-        
-        verts.append(color.x)
-        verts.append(color.y)
-        verts.append(color.z)
-        verts.append(color.w)
-        
-        // End
-        verts.append(rightScreenX)
-        verts.append(pinnedScreenY)
-        verts.append(0)
-        verts.append(1)
-        
-        verts.append(color.x)
-        verts.append(color.y)
-        verts.append(color.z)
-        verts.append(color.w)
-        
-        return verts
-    }
-    
-    private func buildYAxisLine(minDataY: Float, maxDataY: Float,
-                                chartTransform: matrix_float4x4,
-                                pinnedScreenX: Float,
-                                color: SIMD4<Float>) -> [Float] {
-        let bottomScreenY = dataYtoScreenY(dataY: minDataY, transform: chartTransform)
-        let topScreenY    = dataYtoScreenY(dataY: maxDataY, transform: chartTransform)
-        
-        var verts: [Float] = []
-        // Start
-        verts.append(pinnedScreenX)
-        verts.append(bottomScreenY)
-        verts.append(0)
-        verts.append(1)
-        
-        verts.append(color.x)
-        verts.append(color.y)
-        verts.append(color.z)
-        verts.append(color.w)
-        
-        // End
-        verts.append(pinnedScreenX)
-        verts.append(topScreenY)
-        verts.append(0)
-        verts.append(1)
-        
-        verts.append(color.x)
-        verts.append(color.y)
-        verts.append(color.z)
-        verts.append(color.w)
-        
-        return verts
-    }
-    
+    /// Basic "nice ticks" generator
     private func generateNiceTicks(minVal: Double, maxVal: Double, desiredCount: Int) -> [Double] {
-        // same “nice ticks” approach as earlier
         guard minVal < maxVal, desiredCount > 0 else { return [] }
         let range = maxVal - minVal
         let rawStep = range / Double(desiredCount)
@@ -336,14 +334,16 @@ class PinnedAxesRenderer {
         var result: [Double] = []
         var v = start
         while v <= maxVal {
-            if v >= minVal { result.append(v) }
+            if v >= minVal {
+                result.append(v)
+            }
             v += step
         }
         return result
     }
     
+    /// Basic formatting for numeric tick values
     private func formatTick(_ value: Float) -> String {
-        // e.g. handle large values with suffix
         let absVal = abs(value)
         switch absVal {
         case 1_000_000_000...:

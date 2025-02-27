@@ -32,6 +32,8 @@ public class RuntimeGPUTextRenderer {
         descriptor.vertexFunction   = vertexFunc
         descriptor.fragmentFunction = fragmentFunc
         
+        descriptor.rasterSampleCount = 4
+        
         // We'll define a layout: position.xy, texcoord.xy, color.rgba
         let vertexDescriptor = MTLVertexDescriptor()
         vertexDescriptor.attributes[0].format = .float2 // position
