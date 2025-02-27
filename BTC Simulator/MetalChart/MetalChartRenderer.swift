@@ -138,11 +138,13 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             )
             
             // optional: tweak axis styling
-            // pinnedAxesRenderer?.axisColor  = SIMD4<Float>(1, 1, 1, 1)
-            // pinnedAxesRenderer?.labelColor = SIMD4<Float>(0.8, 0.8, 0.8, 1.0)
+            pinnedAxesRenderer?.axisColor  = SIMD4<Float>(1, 1, 1, 1)
+            pinnedAxesRenderer?.labelColor = SIMD4<Float>(0.8, 0.8, 0.8, 1.0)
+            
+            
             // For testing
-            pinnedAxesRenderer?.axisColor  = SIMD4<Float>(1, 0, 0, 1)  // bright red
-            pinnedAxesRenderer?.labelColor = SIMD4<Float>(1, 1, 0, 1)  // bright yellow
+            // pinnedAxesRenderer?.axisColor  = SIMD4<Float>(1, 0, 0, 1)  // bright red
+            // pinnedAxesRenderer?.labelColor = SIMD4<Float>(1, 1, 0, 1)  // bright yellow
         }
         
         // If your pinned axes approach uses “screen space” vertices and a specialized vertex shader:
