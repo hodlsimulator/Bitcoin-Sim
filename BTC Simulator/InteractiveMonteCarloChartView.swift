@@ -13,13 +13,16 @@ struct InteractiveMonteCarloChartView: View {
     @EnvironmentObject var orientationObserver: OrientationObserver
     @EnvironmentObject var chartDataCache: ChartDataCache
     @EnvironmentObject var simSettings: SimulationSettings
-
+    
     @State private var metalChart = MetalChartRenderer()
     
-    // Gesture states for pinch and pan
-    @GestureState private var gestureScale: CGFloat = 1.0
-    @GestureState private var gestureTranslation: CGSize = .zero
-
+    // We store the “base” scale/translation from previous gestures,
+    // plus an anchor for pinch (approx midpoint of the two touch points).
+    @State private var baseScale: Float = 1.0
+    @State private var baseTranslation = SIMD2<Float>(0, 0)
+    
+    @State private var pinchAnchor: CGPoint = .zero
+    
     var body: some View {
         GeometryReader { geo in
             ZStack {
@@ -38,43 +41,77 @@ struct InteractiveMonteCarloChartView: View {
                         metalChart.viewportSize = newSize
                         metalChart.updateViewport(to: newSize)
                     }
-                    .gesture(combinedGesture(geoSize: geo.size))
+                    // Use SimultaneousGesture to track pinch (for scale) + drag (for anchor).
+                    .gesture(
+                        SimultaneousGesture(
+                            pinchGesture(geoSize: geo.size),
+                            dragGesture(geoSize: geo.size)
+                        )
+                    )
             }
         }
     }
     
-    func combinedGesture(geoSize: CGSize) -> some Gesture {
-        // Pinch gesture updates the scale factor.
-        let pinch = MagnificationGesture()
-            .updating($gestureScale) { current, state, _ in
-                state = current
-            }
-            .onEnded { finalScale in
-                // Update the GPU transform matrix
-                metalChart.scale *= Float(finalScale)
+    // MARK: - Pinch Gesture
+    func pinchGesture(geoSize: CGSize) -> some Gesture {
+        MagnificationGesture()
+            .onChanged { currentMagnification in
+                // currentMagnification is how much the user is pinching at this moment.
+                // We'll interpret pinchAnchor as the "focus point" for the scaling.
+                
+                // The new scale is baseScale * current pinch factor.
+                // Then we figure out how much we’ve changed from the old scale
+                // so we can anchor around pinchAnchor in NDC.
+                let oldScale = metalChart.scale
+                let newScale = baseScale * Float(currentMagnification)
+                let scaleRatio = newScale / oldScale
+                
+                // Convert pinchAnchor from view coords to Normalised Device Coords
+                let anchorNDC = metalChart.convertPointToNDC(pinchAnchor, geoSize: geoSize)
+                
+                // Shift translation so that anchorNDC remains in the same place
+                // while scaling around it.
+                metalChart.translation.x -= anchorNDC.x * (scaleRatio - 1)
+                metalChart.translation.y -= anchorNDC.y * (scaleRatio - 1)
+                
+                metalChart.scale = newScale
                 metalChart.updateTransform()
             }
-        
-        // Drag gesture updates the translation.
-        let drag = DragGesture()
-            .updating($gestureTranslation) { current, state, _ in
-                state = current.translation
+            .onEnded { finalMagnification in
+                // Lock in the new base scale.
+                baseScale *= Float(finalMagnification)
+            }
+    }
+    
+    // MARK: - Drag Gesture
+    func dragGesture(geoSize: CGSize) -> some Gesture {
+        DragGesture(minimumDistance: 0, coordinateSpace: .local)
+            .onChanged { drag in
+                // If user is pinching, this roughly tracks two-finger midpoint.
+                // Even a one-finger drag also sets pinchAnchor,
+                // so consider ignoring single-finger drags if you want.
+                pinchAnchor = drag.location
+                
+                // For normal dragging (panning), we also want to move the chart.
+                // The difference from baseTranslation is how far we drag in NDC.
+                let dx = Float(drag.translation.width) / Float(geoSize.width) * 2.0
+                let dy = Float(drag.translation.height) / Float(geoSize.height) * 2.0
+                
+                metalChart.translation.x = baseTranslation.x + dx
+                metalChart.translation.y = baseTranslation.y - dy  // invert Y
+                metalChart.updateTransform()
             }
             .onEnded { final in
-                // Convert drag (in points) to normalized device translation:
+                // Finalise the pan movement.
                 let dx = Float(final.translation.width) / Float(geoSize.width) * 2.0
                 let dy = Float(final.translation.height) / Float(geoSize.height) * 2.0
-                // Note: Screen Y is inverted relative to Metal's NDC
-                metalChart.translation.x += dx
-                metalChart.translation.y -= dy
-                metalChart.updateTransform()
+                baseTranslation.x += dx
+                baseTranslation.y -= dy
             }
-        
-        return SimultaneousGesture(pinch, drag)
     }
 }
 
-// MARK: - Metal Renderer with GPU Transform
+// MARK: - Metal Renderer
 
 class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     var device: MTLDevice!
@@ -86,16 +123,12 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     var chartDataCache: ChartDataCache?
     var simSettings: SimulationSettings?
     
-    // Static vertex data: built once from the full data range.
-    // (We assume that all vertex positions are computed using the full domain.)
-    
-    // GPU-side transform properties
+    // Transform properties
     var viewportSize: CGSize = .zero
     var scale: Float = 1.0
     var translation = SIMD2<Float>(0, 0)
     var transformBuffer: MTLBuffer?
     
-    // We'll build the vertex buffer once.
     func setupMetal(
         in size: CGSize,
         chartDataCache: ChartDataCache,
@@ -154,15 +187,17 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             pipelineState = nil
         }
         
-        // Build the static vertex buffer using full data.
+        // Build the static vertex buffer using full data
         buildLineBuffer()
         
-        // Create the transform uniform buffer.
-        transformBuffer = device.makeBuffer(length: MemoryLayout<matrix_float4x4>.size, options: .storageModeShared)
+        // Create the transform uniform buffer
+        transformBuffer = device.makeBuffer(
+            length: MemoryLayout<matrix_float4x4>.size,
+            options: .storageModeShared
+        )
         updateTransform()
     }
     
-    // Build the vertex buffer only once from full data.
     func buildLineBuffer() {
         guard let cache = chartDataCache,
               let simSettings = simSettings else { return }
@@ -172,22 +207,24 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             simulations: simulations,
             simSettings: simSettings,
             xMin: 0.0,
-            xMax: (simSettings.periodUnit == .weeks) ? Double(simSettings.userPeriods)/52.0 : Double(simSettings.userPeriods)/12.0,
+            xMax: (simSettings.periodUnit == .weeks)
+                ? Double(simSettings.userPeriods)/52.0
+                : Double(simSettings.userPeriods)/12.0,
             yMin: 1.0,
             yMax: 1000000000000.0,
             customPalette: customPalette,
             chartDataCache: cache
         )
         let byteCount = vertexData.count * MemoryLayout<Float>.size
-        vertexBuffer = device.makeBuffer(bytes: vertexData, length: byteCount, options: .storageModeShared)
+        vertexBuffer = device.makeBuffer(
+            bytes: vertexData,
+            length: byteCount,
+            options: .storageModeShared
+        )
         self.lineSizes = lineSizes
     }
     
-    // Update the transformation matrix uniform based on scale and translation.
     func updateTransform() {
-        // Build an orthographic projection matrix in NDC.
-        // Our vertex data is already in [-1, 1] space.
-        // We simply apply a scale and translation.
         let scaleMatrix = matrix_float4x4(diagonal: SIMD4<Float>(scale, scale, 1, 1))
         let translationMatrix = matrix_float4x4(columns: (
             SIMD4<Float>(1, 0, 0, 0),
@@ -196,14 +233,26 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             SIMD4<Float>(translation.x, translation.y, 0, 1)
         ))
         let transform = matrix_multiply(translationMatrix, scaleMatrix)
-        // Write transform to the buffer.
-        let bufferPointer = transformBuffer?.contents().bindMemory(to: matrix_float4x4.self, capacity: 1)
+        
+        let bufferPointer = transformBuffer?.contents().bindMemory(
+            to: matrix_float4x4.self,
+            capacity: 1
+        )
         bufferPointer?.pointee = transform
     }
     
     func updateViewport(to size: CGSize) {
         viewportSize = size
         print(">> updateViewport() - new size: \(size)")
+    }
+    
+    // We need a helper to convert a tap/pinch location from view coords
+    // to Normalised Device Coords ([-1,1] range in X/Y).
+    func convertPointToNDC(_ point: CGPoint, geoSize: CGSize) -> SIMD2<Float> {
+        let ndx = Float(point.x / geoSize.width) * 2.0 - 1.0
+        // Flip y because in Metal’s NDC, +1 is top
+        let ndy = Float((geoSize.height - point.y) / geoSize.height) * 2.0 - 1.0
+        return SIMD2<Float>(ndx, ndy)
     }
     
     // MARK: - MTKViewDelegate
@@ -217,14 +266,13 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
               let drawable = view.currentDrawable,
               let rpd = view.currentRenderPassDescriptor,
               let commandBuffer = commandQueue.makeCommandBuffer(),
-              let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: rpd)
-        else {
+              let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: rpd) else {
             return
         }
         
         renderEncoder.setRenderPipelineState(pipelineState)
         renderEncoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
-        // Pass the transform uniform at buffer index 1.
+        
         if let transformBuffer = transformBuffer {
             renderEncoder.setVertexBuffer(transformBuffer, offset: 0, index: 1)
         }
@@ -260,15 +308,15 @@ func buildLineVertexData(
     
     for (runIndex, sim) in simulations.enumerated() {
         let isBestFit = (sim.id == bestFitId)
-        var chosenColor: Color = isBestFit ? .orange : customPalette[runIndex % customPalette.count]
-        var chosenOpacity: Float = isBestFit ? 1.0 : 0.2
+        let chosenColor: Color = isBestFit ? .orange : customPalette[runIndex % customPalette.count]
+        let chosenOpacity: Float = isBestFit ? 1.0 : 0.2
         let (r, g, b, a) = colorToFloats(chosenColor, opacity: Double(chosenOpacity))
         
         var vertexCount = 0
         for pt in sim.points {
             let rawX = convertPeriodToYears(pt.week, simSettings)
             let rawY = NSDecimalNumber(decimal: pt.value).doubleValue
-            // Normalize using full domain for static data.
+            
             let ratioX = (rawX - xMin) / (xMax - xMin)
             let nx = Float(ratioX * 2.0 - 1.0)
             
@@ -278,11 +326,13 @@ func buildLineVertexData(
             let ratioY = (logVal - logMin) / (logMax - logMin)
             let ny = Float(ratioY * 2.0 - 1.0)
             
+            // Position
             vertexData.append(nx)
             vertexData.append(ny)
             vertexData.append(0.0)
             vertexData.append(1.0)
             
+            // Colour
             vertexData.append(r)
             vertexData.append(g)
             vertexData.append(b)
@@ -294,8 +344,6 @@ func buildLineVertexData(
     }
     return (vertexData, lineSizes)
 }
-
-// MARK: - Helpers
 
 let customPalette: [Color] = [
     .white, .yellow, .red, .blue, .green
@@ -310,7 +358,11 @@ func colorToFloats(_ swiftColor: Color, opacity: Double) -> (Float, Float, Float
 }
 
 func convertPeriodToYears(_ week: Int, _ simSettings: SimulationSettings) -> Double {
-    return simSettings.periodUnit == .weeks ? Double(week) / 52.0 : Double(week) / 12.0
+    if simSettings.periodUnit == .weeks {
+        return Double(week) / 52.0
+    } else {
+        return Double(week) / 12.0
+    }
 }
 
 // MARK: - Wrapper for the MTKView
@@ -323,9 +375,12 @@ struct MTKViewWrapper: UIViewRepresentable {
         mtkView.device = metalChart.device ?? MTLCreateSystemDefaultDevice()
         mtkView.delegate = metalChart
         mtkView.clearColor = MTLClearColorMake(0, 0, 0, 1)
-        mtkView.sampleCount = 4  // For MSAA
+        mtkView.preferredFramesPerSecond = 60
+        mtkView.sampleCount = 4  // MSAA
         return mtkView
     }
     
-    func updateUIView(_ uiView: MTKView, context: Context) { }
+    func updateUIView(_ uiView: MTKView, context: Context) {
+        // No update needed
+    }
 }
