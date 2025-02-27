@@ -97,13 +97,12 @@ enum ChartType {
 
 // MARK: - MonteCarloChartView
 
-import SwiftUI
-import Charts
-
 struct MonteCarloChartView: View {
     @EnvironmentObject var orientationObserver: OrientationObserver
     @EnvironmentObject var chartDataCache: ChartDataCache
     @EnvironmentObject var simSettings: SimulationSettings
+    
+    @State private var zoomFactor: CGFloat = 1.0
     
     var verticalScale: CGFloat {
         orientationObserver.isLandscape ? 1.0 : 0.92
@@ -124,7 +123,7 @@ struct MonteCarloChartView: View {
         let minVal = decimalValues.min().map { NSDecimalNumber(decimal: $0).doubleValue } ?? 1.0
         let maxVal = decimalValues.max().map { NSDecimalNumber(decimal: $0).doubleValue } ?? 2.0
         
-        // Build log-scale domain
+        // Build log-scale domain in case you want log-spaced ticks
         var bottomExp = floor(log10(minVal))
         if minVal <= pow(10, bottomExp), bottomExp > 0 {
             bottomExp -= 1
@@ -143,8 +142,8 @@ struct MonteCarloChartView: View {
         
         let totalPeriods = Double(simSettings.userPeriods)
         let totalYears = (simSettings.periodUnit == .weeks)
-            ? totalPeriods / 52.0
-            : totalPeriods / 12.0
+        ? totalPeriods / 52.0
+        : totalPeriods / 12.0
         
         func dynamicXStride(_ yrs: Double) -> Double {
             switch yrs {
@@ -162,16 +161,19 @@ struct MonteCarloChartView: View {
         // We'll use the total # of runs (including best-fit) to adjust best-fit thickness & darkness
         let iterationCount = normalSimulations.count + 1
         
+        // Precompute stride values for x-axis
+        let xAxisStrideValues = Array(stride(from: 0.0, through: totalYears, by: xStride))
+        
         return GeometryReader { geo in
             ZStack {
                 Color.black.ignoresSafeArea()
                 
                 VStack(spacing: 0) {
                     Chart {
-                        // 1) Faint lines for normal runs only
+                        // 1) Faint lines for normal runs
                         simulationLines(simulations: normalSimulations, simSettings: simSettings)
                         
-                        // 2) Overlaid bold orange best-fit (excluded above)
+                        // 2) Overlaid bold orange best-fit
                         if let bestFitRun = bestFit {
                             bestFitLine(
                                 bestFitRun,
@@ -185,10 +187,8 @@ struct MonteCarloChartView: View {
                     .chartYScale(domain: domainMin...domainMax, type: .log)
                     .chartPlotStyle { plotArea in
                         plotArea
-                            .padding(.leading, 0)
-                            .padding(.trailing, 0)
-                            .padding(.top, 0)
-                            .padding(.bottom, 20)
+                            .padding(.horizontal, 0)
+                            .padding(.vertical, 10)
                     }
                     .chartYAxis {
                         AxisMarks(position: .leading, values: yTickValues) { axisValue in
@@ -199,24 +199,18 @@ struct MonteCarloChartView: View {
                                     let exponent = Int(log10(dblVal))
                                     Text(formatPowerOfTenLabel(exponent))
                                         .foregroundColor(.white)
+                                } else {
+                                    Text("")
                                 }
                             }
                         }
                     }
                     .chartXAxis {
-                        AxisMarks(values: Array(stride(from: 0.0, through: totalYears, by: xStride))) { axisValue in
+                        AxisMarks(values: xAxisStrideValues) { axisValue in
                             AxisGridLine().foregroundStyle(.white.opacity(0.3))
                             AxisTick().foregroundStyle(.white.opacity(0.3))
                             AxisValueLabel {
-                                if let dblVal = axisValue.as(Double.self), dblVal > 0 {
-                                    if totalYears <= 2.0 {
-                                        Text("\(Int(dblVal * 12))M")
-                                            .foregroundColor(.white)
-                                    } else {
-                                        Text("\(Int(dblVal))Y")
-                                            .foregroundColor(.white)
-                                    }
-                                }
+                                Text(xAxisLabel(for: axisValue, totalYears: totalYears)).foregroundColor(.white)
                             }
                         }
                     }
@@ -227,44 +221,22 @@ struct MonteCarloChartView: View {
             }
         }
     }
-}
-
-// MARK: - bestFitLine builder with even darker/thicker scaling
-@ChartContentBuilder
-func bestFitLine(
-    _ run: SimulationRun,
-    simSettings: SimulationSettings,
-    iterationCount: Int
-) -> some ChartContent {
-    // Clamp iterationCount to [70..700]
-    let clamped = max(70, min(iterationCount, 700))
-    let fraction = Double(clamped - 70) / Double(700 - 70)
     
-    // 1) Make brightness drop from 1.0 → 0.65
-    let minBrightness: CGFloat = 1.0
-    let maxDarkBrightness: CGFloat = 0.65
-    let dynamicBrightness = minBrightness - fraction * (minBrightness - maxDarkBrightness)
-    
-    // 2) Thicken from 2.0 → 4.0
-    let minWidth: CGFloat = 2.0
-    let maxWidth: CGFloat = 4.0
-    let lineWidth = minWidth + fraction * (maxWidth - minWidth)
-    
-    return ForEach(run.points) { pt in
-        LineMark(
-            x: .value("Year", convertPeriodToYears(pt.week, simSettings)),
-            y: .value("Value", NSDecimalNumber(decimal: pt.value).doubleValue)
-        )
-        .foregroundStyle(
-            Color(hue: 0.08, saturation: 1.0, brightness: dynamicBrightness)
-        )
-        .lineStyle(
-            StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round)
-        )
+    // Helper function for x-axis labels
+    func xAxisLabel(for axisValue: AxisValue, totalYears: Double) -> String {
+        if let dblVal = axisValue.as(Double.self), dblVal > 0 {
+            if totalYears <= 2.0 {
+                return "\(Int(dblVal * 12))M"
+            } else {
+                return "\(Int(dblVal))Y"
+            }
+        } else {
+            return ""
+        }
     }
 }
 
-// MARK: - The main container
+// MARK: - MonteCarloResultsView
 
 struct MonteCarloResultsView: View {
     @EnvironmentObject var simChartSelection: SimChartSelection
@@ -278,7 +250,6 @@ struct MonteCarloResultsView: View {
     @State private var isGeneratingLandscape = false
     @State private var showChartMenu = false
     
-    // Decide which snapshot to show in portrait
     private var portraitSnapshot: UIImage? {
         switch simChartSelection.selectedChart {
         case .btcPrice:
@@ -288,7 +259,6 @@ struct MonteCarloResultsView: View {
         }
     }
     
-    // Decide which snapshot for a fresh landscape
     private var freshLandscapeSnapshot: UIImage? {
         switch simChartSelection.selectedChart {
         case .btcPrice:
@@ -318,7 +288,6 @@ struct MonteCarloResultsView: View {
                 }
             }
             
-            // The drop-down menu that appears on tapping the arrow
             if !isLandscape && showChartMenu {
                 Color.black.opacity(0.3)
                     .ignoresSafeArea()
@@ -329,8 +298,9 @@ struct MonteCarloResultsView: View {
                 
                 Button {
                     withAnimation {
-                        simChartSelection.selectedChart = (simChartSelection.selectedChart == .cumulativePortfolio
-                            ? .btcPrice : .cumulativePortfolio)
+                        simChartSelection.selectedChart =
+                            (simChartSelection.selectedChart == .cumulativePortfolio
+                             ? .btcPrice : .cumulativePortfolio)
                         showChartMenu = false
                     }
                 } label: {
@@ -344,7 +314,6 @@ struct MonteCarloResultsView: View {
                 .buttonStyle(.plain)
                 .background(Color.black)
                 .edgesIgnoringSafeArea(.horizontal)
-                // ↓↓↓ Changed from 120 to 15 so it appears closer to the title
                 .padding(.top, 15)
                 .transition(.move(edge: .top))
                 .zIndex(2)
@@ -374,7 +343,7 @@ struct MonteCarloResultsView: View {
             }
         }
         .onAppear {
-            // Force the back button title offscreen on this screen if iOS < 16:
+            // Force the back button title offscreen if iOS < 16
             UIBarButtonItem.appearance().setBackButtonTitlePositionAdjustment(
                 UIOffset(horizontal: -1000, vertical: 0),
                 for: .default
@@ -526,6 +495,7 @@ struct MonteCarloResultsView: View {
 }
 
 // MARK: - formatPowerOfTenLabel
+
 func formatPowerOfTenLabel(_ exponent: Int) -> String {
     switch exponent {
     case 0:  return "1"
@@ -556,6 +526,7 @@ func formatPowerOfTenLabel(_ exponent: Int) -> String {
 }
 
 // MARK: - ForceReflowView
+
 struct ForceReflowView<Content: View>: View {
     let content: Content
     
