@@ -11,6 +11,7 @@ import Combine
 import Foundation
 import UIKit
 
+/*
 // MARK: - Data Models
 
 struct WeekPoint: Identifiable {
@@ -23,6 +24,7 @@ struct SimulationRun: Identifiable {
     let id = UUID()
     let points: [WeekPoint]
 }
+*/
 
 // MARK: - SquishedLandscapePlaceholderView
 

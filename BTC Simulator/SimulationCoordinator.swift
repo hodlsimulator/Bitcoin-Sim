@@ -68,11 +68,9 @@ class SimulationCoordinator: ObservableObject {
     
     func runSimulation(generateGraphs: Bool, lockRandomSeed: Bool) {
         print("Coordinator ID in runSimulation =>", ObjectIdentifier(self))
-        
-        // Debug prints for column debugging
         print("DEBUG: runSimulation() - current simChartSelection.selectedChart = \(simChartSelection.selectedChart)")
         
-        // 1) Apply any dictionary-based factor tweaks
+        // 1) Apply dictionary-based factor tweaks
         simSettings.applyDictionaryFactorsToSim()
         
         // 2) Respect monthly vs weekly lock
@@ -85,41 +83,34 @@ class SimulationCoordinator: ObservableObject {
         let newHash = computeInputsHash()
         simSettings.printAllSettings()
         
-        // 3) Load monthly or weekly returns as needed
+        // 3) Load monthly or weekly returns
         if simSettings.periodUnit == .months {
             let btcMonthlyDict = loadBTCMonthlyReturnsAsDict()
             let spMonthlyDict  = loadSP500MonthlyReturnsAsDict()
-            
-            let alignedMonthly = alignBTCandSPMonthly(
-                btcDict: btcMonthlyDict,
-                spDict: spMonthlyDict
-            )
+            let alignedMonthly = alignBTCandSPMonthly(btcDict: btcMonthlyDict, spDict: spMonthlyDict)
             
             historicalBTCMonthlyReturns = alignedMonthly.map { $0.1 }
             sp500MonthlyReturns         = alignedMonthly.map { $0.2 }
             extendedMonthlyReturns      = historicalBTCMonthlyReturns
             
-            // Clear weekly arrays
+            // Clear weekly
             historicalBTCWeeklyReturns = []
             sp500WeeklyReturns = []
             extendedWeeklyReturns = []
             
             print("Loaded \(historicalBTCMonthlyReturns.count) monthly returns.")
             print("extendedMonthlyReturns = \(extendedMonthlyReturns.count)")
+            
         } else {
             let btcWeeklyDict = loadBTCWeeklyReturnsAsDict()
             let spWeeklyDict  = loadSP500WeeklyReturnsAsDict()
-            
-            let alignedWeekly = alignBTCandSPWeekly(
-                btcDict: btcWeeklyDict,
-                spDict: spWeeklyDict
-            )
+            let alignedWeekly = alignBTCandSPWeekly(btcDict: btcWeeklyDict, spDict: spWeeklyDict)
             
             historicalBTCWeeklyReturns = alignedWeekly.map { $0.1 }
             sp500WeeklyReturns         = alignedWeekly.map { $0.2 }
             extendedWeeklyReturns      = historicalBTCWeeklyReturns
             
-            // Clear monthly arrays
+            // Clear monthly
             historicalBTCMonthlyReturns = []
             sp500MonthlyReturns = []
             extendedMonthlyReturns = []
@@ -128,30 +119,21 @@ class SimulationCoordinator: ObservableObject {
             print("extendedWeeklyReturns = \(extendedWeeklyReturns.count)")
         }
         
-        // 4) Calibrate GARCH if user wants it
+        // 4) Calibrate GARCH if requested
         if simSettings.useGarchVolatility {
             calibrateGarchIfNeeded()
         } else {
             fittedGarchModel = nil
         }
         
-        // Prepare for the simulation
+        // Prepare
         isCancelled = false
         isLoading = true
         isChartBuilding = false
         monteCarloResults = []
         completedIterations = 0
         
-        // ----------------------------------------------------------------
-        // FORCIBLY RESET THE PINNED TABLE TO COLUMN 0 (or whichever default)
-        // (Only if you have a binding or a known property to set here.)
-        // Example pseudo-code:
-        //
-        // pinnedColumnIndexBinding?.wrappedValue = 0
-        // print("DEBUG: Forcing pinned table column to 0 on new simulation.")
-        // ----------------------------------------------------------------
-        
-        // 5) Determine final seed (weekly vs monthly)
+        // 5) Figure out final seed
         let finalSeed: UInt64?
         if self.useMonthly {
             if monthlySimSettings.lockedRandomSeedMonthly {
@@ -183,10 +165,7 @@ class SimulationCoordinator: ObservableObject {
         let mempoolArray = [Double](repeating: 50.0, count: 5000)
         let mempoolDataManager = MempoolDataManager(mempoolData: mempoolArray)
         
-        // -----------------------------------------------------------
-        // FIX AUTOCORR OFF/ON FOR FRESH INSTALL (step 6.5).
-        // We'll replicate the user toggling it off -> on behind the scenes.
-        // -----------------------------------------------------------
+        // 6.5) Quick fix for toggling autocorr
         func fixAutocorrAtStartup() {
             if self.useMonthly {
                 if monthlySimSettings.useAutoCorrelationMonthly {
@@ -203,14 +182,11 @@ class SimulationCoordinator: ObservableObject {
             }
         }
         fixAutocorrAtStartup()
-        // -----------------------------------------------------------
         
-        // 7) Run everything in the background
+        // 7) Dispatch to background
         DispatchQueue.global(qos: .userInitiated).async {
             guard let total = self.inputManager.getParsedIterations(), total > 0 else {
-                DispatchQueue.main.async {
-                    self.isLoading = false
-                }
+                DispatchQueue.main.async { self.isLoading = false }
                 return
             }
             
@@ -249,7 +225,7 @@ class SimulationCoordinator: ObservableObject {
                 fittedGarchModel: self.fittedGarchModel
             )
             
-            // Cancel check
+            // Check cancel
             if self.isCancelled {
                 DispatchQueue.main.async { self.isLoading = false }
                 return
@@ -259,19 +235,17 @@ class SimulationCoordinator: ObservableObject {
                 self.stepMedianBTCs = stepMedianPrices
             }
             
-            // If no runs, end
             if allIterations.isEmpty {
-                DispatchQueue.main.async {
-                    self.isLoading = false
-                }
+                DispatchQueue.main.async { self.isLoading = false }
                 return
             }
             
-            // Build results on main queue
+            // Build results on main
             DispatchQueue.main.async {
                 self.isLoading = false
                 self.isChartBuilding = true
                 
+                // Sort runs by final BTC price
                 let finalRuns = allIterations.enumerated().map {
                     ($0.offset, $0.element.last?.btcPriceUSD ?? Decimal.zero, $0.element)
                 }
@@ -313,11 +287,20 @@ class SimulationCoordinator: ObservableObject {
                 self.selectedPercentile = .median
                 self.allSimData = allIterations
                 
-                // Convert runs to chart lines
+                // Convert all runs => faint lines
                 let allSimsAsWeekPoints = self.convertAllSimsToWeekPoints()
                 let allSimsAsPortfolioPoints = self.convertAllSimsToPortfolioWeekPoints()
                 
-                // Best-fit lines
+                // -------------
+                // Reuse the ID from the best-fit run in the faint lines array!
+                // -------------
+                
+                // 1) Grab the same run object from allSimsAsWeekPoints
+                //    so it has the correct ID for the bestFit.
+                let bestFitSim = allSimsAsWeekPoints[bestFitRunIndex]
+                let bestFitSimID = bestFitSim.id  // We'll reuse this
+                
+                // 2) Build new points for BTC or portfolio, as you prefer:
                 let bestFitBTCPoints = bestFitRun.map { row in
                     WeekPoint(week: row.week, value: row.btcPriceUSD)
                 }
@@ -329,31 +312,37 @@ class SimulationCoordinator: ObservableObject {
                     WeekPoint(week: bestFitRun[idx].week, value: val)
                 }
                 
+                // 3) Create new runs with the same ID as bestFitSim
+                let bestFitBTC = SimulationRun(id: bestFitSimID, points: bestFitBTCPoints)
+                let bestFitPortfolio = SimulationRun(id: bestFitSimID, points: bestFitPortfolioPoints)
+                
                 // Clear old charts
                 self.chartDataCache.chartSnapshot = nil
                 self.chartDataCache.chartSnapshotLandscape = nil
                 self.chartDataCache.chartSnapshotPortfolio = nil
                 self.chartDataCache.chartSnapshotPortfolioLandscape = nil
                 
-                // Store faint lines & best fit lines
+                // Store faint lines & bestFit lines
                 self.chartDataCache.allRuns = allSimsAsWeekPoints
                 self.chartDataCache.portfolioRuns = allSimsAsPortfolioPoints
-                self.chartDataCache.bestFitRun = [ SimulationRun(points: bestFitBTCPoints) ]
-                self.chartDataCache.bestFitPortfolioRun = [ SimulationRun(points: bestFitPortfolioPoints) ]
+                
+                // Reuse the same ID
+                self.chartDataCache.bestFitRun = [ bestFitBTC ]
+                self.chartDataCache.bestFitPortfolioRun = [ bestFitPortfolio ]
+                
                 self.chartDataCache.storedInputsHash = newHash
                 
                 let oldSelection = self.simChartSelection.selectedChart
                 
-                // If user doesn’t want graphs, skip chart building
+                // If user doesn’t want charts, skip
                 if !generateGraphs {
                     self.isChartBuilding = false
-                    // self.isSimulationRun = true
-                    print("DEBUG: runSimulation complete. Not generating charts. Potentially reset row/col memory here if desired.")
+                    print("DEBUG: runSimulation complete. Not generating charts.")
                     print("DEBUG: runSimulation FINISHED - selectedChart still = \(self.simChartSelection.selectedChart)")
                     return
                 }
                 
-                // Build chart snapshots on main thread
+                // Build chart snapshots
                 DispatchQueue.main.async {
                     if self.isCancelled {
                         self.isChartBuilding = false
@@ -392,7 +381,6 @@ class SimulationCoordinator: ObservableObject {
                             self.simChartSelection.selectedChart = oldSelection
                             
                             self.isChartBuilding = false
-                            // self.isSimulationRun = true
                             print("DEBUG: runSimulation finished successfully.")
                             print("DEBUG: runSimulation FINISHED - final simChartSelection.selectedChart = \(self.simChartSelection.selectedChart)")
                         }

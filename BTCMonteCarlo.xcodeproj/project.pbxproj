@@ -18,6 +18,7 @@
 		E130933E2D70151100DA6418 /* ChartUtilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = E130933D2D70150F00DA6418 /* ChartUtilities.swift */; };
 		E13093402D70360500DA6418 /* InteractiveMonteCarloChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E130933F2D70360200DA6418 /* InteractiveMonteCarloChartView.swift */; };
 		E13093422D703BFE00DA6418 /* ChartShaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = E13093412D703BFE00DA6418 /* ChartShaders.metal */; };
+		E13093442D70601700DA6418 /* SimulationRun.swift in Sources */ = {isa = PBXBuildFile; fileRef = E13093432D70601200DA6418 /* SimulationRun.swift */; };
 		E14344D62D52D85600225A49 /* FactorState.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14344D52D52D85400225A49 /* FactorState.swift */; };
 		E14344D82D52DE5500225A49 /* FactorCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14344D72D52DE5300225A49 /* FactorCatalog.swift */; };
 		E14344DA2D53553D00225A49 /* SimulationSettings+FactorSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14344D92D53553800225A49 /* SimulationSettings+FactorSync.swift */; };
@@ -154,6 +155,7 @@
 		E130933D2D70150F00DA6418 /* ChartUtilities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartUtilities.swift; sourceTree = "<group>"; };
 		E130933F2D70360200DA6418 /* InteractiveMonteCarloChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InteractiveMonteCarloChartView.swift; sourceTree = "<group>"; };
 		E13093412D703BFE00DA6418 /* ChartShaders.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = ChartShaders.metal; sourceTree = "<group>"; };
+		E13093432D70601200DA6418 /* SimulationRun.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulationRun.swift; sourceTree = "<group>"; };
 		E14344D52D52D85400225A49 /* FactorState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FactorState.swift; sourceTree = "<group>"; };
 		E14344D72D52DE5300225A49 /* FactorCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FactorCatalog.swift; sourceTree = "<group>"; };
 		E14344D92D53553800225A49 /* SimulationSettings+FactorSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SimulationSettings+FactorSync.swift"; sourceTree = "<group>"; };
@@ -373,6 +375,7 @@
 				E1B7B0A62D4753CC00B60EC6 /* ShiftFactors.swift */,
 				E17B2F212D26A9F000ECE087 /* SimulationCoordinator.swift */,
 				E166A8AF2CF855C20003F518 /* SimulationData.swift */,
+				E13093432D70601200DA6418 /* SimulationRun.swift */,
 				E1883F392D1DD94C007AA90B /* SimulationSettings.swift */,
 				E19D10F62D40D8C000E3A55E /* SimulationSettings+BearishFactors.swift */,
 				E19D10F42D40D10C00E3A55E /* SimulationSettings+BullishFactors.swift */,
@@ -624,6 +627,7 @@
 				E1883F3C2D1DDC78007AA90B /* ParametersFormView.swift in Sources */,
 				E18C2BE12D259248006E7438 /* ChartSnapshotView.swift in Sources */,
 				E14AED6E2D684D040068B2A5 /* ColumnsCollectionViewController.swift in Sources */,
+				E13093442D70601700DA6418 /* SimulationRun.swift in Sources */,
 				E14AED702D684DA40068B2A5 /* ColumnsCollectionCell.swift in Sources */,
 				E1A1E52D2D2E39E4008F7658 /* SnapshotExtensions.swift in Sources */,
 				E1A1E51F2D2A7364008F7658 /* PortfolioChartView.swift in Sources */,
