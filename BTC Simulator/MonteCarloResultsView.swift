@@ -493,16 +493,15 @@ struct MonteCarloResultsView: View {
     private func dropDownMenuOverlay() -> some View {
         GeometryReader { geo in
             ZStack {
-                // Dimmed background that dismisses the menu
+                // Tappable dimmed background
                 Color.black.opacity(0.3)
                     .ignoresSafeArea()
                     .onTapGesture {
                         withAnimation { showChartMenu = false }
                     }
                 
-                // The menu with two buttons
+                // The menu
                 VStack(spacing: 0) {
-                    // 1) Toggle BTC vs. Portfolio
                     Button {
                         withAnimation {
                             simChartSelection.selectedChart =
@@ -511,19 +510,15 @@ struct MonteCarloResultsView: View {
                             showChartMenu = false
                         }
                     } label: {
-                        Text(
-                            simChartSelection.selectedChart == .cumulativePortfolio
-                            ? "BTC Price Chart"
-                            : "Cumulative Portfolio"
-                        )
-                        .foregroundColor(.white)
-                        .font(.headline)
-                        .frame(maxWidth: .infinity, minHeight: 50)
+                        Text(simChartSelection.selectedChart == .cumulativePortfolio
+                             ? "BTC Price Chart"
+                             : "Cumulative Portfolio")
+                            .foregroundColor(.white)
+                            .font(.headline)
+                            .frame(maxWidth: .infinity, minHeight: 50)
                     }
-                    .buttonStyle(.plain)
                     .background(Color.black)
-                    
-                    // 2) Toggle Static vs. Dynamic
+
                     Button {
                         withAnimation {
                             showDynamicChart.toggle()
@@ -535,16 +530,12 @@ struct MonteCarloResultsView: View {
                             .font(.headline)
                             .frame(maxWidth: .infinity, minHeight: 50)
                     }
-                    .buttonStyle(.plain)
                     .background(Color.black)
                 }
-                // Full width
+                // Make it full width
                 .frame(width: geo.size.width)
-                // Position near the top, under the nav bar
-                .position(
-                    x: geo.size.width / 2,
-                    y: geo.safeAreaInsets.top + 160
-                )
+                // Hard-code an absolute Y to keep consistent
+                .position(x: geo.size.width / 2, y: 160)
             }
             .transition(.move(edge: .top))
             .zIndex(999)
