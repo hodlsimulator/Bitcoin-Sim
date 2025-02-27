@@ -43,55 +43,52 @@ class MetalChartRenderer: NSObject, MTKViewDelegate {
     var commandQueue: MTLCommandQueue!
     var pipelineState: MTLRenderPipelineState!
     
+    var vertexBuffer: MTLBuffer?
+    
     // Data from your environment object
     var simulationData: [SimulationRun] = []
     var chartDataCache: ChartDataCache?   // So we can grab the data
     
     func setupMetal(in size: CGSize, chartDataCache: ChartDataCache) {
         self.chartDataCache = chartDataCache
-
+        
         device = MTLCreateSystemDefaultDevice()
         guard let device = device else {
             print("Metal not supported on this machine.")
             return
         }
-
+        
         commandQueue = device.makeCommandQueue()
 
-        // Load the default library (with your vertexShader & fragmentShader)
+        // Load shaders
         let library = device.makeDefaultLibrary()
         let vertexFunction = library?.makeFunction(name: "vertexShader")
         let fragmentFunction = library?.makeFunction(name: "fragmentShader")
 
-        // 1) Create the MTLVertexDescriptor
+        // Create a vertex descriptor as before
         let vertexDescriptor = MTLVertexDescriptor()
-
-        // Attribute 0 => position (float4)
-        vertexDescriptor.attributes[0].format = .float4   // 4 floats = float4
-        vertexDescriptor.attributes[0].offset = 0         // starts at offset 0 in the struct
-        vertexDescriptor.attributes[0].bufferIndex = 0    // buffer slot 0
-
-        // Attribute 1 => color (float4)
+        // position => attribute(0)
+        vertexDescriptor.attributes[0].format = .float4
+        vertexDescriptor.attributes[0].offset = 0
+        vertexDescriptor.attributes[0].bufferIndex = 0
+        
+        // color => attribute(1)
         vertexDescriptor.attributes[1].format = .float4
-        // The color starts after the position in memory:
         vertexDescriptor.attributes[1].offset = MemoryLayout<Float>.size * 4
         vertexDescriptor.attributes[1].bufferIndex = 0
-
-        // Layout for buffer 0 => stride = size of position + color
+        
+        // layout => stride of 8 floats (32 bytes)
         vertexDescriptor.layouts[0].stride = MemoryLayout<Float>.size * 8
         vertexDescriptor.layouts[0].stepRate = 1
         vertexDescriptor.layouts[0].stepFunction = .perVertex
-
-        // 2) Create the pipeline descriptor
+        
+        // Set up pipeline
         let pipelineDescriptor = MTLRenderPipelineDescriptor()
         pipelineDescriptor.vertexFunction = vertexFunction
         pipelineDescriptor.fragmentFunction = fragmentFunction
-        pipelineDescriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
-
-        // 3) Assign the vertex descriptor
         pipelineDescriptor.vertexDescriptor = vertexDescriptor
-
-        // 4) Make the pipeline state
+        pipelineDescriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
+        
         do {
             pipelineState = try device.makeRenderPipelineState(descriptor: pipelineDescriptor)
         } catch {
@@ -99,7 +96,22 @@ class MetalChartRenderer: NSObject, MTKViewDelegate {
             pipelineState = nil
         }
 
-        // Now load the simulation data
+        // Example: a single triangle in Normalized Device Coordinates ([-1..1] range)
+        // 3 vertices, each with position(x,y,z,w) and color(r,g,b,a)
+        let vertices: [Float] = [
+            // 1) vertex
+             0.0,  0.5, 0.0, 1.0,   1.0, 0.0, 0.0, 1.0,
+            // 2) vertex
+            -0.5, -0.5, 0.0, 1.0,   0.0, 1.0, 0.0, 1.0,
+            // 3) vertex
+             0.5, -0.5, 0.0, 1.0,   0.0, 0.0, 1.0, 1.0
+        ]
+        
+        // Create our MTLBuffer from the above array
+        vertexBuffer = device.makeBuffer(bytes: vertices,
+                                         length: vertices.count * MemoryLayout<Float>.size,
+                                         options: .storageModeShared)
+        
         loadSimulationData()
     }
     
@@ -118,16 +130,23 @@ class MetalChartRenderer: NSObject, MTKViewDelegate {
     
     func draw(in view: MTKView) {
         guard
-            let pipelineState = pipelineState,    // ensure not nil
+            let pipelineState = pipelineState,
             let drawable = view.currentDrawable,
             let renderPassDescriptor = view.currentRenderPassDescriptor,
             let commandBuffer = commandQueue.makeCommandBuffer(),
             let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderPassDescriptor)
-        else { return }
-
+        else {
+            return
+        }
+        
         renderEncoder.setRenderPipelineState(pipelineState)
-
-        // ...
+        
+        // Bind our MTLBuffer to index 0 (matching 'bufferIndex = 0' in vertex descriptor)
+        renderEncoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
+        
+        // Draw 3 vertices => one triangle
+        renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 3)
+        
         renderEncoder.endEncoding()
         commandBuffer.present(drawable)
         commandBuffer.commit()
