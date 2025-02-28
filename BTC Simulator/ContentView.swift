@@ -364,14 +364,14 @@ struct ContentView: View {
             // Start tracking idle time when content view appears
             idleManager.resetIdleTimer()
         }
-        .onChange(of: coordinator.isLoading) { newVal in
-            if newVal {
+        .onChange(of: coordinator.isLoading) { oldValue, newValue in
+            if newValue {
                 lastViewedColumnIndex = 2
                 lastViewedRow = 0
                 print("DEBUG: Forcing lastViewedColumnIndex to default (2) and lastViewedRow to default (0) on new simulation start.")
             }
         }
-        .onChange(of: coordinator.isChartBuilding) { _ in
+        .onChange(of: coordinator.isChartBuilding) {
             checkNavigationState()
         }
         .onTapGesture {
