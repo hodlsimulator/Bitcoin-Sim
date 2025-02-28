@@ -242,6 +242,14 @@ class PinnedColumnTablesViewController: UIViewController {
             headersCV.delegate = self
             dataCV.delegate    = self
         }
+        
+        // Register for vertical size class changes (replaces traitCollectionDidChange)
+        if #available(iOS 17.0, *) {
+            registerForTraitChanges([UITraitVerticalSizeClass.self], action: #selector(verticalSizeClassDidChange))
+        } else {
+            // Fallback for earlier iOS versions
+            previousSizeClass = traitCollection.verticalSizeClass
+        }
     }
     
     // (Row Memory) => restore the pinned table's row
@@ -287,10 +295,17 @@ class PinnedColumnTablesViewController: UIViewController {
         }
     }
     
-    // Called if orientation changes from portrait <-> landscape
-    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
-        super.traitCollectionDidChange(previousTraitCollection)
-        
+    // MARK: - Orientation Layout Logic
+    func applyLayoutForCurrentOrientation() {
+        let isLandscape = traitCollection.verticalSizeClass == .compact
+        if isLandscape {
+            landscapeCoordinator.applyLandscapeLayout()
+        } else {
+            portraitCoordinator.applyPortraitLayout()
+        }
+    }
+    
+    @objc private func verticalSizeClassDidChange() {
         let isLandscape = traitCollection.verticalSizeClass == .compact
         let wasLandscape = previousSizeClass == .compact
         
@@ -300,16 +315,6 @@ class PinnedColumnTablesViewController: UIViewController {
             applyLayoutForCurrentOrientation()
         }
         previousSizeClass = traitCollection.verticalSizeClass
-    }
-    
-    // MARK: - Orientation Layout Logic
-    func applyLayoutForCurrentOrientation() {
-        let isLandscape = traitCollection.verticalSizeClass == .compact
-        if isLandscape {
-            landscapeCoordinator.applyLandscapeLayout()
-        } else {
-            portraitCoordinator.applyPortraitLayout()
-        }
     }
     
     // MARK: - Restore Column Memory
