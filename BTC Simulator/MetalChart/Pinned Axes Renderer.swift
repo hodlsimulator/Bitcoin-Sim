@@ -106,8 +106,6 @@ class PinnedAxesRenderer {
                     minY: Float,
                     maxY: Float,
                     chartTransform: matrix_float4x4) {
-        // Log the input values to see if they're correct
-        print("updateAxes called with minX: \(minX), maxX: \(maxX), minY: \(minY), maxY: \(maxY)")
         
         // Pinned axis positions in screen space.
         let pinnedScreenX: Float = 50
@@ -199,9 +197,6 @@ class PinnedAxesRenderer {
                         maxX: Float(viewportSize.width),
                         pinnedScreenY: pinnedScreenY,
                         chartTransform: chartTransform)
-        
-        // Log after finishing axes update
-        print("updateAxes completed")
     }
     
     func renderTextBuffer(renderEncoder: MTLRenderCommandEncoder, buffer: MTLBuffer, vertexCount: Int) {
@@ -379,6 +374,7 @@ extension PinnedAxesRenderer {
         for val in xTicks {
             let sx = dataXtoScreenX(dataX: Float(val), transform: chartTransform)
             if sx < 50 { continue }
+
             // Build tick line
             let y0 = pinnedScreenY
             let y1 = pinnedScreenY + tickLen
@@ -387,8 +383,8 @@ extension PinnedAxesRenderer {
                                                   x1: sx + halfT,
                                                   y1: y1,
                                                   color: tickColor))
-            // Build text label
-            let formattedTickValue = textRenderer.formatTickDecimal(Decimal(val))
+            // Format and build text label for year ticks
+            let formattedTickValue = String(format: "%.0f", val)
             let (textBuffer, vertexCount) = textRenderer.buildTextVertices(
                 string: formattedTickValue,
                 x: sx,
@@ -415,6 +411,7 @@ extension PinnedAxesRenderer {
         for val in yTicks {
             let sy = dataYtoScreenY(dataY: Float(val), transform: chartTransform)
             if sy < 0 || sy > pinnedScreenY { continue }
+
             // Build tick line
             let x0 = pinnedScreenX - tickLen
             let x1 = pinnedScreenX
@@ -423,8 +420,9 @@ extension PinnedAxesRenderer {
                                                   x1: x1,
                                                   y1: sy + halfT,
                                                   color: tickColor))
-            // Build text label
-            let formattedTickValue = textRenderer.formatTickDecimal(Decimal(val))
+
+            // Use formattedGroupedSuffix() to format the USD values
+            let formattedTickValue = val.formattedGroupedSuffix() // Call the extension here for formatting
             let (textBuffer, vertexCount) = textRenderer.buildTextVertices(
                 string: formattedTickValue,
                 x: x0 - 5,

@@ -320,9 +320,6 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             height: Int(view.drawableSize.height)
         ))
 
-        // Log before updating axes
-        print("Calling updateAxes...")
-
         // Update pinned axes and grid data
         if let pinnedAxes = pinnedAxesRenderer {
             pinnedAxes.viewportSize = view.bounds.size
@@ -330,9 +327,6 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             // Compute the visible ranges for axes
             let (xMinVis, xMaxVis) = computeVisibleRangeX()
             let (yMinVis, yMaxVis) = computeVisibleRangeY()
-
-            // Log the visible ranges
-            print("Visible Range - X: (\(xMinVis), \(xMaxVis)), Y: (\(yMinVis), \(yMaxVis))")
             
             // Update axes data
             pinnedAxes.updateAxes(
@@ -342,9 +336,6 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
                 maxY: yMaxVis,
                 chartTransform: currentTransformMatrix()
             )
-            
-            // Log after update
-            print("Axes updated successfully")
             
             // Draw the axes and grid lines first
             pinnedAxes.drawAxes(renderEncoder: renderEncoder)
