@@ -1,988 +1,513 @@
-diff --git a/BTC Simulator/Bridging screen/CustomBarViewController.swift b/BTC Simulator/Bridging screen/CustomBarViewController.swift
-new file mode 100644
-index 0000000..3cfaff2
---- /dev/null
-+++ b/BTC Simulator/Bridging screen/CustomBarViewController.swift	
-@@ -0,0 +1,64 @@
-+//
-+//  CustomBarViewController.swift
-+//  BTCMonteCarlo
-+//
-+//  Created by . . on 22/02/2025.
-+//
-+
-+import UIKit
-+
-+class CustomBarViewController: UIViewController, UIGestureRecognizerDelegate {
-+
-+    private let customNavBar = UIView()
-+    private let backButton   = UIButton(type: .system)
+diff --git a/BTC Simulator/BTC_SimulatorApp.swift b/BTC Simulator/BTC_SimulatorApp.swift
+index b17cf44..b1263f1 100644
+--- a/BTC Simulator/BTC_SimulatorApp.swift	
++++ b/BTC Simulator/BTC_SimulatorApp.swift	
+@@ -30,6 +30,9 @@ struct BTCMonteCarloApp: App {
+ 
+     // Declare a variable to store the font atlas and the text renderer
+     @StateObject private var textRendererManager = TextRendererManager()
 +    
-+    override func viewDidLoad() {
-+        super.viewDidLoad()
-+        
-+        view.backgroundColor = .systemBackground 
-+        
-+        // 1) Hide the system nav bar
-+        navigationController?.isNavigationBarHidden = true
-+        
-+        // 2) Enable the edge-swipe pop gesture
-+        if let nav = navigationController {
-+            nav.interactivePopGestureRecognizer?.delegate = self
-+            nav.interactivePopGestureRecognizer?.isEnabled = true
-+        }
-+        
-+        // 3) Add a custom top bar (fake nav bar)
-+        customNavBar.backgroundColor = .darkGray
-+        customNavBar.translatesAutoresizingMaskIntoConstraints = false
-+        view.addSubview(customNavBar)
-+        
-+        NSLayoutConstraint.activate([
-+            customNavBar.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-+            customNavBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-+            customNavBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-+            customNavBar.heightAnchor.constraint(equalToConstant: 56) // or whatever
-+        ])
-+        
-+        // 4) Add a custom back button
-+        backButton.setTitle("", for: .normal)              // no text
-+        backButton.setImage(UIImage(systemName: "chevron.left"), for: .normal)
-+        backButton.tintColor = .white
-+        backButton.addTarget(self, action: #selector(handleCustomBack), for: .touchUpInside)
-+        backButton.translatesAutoresizingMaskIntoConstraints = false
-+        customNavBar.addSubview(backButton)
-+        
-+        NSLayoutConstraint.activate([
-+            backButton.leadingAnchor.constraint(equalTo: customNavBar.leadingAnchor, constant: 16),
-+            backButton.centerYAnchor.constraint(equalTo: customNavBar.centerYAnchor)
-+        ])
-+    }
-+    
-+    @objc private func handleCustomBack() {
-+        navigationController?.popViewController(animated: true)
-+    }
-+    
-+    // 5) Decide if the edge-swipe should begin
-+    func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-+        return (navigationController?.viewControllers.count ?? 0) > 1
-+    }
-+}
-+
-diff --git a/BTC Simulator/Bridging screen/PinnedColumnBridgeRepresentable.swift b/BTC Simulator/Bridging screen/PinnedColumnBridgeRepresentable.swift
-index 48b4598..956ae2e 100644
---- a/BTC Simulator/Bridging screen/PinnedColumnBridgeRepresentable.swift	
-+++ b/BTC Simulator/Bridging screen/PinnedColumnBridgeRepresentable.swift	
-@@ -8,58 +8,36 @@
- import SwiftUI
- import UIKit
++    // Initialize the IdleManager for tracking idle state
++    @StateObject private var idleManager = IdleManager()
  
--// 1) Make sure to remove the default SwiftUI bar or hide it.
--//    For example, wrap the view in a NavigationView, but hide that nav bar:
--struct PinnedColumnBridgeRepresentable: View {
--
--    // Dummy ObservedObjects
-+struct PinnedColumnBridgeRepresentable: UIViewControllerRepresentable {
-+    @Binding var isPresented: Bool
-     @ObservedObject var coordinator: SimulationCoordinator
-     @ObservedObject var inputManager: PersistentInputManager
-     @ObservedObject var monthlySimSettings: MonthlySimulationSettings
-     @ObservedObject var simSettings: SimulationSettings
- 
--    var body: some View {
--        // If you wrap this in a NavigationView, hide the bar:
--        NavigationView {
--            BridgeContainer(
-+    func makeUIViewController(context: Context) -> PinnedColumnBridgeViewController {
-+        // Create your pinned VC
-+        let pinnedVC = PinnedColumnBridgeViewController()
-+        pinnedVC.representableContainer = .init(
-+            coordinator: coordinator,
-+            inputManager: inputManager,
-+            monthlySimSettings: monthlySimSettings,
-+            simSettings: simSettings
-+        )
-+        pinnedVC.dismissBinding = $isPresented
-+
-+        // Return pinnedVC directly (no extra UINavigationController)
-+            return pinnedVC
-+    }
-+
-+    func updateUIViewController(_ uiViewController: PinnedColumnBridgeViewController,
-+                                     context: Context) {
-+        // Update references if needed
-+        uiViewController.representableContainer = .init(
-                 coordinator: coordinator,
-                 inputManager: inputManager,
-                 monthlySimSettings: monthlySimSettings,
-                 simSettings: simSettings
-             )
--            // 2) Let your UIKit view stretch under the safe areas:
--            .ignoresSafeArea(.all)
--            .navigationBarHidden(true)
--            .navigationBarBackButtonHidden(true)
--        }
--        // Or remove NavigationView altogether if you don’t need SwiftUI nav management
--        .navigationViewStyle(StackNavigationViewStyle())
--    }
--
--    struct BridgeContainer: UIViewControllerRepresentable {
--        let coordinator: SimulationCoordinator
--        let inputManager: PersistentInputManager
--        let monthlySimSettings: MonthlySimulationSettings
--        let simSettings: SimulationSettings
--
--        func makeCoordinator() -> Coordinator { Coordinator(self) }
--
--        func makeUIViewController(context: Context) -> PinnedColumnBridgeViewController {
--            let vc = PinnedColumnBridgeViewController()
--            vc.representableContainer = self
--            return vc
--        }
--        
--        func updateUIViewController(_ uiViewController: PinnedColumnBridgeViewController,
--                                    context: Context) {
--            uiViewController.representableContainer = self
--        }
--        
--        class Coordinator: NSObject {
--            var parent: BridgeContainer
--            init(_ parent: BridgeContainer) {
--                self.parent = parent
--            }
-         }
-     }
--}
-diff --git a/BTC Simulator/Bridging screen/PinnedColumnBridgeRepresentableUIKit.swift b/BTC Simulator/Bridging screen/PinnedColumnBridgeRepresentableUIKit.swift
-new file mode 100644
-index 0000000..de913f0
---- /dev/null
-+++ b/BTC Simulator/Bridging screen/PinnedColumnBridgeRepresentableUIKit.swift	
-@@ -0,0 +1,48 @@
-+//
-+//  PinnedColumnBridgeRepresentableUIKit.swift
-+//  BTCMonteCarlo
-+//
-+//  Created by . . on 22/02/2025.
-+//
-+
-+import SwiftUI
-+import UIKit
-+
-+struct PinnedColumnBridgeRepresentableUIKit: UIViewControllerRepresentable {
-+
-+    // A binding to track whether this screen is presented in SwiftUI
-+    @Binding var isPresented: Bool
-+
-+    let coordinator: SimulationCoordinator
-+    let inputManager: PersistentInputManager
-+    let monthlySimSettings: MonthlySimulationSettings
-+    let simSettings: SimulationSettings
-+
-+    func makeUIViewController(context: Context) -> PinnedColumnBridgeViewController {
-+        let vc = PinnedColumnBridgeViewController()
-+
-+        // Match the order: (coordinator, inputManager, monthlySimSettings, simSettings)
-+        vc.representableContainer = .init(
-+            coordinator: coordinator,
-+            inputManager: inputManager,
-+            monthlySimSettings: monthlySimSettings,
-+            simSettings: simSettings
-+        )
-+
-+        // Provide the SwiftUI binding for dismiss
-+        vc.dismissBinding = $isPresented
-+
-+        return vc
-+    }
-+
-+    func updateUIViewController(_ uiViewController: PinnedColumnBridgeViewController,
-+                                context: Context) {
-+        // Same order here if you’re updating references
-+        uiViewController.representableContainer = .init(
-+            coordinator: coordinator,
-+            inputManager: inputManager,
-+            monthlySimSettings: monthlySimSettings,
-+            simSettings: simSettings
-+        )
-+    }
-+}
-diff --git a/BTC Simulator/Bridging screen/PinnedColumnBridgeViewController.swift b/BTC Simulator/Bridging screen/PinnedColumnBridgeViewController.swift
-index ca611a0..3d5a78c 100644
---- a/BTC Simulator/Bridging screen/PinnedColumnBridgeViewController.swift	
-+++ b/BTC Simulator/Bridging screen/PinnedColumnBridgeViewController.swift	
-@@ -1,4 +1,3 @@
--//
- //  PinnedColumnBridgeViewController.swift
- //  BTCMonteCarlo
- //
-@@ -8,45 +7,37 @@
- import UIKit
- import SwiftUI
- 
--class PinnedColumnBridgeViewController: UIViewController {
-+// MARK: - BridgeContainer
-+struct BridgeContainer {
-+    let coordinator: SimulationCoordinator
-+    let inputManager: PersistentInputManager
-+    let monthlySimSettings: MonthlySimulationSettings
-+    let simSettings: SimulationSettings
-+}
- 
--    // This container references your SwiftUI/Coordinator logic
--    var representableContainer: PinnedColumnBridgeRepresentable.BridgeContainer?
-+// MARK: - PinnedColumnBridgeViewController
-+class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDelegate {
- 
--    private let hostingController = UIHostingController(rootView: AnyView(EmptyView()))
--    private let summaryCardContainer = UIView()
--    private let pinnedTablePlaceholder = UIView()
--    private let pinnedColumnTablesVC = PinnedColumnTablesViewController()
--
--    // A custom back button for the top bar
--    private let backButton: UIButton = {
--        let button = UIButton(type: .system)
--        button.setImage(UIImage(systemName: "chevron.left"), for: .normal)
--        button.tintColor = .white
--        button.translatesAutoresizingMaskIntoConstraints = false
--        return button
--    }()
-+    // MARK: - Properties
-+    var representableContainer: BridgeContainer?
-+    var dismissBinding: Binding<Bool>?
- 
--    // A chart button for the top bar
--    private let chartButton: UIButton = {
--        let button = UIButton(type: .system)
--        button.setImage(UIImage(systemName: "chart.line.uptrend.xyaxis"), for: .normal)
--        button.tintColor = .white
--        button.translatesAutoresizingMaskIntoConstraints = false
--        return button
--    }()
--    
--    // A centred label for the top bar
--    private let titleLabel: UILabel = {
--        let label = UILabel()
--        label.text = "Simulation Results"
--        label.textColor = .white
--        label.textAlignment = .center
--        label.translatesAutoresizingMaskIntoConstraints = false
--        return label
--    }()
-+    // We’ll use our own top bar instead of the system navigation bar
-+    private let customTopBar = UIView()
-+    private let titleLabel   = UILabel()
-+    private let backButton   = UIButton(type: .system)
-+    private let chartButton  = UIButton(type: .system)
-+
-+    // The standard nav bar is 44pt plus the status-bar safe area on modern devices
-+    // so we’ll just keep 44 as the “additional” nav bar height:
-+    private let customNavBarHeight: CGFloat = 44
-+    private let summaryCardHeight:  CGFloat = 80
-+
-+    private let hostingController      = UIHostingController(rootView: AnyView(EmptyView()))
-+    private let summaryCardContainer   = UIView()
-+    private let pinnedTablePlaceholder = UIView()
-+    private let pinnedColumnTablesVC   = PinnedColumnTablesViewController()
- 
--    // Larger scroll-to-bottom button with reduced opacity.
-     private let scrollToBottomButton: UIButton = {
-         let btn = UIButton(type: .system)
-         btn.setImage(UIImage(systemName: "chevron.down.circle.fill"), for: .normal)
-@@ -60,101 +51,62 @@ class PinnedColumnBridgeViewController: UIViewController {
-         btn.isHidden = false
-         return btn
-     }()
--    
--    // Track previous "at bottom" state to avoid re-triggering fade repeatedly
-+
-     private var wasAtBottom = false
- 
-+    // MARK: - viewDidLoad
-     override func viewDidLoad() {
-         super.viewDidLoad()
- 
--        if #available(iOS 11.0, *) {
--                self.additionalSafeAreaInsets = .zero
--            } else {
--                automaticallyAdjustsScrollViewInsets = false
--            }
--        
--        // A custom top bar
--        let topBar = UIView()
--        topBar.backgroundColor = UIColor(white: 0.12, alpha: 1.0)
--        topBar.translatesAutoresizingMaskIntoConstraints = false
--
--        let topBarHeight: CGFloat = 100
--
--        // Container stack: [topBar, summaryCardContainer + pinnedTablePlaceholder]
--        let containerStack = UIStackView()
--        containerStack.axis = .vertical
--        containerStack.spacing = 0
--        containerStack.translatesAutoresizingMaskIntoConstraints = false
--        view.addSubview(containerStack)
--
--        NSLayoutConstraint.activate([
--            containerStack.topAnchor.constraint(equalTo: view.topAnchor),
--            containerStack.bottomAnchor.constraint(equalTo: view.bottomAnchor),
--            containerStack.leadingAnchor.constraint(equalTo: view.leadingAnchor),
--            containerStack.trailingAnchor.constraint(equalTo: view.trailingAnchor)
--        ])
--
--        // 1) The top bar
--        containerStack.addArrangedSubview(topBar)
--        topBar.heightAnchor.constraint(equalToConstant: topBarHeight).isActive = true
--
--        // Add buttons + title to top bar
--        topBar.addSubview(backButton)
--        topBar.addSubview(chartButton)
--        topBar.addSubview(titleLabel)
-+        // Hide the system nav bar
-+        navigationController?.isNavigationBarHidden = true
- 
--        // Hook up button taps
--        backButton.addTarget(self, action: #selector(handleBackButton), for: .touchUpInside)
--        chartButton.addTarget(self, action: #selector(handleChartButton), for: .touchUpInside)
-+        // Re-enable edge-swipe pop
-+        if let nav = navigationController {
-+            nav.interactivePopGestureRecognizer?.delegate = self
-+            nav.interactivePopGestureRecognizer?.isEnabled = true
-+        }
- 
--        // Position them towards the bottom of topBar
--        let bottomOffset: CGFloat = -2
-+        // 1) Setup the custom top bar
-+        setupCustomTopBar()
- 
-+        // 2) Setup summaryCardContainer below the nav bar
-+        summaryCardContainer.backgroundColor = UIColor(white: 0.12, alpha: 1.0)
-+        summaryCardContainer.translatesAutoresizingMaskIntoConstraints = false
-+        view.addSubview(summaryCardContainer)
-         NSLayoutConstraint.activate([
--            // Back button on the left
--            backButton.leadingAnchor.constraint(equalTo: topBar.leadingAnchor, constant: 16),
--            backButton.bottomAnchor.constraint(equalTo: topBar.bottomAnchor, constant: bottomOffset),
--            
--            // Chart button on the right
--            chartButton.trailingAnchor.constraint(equalTo: topBar.trailingAnchor, constant: -16),
--            chartButton.bottomAnchor.constraint(equalTo: topBar.bottomAnchor, constant: bottomOffset),
--            
--            // Title in the centre
--            titleLabel.centerXAnchor.constraint(equalTo: topBar.centerXAnchor),
--            titleLabel.bottomAnchor.constraint(equalTo: topBar.bottomAnchor, constant: bottomOffset)
-+            summaryCardContainer.topAnchor.constraint(equalTo: customTopBar.bottomAnchor),
-+            summaryCardContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-+            summaryCardContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-+            summaryCardContainer.heightAnchor.constraint(equalToConstant: summaryCardHeight)
-         ])
- 
--        // 2) Main stack: [ summaryCardContainer, pinnedTablePlaceholder ]
--        pinnedTablePlaceholder.backgroundColor = UIColor.darkGray.withAlphaComponent(0.2)
--        let mainStack = UIStackView(arrangedSubviews: [
--            summaryCardContainer,
--            pinnedTablePlaceholder
--        ])
--        mainStack.axis = .vertical
--        mainStack.spacing = 0
--        containerStack.addArrangedSubview(mainStack)
--        
--        mainStack.setCustomSpacing(0, after: summaryCardContainer)
--
--        // Attach hosting controller for summary card
-+        // Embed SwiftUI summary card
-         addChild(hostingController)
-         summaryCardContainer.addSubview(hostingController.view)
--        hostingController.didMove(toParent: self)
--
-         hostingController.view.translatesAutoresizingMaskIntoConstraints = false
-         NSLayoutConstraint.activate([
-             hostingController.view.topAnchor.constraint(equalTo: summaryCardContainer.topAnchor),
-             hostingController.view.leadingAnchor.constraint(equalTo: summaryCardContainer.leadingAnchor),
-             hostingController.view.trailingAnchor.constraint(equalTo: summaryCardContainer.trailingAnchor),
--            hostingController.view.bottomAnchor.constraint(equalTo: summaryCardContainer.bottomAnchor),
--            summaryCardContainer.heightAnchor.constraint(equalToConstant: 90)
-+            hostingController.view.bottomAnchor.constraint(equalTo: summaryCardContainer.bottomAnchor)
-         ])
-+        hostingController.didMove(toParent: self)
- 
--        // 3) Pin the pinned table VC inside pinnedTablePlaceholder
-+        // 3) Pinned table area
-+        pinnedTablePlaceholder.backgroundColor = UIColor.darkGray.withAlphaComponent(0.2)
-+        pinnedTablePlaceholder.translatesAutoresizingMaskIntoConstraints = false
-+        view.addSubview(pinnedTablePlaceholder)
-+        NSLayoutConstraint.activate([
-+            pinnedTablePlaceholder.topAnchor.constraint(equalTo: summaryCardContainer.bottomAnchor),
-+            pinnedTablePlaceholder.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-+            pinnedTablePlaceholder.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-+            pinnedTablePlaceholder.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
-+        ])
-+
-+        // Embed pinnedColumnTablesVC
-         addChild(pinnedColumnTablesVC)
-         pinnedTablePlaceholder.addSubview(pinnedColumnTablesVC.view)
--        pinnedColumnTablesVC.didMove(toParent: self)
--
-         pinnedColumnTablesVC.view.translatesAutoresizingMaskIntoConstraints = false
-         NSLayoutConstraint.activate([
-             pinnedColumnTablesVC.view.topAnchor.constraint(equalTo: pinnedTablePlaceholder.topAnchor),
-@@ -162,37 +114,32 @@ class PinnedColumnBridgeViewController: UIViewController {
-             pinnedColumnTablesVC.view.trailingAnchor.constraint(equalTo: pinnedTablePlaceholder.trailingAnchor),
-             pinnedColumnTablesVC.view.bottomAnchor.constraint(equalTo: pinnedTablePlaceholder.bottomAnchor)
-         ])
-+        pinnedColumnTablesVC.didMove(toParent: self)
- 
--        // 4) Add the scroll-to-bottom button
-+        // 4) Scroll-to-bottom button
-         view.addSubview(scrollToBottomButton)
-         scrollToBottomButton.addTarget(self, action: #selector(handleScrollToBottom), for: .touchUpInside)
--
-         NSLayoutConstraint.activate([
-             scrollToBottomButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
--            scrollToBottomButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16),
-+            scrollToBottomButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16)
-         ])
- 
--        // 5) Hide/fade the button automatically if user is at bottom
-+        // Observe "at bottom" changes
-         pinnedColumnTablesVC.onIsAtBottomChanged = { [weak self] isAtBottom in
-             guard let self = self else { return }
--            
--            // Only animate if there's a change
-             guard isAtBottom != self.wasAtBottom else { return }
-             self.wasAtBottom = isAtBottom
--            
-+
-             DispatchQueue.main.async {
-                 if isAtBottom {
-                     if !self.scrollToBottomButton.isHidden {
--                        UIView.animate(withDuration: 0.3, animations: {
-+                        UIView.animate(withDuration: 0.3) {
-                             self.scrollToBottomButton.alpha = 0.0
--                        }, completion: { finished in
--                            if finished {
--                                self.scrollToBottomButton.isHidden = true
--                            }
--                        })
-+                        } completion: { finished in
-+                            if finished { self.scrollToBottomButton.isHidden = true }
-+                        }
+     init() {
+         let navBarAppearance = UINavigationBarAppearance()
+@@ -131,10 +134,22 @@ struct BTCMonteCarloApp: App {
+                             .environmentObject(simChartSelection)
+                             .environmentObject(coordinator)
+                             .environmentObject(textRendererManager)
++                            .onAppear {
++                                idleManager.resetIdleTimer() // Start idle timer when the view appears
++                            }
++                            .onChange(of: scenePhase) { phase in
++                                switch phase {
++                                case .active:
++                                    idleManager.resetIdleTimer() // Reset idle timer when app becomes active
++                                case .inactive, .background:
++                                    idleManager.resumeProcessing() // Handle background state
++                                default:
++                                    break
++                                }
++                            }
                      }
+                     .tint(.white)
+                     .preferredColorScheme(.dark)
+-
                  } else {
--                    // Fade in
-                     if self.scrollToBottomButton.isHidden {
-                         self.scrollToBottomButton.isHidden = false
-                         self.scrollToBottomButton.alpha = 0.0
-@@ -205,80 +152,156 @@ class PinnedColumnBridgeViewController: UIViewController {
-         }
-     }
- 
-+    // MARK: - viewWillAppear
-     override func viewWillAppear(_ animated: Bool) {
-         super.viewWillAppear(animated)
--        
--        // Hide the system nav bar
-         navigationController?.setNavigationBarHidden(true, animated: false)
-+        navigationController?.interactivePopGestureRecognizer?.delegate = self
-+        navigationController?.interactivePopGestureRecognizer?.isEnabled = true
- 
-         refreshSummaryCard()
-         populatePinnedTable()
-     }
- 
--    @objc private func handleBackButton() {
-+    // MARK: - Setup Custom Bar
-+    private func setupCustomTopBar() {
-+        customTopBar.backgroundColor = UIColor(white: 0.12, alpha: 1.0)
-+        customTopBar.translatesAutoresizingMaskIntoConstraints = false
-+        view.addSubview(customTopBar)
-+
-+        // This anchors the bar from the very top of the screen
-+        // down to safeAreaLayoutGuide.topAnchor + 44 points.
-+        NSLayoutConstraint.activate([
-+            customTopBar.topAnchor.constraint(equalTo: view.topAnchor),
-+            customTopBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-+            customTopBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-+            // This bottom anchor makes the bar 44 points taller than the safe area’s top
-+            customTopBar.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor,
-+                                                 constant: customNavBarHeight)
-+        ])
-+
-+        // Back button
-+        backButton.setImage(UIImage(systemName: "chevron.left"), for: .normal)
-+        backButton.tintColor = .white
-+        backButton.adjustsImageWhenHighlighted = false
-+        backButton.translatesAutoresizingMaskIntoConstraints = false
-+        backButton.addTarget(self, action: #selector(handleBack), for: .touchUpInside)
-+        customTopBar.addSubview(backButton)
-+        NSLayoutConstraint.activate([
-+            backButton.leadingAnchor.constraint(equalTo: customTopBar.leadingAnchor, constant: 16),
-+            backButton.centerYAnchor.constraint(equalTo: customTopBar.centerYAnchor)
-+        ])
-+
-+        // Title label
-+        titleLabel.text = "Simulation Results"
-+        titleLabel.textColor = .white
-+        titleLabel.font = UIFont.boldSystemFont(ofSize: 17)
-+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
-+        customTopBar.addSubview(titleLabel)
-+        NSLayoutConstraint.activate([
-+            titleLabel.centerXAnchor.constraint(equalTo: customTopBar.centerXAnchor),
-+            titleLabel.centerYAnchor.constraint(equalTo: customTopBar.centerYAnchor)
-+        ])
-+
-+        // Chart button
-+        chartButton.setImage(UIImage(systemName: "chart.line.uptrend.xyaxis"), for: .normal)
-+        chartButton.tintColor = .white
-+        chartButton.adjustsImageWhenHighlighted = false
-+        chartButton.translatesAutoresizingMaskIntoConstraints = false
-+        chartButton.addTarget(self, action: #selector(handleChartButton), for: .touchUpInside)
-+        customTopBar.addSubview(chartButton)
-+        NSLayoutConstraint.activate([
-+            chartButton.trailingAnchor.constraint(equalTo: customTopBar.trailingAnchor, constant: -16),
-+            chartButton.centerYAnchor.constraint(equalTo: customTopBar.centerYAnchor)
-+        ])
-+    }
-+
-+    // MARK: - Edge-Swipe
-+    func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-+        let count = navigationController?.viewControllers.count ?? 0
-+        return count > 1
-+    }
-+
-+    // MARK: - Button Handlers
-+    @objc private func handleBack() {
-         navigationController?.popViewController(animated: true)
-     }
- 
-     @objc private func handleChartButton() {
--        print("Chart icon tapped!")
-+        print("PinnedColumnBridgeViewController: Chart icon tapped!")
-     }
- 
-+    @objc private func handleScrollToBottom() {
-+        pinnedColumnTablesVC.scrollToBottom()
-+    }
-+
-+    // MARK: - Populate
-     private func refreshSummaryCard() {
-         guard let container = representableContainer else { return }
--        
-         let coord = container.coordinator
--        
--        // Make sure we have at least one row
-+
-         guard let firstRow = coord.monteCarloResults.first,
--              let lastRow  = coord.monteCarloResults.last else {
--            return
--        }
--        
--        // Figure out final BTC price
-+              let lastRow  = coord.monteCarloResults.last else { return }
-+
-         let finalBTC = lastRow.btcPriceUSD
--        
--        // Decide on final portfolio in USD vs. EUR
--        let finalPortfolio: Decimal = (coord.simSettings.currencyPreference == .eur)
--            ? lastRow.portfolioValueEUR
--            : lastRow.portfolioValueUSD
--        
--        // Also figure out the initial portfolio value
--        let initialPortfolio: Decimal = (coord.simSettings.currencyPreference == .eur)
--            ? firstRow.portfolioValueEUR
--            : firstRow.portfolioValueUSD
--        
--        // Avoid dividing by zero
--        let growthPercentDouble: Double
--        if initialPortfolio == 0 {
--            growthPercentDouble = 0
--        } else {
--            let finalD = Double(truncating: finalPortfolio as NSNumber)
--            let initD  = Double(truncating: initialPortfolio as NSNumber)
--            growthPercentDouble = (finalD / initD - 1) * 100
--        }
--        
--        // Just assume "$" or "€", or read from simSettings if you prefer
--        let currencySymbol: String = (coord.simSettings.currencyPreference == .eur) ? "€" : "$"
--        
--        hostingController.rootView = AnyView(
--            SimulationSummaryCardView(
--                finalBTCPrice: Double(truncating: finalBTC as NSNumber),
--                finalPortfolioValue: Double(truncating: finalPortfolio as NSNumber),
--                growthPercent: growthPercentDouble,
--                currencySymbol: currencySymbol
-+
-+        switch coord.simSettings.currencyPreference {
-+        case .usd:
-+            let finalPortfolio = lastRow.portfolioValueUSD
-+            let initialPortfolio = firstRow.portfolioValueUSD
-+            let (growthPercentDouble, currencySymbol) = growthCalc(finalPortfolio, initialPortfolio, "$")
-+
-+            hostingController.rootView = AnyView(
-+                SimulationSummaryCardView(
-+                    finalBTCPrice: Double(truncating: finalBTC as NSNumber),
-+                    finalPortfolioValue: Double(truncating: finalPortfolio as NSNumber),
-+                    growthPercent: growthPercentDouble,
-+                    currencySymbol: currencySymbol
-+                )
-+                .frame(maxWidth: .infinity, maxHeight: .infinity)
-+                .background(Color(UIColor(white: 0.12, alpha: 1.0)))
-             )
--            .frame(maxWidth: .infinity, maxHeight: .infinity)
--            .background(Color(UIColor(white: 0.12, alpha: 1.0)))
--        )
-+
-+        case .eur:
-+            let finalPortfolio = lastRow.portfolioValueEUR
-+            let initialPortfolio = firstRow.portfolioValueEUR
-+            let (growthPercentDouble, currencySymbol) = growthCalc(finalPortfolio, initialPortfolio, "€")
-+
-+            hostingController.rootView = AnyView(
-+                SimulationSummaryCardView(
-+                    finalBTCPrice: Double(truncating: finalBTC as NSNumber),
-+                    finalPortfolioValue: Double(truncating: finalPortfolio as NSNumber),
-+                    growthPercent: growthPercentDouble,
-+                    currencySymbol: currencySymbol
-+                )
-+                .frame(maxWidth: .infinity, maxHeight: .infinity)
-+                .background(Color(UIColor(white: 0.12, alpha: 1.0)))
-+            )
-+
-+        case .both:
-+            let finalPortfolio = lastRow.portfolioValueUSD
-+            let initialPortfolio = firstRow.portfolioValueUSD
-+            let (growthPercentDouble, currencySymbol) = growthCalc(finalPortfolio, initialPortfolio, "$")
-+
-+            hostingController.rootView = AnyView(
-+                SimulationSummaryCardView(
-+                    finalBTCPrice: Double(truncating: finalBTC as NSNumber),
-+                    finalPortfolioValue: Double(truncating: finalPortfolio as NSNumber),
-+                    growthPercent: growthPercentDouble,
-+                    currencySymbol: currencySymbol
-+                )
-+                .frame(maxWidth: .infinity, maxHeight: .infinity)
-+                .background(Color(UIColor(white: 0.12, alpha: 1.0)))
-+            )
-+        }
-     }
- 
-     private func populatePinnedTable() {
-         guard let container = representableContainer else { return }
--        
-+
-         let data = container.coordinator.monteCarloResults
-         let pref = container.simSettings.currencyPreference
--        
--        // Build columns based on the user’s currencyPreference
-+
-         let columns: [(String, PartialKeyPath<SimulationData>)]
-         switch pref {
-         case .usd:
-@@ -292,7 +315,6 @@ class PinnedColumnBridgeViewController: UIViewController {
-                 ("Net Contrib (BTC)", \SimulationData.netContributionBTC),
-                 ("Withdraw (USD)", \SimulationData.withdrawalUSD)
-             ]
--            
-         case .eur:
-             columns = [
-                 ("Starting BTC (BTC)", \SimulationData.startingBTC),
-@@ -304,7 +326,6 @@ class PinnedColumnBridgeViewController: UIViewController {
-                 ("Net Contrib (BTC)", \SimulationData.netContributionBTC),
-                 ("Withdraw (EUR)", \SimulationData.withdrawalEUR)
-             ]
--            
-         case .both:
-             columns = [
-                 ("Starting BTC (BTC)", \SimulationData.startingBTC),
-@@ -334,13 +355,18 @@ class PinnedColumnBridgeViewController: UIViewController {
-         )
-     }
- 
--    @objc private func handleScrollToBottom() {
--        pinnedColumnTablesVC.scrollToBottom()
--    }
--    
--    // In PinnedColumnBridgeViewController.swift
--    override func viewDidLayoutSubviews() {
--        super.viewDidLayoutSubviews()
--        // Everything else stays as needed; all print statements are removed
-+    // MARK: - Growth Calculation
-+    private func growthCalc(_ finalPortfolio: Decimal,
-+                            _ initialPortfolio: Decimal,
-+                            _ symbol: String) -> (Double, String) {
-+        let growthPercentDouble: Double
-+        if initialPortfolio == 0 {
-+            growthPercentDouble = 0.0
-+        } else {
-+            let finalD = Double(truncating: finalPortfolio as NSNumber)
-+            let initD  = Double(truncating: initialPortfolio as NSNumber)
-+            growthPercentDouble = (finalD / initD - 1) * 100
-+        }
-+        return (growthPercentDouble, symbol)
-     }
- }
-diff --git a/BTC Simulator/Bridging screen/SomeParentView.swift b/BTC Simulator/Bridging screen/SomeParentView.swift
-deleted file mode 100644
-index 79f4989..0000000
---- a/BTC Simulator/Bridging screen/SomeParentView.swift	
-+++ /dev/null
-@@ -1,72 +0,0 @@
--//
--//  SomeParentView.swift
--//  BTCMonteCarlo
--//
--//  Created by Conor on 17/02/2025.
--//
--/*
--import SwiftUI
--
--/// A SwiftUI view that demonstrates how to embed the pinned-column UIKit layout.
--/// We pass data in, show a floating "Scroll to Bottom" button, etc.
--struct SomeParentView: View {
--
--    @EnvironmentObject var coordinator: SimulationCoordinator
--
--    // The state to remember the last row scrolled
--    @State private var lastViewedRow = 0
--
--    // A flag that triggers scrolling to bottom
--    @State private var scrollToBottomFlag = false
--    
--    // Whether we're currently near the bottom of the pinned tables
--    @State private var isAtBottom = false
--
--    var body: some View {
--        NavigationView {
--            ZStack {
--                // The UIKit bridging view
--                PinnedColumnTablesRepresentable(
--                    displayedData: coordinator.monteCarloResults,
--                    pinnedColumnTitle: "Week",
--                    pinnedColumnKeyPath: \SimulationData.week,
--                    columns: myColumns,
--                    lastViewedRow: $lastViewedRow,
--                    scrollToBottomFlag: $scrollToBottomFlag,
--                    // IMPORTANT: pass the new isAtBottom binding here
--                    isAtBottom: $isAtBottom
--                )
--                .edgesIgnoringSafeArea(.bottom)
--
--                // Floating “Scroll to Bottom” button if not already at bottom
--                if !isAtBottom {
--                    VStack {
--                        Spacer()
--                        Button(action: {
--                            scrollToBottomFlag = true
--                        }) {
--                            Image(systemName: "chevron.down.circle")
--                                .foregroundColor(.white)
--                                .padding()
--                                .background(Color(white: 0.2).opacity(0.9))
--                                .clipShape(Circle())
--                        }
--                        .padding()
--                    }
--                }
--            }
--            .navigationBarTitle("Pinned Column Table", displayMode: .inline)
--        }
--    }
--
--    // Example columns
--    private var myColumns: [(String, PartialKeyPath<SimulationData>)] {
--        return [
--            ("BTC Price (USD)", \SimulationData.btcPriceUSD),
--            ("Portfolio (USD)", \SimulationData.portfolioValueUSD),
--            ("Contrib (USD)", \SimulationData.contributionUSD),
--            // etc...
--        ]
--    }
--}
--*/
+                     NavigationStack {
+                         OnboardingView(didFinishOnboarding: $didFinishOnboarding)
 diff --git a/BTC Simulator/ContentView.swift b/BTC Simulator/ContentView.swift
-index 4e34eeb..6cc9461 100644
+index 73f3969..7533652 100644
 --- a/BTC Simulator/ContentView.swift	
 +++ b/BTC Simulator/ContentView.swift	
-@@ -295,11 +295,11 @@ struct ContentView: View {
-                 // The main parameter entry screen
-                 parametersScreen
+@@ -287,6 +287,9 @@ struct ContentView: View {
+     @EnvironmentObject var coordinator: SimulationCoordinator
+     @EnvironmentObject var simChartSelection: SimChartSelection
+     @EnvironmentObject var textRendererManager: TextRendererManager // Add this line for text rendering
++    
++    // IdleManager to manage idle state
++    @StateObject private var idleManager = IdleManager()
  
--                // Bottom icons bar if not loading/keyboard
-+                // Bottom icons bar (only if not loading/keyboard)
-                 if !coordinator.isLoading && !coordinator.isChartBuilding && !isKeyboardVisible {
-                     bottomIcons
-                 }
--                
-+
-                 // Loading overlay if coordinator is busy
-                 if coordinator.isLoading || coordinator.isChartBuilding {
-                     LoadingOverlayView()
-@@ -307,27 +307,25 @@ struct ContentView: View {
-                         .environmentObject(simSettings)
-                 }
-             }
--            // Hide SwiftUI nav bar for the MAIN screen:
-+            // Hide the nav bar on the main screen
-             .navigationBarHidden(true)
--            
--            // Destination for bridging screen:
-+
-+            // Bridging screen
-             .navigationDestination(isPresented: $showPinnedColumns) {
--                // Show SwiftUI’s nav bar if you like, or keep hidden:
--                PinnedColumnBridgeRepresentable(
-+                PinnedColumnBridgeRepresentableUIKit(
-+                    isPresented: $showPinnedColumns,
-                     coordinator: coordinator,
-                     inputManager: inputManager,
-                     monthlySimSettings: monthlySimSettings,
-                     simSettings: simSettings
-                 )
--                // Force SwiftUI nav bar off:
--                .navigationBarHidden(true)
--                .navigationBarBackButtonHidden(true)
-+                .navigationBarHidden(true) // Hide the system bar entirely
-                 .onAppear {
--                    removeNavBarHairline()
-+                    removeNavBarHairline() // optional, if you keep it around
-                 }
-             }
--            
--            // AFTER the bridging screen, add Settings & About:
-+
-+            // Settings screen
-             .navigationDestination(isPresented: $showSettings) {
-                 SettingsView()
-                     .environmentObject(simSettings)
-@@ -335,18 +333,24 @@ struct ContentView: View {
-                     .environmentObject(coordinator)
-                     .onAppear { removeNavBarHairline() }
-             }
-+
-+            // About screen
-             .navigationDestination(isPresented: $showAbout) {
-                 AboutView()
-                     .onAppear { removeNavBarHairline() }
-             }
-         }
--        // On appear, remove any hairline from the nav bar
-         .onAppear {
-+            // Shift back button title off-screen globally
-+            UIBarButtonItem.appearance().setBackButtonTitlePositionAdjustment(UIOffset(horizontal: -1000, vertical: 0), for: .default)
+     var body: some View {
+         NavigationStack {
+@@ -357,17 +360,18 @@ struct ContentView: View {
+                 for: .default
+             )
              removeNavBarHairline()
++            
++            // Start tracking idle time when content view appears
++            idleManager.resetIdleTimer()
          }
--        // If coordinator finishes loading or building, check if we auto-navigate
--        .onChange(of: coordinator.isLoading) { _ in checkNavigationState() }
--        .onChange(of: coordinator.isChartBuilding) { _ in checkNavigationState() }
-+        .onChange(of: coordinator.isLoading) { _ in
-+            checkNavigationState()
+-        // Using the new two-parameter onChange closure (available in iOS 17)
+-        .onChange(of: coordinator.isLoading, initial: true) { oldValue, newValue in
+-            if newValue {
+-                lastViewedColumnIndex = 2
+-                lastViewedRow = 0
+-                print("DEBUG: Forcing lastViewedColumnIndex to default (2) and lastViewedRow to default (0) on new simulation start.")
+-            }
++        .onChange(of: coordinator.isLoading) { newVal in
++            print("DEBUG: coordinator.isLoading changed to \(newVal)")
 +        }
-+        .onChange(of: coordinator.isChartBuilding) { _ in
-+            checkNavigationState()
-+        }
++        .onChange(of: coordinator.isChartBuilding) { newVal in
++            print("DEBUG: coordinator.isChartBuilding changed to \(newVal)")
+         }
+-        .onChange(of: coordinator.isChartBuilding) { _ in
+-            checkNavigationState()
++        .onTapGesture {
++            idleManager.resetIdleTimer() // Reset idle timer on user interaction
+         }
      }
  
-     // MARK: - Parameter Screen
-@@ -490,3 +494,13 @@ struct ContentView: View {
+@@ -380,12 +384,6 @@ struct ContentView: View {
+             isKeyboardVisible: $isKeyboardVisible,
+             showPinnedColumns: $showPinnedColumns
+         )
+-        .onChange(of: coordinator.isLoading) { newVal in
+-            print("DEBUG: coordinator.isLoading changed to \(newVal)")
+-        }
+-        .onChange(of: coordinator.isChartBuilding) { newVal in
+-            print("DEBUG: coordinator.isChartBuilding changed to \(newVal)")
+-        }
      }
- }
  
-+extension View {
-+    @ViewBuilder
-+    func ifAvailableiOS16(_ transform: (Self) -> some View) -> some View {
-+        if #available(iOS 16.0, *) {
-+            transform(self)
-+        } else {
-+            self
-+        }
+     // MARK: - Bottom Icons
+diff --git a/BTC Simulator/MetalChart/IdleManager.swift b/BTC Simulator/MetalChart/IdleManager.swift
+new file mode 100644
+index 0000000..9f17153
+--- /dev/null
++++ b/BTC Simulator/MetalChart/IdleManager.swift	
+@@ -0,0 +1,59 @@
++//
++//  IdleManager.swift
++//  BTCMonteCarlo
++//
++//  Created by . . on 28/02/2025.
++//
++
++import Foundation
++
++class IdleManager: ObservableObject {
++    private var idleTimer: Timer?
++    private var lastActivityTime: Date = Date()
++    private let idleTimeLimit: TimeInterval = 30.0 // 30 seconds for idle timeout
++    
++    // Call this method to reset the idle timer whenever there's user interaction (e.g., tapping, scrolling)
++    @objc func resetIdleTimer() {
++        lastActivityTime = Date()
++        
++        // Invalidate any existing timer to reset the idle state
++        idleTimer?.invalidate()
++        
++        // Create a new timer to trigger idle timeout after the specified idleTimeLimit
++        idleTimer = Timer.scheduledTimer(timeInterval: idleTimeLimit,
++                                         target: self,
++                                         selector: #selector(idleTimeout),
++                                         userInfo: nil,
++                                         repeats: false)
++    }
++    
++    // This method is triggered when idle time exceeds the limit (e.g., after 30 seconds of inactivity)
++    @objc private func idleTimeout() {
++        // Pause ongoing tasks to save resources when the app is idle
++        handleIdleState()
++    }
++    
++    // Handles actions for when the app is idle, such as pausing tasks and releasing resources
++    private func handleIdleState() {
++        pauseProcessing()
++        releaseResources()
++    }
++    
++    // Pauses ongoing processing, rendering, or calculations to save resources
++    private func pauseProcessing() {
++        print("Pausing live processing due to inactivity.")
++        // Add code here to pause Metal rendering or any ongoing data processing
++    }
++    
++    // Releases resources that are not needed during the idle state to conserve power and memory
++    private func releaseResources() {
++        print("Releasing resources to save power and memory.")
++        // Add code here to release GPU resources, reset buffers, or pause data updates
++    }
++    
++    // Call this method when the app becomes active again (e.g., after user interaction)
++    func resumeProcessing() {
++        print("Resuming live processing.")
++        // Add code here to restart rendering or resume data processing
 +    }
 +}
+diff --git a/BTC Simulator/MetalChart/MetalChartContainerView.swift b/BTC Simulator/MetalChart/MetalChartContainerView.swift
+index 21445b7..3ca1a7c 100644
+--- a/BTC Simulator/MetalChart/MetalChartContainerView.swift	
++++ b/BTC Simulator/MetalChart/MetalChartContainerView.swift	
+@@ -13,6 +13,9 @@ import MetalKit
+ struct MetalChartContainerView: UIViewRepresentable {
+     let metalChart: MetalChartRenderer
+     
++    // Declare IdleManager to manage idle state
++    @StateObject private var idleManager = IdleManager()
++    
+     func makeUIView(context: Context) -> MetalChartUIView {
+         // Ensure textRendererManager is available from metalChart
+         guard let textRendererManager = metalChart.textRendererManager else {
+@@ -73,6 +76,10 @@ struct MetalChartContainerView: UIViewRepresentable {
+         metalView.addGestureRecognizer(doubleTapGR)
+         metalView.addGestureRecognizer(doubleTapSlideGR)
+         
++        // Reset the idle timer whenever there is any gesture interaction
++        metalView.addGestureRecognizer(UITapGestureRecognizer(target: coordinator, action: #selector(coordinator.resetIdleTimer)))
++        metalView.addGestureRecognizer(UIPanGestureRecognizer(target: coordinator, action: #selector(coordinator.resetIdleTimer)))
++        
+         return metalView
+     }
+     
+@@ -81,6 +88,7 @@ struct MetalChartContainerView: UIViewRepresentable {
+     }
+     
+     func makeCoordinator() -> MetalChartGestureCoordinator {
+-        MetalChartGestureCoordinator()
++        // Pass IdleManager to the Coordinator
++        MetalChartGestureCoordinator(idleManager: idleManager)
+     }
+ }
+diff --git a/BTC Simulator/MetalChart/MetalChartGestureCoordinator.swift b/BTC Simulator/MetalChart/MetalChartGestureCoordinator.swift
+index a7c4706..326d938 100644
+--- a/BTC Simulator/MetalChart/MetalChartGestureCoordinator.swift	
++++ b/BTC Simulator/MetalChart/MetalChartGestureCoordinator.swift	
+@@ -10,24 +10,29 @@ import UIKit
+ 
+ /// Multi-touch gestures: single-finger pan, two-finger pan, pinch, double-tap zoom.
+ class MetalChartGestureCoordinator: NSObject {
+-    
++    private let idleManager: IdleManager // Use 'let' since it won’t change after initialization
++
++    // Initializer to accept idleManager from MetalChartContainerView
++    init(idleManager: IdleManager) {
++        self.idleManager = idleManager
++        super.init()
++    }
++
++    // Method for gesture recognizers to reset the idle timer
++    @objc func resetIdleTimer() {
++        idleManager.resetIdleTimer()
++    }
++
++    // Existing properties (unchanged)
+     private var baseScale: Float = 1.0
+     private var baseTranslation = SIMD2<Float>(0, 0)
+-    
+     private var baseScaleForTwoFingerPan: Float = 1.0
+-    
+     private var initialPinchAnchorData: SIMD2<Float>?
+-    
+-    // For the new double-tap-slide gesture
+     private var baseScaleX: Float = 1.0
+     private var baseScaleY: Float = 1.0
+     private var doubleTapSlideStartPoint: CGPoint = .zero
+-    private let doubleTapSlideSensitivity: CGFloat = 0.01 // tweak to taste
+-    
+-    // Zoom factor for double-tap
++    private let doubleTapSlideSensitivity: CGFloat = 0.01
+     private let doubleTapZoomFactor: Float = 1.5
+-    
+-    // Zoom factor for two-finger pan
+     private let twoFingerZoomFactor: Float = 0.005
+ }
+ 
+@@ -40,6 +45,9 @@ extension MetalChartGestureCoordinator {
+         guard let chartView = recognizer.view as? MetalChartUIView else { return }
+         let renderer = chartView.renderer
+         
++        // Reset the idle timer whenever there's gesture interaction
++        idleManager.resetIdleTimer()
++        
+         switch recognizer.state {
+         case .began:
+             // Store the initial scale
+@@ -54,44 +62,25 @@ extension MetalChartGestureCoordinator {
+             let currentPoint = recognizer.location(in: chartView)
+             
+             // We'll do an example: vertical movement => scale Y, horizontal => scale X
+-            // You can decide the formula
+             let dy = currentPoint.y - doubleTapSlideStartPoint.y
+             let dx = currentPoint.x - doubleTapSlideStartPoint.x
+             
+-            // For instance, let newScaleY = baseScaleY * (1 + -dy * 0.01)
+-            // negative dy for upward means bigger scale
+             let factorY = 1.0 + (-dy * doubleTapSlideSensitivity)
+             let newScaleY = max(0.0001, baseScaleY * Float(factorY))
+             
+             let factorX = 1.0 + (dx * doubleTapSlideSensitivity)
+             let newScaleX = max(0.0001, baseScaleX * Float(factorX))
+             
+-            // Decide if you want to scale only Y or only X or both:
+-            // Example: scale only Y:
+-            // renderer.scaleY = newScaleY
+-            //
+-            // Example: scale only X:
+-            // renderer.scaleX = newScaleX
+-            //
+-            // Example: scale both (like a uniform-ish approach):
+-            // but that defeats the purpose of "slide up/down for Y-axis" vs "slide left/right for X-axis"
+-            
+-            // Let's show a quick approach:
+-            //   If absolute vertical movement > horizontal, treat it as a Y-scale gesture
+-            //   else treat as X-scale
++            // Decide if you want to scale only Y or only X or both
+             if abs(dy) > abs(dx) {
+-                // predominantly vertical => scale Y
+                 renderer.scaleY = newScaleY
+             } else {
+-                // predominantly horizontal => scale X
+                 renderer.scaleX = newScaleX
+             }
+             
+             renderer.updateTransform()
+             
+         case .ended, .cancelled:
+-            // Optionally clamp the edges if you want
+-            // e.g. if you want to keep chart from going offscreen horizontally
+             renderer.anchorEdges()
+             
+         default:
+@@ -120,13 +109,15 @@ extension MetalChartGestureCoordinator {
+         let renderer = chartView.renderer
+         let translationPoint = recognizer.translation(in: chartView)
+         
++        // Reset the idle timer whenever there's gesture interaction
++        idleManager.resetIdleTimer()
++        
+         switch recognizer.state {
+         case .began:
+             baseScale = renderer.scale
+             baseTranslation = renderer.translation
+             
+         case .changed:
+-            // Just do normal panning (no clamp in changed for Option A)
+             renderer.scale = baseScale
+             renderer.translation = baseTranslation
+             
+@@ -138,10 +129,7 @@ extension MetalChartGestureCoordinator {
+             renderer.updateTransform()
+             
+         case .ended, .cancelled:
+-            // Now clamp once
+             renderer.anchorEdges()
+-            
+-            // Update base
+             baseScale = renderer.scale
+             baseTranslation = renderer.translation
+             
+@@ -157,6 +145,9 @@ extension MetalChartGestureCoordinator {
+         
+         guard recognizer.numberOfTouches == 2 else { return }
+         
++        // Reset the idle timer whenever there's gesture interaction
++        idleManager.resetIdleTimer()
++        
+         switch recognizer.state {
+         case .began:
+             baseScaleForTwoFingerPan = renderer.scale
+@@ -183,7 +174,6 @@ extension MetalChartGestureCoordinator {
+             renderer.updateTransform()
+             
+         case .ended, .cancelled:
+-            // Single clamp at end
+             renderer.anchorEdges()
+             
+         default:
+@@ -196,12 +186,14 @@ extension MetalChartGestureCoordinator {
+         guard let chartView = recognizer.view as? MetalChartUIView else { return }
+         let renderer = chartView.renderer
+         
++        // Reset the idle timer whenever there's gesture interaction
++        idleManager.resetIdleTimer()
++        
+         switch recognizer.state {
+         case .began:
+             baseScale = renderer.scale
+             baseTranslation = renderer.translation
+             
+-            // Midpoint
+             let location: CGPoint
+             if recognizer.numberOfTouches >= 2 {
+                 let t1 = recognizer.location(ofTouch: 0, in: chartView)
+@@ -222,7 +214,6 @@ extension MetalChartGestureCoordinator {
+             let pinchScale = Float(recognizer.scale)
+             let newScale   = baseScale * pinchScale
+             
+-            // Anchor logic
+             let anchorOldScreen = anchorScreenCoord(
+                 renderer: renderer,
+                 dataCoord: anchorData,
+@@ -250,9 +241,7 @@ extension MetalChartGestureCoordinator {
+             renderer.updateTransform()
+             
+         case .ended, .cancelled:
+-            // Once you release pinch, clamp
+             renderer.anchorEdges()
+-            
+             baseScale = renderer.scale
+             baseTranslation = renderer.translation
+             initialPinchAnchorData = nil
+@@ -273,13 +262,11 @@ extension MetalChartGestureCoordinator {
+         let oldScale = renderer.scale
+         let oldTrans = renderer.translation
+         
+-        // Temporarily override
+         renderer.scale = scale
+         renderer.translation = translation
+         
+         let screenPt = renderer.convertDataToPoint(dataCoord, viewSize: chartView.bounds.size)
+         
+-        // Restore
+         renderer.scale = oldScale
+         renderer.translation = oldTrans
+         
+@@ -291,6 +278,9 @@ extension MetalChartGestureCoordinator {
+         guard let chartView = recognizer.view as? MetalChartUIView else { return }
+         let renderer = chartView.renderer
+         
++        // Reset the idle timer whenever there's gesture interaction
++        idleManager.resetIdleTimer()
++        
+         if recognizer.state == .ended {
+             baseScale = renderer.scale
+             baseTranslation = renderer.translation
+@@ -307,7 +297,6 @@ extension MetalChartGestureCoordinator {
+             renderer.scale = newScale
+             renderer.updateTransform()
+             
+-            // Finally clamp
+             renderer.anchorEdges()
+             
+             baseScale = newScale
+diff --git a/BTC Simulator/MetalChart/MetalChartRenderer.swift b/BTC Simulator/MetalChart/MetalChartRenderer.swift
+index 850922f..ab6838b 100644
+--- a/BTC Simulator/MetalChart/MetalChartRenderer.swift	
++++ b/BTC Simulator/MetalChart/MetalChartRenderer.swift	
+@@ -57,6 +57,9 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
+     
+     // MARK: - Setup
+     
++    // IdleManager to manage idle state
++    private var idleManager = IdleManager()
++    
+     func setupMetal(
+         in size: CGSize,
+         chartDataCache: ChartDataCache,
+@@ -308,6 +311,9 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
+             return
+         }
+         
++        // Reset the idle timer when rendering occurs
++        idleManager.resetIdleTimer()
++        
+         // 1) Ensure the viewport size is up-to-date
+         let deviceScale = view.drawableSize.width / view.bounds.size.width
+         let scissorX = Int(pinnedAxisOffset * deviceScale)
+diff --git a/BTC Simulator/MetalChart/MetalChartUIView.swift b/BTC Simulator/MetalChart/MetalChartUIView.swift
+index de2abb1..a56f7ec 100644
+--- a/BTC Simulator/MetalChart/MetalChartUIView.swift	
++++ b/BTC Simulator/MetalChart/MetalChartUIView.swift	
+@@ -13,6 +13,9 @@ class MetalChartUIView: UIView {
+     let renderer: MetalChartRenderer
+     let mtkView: MTKView
+     
++    // IdleManager to track idle time and reset the timer
++    private var idleManager = IdleManager()
++    
+     init(frame: CGRect, renderer: MetalChartRenderer, textRendererManager: TextRendererManager) {
+         self.renderer = renderer
+         
+@@ -27,6 +30,9 @@ class MetalChartUIView: UIView {
+         mtkView.sampleCount = 4
+         mtkView.preferredFramesPerSecond = 60
+         
++        // Add gesture recognizers to reset idle timer on user interaction
++        addGestureRecognizers()
++        
+         addSubview(mtkView)
+     }
+     
+@@ -38,4 +44,21 @@ class MetalChartUIView: UIView {
+         super.layoutSubviews()
+         mtkView.frame = self.bounds
+     }
++    
++    // Add gesture recognizers to reset idle timer on interaction
++    private func addGestureRecognizers() {
++        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleUserInteraction))
++        self.addGestureRecognizer(tapGesture)
++        
++        let panGesture = UIPanGestureRecognizer(target: self, action: #selector(handleUserInteraction))
++        self.addGestureRecognizer(panGesture)
++        
++        let pinchGesture = UIPinchGestureRecognizer(target: self, action: #selector(handleUserInteraction))
++        self.addGestureRecognizer(pinchGesture)
++    }
++    
++    // Method to reset the idle timer on user interaction
++    @objc private func handleUserInteraction() {
++        idleManager.resetIdleTimer() // Reset idle timer whenever there is user interaction
++    }
+ }
 diff --git a/BTCMonteCarlo.xcodeproj/project.pbxproj b/BTCMonteCarlo.xcodeproj/project.pbxproj
-index 4bc4eb6..5afa572 100644
+index ff94a61..e0a436d 100644
 --- a/BTCMonteCarlo.xcodeproj/project.pbxproj
 +++ b/BTCMonteCarlo.xcodeproj/project.pbxproj
-@@ -27,6 +27,7 @@
- 		E14AED7E2D686A400068B2A5 /* NumericExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14AED7D2D686A3E0068B2A5 /* NumericExtensions.swift */; };
- 		E14AED802D6960730068B2A5 /* SnapTwoColumnsFlowLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14AED7F2D69606F0068B2A5 /* SnapTwoColumnsFlowLayout.swift */; };
- 		E14AED822D6960E50068B2A5 /* OneColumnCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14AED812D6960E00068B2A5 /* OneColumnCell.swift */; };
-+		E14AED852D69A27B0068B2A5 /* PinnedColumnBridgeRepresentableUIKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14AED842D69A2780068B2A5 /* PinnedColumnBridgeRepresentableUIKit.swift */; };
- 		E14D23F52D37425D007CC11A /* SimulationSummaryCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14D23F42D374258007CC11A /* SimulationSummaryCardView.swift */; };
- 		E14D23FA2D3A2260007CC11A /* S&P 500 Historical Data Monthly.csv in Resources */ = {isa = PBXBuildFile; fileRef = E14D23F82D3A2260007CC11A /* S&P 500 Historical Data Monthly.csv */; };
- 		E14D23FC2D3A2260007CC11A /* Bitcoin Historical Data Weekly.csv in Resources */ = {isa = PBXBuildFile; fileRef = E14D23F72D3A2260007CC11A /* Bitcoin Historical Data Weekly.csv */; };
-@@ -60,6 +61,7 @@
- 		E1883F482D1E8E21007AA90B /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1883F472D1E8E1C007AA90B /* AboutView.swift */; };
- 		E1883F502D1FCEBD007AA90B /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1883F4F2D1FCEB9007AA90B /* OnboardingView.swift */; };
- 		E1883F522D1FDDB2007AA90B /* BitcoinShapes.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1883F512D1FDDB0007AA90B /* BitcoinShapes.swift */; };
-+		E18B2D5F2D6A7ACC005E5EDE /* CustomBarViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E18B2D5E2D6A7ACA005E5EDE /* CustomBarViewController.swift */; };
- 		E18C2BE12D259248006E7438 /* ChartSnapshotView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E18C2BE02D259245006E7438 /* ChartSnapshotView.swift */; };
- 		E191AD5D2D1B06E600020DBE /* BitcoinHistoricalData.swift in Sources */ = {isa = PBXBuildFile; fileRef = E191AD5C2D1B06E000020DBE /* BitcoinHistoricalData.swift */; };
- 		E191AD5F2D1B07BC00020DBE /* CSVLoaderHistorical.swift in Sources */ = {isa = PBXBuildFile; fileRef = E191AD5E2D1B07B800020DBE /* CSVLoaderHistorical.swift */; };
-@@ -72,7 +74,6 @@
- 		E1942C992D63FD6200F5B9A1 /* PinnedColumnTablesViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1942C982D63FD5E00F5B9A1 /* PinnedColumnTablesViewController.swift */; };
- 		E1942C9B2D63FD7500F5B9A1 /* PinnedColumnCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1942C9A2D63FD7300F5B9A1 /* PinnedColumnCell.swift */; };
- 		E1942C9D2D63FD9200F5B9A1 /* ColumnsCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1942C9C2D63FD9000F5B9A1 /* ColumnsCell.swift */; };
--		E1942C9F2D63FDB100F5B9A1 /* SomeParentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1942C9E2D63FDAF00F5B9A1 /* SomeParentView.swift */; };
- 		E1942CA12D64331C00F5B9A1 /* PinnedColumnBridgeRepresentable.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1942CA02D64331900F5B9A1 /* PinnedColumnBridgeRepresentable.swift */; };
- 		E1942CA32D64334D00F5B9A1 /* PinnedColumnBridgeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1942CA22D64334B00F5B9A1 /* PinnedColumnBridgeViewController.swift */; };
- 		E19D10E72D3ED96200E3A55E /* GARCHHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = E19D10E62D3ED96000E3A55E /* GARCHHelper.swift */; };
-@@ -153,6 +154,7 @@
- 		E14AED7D2D686A3E0068B2A5 /* NumericExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NumericExtensions.swift; sourceTree = "<group>"; };
- 		E14AED7F2D69606F0068B2A5 /* SnapTwoColumnsFlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnapTwoColumnsFlowLayout.swift; sourceTree = "<group>"; };
- 		E14AED812D6960E00068B2A5 /* OneColumnCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OneColumnCell.swift; sourceTree = "<group>"; };
-+		E14AED842D69A2780068B2A5 /* PinnedColumnBridgeRepresentableUIKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinnedColumnBridgeRepresentableUIKit.swift; sourceTree = "<group>"; };
- 		E14D23F42D374258007CC11A /* SimulationSummaryCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulationSummaryCardView.swift; sourceTree = "<group>"; };
- 		E14D23F72D3A2260007CC11A /* Bitcoin Historical Data Weekly.csv */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Bitcoin Historical Data Weekly.csv"; sourceTree = "<group>"; };
- 		E14D23F82D3A2260007CC11A /* S&P 500 Historical Data Monthly.csv */ = {isa = PBXFileReference; lastKnownFileType = text; path = "S&P 500 Historical Data Monthly.csv"; sourceTree = "<group>"; };
-@@ -186,6 +188,7 @@
- 		E1883F472D1E8E1C007AA90B /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
- 		E1883F4F2D1FCEB9007AA90B /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
- 		E1883F512D1FDDB0007AA90B /* BitcoinShapes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BitcoinShapes.swift; sourceTree = "<group>"; };
-+		E18B2D5E2D6A7ACA005E5EDE /* CustomBarViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomBarViewController.swift; sourceTree = "<group>"; };
- 		E18C2BE02D259245006E7438 /* ChartSnapshotView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartSnapshotView.swift; sourceTree = "<group>"; };
- 		E191AD5C2D1B06E000020DBE /* BitcoinHistoricalData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BitcoinHistoricalData.swift; sourceTree = "<group>"; };
- 		E191AD5E2D1B07B800020DBE /* CSVLoaderHistorical.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVLoaderHistorical.swift; sourceTree = "<group>"; };
-@@ -198,7 +201,6 @@
- 		E1942C982D63FD5E00F5B9A1 /* PinnedColumnTablesViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinnedColumnTablesViewController.swift; sourceTree = "<group>"; };
- 		E1942C9A2D63FD7300F5B9A1 /* PinnedColumnCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinnedColumnCell.swift; sourceTree = "<group>"; };
- 		E1942C9C2D63FD9000F5B9A1 /* ColumnsCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColumnsCell.swift; sourceTree = "<group>"; };
--		E1942C9E2D63FDAF00F5B9A1 /* SomeParentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SomeParentView.swift; sourceTree = "<group>"; };
- 		E1942CA02D64331900F5B9A1 /* PinnedColumnBridgeRepresentable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinnedColumnBridgeRepresentable.swift; sourceTree = "<group>"; };
- 		E1942CA22D64334B00F5B9A1 /* PinnedColumnBridgeViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinnedColumnBridgeViewController.swift; sourceTree = "<group>"; };
- 		E19D10E62D3ED96000E3A55E /* GARCHHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GARCHHelper.swift; sourceTree = "<group>"; };
-@@ -400,14 +402,15 @@
- 				E14AED6F2D684DA20068B2A5 /* ColumnsCollectionCell.swift */,
- 				E14AED6D2D684D020068B2A5 /* ColumnsCollectionViewController.swift */,
- 				E166A8B82CF955E80003F518 /* ContentOffsetScrollView.swift */,
-+				E18B2D5E2D6A7ACA005E5EDE /* CustomBarViewController.swift */,
- 				E14AED812D6960E00068B2A5 /* OneColumnCell.swift */,
- 				E1942CA02D64331900F5B9A1 /* PinnedColumnBridgeRepresentable.swift */,
-+				E14AED842D69A2780068B2A5 /* PinnedColumnBridgeRepresentableUIKit.swift */,
- 				E1942CA22D64334B00F5B9A1 /* PinnedColumnBridgeViewController.swift */,
- 				E1942C9A2D63FD7300F5B9A1 /* PinnedColumnCell.swift */,
- 				E1942C962D63FD0900F5B9A1 /* PinnedColumnTablesRepresentable.swift */,
- 				E1942C982D63FD5E00F5B9A1 /* PinnedColumnTablesViewController.swift */,
- 				E14AED7F2D69606F0068B2A5 /* SnapTwoColumnsFlowLayout.swift */,
--				E1942C9E2D63FDAF00F5B9A1 /* SomeParentView.swift */,
- 				E14AED712D6857820068B2A5 /* TwoColumnChunker.swift */,
- 				E14AED752D6857C40068B2A5 /* TwoColumnCollectionViewController.swift */,
- 			);
-@@ -564,9 +567,9 @@
- 				E1883F502D1FCEBD007AA90B /* OnboardingView.swift in Sources */,
- 				E19D11442D42FA6800E3A55E /* RNGHelpers.swift in Sources */,
- 				E14344DA2D53553D00225A49 /* SimulationSettings+FactorSync.swift in Sources */,
-+				E18B2D5F2D6A7ACC005E5EDE /* CustomBarViewController.swift in Sources */,
- 				E112E3762D58B73A00167E92 /* MailView.swift in Sources */,
- 				E1A1E52F2D2E3A40008F7658 /* RowOffsetHelpers.swift in Sources */,
--				E1942C9F2D63FDB100F5B9A1 /* SomeParentView.swift in Sources */,
- 				E17B2F802D2800D400ECE087 /* OrientationObserver.swift in Sources */,
- 				E19D113C2D42F81C00E3A55E /* UtilityExtensions.swift in Sources */,
- 				E19D113A2D42F75000E3A55E /* MarketRegime.swift in Sources */,
-@@ -618,6 +621,7 @@
+@@ -33,6 +33,7 @@
+ 		E130935F2D70A0E000DA6418 /* RuntimeGPUTextRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = E130935E2D70A0DE00DA6418 /* RuntimeGPUTextRenderer.swift */; };
+ 		E13093612D70A35300DA6418 /* AxisShaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = E13093602D70A35300DA6418 /* AxisShaders.metal */; };
+ 		E13093632D71799400DA6418 /* TextRendererManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E13093622D71799200DA6418 /* TextRendererManager.swift */; };
++		E13093672D71CB1700DA6418 /* IdleManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E13093662D71CB1500DA6418 /* IdleManager.swift */; };
+ 		E14344D62D52D85600225A49 /* FactorState.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14344D52D52D85400225A49 /* FactorState.swift */; };
+ 		E14344D82D52DE5500225A49 /* FactorCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14344D72D52DE5300225A49 /* FactorCatalog.swift */; };
+ 		E14344DA2D53553D00225A49 /* SimulationSettings+FactorSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14344D92D53553800225A49 /* SimulationSettings+FactorSync.swift */; };
+@@ -184,6 +185,7 @@
+ 		E130935E2D70A0DE00DA6418 /* RuntimeGPUTextRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuntimeGPUTextRenderer.swift; sourceTree = "<group>"; };
+ 		E13093602D70A35300DA6418 /* AxisShaders.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = AxisShaders.metal; sourceTree = "<group>"; };
+ 		E13093622D71799200DA6418 /* TextRendererManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextRendererManager.swift; sourceTree = "<group>"; };
++		E13093662D71CB1500DA6418 /* IdleManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdleManager.swift; sourceTree = "<group>"; };
+ 		E14344D52D52D85400225A49 /* FactorState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FactorState.swift; sourceTree = "<group>"; };
+ 		E14344D72D52DE5300225A49 /* FactorCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FactorCatalog.swift; sourceTree = "<group>"; };
+ 		E14344D92D53553800225A49 /* SimulationSettings+FactorSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SimulationSettings+FactorSync.swift"; sourceTree = "<group>"; };
+@@ -450,6 +452,7 @@
+ 				E130935C2D70A0A600DA6418 /* FontAtlasGenerator.swift */,
+ 				E13093542D709BC800DA6418 /* GPUFontAtlas.swift */,
+ 				E13093562D709BF200DA6418 /* GPUTextRenderer.swift */,
++				E13093662D71CB1500DA6418 /* IdleManager.swift */,
+ 				E13093452D7076B700DA6418 /* MetalChartContainerView.swift */,
+ 				E130934A2D70773B00DA6418 /* MetalChartGestureCoordinator.swift */,
+ 				E130934C2D70779300DA6418 /* MetalChartRenderer.swift */,
+@@ -709,6 +712,7 @@
+ 				E13093312D6D8AFC00DA6418 /* PortraitLayoutCoordinator.swift in Sources */,
+ 				E1E31C4F2D4349E000ED22E6 /* DataLoader.swift in Sources */,
+ 				E1B7B0A72D4753CF00B60EC6 /* ShiftFactors.swift in Sources */,
++				E13093672D71CB1700DA6418 /* IdleManager.swift in Sources */,
+ 				E14D240B2D3A698A007CC11A /* SimulationSettingsInit.swift in Sources */,
+ 				E1E31C512D438DD900ED22E6 /* GarchCalibrator.swift in Sources */,
  				E1942CA32D64334D00F5B9A1 /* PinnedColumnBridgeViewController.swift in Sources */,
- 				E1F1CB622D4F081D003DB24F /* HalvingHistoricalManager.swift in Sources */,
- 				E1883F3E2D1E0D7A007AA90B /* ActiveField.swift in Sources */,
-+				E14AED852D69A27B0068B2A5 /* PinnedColumnBridgeRepresentableUIKit.swift in Sources */,
- 				E1942C992D63FD6200F5B9A1 /* PinnedColumnTablesViewController.swift in Sources */,
- 				E1942C8F2D61C50A00F5B9A1 /* OnboardingSteps.swift in Sources */,
- 				E19D10F52D40D10E00E3A55E /* SimulationSettings+BullishFactors.swift in Sources */,
 diff --git a/BTCMonteCarlo.xcodeproj/project.xcworkspace/xcuserdata/conor.xcuserdatad/UserInterfaceState.xcuserstate b/BTCMonteCarlo.xcodeproj/project.xcworkspace/xcuserdata/conor.xcuserdatad/UserInterfaceState.xcuserstate
-index c82b82b..2340396 100644
+index 375c945..419d1d0 100644
 Binary files a/BTCMonteCarlo.xcodeproj/project.xcworkspace/xcuserdata/conor.xcuserdatad/UserInterfaceState.xcuserstate and b/BTCMonteCarlo.xcodeproj/project.xcworkspace/xcuserdata/conor.xcuserdatad/UserInterfaceState.xcuserstate differ
