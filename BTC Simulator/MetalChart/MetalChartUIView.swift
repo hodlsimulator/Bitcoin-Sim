@@ -13,10 +13,12 @@ class MetalChartUIView: UIView {
     let renderer: MetalChartRenderer
     let mtkView: MTKView
     
-    init(frame: CGRect, renderer: MetalChartRenderer) {
+    init(frame: CGRect, renderer: MetalChartRenderer, textRendererManager: TextRendererManager) {
         self.renderer = renderer
         
-        // Create an MTKView, wire it to your renderer
+        // Pass textRendererManager to the renderer
+        renderer.textRendererManager = textRendererManager
+        
         mtkView = MTKView(frame: frame, device: renderer.device ?? MTLCreateSystemDefaultDevice())
         super.init(frame: frame)
         
@@ -25,7 +27,6 @@ class MetalChartUIView: UIView {
         mtkView.sampleCount = 4
         mtkView.preferredFramesPerSecond = 60
         
-        // Add the MTKView as a subview
         addSubview(mtkView)
     }
     
@@ -35,7 +36,6 @@ class MetalChartUIView: UIView {
     
     override func layoutSubviews() {
         super.layoutSubviews()
-        // Ensure MTKView always matches our bounds
         mtkView.frame = self.bounds
     }
 }

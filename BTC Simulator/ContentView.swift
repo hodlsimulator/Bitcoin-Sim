@@ -238,9 +238,7 @@ struct ContentView: View {
 
     @FocusState private var activeField: ActiveField?
 
-    // @State private var isAtBottom: Bool = false
     @State private var lastViewedWeek: Int = 0
-
     @State private var scrollToBottom: Bool = false
     @State private var lastScrollTime = Date()
     @State private var contentScrollProxy: ScrollViewProxy?
@@ -257,7 +255,6 @@ struct ContentView: View {
 
     @AppStorage("advancedSettingsUnlocked") private var advancedSettingsUnlocked: Bool = false
 
-    // Some toggles for subviews
     @State private var showSettings = false
     @State private var showAbout = false
     @State private var showHistograms = false
@@ -274,11 +271,9 @@ struct ContentView: View {
     @State private var showSnapshotView = false
     @State private var showSnapshotsDebug = false
 
-    // Whether we navigate to the pinned columns bridging screen
     @State private var showPinnedColumns = false
-    
     @State private var lastViewedRow: Int = 0
-    
+
     @State private var lastViewedColumnIndex: Int = {
         let stored = UserDefaults.standard.object(forKey: "LastViewedColumnIndex") as? Int
         return stored ?? 2  // If no stored value, default to 2
@@ -291,6 +286,7 @@ struct ContentView: View {
     @EnvironmentObject var chartDataCache: ChartDataCache
     @EnvironmentObject var coordinator: SimulationCoordinator
     @EnvironmentObject var simChartSelection: SimChartSelection
+    @EnvironmentObject var textRendererManager: TextRendererManager // Add this line for text rendering
 
     var body: some View {
         NavigationStack {
@@ -352,6 +348,9 @@ struct ContentView: View {
             }
         }
         .onAppear {
+            // Generate font atlas when content view appears
+            textRendererManager.generateFontAtlasAndRenderer(device: MTLCreateSystemDefaultDevice()!)
+            
             // Shift back button title off-screen globally
             UIBarButtonItem.appearance().setBackButtonTitlePositionAdjustment(
                 UIOffset(horizontal: -1000, vertical: 0),
@@ -426,7 +425,7 @@ struct ContentView: View {
             showPinnedColumns = true
         }
     }
-    
+
     private func navigateIfNeeded() {
         if !coordinator.isLoading && !coordinator.isChartBuilding {
             showPinnedColumns = true

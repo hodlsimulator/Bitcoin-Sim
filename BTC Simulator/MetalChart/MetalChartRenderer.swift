@@ -15,6 +15,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     var device: MTLDevice!
     var commandQueue: MTLCommandQueue!
     var pipelineState: MTLRenderPipelineState!
+    var textRendererManager: TextRendererManager?
     
     // MARK: - Chart Data
     var vertexBuffer: MTLBuffer?
@@ -75,6 +76,11 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         guard let library = device.makeDefaultLibrary() else {
             print("Failed to create default library.")
             return
+        }
+        
+        // Initialize textRendererManager only if it is nil
+        if textRendererManager == nil {
+            textRendererManager = TextRendererManager()
         }
         
         // Build pipeline
@@ -139,8 +145,12 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         // If you have pinned axes with GPU-based text
         let fontSize: CGFloat = 14
         if let fontAtlas = generateFontAtlas(device: device, font: UIFont.systemFont(ofSize: fontSize)) {
-            let textRenderer = RuntimeGPUTextRenderer(device: device, atlas: fontAtlas, library: library)
-            pinnedAxesRenderer = PinnedAxesRenderer(device: device, textRenderer: textRenderer, library: library)
+            if let textRendererManager = textRendererManager,
+               let textRenderer = textRendererManager.getTextRenderer() {
+                pinnedAxesRenderer = PinnedAxesRenderer(device: device, textRenderer: textRenderer, textRendererManager: textRendererManager, library: library)
+            } else {
+                print("TextRendererManager or TextRenderer is nil")
+            }
         }
     }
     
@@ -275,6 +285,9 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         else {
             return
         }
+        
+        // Pass renderEncoder to PinnedAxesRenderer
+        pinnedAxesRenderer?.drawAxes(renderEncoder: renderEncoder)
         
         // 1) Draw lines with scissor from x=50
         renderEncoder.setRenderPipelineState(pipelineState)

@@ -6,6 +6,8 @@
 //
 
 import SwiftUI
+import Metal
+import UIKit
 
 class SimChartSelection: ObservableObject {
     @Published var selectedChart: ChartType = .btcPrice
@@ -19,13 +21,15 @@ struct BTCMonteCarloApp: App {
     @AppStorage("isMonthlyMode") private var isMonthlyMode = false
 
     // MARK: - StateObjects
-    @StateObject private var appViewModel: AppViewModel
     @StateObject private var inputManager: PersistentInputManager
     @StateObject private var weeklySimSettings: SimulationSettings
     @StateObject private var monthlySimSettings: MonthlySimulationSettings
     @StateObject private var chartDataCache: ChartDataCache
     @StateObject private var simChartSelection: SimChartSelection
     @StateObject private var coordinator: SimulationCoordinator
+
+    // Declare a variable to store the font atlas and the text renderer
+    @StateObject private var textRendererManager = TextRendererManager()
 
     init() {
         let navBarAppearance = UINavigationBarAppearance()
@@ -77,7 +81,7 @@ struct BTCMonteCarloApp: App {
         ]
         UserDefaults.standard.register(defaults: defaultToggles)
 
-        let localAppViewModel       = AppViewModel()
+        // Initialize the local objects here
         let localInputManager       = PersistentInputManager()
         let localWeeklySimSettings  = SimulationSettings(loadDefaults: true)
         let localMonthlySimSettings = MonthlySimulationSettings(loadDefaults: true)
@@ -89,25 +93,16 @@ struct BTCMonteCarloApp: App {
             simSettings: localWeeklySimSettings,
             monthlySimSettings: localMonthlySimSettings,
             inputManager: localInputManager,
-            simChartSelection: localSimChartSelection               
+            simChartSelection: localSimChartSelection
         )
 
-        _appViewModel       = StateObject(wrappedValue: localAppViewModel)
+        // Assign values to the properties
         _inputManager       = StateObject(wrappedValue: localInputManager)
         _weeklySimSettings  = StateObject(wrappedValue: localWeeklySimSettings)
         _monthlySimSettings = StateObject(wrappedValue: localMonthlySimSettings)
         _chartDataCache     = StateObject(wrappedValue: localChartDataCache)
         _simChartSelection  = StateObject(wrappedValue: localSimChartSelection)
         _coordinator        = StateObject(wrappedValue: localCoordinator)
-        
-        #if DEBUG
-        // Wipe monthly keys only while running in Debug mode from Xcode
-        UserDefaults.standard.removeObject(forKey: "savedUserPeriodsMonthly")
-        UserDefaults.standard.removeObject(forKey: "savedInitialBTCPriceUSDMonthly")
-        UserDefaults.standard.removeObject(forKey: "savedStartingBalanceMonthly")
-        UserDefaults.standard.removeObject(forKey: "savedAverageCostBasisMonthly")
-        UserDefaults.standard.synchronize()
-        #endif
     }
 
     var body: some Scene {
@@ -118,10 +113,11 @@ struct BTCMonteCarloApp: App {
                 GeometryReader { geo in
                     Color.clear
                         .onAppear {
-                            appViewModel.windowSize = geo.size
+                            // Generate the font atlas when content view appears
+                            textRendererManager.generateFontAtlasAndRenderer(device: MTLCreateSystemDefaultDevice()!)
                         }
                         .onChange(of: geo.size) { _, newSize in
-                            appViewModel.windowSize = newSize
+                            // Handle any additional logic related to window resizing
                         }
                 }
 
@@ -134,7 +130,7 @@ struct BTCMonteCarloApp: App {
                             .environmentObject(chartDataCache)
                             .environmentObject(simChartSelection)
                             .environmentObject(coordinator)
-                            .environmentObject(appViewModel)
+                            .environmentObject(textRendererManager)
                     }
                     .tint(.white)
                     .preferredColorScheme(.dark)
@@ -148,7 +144,7 @@ struct BTCMonteCarloApp: App {
                             .environmentObject(chartDataCache)
                             .environmentObject(simChartSelection)
                             .environmentObject(coordinator)
-                            .environmentObject(appViewModel)
+                            .environmentObject(textRendererManager)
                     }
                     .preferredColorScheme(.dark)
                 }
