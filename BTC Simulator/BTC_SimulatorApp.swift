@@ -34,7 +34,7 @@ struct BTCMonteCarloApp: App {
     // Initialize the IdleManager for tracking idle state
     @StateObject private var idleManager = IdleManager()
 
-    init() {
+    init() {    
         let navBarAppearance = UINavigationBarAppearance()
         navBarAppearance.configureWithOpaqueBackground()
         navBarAppearance.backgroundColor = UIColor(white: 0.12, alpha: 1.0)

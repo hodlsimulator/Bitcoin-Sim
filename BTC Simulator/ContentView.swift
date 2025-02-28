@@ -325,7 +325,7 @@ struct ContentView: View {
                     simChartSelection: simChartSelection,
                     chartDataCache: chartDataCache
                 )
-                .fullBleedStyle() // Add this modifier here
+                .fullBleedStyle()
                 .onAppear {
                     removeNavBarHairline()
                 }
@@ -365,10 +365,14 @@ struct ContentView: View {
             idleManager.resetIdleTimer()
         }
         .onChange(of: coordinator.isLoading) { newVal in
-            print("DEBUG: coordinator.isLoading changed to \(newVal)")
+            if newVal {
+                lastViewedColumnIndex = 2
+                lastViewedRow = 0
+                print("DEBUG: Forcing lastViewedColumnIndex to default (2) and lastViewedRow to default (0) on new simulation start.")
+            }
         }
-        .onChange(of: coordinator.isChartBuilding) { newVal in
-            print("DEBUG: coordinator.isChartBuilding changed to \(newVal)")
+        .onChange(of: coordinator.isChartBuilding) { _ in
+            checkNavigationState()
         }
         .onTapGesture {
             idleManager.resetIdleTimer() // Reset idle timer on user interaction
