@@ -111,6 +111,9 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         // Initial transform
         updateTransform()
         
+        // *** Pin left edge to axis on initial load ***
+        anchorLeftEdgeAtLoad()
+        
         // Optional pinned axes
         let fontSize: CGFloat = 14
         if let fontAtlas = generateFontAtlas(device: device,
@@ -208,9 +211,8 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         return matrix_multiply(translationMatrix, scaleMatrix)
     }
     
-    // MARK: - Coordinate Conversions (Gesture Coordinator Needs)
+    // MARK: - Coordinate Conversions
     
-    /// Convert a screen point (UIKit coords) -> NDC [-1..+1].
     func convertPointToNDC(_ point: CGPoint, viewSize: CGSize) -> SIMD2<Float> {
         let ndx = Float(point.x / viewSize.width) * 2.0 - 1.0
         // Flip Y because UIKit top-left is (0,0)
@@ -218,7 +220,6 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         return SIMD2<Float>(ndx, ndy)
     }
     
-    /// Convert screen point -> data coords (like unproject).
     func convertPointToData(_ point: CGPoint, viewSize: CGSize) -> SIMD2<Float> {
         let ndc2 = convertPointToNDC(point, viewSize: viewSize)
         let ndc4 = SIMD4<Float>(ndc2.x, ndc2.y, 0, 1)
@@ -227,7 +228,6 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         return SIMD2<Float>(data4.x, data4.y)
     }
     
-    /// Convert data coords -> screen points (like project).
     func convertDataToPoint(_ dataCoord: SIMD2<Float>, viewSize: CGSize) -> CGPoint {
         let d4 = SIMD4<Float>(dataCoord.x, dataCoord.y, 0, 1)
         let ndc4 = currentTransformMatrix() * d4
@@ -242,12 +242,11 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     // MARK: - MTKViewDelegate
     
     func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
-        // Called when the view changes size; do any needed recalculations here.
+        // Called when the view changes size
     }
     
     func draw(in view: MTKView) {
-        // Anchor edges to keep left edge pinned at x=50 and optionally
-        // pin the right edge if it comes into view.
+        // 1) Pin edges so the left edge or right edge anchor if they come into view
         anchorEdges()
         
         guard let pipelineState = pipelineState,
@@ -259,14 +258,14 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             return
         }
         
-        // Scissor so the chart doesn't show to the left of x=50.
+        // 2) Scissor so the chart doesn't show to the left of x=50 (y-axis).
         let leftClip: Int = 50
         renderEncoder.setScissorRect(MTLScissorRect(x: leftClip,
                                                     y: 0,
                                                     width: Int(view.drawableSize.width) - leftClip,
                                                     height: Int(view.drawableSize.height)))
         
-        // 1) Draw lines
+        // 3) Draw lines
         renderEncoder.setRenderPipelineState(pipelineState)
         renderEncoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
         
@@ -282,7 +281,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             offsetIndex += count
         }
         
-        // 2) Draw pinned axes
+        // 4) Draw pinned axes
         if let pinnedAxes = pinnedAxesRenderer {
             pinnedAxes.viewportSize = view.bounds.size
             
@@ -411,47 +410,63 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         return (yMinVis, yMaxVis)
     }
     
-    // MARK: - Pin the edges so the chart can be anchored left or right
+    // MARK: - Pin edges
     
-    /// This pins the left edge to x=50 if it becomes visible, and pins the right edge
-    /// to the right side of the screen if it becomes visible. If the user pans so an
-    /// edge is off screen, it’s allowed to move until that edge reappears.
+    /// Make sure the left edge is anchored on load (so it's not slightly offscreen).
+    private func anchorLeftEdgeAtLoad() {
+        guard viewportSize.width > 0 else { return }
+        
+        let pinnedLeftScreenX: Float = 50
+        
+        // Where is the left data edge in screen coords right now?
+        let leftClipPoint = SIMD4<Float>(-1, 0, 0, 1)
+        let leftNDC = currentTransformMatrix() * leftClipPoint
+        let leftNDCX = leftNDC.x / leftNDC.w
+        let leftScreenX = (leftNDCX + 1) * 0.5 * Float(viewportSize.width)
+        
+        // Force it to 50.
+        let delta = pinnedLeftScreenX - leftScreenX
+        translation.x += delta / (0.5 * Float(viewportSize.width))
+        updateTransform()
+    }
+    
+    /// This pins the left edge if it becomes visible (i.e. if leftScreenX > 50),
+    /// and pins the right edge if it comes into the view (i.e. if rightScreenX < view width).
     private func anchorEdges() {
         guard viewportSize.width > 0 else { return }
         
         let pinnedLeftScreenX: Float = 50
         let pinnedRightScreenX: Float = Float(viewportSize.width)
         
-        // Where is the left data edge in screen coords?
+        // Left edge
         let leftClipPoint = SIMD4<Float>(-1, 0, 0, 1)
         let leftNDC = currentTransformMatrix() * leftClipPoint
         let leftNDCX = leftNDC.x / leftNDC.w
         let leftScreenX = (leftNDCX + 1) * 0.5 * Float(viewportSize.width)
         
-        // If left edge is actually to the right of pinnedLeftScreenX, clamp it:
+        // If the left edge is visible on screen to the right of x=50, snap it back
         if leftScreenX > pinnedLeftScreenX {
             let delta = pinnedLeftScreenX - leftScreenX
-            // Convert screen delta to NDC shift
             translation.x += delta / (0.5 * Float(viewportSize.width))
             updateTransform()
         }
         
-        // Now check the right edge in the updated transform
+        // Right edge
         let rightClipPoint = SIMD4<Float>(+1, 0, 0, 1)
-        let newRightNDC = currentTransformMatrix() * rightClipPoint
-        let newRightNDCX = newRightNDC.x / newRightNDC.w
-        let newRightScreenX = (newRightNDCX + 1) * 0.5 * Float(viewportSize.width)
+        let rightNDC = currentTransformMatrix() * rightClipPoint
+        let rightNDCX = rightNDC.x / rightNDC.w
+        let rightScreenX = (rightNDCX + 1) * 0.5 * Float(viewportSize.width)
         
-        // If right edge is actually to the left of pinnedRightScreenX, clamp it:
-        if newRightScreenX < pinnedRightScreenX {
-            let delta = pinnedRightScreenX - newRightScreenX
+        // If the right edge is visible on screen but doesn't reach the screen edge, anchor it
+        if rightScreenX < pinnedRightScreenX {
+            let delta = pinnedRightScreenX - rightScreenX
             translation.x += delta / (0.5 * Float(viewportSize.width))
             updateTransform()
         }
     }
     
     // MARK: - Possibly needed by your code
-    /// Example for turning weeks -> years or months -> years
+    
     func convertPeriodToYears(_ week: Int, _ simSettings: SimulationSettings) -> Double {
         if simSettings.periodUnit == .weeks {
             return Double(week) / 52.0
