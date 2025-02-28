@@ -137,13 +137,17 @@ struct BTCMonteCarloApp: App {
                             .onAppear {
                                 idleManager.resetIdleTimer() // Start idle timer when the view appears
                             }
-                            .onChange(of: scenePhase) { phase in
-                                switch phase {
+                            .onChange(of: scenePhase) { _, newPhase in
+                                print("Scene phase changed to: \(newPhase)")
+                                switch newPhase {
                                 case .active:
-                                    idleManager.resetIdleTimer() // Reset idle timer when app becomes active
+                                    print("Resetting idle timer")
+                                    idleManager.resetIdleTimer()
                                 case .inactive, .background:
-                                    idleManager.resumeProcessing() // Handle background state
+                                    print("Resuming processing")
+                                    idleManager.resumeProcessing()
                                 default:
+                                    print("Unhandled phase: \(newPhase)")
                                     break
                                 }
                             }
