@@ -121,12 +121,7 @@ struct AdvancedSettingsSection: View {
                         Toggle("Use Historical Sampling", isOn: historicalSamplingBinding)
                             .tint(.orange)
                             .foregroundColor(.white)
-                            .onChange(of: historicalSamplingBinding.wrappedValue) { newVal in
-                                // If they turned OFF historical sampling, also turn off extended
-                                if !newVal {
-                                    extendedHistoricalSamplingBinding.wrappedValue = false
-                                }
-                            }
+                            // Remove onChange 
                         
                         Toggle("Use Extended Historical Sampling", isOn: extendedHistoricalSamplingBinding)
                             .tint(.orange)
@@ -348,11 +343,21 @@ extension AdvancedSettingsSection {
         Binding(
             get: { isMonthly ? monthlySimSettings.useHistoricalSamplingMonthly : weeklySimSettings.useHistoricalSampling },
             set: { newVal in
+                print("Binding setting Historical to \(newVal)")
                 if isMonthly {
                     monthlySimSettings.useHistoricalSamplingMonthly = newVal
+                    if !newVal {
+                        print("Binding forcing Extended OFF (monthly)")
+                        monthlySimSettings.useExtendedHistoricalSamplingMonthly = false
+                    }
                 } else {
                     weeklySimSettings.useHistoricalSampling = newVal
+                    if !newVal {
+                        print("Binding forcing Extended OFF (weekly)")
+                        weeklySimSettings.useExtendedHistoricalSampling = false
+                    }
                 }
+                print("Binding result: Historical=\(isMonthly ? monthlySimSettings.useHistoricalSamplingMonthly : weeklySimSettings.useHistoricalSampling), Extended=\(isMonthly ? monthlySimSettings.useExtendedHistoricalSamplingMonthly : weeklySimSettings.useExtendedHistoricalSampling)")
             }
         )
     }

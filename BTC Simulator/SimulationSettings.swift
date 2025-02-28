@@ -157,22 +157,24 @@ class SimulationSettings: ObservableObject {
             }
         }
     }
-    @Published var useHistoricalSampling: Bool = true {
-        didSet {
-            if isInitialized {
-                print("[useHistoricalSampling didSet (weekly)] useHistoricalSampling changed to \(useHistoricalSampling)")
-                UserDefaults.standard.set(useHistoricalSampling, forKey: "useHistoricalSampling")
-            }
-        }
-    }
-    @Published var useExtendedHistoricalSampling: Bool = true {
-        didSet {
-            if isInitialized {
-                print("[useExtendedHistoricalSampling didSet (weekly)] useExtendedHistoricalSampling changed to \(useExtendedHistoricalSampling)")
-                UserDefaults.standard.set(useExtendedHistoricalSampling, forKey: "useExtendedHistoricalSampling")
-            }
-        }
-    }
+    @Published var useHistoricalSampling: Bool = true
+    // {
+    //     didSet {
+    //         if isInitialized {
+    //             print("[useHistoricalSampling didSet (weekly)] useHistoricalSampling changed to \(useHistoricalSampling)")
+    //             UserDefaults.standard.set(useHistoricalSampling, forKey: "useHistoricalSampling")
+    //         }
+    //     }
+    // }
+    @Published var useExtendedHistoricalSampling: Bool = true
+    // {
+    //     didSet {
+    //         if isInitialized {
+    //             print("[useExtendedHistoricalSampling didSet (weekly)] useExtendedHistoricalSampling changed to \(useExtendedHistoricalSampling)")
+    //             UserDefaults.standard.set(useExtendedHistoricalSampling, forKey: "useExtendedHistoricalSampling")
+    //         }
+    //     }
+    // }
     @Published var useVolShocks: Bool = true {
         didSet {
             if isInitialized {
