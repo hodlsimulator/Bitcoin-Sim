@@ -78,11 +78,35 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             return
         }
         
-        // Initialize textRendererManager only if it is nil
-        if textRendererManager == nil {
-            textRendererManager = TextRendererManager()
+        // Log for debugging
+        print("Initializing TextRendererManager...")
+        textRendererManager = TextRendererManager()
+        print("TextRendererManager initialized: \(String(describing: textRendererManager))")
+
+        // Ensure TextRendererManager is available before proceeding
+        if let textRendererManager = textRendererManager {
+            print("TextRendererManager is available, proceeding with setup.")
+            
+            // Ensure the font atlas and text renderer are generated
+            textRendererManager.generateFontAtlasAndRenderer(device: device)
+            
+            if let textRenderer = textRendererManager.getTextRenderer() {
+                print("TextRenderer is available. Proceeding with pipeline setup.")
+                
+                // Proceed with PinnedAxesRenderer setup
+                pinnedAxesRenderer = PinnedAxesRenderer(device: device,
+                                                         textRenderer: textRenderer,
+                                                         textRendererManager: textRendererManager,
+                                                         library: library)
+            } else {
+                print("TextRenderer is nil after initialization. Cannot proceed.")
+                return
+            }
+        } else {
+            print("TextRendererManager is nil. Cannot proceed with setup.")
+            return
         }
-        
+
         // Build pipeline
         let vertexFunction = library.makeFunction(name: "vertexShader")
         let fragmentFunction = library.makeFunction(name: "fragmentShader")
@@ -108,8 +132,6 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         
         // Enable alpha blending
         pipelineDescriptor.colorAttachments[0].isBlendingEnabled = true
-        pipelineDescriptor.colorAttachments[0].rgbBlendOperation = .add
-        pipelineDescriptor.colorAttachments[0].alphaBlendOperation = .add
         pipelineDescriptor.colorAttachments[0].sourceRGBBlendFactor = .sourceAlpha
         pipelineDescriptor.colorAttachments[0].destinationRGBBlendFactor = .oneMinusSourceAlpha
         pipelineDescriptor.colorAttachments[0].sourceAlphaBlendFactor = .one
@@ -286,49 +308,33 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             return
         }
         
-        // Pass renderEncoder to PinnedAxesRenderer
-        pinnedAxesRenderer?.drawAxes(renderEncoder: renderEncoder)
-        
-        // 1) Draw lines with scissor from x=50
-        renderEncoder.setRenderPipelineState(pipelineState)
-        
+        // 1) Ensure the viewport size is up-to-date
         let deviceScale = view.drawableSize.width / view.bounds.size.width
         let scissorX = Int(pinnedAxisOffset * deviceScale)
         
+        // Set scissor rectangle for rendering axes and grid
         renderEncoder.setScissorRect(MTLScissorRect(
             x: scissorX,
             y: 0,
             width: max(0, Int(view.drawableSize.width) - scissorX),
             height: Int(view.drawableSize.height)
         ))
-        
-        renderEncoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
-        if let tbuf = transformBuffer {
-            renderEncoder.setVertexBuffer(tbuf, offset: 0, index: 1)
-        }
-        
-        var offsetIndex = 0
-        for count in lineSizes {
-            renderEncoder.drawPrimitives(type: .lineStrip,
-                                         vertexStart: offsetIndex,
-                                         vertexCount: count)
-            offsetIndex += count
-        }
-        
-        // 2) Draw pinned axes (no scissor)
-        renderEncoder.setScissorRect(MTLScissorRect(
-            x: 0,
-            y: 0,
-            width: Int(view.drawableSize.width),
-            height: Int(view.drawableSize.height)
-        ))
-        
+
+        // Log before updating axes
+        print("Calling updateAxes...")
+
+        // Update pinned axes and grid data
         if let pinnedAxes = pinnedAxesRenderer {
             pinnedAxes.viewportSize = view.bounds.size
             
+            // Compute the visible ranges for axes
             let (xMinVis, xMaxVis) = computeVisibleRangeX()
             let (yMinVis, yMaxVis) = computeVisibleRangeY()
+
+            // Log the visible ranges
+            print("Visible Range - X: (\(xMinVis), \(xMaxVis)), Y: (\(yMinVis), \(yMaxVis))")
             
+            // Update axes data
             pinnedAxes.updateAxes(
                 minX: xMinVis,
                 maxX: xMaxVis,
@@ -336,9 +342,31 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
                 maxY: yMaxVis,
                 chartTransform: currentTransformMatrix()
             )
+            
+            // Log after update
+            print("Axes updated successfully")
+            
+            // Draw the axes and grid lines first
             pinnedAxes.drawAxes(renderEncoder: renderEncoder)
         }
         
+        // 2) Draw chart lines with scissor from x = 50
+        renderEncoder.setRenderPipelineState(pipelineState)
+        renderEncoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
+        
+        if let tbuf = transformBuffer {
+            renderEncoder.setVertexBuffer(tbuf, offset: 0, index: 1)
+        }
+
+        var offsetIndex = 0
+        for count in lineSizes {
+            renderEncoder.drawPrimitives(type: .lineStrip,
+                                         vertexStart: offsetIndex,
+                                         vertexCount: count)
+            offsetIndex += count
+        }
+
+        // 3) End the encoding and present the drawable
         renderEncoder.endEncoding()
         commandBuffer.present(drawable)
         commandBuffer.commit()

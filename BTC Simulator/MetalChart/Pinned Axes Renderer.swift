@@ -16,47 +16,47 @@ struct ViewportSize {
 class PinnedAxesRenderer {
     
     var textRendererManager: TextRendererManager
-
+    
     private let device: MTLDevice
     private let textRenderer: RuntimeGPUTextRenderer
     private var axisPipelineState: MTLRenderPipelineState?
-
+    
     /// Current view size; set each frame.
     var viewportSize: CGSize = .zero
-
+    
     /// Colours
     var axisColor = SIMD4<Float>(1, 1, 1, 1)
     var tickColor = SIMD4<Float>(0.7, 0.7, 0.7, 1.0)
     // Reduced opacity for grid lines (alpha 0.6)
     var gridColor = SIMD4<Float>(0.4, 0.4, 0.4, 0.6)
-
+    
     // MARK: - Axis geometry (triangle strips)
     private var xAxisQuadBuffer: MTLBuffer?
     private var xAxisQuadVertexCount = 0
-
+    
     private var yAxisQuadBuffer: MTLBuffer?
     private var yAxisQuadVertexCount = 0
-
+    
     // MARK: - Ticks (short lines on the axes) - triangle list
     private var xTickBuffer: MTLBuffer?
     private var xTickVertexCount = 0
-
+    
     private var yTickBuffer: MTLBuffer?
     private var yTickVertexCount = 0
-
+    
     // MARK: - Grid lines (spanning inside chart) - triangle list
     private var xGridBuffer: MTLBuffer?
     private var xGridVertexCount = 0
-
+    
     private var yGridBuffer: MTLBuffer?
     private var yGridVertexCount = 0
-
+    
     // MARK: - Text buffers for tick labels
     private var xTickTextBuffers: [MTLBuffer] = []
     private var xTickTextVertexCounts: [Int] = []
     private var yTickTextBuffers: [MTLBuffer] = []
     private var yTickTextVertexCounts: [Int] = []
-
+    
     init(device: MTLDevice,
          textRenderer: RuntimeGPUTextRenderer,
          textRendererManager: TextRendererManager,
@@ -66,53 +66,56 @@ class PinnedAxesRenderer {
         self.textRendererManager = textRendererManager
         buildAxisPipeline(library: library, textRendererManager: textRendererManager)
     }
-
+    
     // Build a basic pipeline for the axes/ticks
     private func buildAxisPipeline(library: MTLLibrary, textRendererManager: TextRendererManager) {
         let descriptor = MTLRenderPipelineDescriptor()
         descriptor.vertexFunction = library.makeFunction(name: "axisVertexShader_screenSpace")
         descriptor.fragmentFunction = library.makeFunction(name: "axisFragmentShader")
         descriptor.rasterSampleCount = 4  // if using MSAA
-
+        
         let vertexDescriptor = MTLVertexDescriptor()
         vertexDescriptor.attributes[0].format = .float4
         vertexDescriptor.attributes[0].offset = 0
         vertexDescriptor.attributes[0].bufferIndex = 0
-
+        
         vertexDescriptor.attributes[1].format = .float4
         vertexDescriptor.attributes[1].offset = MemoryLayout<Float>.size * 4
         vertexDescriptor.attributes[1].bufferIndex = 0
-
+        
         vertexDescriptor.layouts[0].stride = MemoryLayout<Float>.size * 8
         descriptor.vertexDescriptor = vertexDescriptor
-
+        
         descriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
         descriptor.colorAttachments[0].isBlendingEnabled = true
         descriptor.colorAttachments[0].sourceRGBBlendFactor = .sourceAlpha
         descriptor.colorAttachments[0].destinationRGBBlendFactor = .oneMinusSourceAlpha
-
+        
         do {
             axisPipelineState = try device.makeRenderPipelineState(descriptor: descriptor)
         } catch {
             print("Error building axis pipeline: \(error)")
         }
     }
-
+    
     // MARK: - Update
-
+    
     /// Called every frame to rebuild geometry for axes, ticks, and grid lines.
     func updateAxes(minX: Float,
                     maxX: Float,
                     minY: Float,
                     maxY: Float,
                     chartTransform: matrix_float4x4) {
+        // Log the input values to see if they're correct
+        print("updateAxes called with minX: \(minX), maxX: \(maxX), minY: \(minY), maxY: \(maxY)")
+        
         // Pinned axis positions in screen space.
         let pinnedScreenX: Float = 50
         let pinnedScreenY: Float = Float(viewportSize.height) - 40
-
+        
         // Axis thickness.
         let axisThickness: Float = 2
-
+        
         // 1) Build pinned X axis
         let xQuadVerts = buildXAxisQuad(
             minDataX: minX,
@@ -129,7 +132,7 @@ class PinnedAxesRenderer {
             length: xQuadVerts.count * MemoryLayout<Float>.size,
             options: .storageModeShared
         )
-
+        
         // 2) Build pinned Y axis
         let yQuadVerts = buildYAxisQuad(
             minDataY: minY,
@@ -146,13 +149,13 @@ class PinnedAxesRenderer {
             length: yQuadVerts.count * MemoryLayout<Float>.size,
             options: .storageModeShared
         )
-
+        
         // Generate tick and grid values.
         let tickXValues = generateNiceTicks(minVal: Double(minX), maxVal: Double(maxX), desiredCount: 6)
         let tickYValues = generateNiceTicks(minVal: Double(minY), maxVal: Double(maxY), desiredCount: 6)
         let gridXValues = generateNiceTicks(minVal: Double(minX), maxVal: Double(maxX), desiredCount: 10)
         let gridYValues = generateNiceTicks(minVal: Double(minY), maxVal: Double(maxY), desiredCount: 10)
-
+        
         // 3) Build short ticks and text labels on pinned axes
         let (xTickVerts, xTickTexts) = buildXTicks(
             tickXValues,
@@ -168,7 +171,7 @@ class PinnedAxesRenderer {
         )
         self.xTickTextBuffers = xTickTexts.map { $0.0 }
         self.xTickTextVertexCounts = xTickTexts.map { $0.1 }
-
+        
         let (yTickVerts, yTickTexts) = buildYTicks(
             tickYValues,
             pinnedScreenX: pinnedScreenX,
@@ -184,7 +187,7 @@ class PinnedAxesRenderer {
         )
         self.yTickTextBuffers = yTickTexts.map { $0.0 }
         self.yTickTextVertexCounts = yTickTexts.map { $0.1 }
-
+        
         // 4) Build grid lines that span the chart interior
         buildXGridLines(gridXValues,
                         minY: 0,
@@ -196,19 +199,30 @@ class PinnedAxesRenderer {
                         maxX: Float(viewportSize.width),
                         pinnedScreenY: pinnedScreenY,
                         chartTransform: chartTransform)
+        
+        // Log after finishing axes update
+        print("updateAxes completed")
     }
-
+    
     func renderTextBuffer(renderEncoder: MTLRenderCommandEncoder, buffer: MTLBuffer, vertexCount: Int) {
+        // Check if the buffer's size is correct
+        let bufferLength = buffer.length
+        let expectedSize = vertexCount * MemoryLayout<Float>.size * 8 // Assuming 8 elements per vertex (x, y, z, w, color)
+        if bufferLength != expectedSize {
+            print("Warning: Buffer size mismatch. Expected: \(expectedSize), Got: \(bufferLength)")
+        }
+        
+        // Set the buffer and draw primitives
         renderEncoder.setVertexBuffer(buffer, offset: 0, index: 0)
         renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: vertexCount)
     }
-
+    
     // MARK: - Draw
-
+    
     func drawAxes(renderEncoder: MTLRenderCommandEncoder) {
         guard let axisPipeline = axisPipelineState else { return }
-
-        // Build a viewport buffer for the vertex shader
+        
+        // Build a viewport buffer for the axis vertex shader
         var vp = ViewportSize(size: SIMD2<Float>(Float(viewportSize.width),
                                                  Float(viewportSize.height)))
         guard let vpBuffer = device.makeBuffer(bytes: &vp,
@@ -217,63 +231,67 @@ class PinnedAxesRenderer {
             return
         }
         renderEncoder.setVertexBuffer(vpBuffer, offset: 0, index: 1)
-
-        // Use pipeline for all drawing
+        
+        // Draw axes, ticks, and grid lines
         renderEncoder.setRenderPipelineState(axisPipeline)
-
-        // Draw X grid lines
+        
         if let buf = xGridBuffer, xGridVertexCount > 0 {
             renderEncoder.setVertexBuffer(buf, offset: 0, index: 0)
-            renderEncoder.drawPrimitives(type: .triangle,
-                                         vertexStart: 0,
-                                         vertexCount: xGridVertexCount)
+            renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: xGridVertexCount)
         }
-        // Draw Y grid lines
         if let buf = yGridBuffer, yGridVertexCount > 0 {
             renderEncoder.setVertexBuffer(buf, offset: 0, index: 0)
-            renderEncoder.drawPrimitives(type: .triangle,
-                                         vertexStart: 0,
-                                         vertexCount: yGridVertexCount)
+            renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: yGridVertexCount)
         }
-
-        // Draw X ticks
         if let buf = xTickBuffer, xTickVertexCount > 0 {
             renderEncoder.setVertexBuffer(buf, offset: 0, index: 0)
-            renderEncoder.drawPrimitives(type: .triangle,
-                                         vertexStart: 0,
-                                         vertexCount: xTickVertexCount)
+            renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: xTickVertexCount)
         }
-        // Draw Y ticks
         if let buf = yTickBuffer, yTickVertexCount > 0 {
             renderEncoder.setVertexBuffer(buf, offset: 0, index: 0)
-            renderEncoder.drawPrimitives(type: .triangle,
-                                         vertexStart: 0,
-                                         vertexCount: yTickVertexCount)
+            renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: yTickVertexCount)
         }
-
-        // Draw pinned X axis (triangle strip)
         if let buf = xAxisQuadBuffer, xAxisQuadVertexCount > 0 {
             renderEncoder.setVertexBuffer(buf, offset: 0, index: 0)
-            renderEncoder.drawPrimitives(type: .triangleStrip,
-                                         vertexStart: 0,
-                                         vertexCount: xAxisQuadVertexCount)
+            renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: xAxisQuadVertexCount)
         }
-        // Draw pinned Y axis (triangle strip)
         if let buf = yAxisQuadBuffer, yAxisQuadVertexCount > 0 {
             renderEncoder.setVertexBuffer(buf, offset: 0, index: 0)
-            renderEncoder.drawPrimitives(type: .triangleStrip,
-                                         vertexStart: 0,
-                                         vertexCount: yAxisQuadVertexCount)
+            renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: yAxisQuadVertexCount)
         }
-
+        
         // Draw tick label texts
         if let textPipelineState = textRenderer.pipelineState {
             renderEncoder.setRenderPipelineState(textPipelineState)
+            
+            // Create projection matrix for text (screen space to NDC)
+            let width = Float(viewportSize.width)
+            let height = Float(viewportSize.height)
+            var projectionMatrix = matrix_float4x4(
+                [2/width, 0, 0, 0],
+                [0, -2/height, 0, 0],
+                [0, 0, 1, 0],
+                [-1, 1, 0, 1]
+            )
+            guard let projectionBuffer = device.makeBuffer(bytes: &projectionMatrix,
+                                                           length: MemoryLayout<matrix_float4x4>.size,
+                                                           options: .storageModeShared) else {
+                print("Failed to create projection buffer")
+                return
+            }
+            renderEncoder.setVertexBuffer(projectionBuffer, offset: 0, index: 1)
+            
+            // Set the font atlas texture for the fragment shader
+            renderEncoder.setFragmentTexture(textRenderer.atlas.texture, index: 0)
+            
+            // Draw all text buffers
             for (buffer, vertexCount) in zip(xTickTextBuffers, xTickTextVertexCounts) {
-                renderTextBuffer(renderEncoder: renderEncoder, buffer: buffer, vertexCount: vertexCount)
+                renderEncoder.setVertexBuffer(buffer, offset: 0, index: 0)
+                renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: vertexCount)
             }
             for (buffer, vertexCount) in zip(yTickTextBuffers, yTickTextVertexCounts) {
-                renderTextBuffer(renderEncoder: renderEncoder, buffer: buffer, vertexCount: vertexCount)
+                renderEncoder.setVertexBuffer(buffer, offset: 0, index: 0)
+                renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: vertexCount)
             }
         }
     }

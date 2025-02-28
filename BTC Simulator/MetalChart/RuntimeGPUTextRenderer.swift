@@ -49,7 +49,7 @@ public class RuntimeGPUTextRenderer {
         vertexDescriptor.attributes[2].offset = MemoryLayout<Float>.size * 4
         vertexDescriptor.attributes[2].bufferIndex = 0
         
-        vertexDescriptor.layouts[0].stride = MemoryLayout<Float>.size * 8
+        vertexDescriptor.layouts[0].stride = MemoryLayout<Float>.size * 8  // 8 attributes per vertex (x, y, u, v, color)
         descriptor.vertexDescriptor = vertexDescriptor
         
         // Enable alpha blending
@@ -121,26 +121,30 @@ public class RuntimeGPUTextRenderer {
                          vertexCount: Int,
                          transformBuffer: MTLBuffer? = nil) {
         guard let pipelineState = pipelineState else { return }
+
         encoder.setRenderPipelineState(pipelineState)
-        
-        // Vertex buffer at index 0
         encoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
-        
-        // Transform buffer or identity
+
+        // Log the transform buffer size before setting it.
         if let transformBuffer = transformBuffer {
-            encoder.setVertexBuffer(transformBuffer, offset: 0, index: 1)
+            print("Transform buffer size: \(transformBuffer.length) bytes")  // Should print 64 bytes for matrix_float4x4
+            encoder.setVertexBuffer(transformBuffer, offset: 0, index: 1)  // Buffer index 1 for transformation matrix
         } else {
             var identity = matrix_identity_float4x4
             let identityBuffer = device.makeBuffer(bytes: &identity,
                                                    length: MemoryLayout<matrix_float4x4>.size,
                                                    options: .storageModeShared)
-            encoder.setVertexBuffer(identityBuffer, offset: 0, index: 1)
+            
+            // Log the identity buffer size
+            if let identityBuffer = identityBuffer {
+                print("Identity buffer size: \(identityBuffer.length) bytes")  // Should print 64 bytes for matrix_float4x4
+                encoder.setVertexBuffer(identityBuffer, offset: 0, index: 1)  // Buffer index 1
+            } else {
+                print("Failed to create identity buffer.")
+            }
         }
-        
-        // Font atlas texture
+
         encoder.setFragmentTexture(atlas.texture, index: 0)
-        
-        // Draw
         encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: vertexCount)
     }
 }

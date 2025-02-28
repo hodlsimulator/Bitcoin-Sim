@@ -14,28 +14,24 @@ struct TextVertexIn {
     float4 color    [[attribute(2)]];
 };
 
-struct TransformUniforms {
-    float4x4 mvp;
-};
-
 struct TextVertexOut {
     float4 position [[position]];
     float2 uv;
     float4 color;
 };
 
+
+struct TransformUniforms {
+    float4x4 mvp;  // The transformation matrix
+};
+
 vertex TextVertexOut textVertexShader(TextVertexIn in [[stage_in]],
-                                      constant TransformUniforms& uniforms [[buffer(1)]])
-{
+                                      constant TransformUniforms& uniforms [[buffer(1)]]) {
     TextVertexOut out;
-    // Transform the position by our MVP matrix
     float4 pos = float4(in.position, 0.0, 1.0);
-    out.position = uniforms.mvp * pos;
-    
-    // Pass the texture coordinate and color through
+    out.position = uniforms.mvp * pos;  // Apply transformation
     out.uv = in.texCoord;
     out.color = in.color;
-    
     return out;
 }
 
