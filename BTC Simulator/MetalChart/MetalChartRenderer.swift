@@ -11,7 +11,8 @@ import simd
 import SwiftUI // for Color
 
 class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
-    // MARK: - Metal Properties
+    
+    // MARK: - Metal
     var device: MTLDevice!
     var commandQueue: MTLCommandQueue!
     var pipelineState: MTLRenderPipelineState!
@@ -23,17 +24,21 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     var simSettings: SimulationSettings?
     
     // MARK: - Transform & Viewport
-    var viewportSize: CGSize = .zero
+    var viewportSize: CGSize = .zero   // in SwiftUI points
     var scale: Float = 1.0
     var translation = SIMD2<Float>(0, 0)
     var transformBuffer: MTLBuffer?
     
-    // We’ll store the actual min/max of data’s X to ensure the *true* left edge is pinned
+    // For convenience: the actual min/max X in data
     private var actualMinX: Float = 0
     private var actualMaxX: Float = 1
     
     // MARK: - Axes
     var pinnedAxesRenderer: PinnedAxesRenderer?
+    
+    // This is the axis offset in *points* from the left screen edge.
+    // We'll use it to scissor and to clamp the transform.
+    private let pinnedAxisOffset: CGFloat = 50
     
     // MARK: - Setup
     
@@ -46,7 +51,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         self.simSettings = simSettings
         
         guard let device = MTLCreateSystemDefaultDevice() else {
-            print("Metal not supported on this machine.")
+            print("No Metal support.")
             return
         }
         self.device = device
@@ -58,7 +63,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             return
         }
         
-        // Build the pipeline
+        // Build pipeline
         let vertexFunction   = library.makeFunction(name: "vertexShader")
         let fragmentFunction = library.makeFunction(name: "fragmentShader")
         
@@ -81,6 +86,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         pipelineDescriptor.vertexDescriptor = vertexDescriptor
         pipelineDescriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
         
+        // Blending if you want alpha lines
         pipelineDescriptor.colorAttachments[0].isBlendingEnabled = true
         pipelineDescriptor.colorAttachments[0].rgbBlendOperation = .add
         pipelineDescriptor.colorAttachments[0].alphaBlendOperation = .add
@@ -89,7 +95,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         pipelineDescriptor.colorAttachments[0].sourceAlphaBlendFactor = .one
         pipelineDescriptor.colorAttachments[0].destinationAlphaBlendFactor = .oneMinusSourceAlpha
         
-        // If you want MSAA for smoother lines:
+        // If you'd like MSAA
         pipelineDescriptor.rasterSampleCount = 4
         
         do {
@@ -99,22 +105,17 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             pipelineState = nil
         }
         
-        // Build line vertex data
         buildLineBuffer()
         
         // Create a uniform buffer for transforms
-        transformBuffer = device.makeBuffer(
-            length: MemoryLayout<matrix_float4x4>.size,
-            options: .storageModeShared
-        )
-        
-        // Initial transform
+        transformBuffer = device.makeBuffer(length: MemoryLayout<matrix_float4x4>.size,
+                                            options: .storageModeShared)
         updateTransform()
         
-        // *** Pin left edge to axis on initial load ***
+        // Optionally pin the left edge right away so it's at x=50
         anchorLeftEdgeAtLoad()
         
-        // Optional pinned axes
+        // If you have a GPU-based text renderer for pinned axes
         let fontSize: CGFloat = 14
         if let fontAtlas = generateFontAtlas(device: device,
                                              font: UIFont.systemFont(ofSize: fontSize)) {
@@ -127,13 +128,12 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         }
     }
     
-    // MARK: - Build Line Data
+    // MARK: - Build Vertex Data
     
     func buildLineBuffer() {
         guard let cache = chartDataCache,
               let simSettings = simSettings else { return }
         
-        // Collect all X values from all runs so we can find the *true* min & max
         var allXValues: [Double] = []
         
         let simulations = cache.allRuns ?? []
@@ -145,16 +145,14 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         }
         
         guard let minX = allXValues.min(), let maxX = allXValues.max() else {
-            print("No data to build line buffer")
+            print("No data to build line buffer.")
             return
         }
         
-        // Save these so anchor logic can reference them
         actualMinX = Float(minX)
         actualMaxX = Float(maxX)
         
-        // We'll normalise from [minX..maxX] to [-1..+1]
-        let (vertexData, lineSizes) = buildLineVertexData(
+        let (vertexData, lineCounts) = buildLineVertexData(
             simulations: simulations,
             simSettings: simSettings,
             xMin: minX,
@@ -165,7 +163,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             chartDataCache: cache
         )
         
-        self.lineSizes = lineSizes
+        self.lineSizes = lineCounts
         
         let byteCount = vertexData.count * MemoryLayout<Float>.size
         vertexBuffer = device.makeBuffer(bytes: vertexData,
@@ -175,104 +173,112 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     
     // MARK: - Updating Transform
     
-    /// Called by SwiftUI when the view size changes
     func updateViewport(to size: CGSize) {
+        // SwiftUI might call this on size changes
         viewportSize = size
     }
     
-    /// Rebuilds the T*S matrix, stores it in `transformBuffer`.
     func updateTransform() {
-        let scaleMatrix = matrix_float4x4(diagonal: SIMD4<Float>(scale, scale, 1, 1))
-        let translationMatrix = matrix_float4x4(columns: (
+        // Combine scale & translation into a single matrix
+        let scaleM = matrix_float4x4(diagonal: SIMD4<Float>(scale, scale, 1, 1))
+        let transM = matrix_float4x4(columns: (
             SIMD4<Float>(1, 0, 0, 0),
             SIMD4<Float>(0, 1, 0, 0),
             SIMD4<Float>(0, 0, 1, 0),
             SIMD4<Float>(translation.x, translation.y, 0, 1)
         ))
         
-        let finalTransform = matrix_multiply(translationMatrix, scaleMatrix)
+        let final = matrix_multiply(transM, scaleM)
         
-        let ptr = transformBuffer?.contents().bindMemory(
-            to: matrix_float4x4.self,
-            capacity: 1
-        )
-        ptr?.pointee = finalTransform
+        let ptr = transformBuffer?.contents().bindMemory(to: matrix_float4x4.self, capacity: 1)
+        ptr?.pointee = final
     }
     
-    /// Returns the current T*S matrix
     func currentTransformMatrix() -> matrix_float4x4 {
-        let scaleMatrix = matrix_float4x4(diagonal: SIMD4<Float>(scale, scale, 1, 1))
-        let translationMatrix = matrix_float4x4(columns: (
+        let scaleM = matrix_float4x4(diagonal: SIMD4<Float>(scale, scale, 1, 1))
+        let transM = matrix_float4x4(columns: (
             SIMD4<Float>(1, 0, 0, 0),
             SIMD4<Float>(0, 1, 0, 0),
             SIMD4<Float>(0, 0, 1, 0),
             SIMD4<Float>(translation.x, translation.y, 0, 1)
         ))
-        return matrix_multiply(translationMatrix, scaleMatrix)
+        return matrix_multiply(transM, scaleM)
     }
     
-    // MARK: - Coordinate Conversions
+    // MARK: - Coordinate Conversion (used by the Gesture Coordinator)
     
+    /// Convert a screen point (UIKit coords) -> NDC [-1..+1].
     func convertPointToNDC(_ point: CGPoint, viewSize: CGSize) -> SIMD2<Float> {
+        // x in [0..width], so (x / width)*2 - 1 => [-1..+1]
         let ndx = Float(point.x / viewSize.width) * 2.0 - 1.0
-        // Flip Y because UIKit top-left is (0,0)
+        // y is flipped in UIKit
         let ndy = Float((viewSize.height - point.y) / viewSize.height) * 2.0 - 1.0
         return SIMD2<Float>(ndx, ndy)
     }
     
+    /// Convert screen point -> data coords by unprojecting with inverse T*S matrix
     func convertPointToData(_ point: CGPoint, viewSize: CGSize) -> SIMD2<Float> {
         let ndc2 = convertPointToNDC(point, viewSize: viewSize)
         let ndc4 = SIMD4<Float>(ndc2.x, ndc2.y, 0, 1)
-        let invT = simd_inverse(currentTransformMatrix())
-        let data4 = invT * ndc4
+        let invMatrix = simd_inverse(currentTransformMatrix())
+        let data4 = invMatrix * ndc4
         return SIMD2<Float>(data4.x, data4.y)
     }
     
+    /// Convert data coords -> screen points by applying T*S
     func convertDataToPoint(_ dataCoord: SIMD2<Float>, viewSize: CGSize) -> CGPoint {
-        let d4 = SIMD4<Float>(dataCoord.x, dataCoord.y, 0, 1)
-        let ndc4 = currentTransformMatrix() * d4
+        let data4 = SIMD4<Float>(dataCoord.x, dataCoord.y, 0, 1)
+        let ndc4 = currentTransformMatrix() * data4
         let ndcX = ndc4.x / ndc4.w
         let ndcY = ndc4.y / ndc4.w
         
+        // Map [-1..+1] -> [0..width or height]
         let screenX = CGFloat((ndcX + 1) * 0.5) * viewSize.width
-        let screenY = CGFloat(1 - ((ndcY + 1) * 0.5)) * viewSize.height
+        let screenY = CGFloat(1.0 - ((ndcY + 1) * 0.5)) * viewSize.height
         return CGPoint(x: screenX, y: screenY)
     }
     
     // MARK: - MTKViewDelegate
     
     func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
-        // Called when the view changes size
+        // Possibly update references if needed
     }
     
     func draw(in view: MTKView) {
-        // 1) Pin edges so the left edge or right edge anchor if they come into view
+        // Snap edges so the chart can't drift left of x=50 or off the right side
         anchorEdges()
         
         guard let pipelineState = pipelineState,
               let drawable = view.currentDrawable,
               let rpd = view.currentRenderPassDescriptor,
               let commandBuffer = commandQueue.makeCommandBuffer(),
-              let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: rpd)
-        else {
+              let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: rpd) else {
             return
         }
         
-        // 2) Scissor so the chart doesn't show to the left of x=50 (y-axis).
-        let leftClip: Int = 50
-        renderEncoder.setScissorRect(MTLScissorRect(x: leftClip,
-                                                    y: 0,
-                                                    width: Int(view.drawableSize.width) - leftClip,
-                                                    height: Int(view.drawableSize.height)))
-        
-        // 3) Draw lines
+        // 1) Draw chart lines with scissor so they're hidden left of x=50
         renderEncoder.setRenderPipelineState(pipelineState)
-        renderEncoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
         
-        if let transformBuffer = transformBuffer {
-            renderEncoder.setVertexBuffer(transformBuffer, offset: 0, index: 1)
+        // Convert pinnedAxisOffset=50 points -> device pixels
+        // If device scale is 2, this becomes 100 pixels
+        let scale = view.drawableSize.width / view.bounds.size.width
+        let scissorLeft = Int(pinnedAxisOffset * scale)
+        
+        let scissorRect = MTLScissorRect(
+            x: scissorLeft,
+            y: 0,
+            width: max(0, Int(view.drawableSize.width) - scissorLeft),
+            height: Int(view.drawableSize.height)
+        )
+        renderEncoder.setScissorRect(scissorRect)
+        
+        // Bind buffers
+        renderEncoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
+        if let transformBuf = transformBuffer {
+            renderEncoder.setVertexBuffer(transformBuf, offset: 0, index: 1)
         }
         
+        // Draw lines
         var offsetIndex = 0
         for count in lineSizes {
             renderEncoder.drawPrimitives(type: .lineStrip,
@@ -281,7 +287,15 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             offsetIndex += count
         }
         
-        // 4) Draw pinned axes
+        // 2) Draw pinned axes (ticks, labels) with full scissor (so not clipped)
+        let fullRect = MTLScissorRect(
+            x: 0,
+            y: 0,
+            width: Int(view.drawableSize.width),
+            height: Int(view.drawableSize.height)
+        )
+        renderEncoder.setScissorRect(fullRect)
+        
         if let pinnedAxes = pinnedAxesRenderer {
             pinnedAxes.viewportSize = view.bounds.size
             
@@ -298,7 +312,6 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             pinnedAxes.drawAxes(renderEncoder: renderEncoder)
         }
         
-        // Finish
         renderEncoder.endEncoding()
         commandBuffer.present(drawable)
         commandBuffer.commit()
@@ -326,7 +339,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     ) -> ([Float], [Int]) {
         
         var vertexData: [Float] = []
-        var lineSizes: [Int] = []
+        var lineCounts: [Int] = []
         
         let bestFitId = chartDataCache.bestFitRun?.first?.id
         
@@ -338,21 +351,19 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             
             var vertexCount = 0
             for pt in sim.points {
-                // Convert 'week' to x in data space
                 let rawX = convertPeriodToYears(pt.week, simSettings)
-                // Convert the decimal to a Double for Y
                 let rawY = NSDecimalNumber(decimal: pt.value).doubleValue
                 
-                // Normalise X from [minX..maxX] to [-1..+1]
-                let ratioX = (rawX - xMin) / (xMax - xMin) // 0..1
-                let ndcX = Float(ratioX * 2.0 - 1.0)       // -1..+1
+                // Normalise x from [xMin..xMax] to [-1..+1]
+                let ratioX = (rawX - xMin) / (xMax - xMin)
+                let ndcX = Float(ratioX * 2.0 - 1.0)
                 
-                // Normalise Y in log scale -> [-1..+1]
+                // Log scale y, then normalise -> [-1..+1]
                 let logVal = log10(rawY)
                 let logMin = log10(yMin)
                 let logMax = log10(yMax)
-                let ratioY = (logVal - logMin) / (logMax - logMin) // 0..1
-                let ndcY = Float(ratioY * 2.0 - 1.0)               // -1..+1
+                let ratioY = (logVal - logMin) / (logMax - logMin)
+                let ndcY = Float(ratioY * 2.0 - 1.0)
                 
                 // Vertex position
                 vertexData.append(ndcX)
@@ -368,13 +379,14 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
                 
                 vertexCount += 1
             }
-            lineSizes.append(vertexCount)
+            lineCounts.append(vertexCount)
         }
         
-        return (vertexData, lineSizes)
+        return (vertexData, lineCounts)
     }
     
     func colorToFloats(_ c: Color, opacity: Double) -> (Float, Float, Float, Float) {
+        // Convert SwiftUI.Color to RGBA floats
         let ui = UIColor(c)
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
         ui.getRed(&r, green: &g, blue: &b, alpha: &a)
@@ -410,56 +422,55 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         return (yMinVis, yMaxVis)
     }
     
-    // MARK: - Pin edges
+    // MARK: - Pin Edges
     
-    /// Make sure the left edge is anchored on load (so it's not slightly offscreen).
+    /// On first load, forcibly pin the chart so the left edge (NDC=-1) lands at x=50 in points.
     private func anchorLeftEdgeAtLoad() {
         guard viewportSize.width > 0 else { return }
         
-        let pinnedLeftScreenX: Float = 50
+        let pinnedLeft: Float = 50
         
-        // Where is the left data edge in screen coords right now?
+        // Check where -1 in NDC is currently on screen
         let leftClipPoint = SIMD4<Float>(-1, 0, 0, 1)
-        let leftNDC = currentTransformMatrix() * leftClipPoint
-        let leftNDCX = leftNDC.x / leftNDC.w
-        let leftScreenX = (leftNDCX + 1) * 0.5 * Float(viewportSize.width)
+        let ndc = currentTransformMatrix() * leftClipPoint
+        let currentNDC_X = ndc.x / ndc.w
         
-        // Force it to 50.
-        let delta = pinnedLeftScreenX - leftScreenX
+        // Convert that to screen points
+        let screenX = (currentNDC_X + 1) * 0.5 * Float(viewportSize.width)
+        let delta = pinnedLeft - screenX
+        
+        // Adjust translation so -1 is pinned at x=50
         translation.x += delta / (0.5 * Float(viewportSize.width))
         updateTransform()
     }
     
-    /// This pins the left edge if it becomes visible (i.e. if leftScreenX > 50),
-    /// and pins the right edge if it comes into the view (i.e. if rightScreenX < view width).
+    /// Each frame, clamp so the chart can't move into 0..50 region or slip off the right side.
     private func anchorEdges() {
         guard viewportSize.width > 0 else { return }
         
-        let pinnedLeftScreenX: Float = 50
-        let pinnedRightScreenX: Float = Float(viewportSize.width)
+        // If the left edge is to the right of 50, clamp it
+        let pinnedLeft: Float = 50
+        let pinnedRight: Float = Float(viewportSize.width)
         
-        // Left edge
         let leftClipPoint = SIMD4<Float>(-1, 0, 0, 1)
         let leftNDC = currentTransformMatrix() * leftClipPoint
         let leftNDCX = leftNDC.x / leftNDC.w
         let leftScreenX = (leftNDCX + 1) * 0.5 * Float(viewportSize.width)
         
-        // If the left edge is visible on screen to the right of x=50, snap it back
-        if leftScreenX > pinnedLeftScreenX {
-            let delta = pinnedLeftScreenX - leftScreenX
+        if leftScreenX > pinnedLeft {
+            let delta = pinnedLeft - leftScreenX
             translation.x += delta / (0.5 * Float(viewportSize.width))
             updateTransform()
         }
         
-        // Right edge
+        // Similarly, if the right edge tries to be left of the screen boundary, clamp it
         let rightClipPoint = SIMD4<Float>(+1, 0, 0, 1)
         let rightNDC = currentTransformMatrix() * rightClipPoint
         let rightNDCX = rightNDC.x / rightNDC.w
         let rightScreenX = (rightNDCX + 1) * 0.5 * Float(viewportSize.width)
         
-        // If the right edge is visible on screen but doesn't reach the screen edge, anchor it
-        if rightScreenX < pinnedRightScreenX {
-            let delta = pinnedRightScreenX - rightScreenX
+        if rightScreenX < pinnedRight {
+            let delta = pinnedRight - rightScreenX
             translation.x += delta / (0.5 * Float(viewportSize.width))
             updateTransform()
         }
@@ -475,3 +486,4 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         }
     }
 }
+    
