@@ -146,7 +146,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             return
         }
         
-        // Save these so anchorLeftEdge() can reference them
+        // Save these so anchor logic can reference them
         actualMinX = Float(minX)
         actualMaxX = Float(maxX)
         
@@ -196,7 +196,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         ptr?.pointee = finalTransform
     }
     
-    /// Returns the current T*S matrix, which your coordinator might also need.
+    /// Returns the current T*S matrix
     func currentTransformMatrix() -> matrix_float4x4 {
         let scaleMatrix = matrix_float4x4(diagonal: SIMD4<Float>(scale, scale, 1, 1))
         let translationMatrix = matrix_float4x4(columns: (
@@ -246,8 +246,9 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     }
     
     func draw(in view: MTKView) {
-        // 1) Pin the chart's left edge (the real minX in data) to the pinned axis
-        anchorLeftEdge()
+        // Anchor edges to keep left edge pinned at x=50 and optionally
+        // pin the right edge if it comes into view.
+        anchorEdges()
         
         guard let pipelineState = pipelineState,
               let drawable = view.currentDrawable,
@@ -258,7 +259,14 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             return
         }
         
-        // 2) Draw lines
+        // Scissor so the chart doesn't show to the left of x=50.
+        let leftClip: Int = 50
+        renderEncoder.setScissorRect(MTLScissorRect(x: leftClip,
+                                                    y: 0,
+                                                    width: Int(view.drawableSize.width) - leftClip,
+                                                    height: Int(view.drawableSize.height)))
+        
+        // 1) Draw lines
         renderEncoder.setRenderPipelineState(pipelineState)
         renderEncoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
         
@@ -274,7 +282,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             offsetIndex += count
         }
         
-        // 3) Draw pinned axes
+        // 2) Draw pinned axes
         if let pinnedAxes = pinnedAxesRenderer {
             pinnedAxes.viewportSize = view.bounds.size
             
@@ -291,7 +299,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             pinnedAxes.drawAxes(renderEncoder: renderEncoder)
         }
         
-        // 4) Finish
+        // Finish
         renderEncoder.endEncoding()
         commandBuffer.present(drawable)
         commandBuffer.commit()
@@ -403,45 +411,52 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         return (yMinVis, yMaxVis)
     }
     
+    // MARK: - Pin the edges so the chart can be anchored left or right
+    
+    /// This pins the left edge to x=50 if it becomes visible, and pins the right edge
+    /// to the right side of the screen if it becomes visible. If the user pans so an
+    /// edge is off screen, it’s allowed to move until that edge reappears.
+    private func anchorEdges() {
+        guard viewportSize.width > 0 else { return }
+        
+        let pinnedLeftScreenX: Float = 50
+        let pinnedRightScreenX: Float = Float(viewportSize.width)
+        
+        // Where is the left data edge in screen coords?
+        let leftClipPoint = SIMD4<Float>(-1, 0, 0, 1)
+        let leftNDC = currentTransformMatrix() * leftClipPoint
+        let leftNDCX = leftNDC.x / leftNDC.w
+        let leftScreenX = (leftNDCX + 1) * 0.5 * Float(viewportSize.width)
+        
+        // If left edge is actually to the right of pinnedLeftScreenX, clamp it:
+        if leftScreenX > pinnedLeftScreenX {
+            let delta = pinnedLeftScreenX - leftScreenX
+            // Convert screen delta to NDC shift
+            translation.x += delta / (0.5 * Float(viewportSize.width))
+            updateTransform()
+        }
+        
+        // Now check the right edge in the updated transform
+        let rightClipPoint = SIMD4<Float>(+1, 0, 0, 1)
+        let newRightNDC = currentTransformMatrix() * rightClipPoint
+        let newRightNDCX = newRightNDC.x / newRightNDC.w
+        let newRightScreenX = (newRightNDCX + 1) * 0.5 * Float(viewportSize.width)
+        
+        // If right edge is actually to the left of pinnedRightScreenX, clamp it:
+        if newRightScreenX < pinnedRightScreenX {
+            let delta = pinnedRightScreenX - newRightScreenX
+            translation.x += delta / (0.5 * Float(viewportSize.width))
+            updateTransform()
+        }
+    }
+    
     // MARK: - Possibly needed by your code
     /// Example for turning weeks -> years or months -> years
     func convertPeriodToYears(_ week: Int, _ simSettings: SimulationSettings) -> Double {
-        // fill in however you were doing it
         if simSettings.periodUnit == .weeks {
             return Double(week) / 52.0
         } else {
             return Double(week) / 12.0
-        }
-    }
-    
-    // MARK: - Pin the left edge so the chart's min X aligns with pinned Y-axis
-    
-    /// Forces the chart’s *true* min X data to remain at the pinned axis.
-    /// The pinned axis in `PinnedAxesRenderer` is typically 50 px from the left.
-    private func anchorLeftEdge() {
-        guard viewportSize.width > 0 else { return }
-        
-        // The PinnedAxesRenderer draws the vertical axis at 50 px from left.
-        let pinnedScreenX: Float = 50
-        
-        // Convert pinnedScreenX to NDC:  (0..width) -> (-1..+1)
-        let desiredNDC_X = (pinnedScreenX / Float(viewportSize.width)) * 2.0 - 1.0
-        
-        // The *true* minimum X in data space was normalised to -1 in the vertex data.
-        // So let’s see where “-1 in clip space” currently transforms to *now*:
-        // We can just directly check: a point at clipX=-1 => ( -1, 0, 0, 1 ).
-        // Where is that on screen after the current transform?
-        
-        let testClipPoint = SIMD4<Float>(-1, 0, 0, 1)
-        let ndc = currentTransformMatrix() * testClipPoint
-        let currentNDC_X = ndc.x / ndc.w
-        
-        // Compare to the desired pinned axis location in clip coords
-        let delta = desiredNDC_X - currentNDC_X
-        
-        if abs(delta) > 0.00001 {
-            translation.x += delta
-            updateTransform()
         }
     }
 }
