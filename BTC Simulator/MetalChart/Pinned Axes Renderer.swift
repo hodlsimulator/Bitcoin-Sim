@@ -284,7 +284,7 @@ extension PinnedAxesRenderer {
         var topY = dataYtoScreenY(dataY: maxDataY, transform: transform)
         if topY > pinnedScreenY { topY = pinnedScreenY }
         
-        let halfT = thickness * 0.2 
+        let halfT = thickness * 0.2
         let x0 = pinnedScreenX - halfT
         let x1 = pinnedScreenX + halfT
         

@@ -11,29 +11,29 @@ import simd
 import SwiftUI // for Color
 
 class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
+    // MARK: - Metal Properties
     var device: MTLDevice!
     var commandQueue: MTLCommandQueue!
     var pipelineState: MTLRenderPipelineState!
     
+    // MARK: - Chart Data
     var vertexBuffer: MTLBuffer?
     var lineSizes: [Int] = []
     var chartDataCache: ChartDataCache?
     var simSettings: SimulationSettings?
     
-    // Transform properties
+    // MARK: - Transform & Viewport
     var viewportSize: CGSize = .zero
     var scale: Float = 1.0
     var translation = SIMD2<Float>(0, 0)
     var transformBuffer: MTLBuffer?
     
-    // (NEW) A pinned axes renderer
-    var pinnedAxesRenderer: PinnedAxesRenderer?
+    // We’ll store the actual min/max of data’s X to ensure the *true* left edge is pinned
+    private var actualMinX: Float = 0
+    private var actualMaxX: Float = 1
     
-    // (OPTIONAL) Example visible min/max (for pinned axes)
-    var xMinVis: Float = 0
-    var xMaxVis: Float = 10
-    var yMinVis: Float = 1
-    var yMaxVis: Float = 1_000_000
+    // MARK: - Axes
+    var pinnedAxesRenderer: PinnedAxesRenderer?
     
     // MARK: - Setup
     
@@ -45,31 +45,28 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         self.chartDataCache = chartDataCache
         self.simSettings = simSettings
         
-        // 1) Create the default MTLDevice
         guard let device = MTLCreateSystemDefaultDevice() else {
             print("Metal not supported on this machine.")
             return
         }
         self.device = device
         
-        // 2) Create the command queue
         commandQueue = device.makeCommandQueue()
         
-        // 3) Build your main chart pipeline
         guard let library = device.makeDefaultLibrary() else {
             print("Failed to create default library.")
             return
         }
         
+        // Build the pipeline
         let vertexFunction   = library.makeFunction(name: "vertexShader")
         let fragmentFunction = library.makeFunction(name: "fragmentShader")
         
         let vertexDescriptor = MTLVertexDescriptor()
-        // position float4
         vertexDescriptor.attributes[0].format = .float4
         vertexDescriptor.attributes[0].offset = 0
         vertexDescriptor.attributes[0].bufferIndex = 0
-        // color float4
+        
         vertexDescriptor.attributes[1].format = .float4
         vertexDescriptor.attributes[1].offset = MemoryLayout<Float>.size * 4
         vertexDescriptor.attributes[1].bufferIndex = 0
@@ -84,7 +81,6 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         pipelineDescriptor.vertexDescriptor = vertexDescriptor
         pipelineDescriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
         
-        // Enable blending
         pipelineDescriptor.colorAttachments[0].isBlendingEnabled = true
         pipelineDescriptor.colorAttachments[0].rgbBlendOperation = .add
         pipelineDescriptor.colorAttachments[0].alphaBlendOperation = .add
@@ -93,107 +89,96 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         pipelineDescriptor.colorAttachments[0].sourceAlphaBlendFactor = .one
         pipelineDescriptor.colorAttachments[0].destinationAlphaBlendFactor = .oneMinusSourceAlpha
         
-        // Enable MSAA for smoother lines
+        // If you want MSAA for smoother lines:
         pipelineDescriptor.rasterSampleCount = 4
         
         do {
             pipelineState = try device.makeRenderPipelineState(descriptor: pipelineDescriptor)
-            print(">> Pipeline state created successfully.")
         } catch {
             print("Error creating pipeline state: \(error)")
             pipelineState = nil
         }
         
-        // 4) Build the static vertex buffer for your lines (using your chartDataCache, etc.)
+        // Build line vertex data
         buildLineBuffer()
         
-        // 5) Create the transform uniform buffer
+        // Create a uniform buffer for transforms
         transformBuffer = device.makeBuffer(
             length: MemoryLayout<matrix_float4x4>.size,
             options: .storageModeShared
         )
+        
+        // Initial transform
         updateTransform()
         
-        // 6) (NEW) Create a pinned axes renderer + text renderer for axis labels, if desired
-        
-        // 6a) Build a GPU font atlas
+        // Optional pinned axes
         let fontSize: CGFloat = 14
-        if let fontAtlas = generateFontAtlas(
-            device: device,
-            font: UIFont.systemFont(ofSize: fontSize)
-        ) {
-            // 6b) Create a GPU text renderer
-            let textRenderer = RuntimeGPUTextRenderer(
-                device: device,
-                atlas: fontAtlas,
-                library: library
-            )
-            
-            // 6c) Create your pinned axes renderer (from your PinnedAxesRenderer.swift)
-            //     It may build its own pipeline or reuse a second pipeline function in AxisShaders.metal.
-            pinnedAxesRenderer = PinnedAxesRenderer(
-                device: device,
-                textRenderer: textRenderer,
-                library: library
-            )
-            
-            // optional: tweak axis styling
-            pinnedAxesRenderer?.axisColor  = SIMD4<Float>(1, 1, 1, 1)
-            pinnedAxesRenderer?.labelColor = SIMD4<Float>(0.8, 0.8, 0.8, 1.0)
-            
-            
-            // For testing
-            // pinnedAxesRenderer?.axisColor  = SIMD4<Float>(1, 0, 0, 1)  // bright red
-            // pinnedAxesRenderer?.labelColor = SIMD4<Float>(1, 1, 0, 1)  // bright yellow
+        if let fontAtlas = generateFontAtlas(device: device,
+                                             font: UIFont.systemFont(ofSize: fontSize)) {
+            let textRenderer = RuntimeGPUTextRenderer(device: device,
+                                                      atlas: fontAtlas,
+                                                      library: library)
+            pinnedAxesRenderer = PinnedAxesRenderer(device: device,
+                                                    textRenderer: textRenderer,
+                                                    library: library)
         }
-        
-        // If your pinned axes approach uses “screen space” vertices and a specialized vertex shader:
-        // pinnedAxesRenderer might do something like:
-        //
-        //    let axisVertexFunc = library.makeFunction(name: "axisVertexShader_screenSpace")
-        //    let axisFragFunc   = library.makeFunction(name: "axisFragmentShader")
-        //    // build pipeline ...
-        //
-        // That is typically done INSIDE the pinned axes renderer’s init or pipeline-building method.
-        
-        // Done! You’re now set up with your main chart pipeline + pinned axes pipeline.
     }
     
-    // MARK: - Building Line Data
+    // MARK: - Build Line Data
     
     func buildLineBuffer() {
         guard let cache = chartDataCache,
               let simSettings = simSettings else { return }
         
-        let simulations = cache.allRuns ?? []
+        // Collect all X values from all runs so we can find the *true* min & max
+        var allXValues: [Double] = []
         
-        // Build vertex data for your lines
+        let simulations = cache.allRuns ?? []
+        for sim in simulations {
+            for pt in sim.points {
+                let rawX = convertPeriodToYears(pt.week, simSettings)
+                allXValues.append(rawX)
+            }
+        }
+        
+        guard let minX = allXValues.min(), let maxX = allXValues.max() else {
+            print("No data to build line buffer")
+            return
+        }
+        
+        // Save these so anchorLeftEdge() can reference them
+        actualMinX = Float(minX)
+        actualMaxX = Float(maxX)
+        
+        // We'll normalise from [minX..maxX] to [-1..+1]
         let (vertexData, lineSizes) = buildLineVertexData(
             simulations: simulations,
             simSettings: simSettings,
-            xMin: 0.0,
-            xMax: (simSettings.periodUnit == .weeks)
-            ? Double(simSettings.userPeriods) / 52.0
-            : Double(simSettings.userPeriods) / 12.0,
+            xMin: minX,
+            xMax: maxX,
             yMin: 1.0,
             yMax: 1_000_000_000_000.0,
             customPalette: customPalette,
             chartDataCache: cache
         )
         
-        let byteCount = vertexData.count * MemoryLayout<Float>.size
-        vertexBuffer = device.makeBuffer(
-            bytes: vertexData,
-            length: byteCount,
-            options: .storageModeShared
-        )
         self.lineSizes = lineSizes
+        
+        let byteCount = vertexData.count * MemoryLayout<Float>.size
+        vertexBuffer = device.makeBuffer(bytes: vertexData,
+                                         length: byteCount,
+                                         options: .storageModeShared)
     }
     
     // MARK: - Updating Transform
     
+    /// Called by SwiftUI when the view size changes
+    func updateViewport(to size: CGSize) {
+        viewportSize = size
+    }
+    
+    /// Rebuilds the T*S matrix, stores it in `transformBuffer`.
     func updateTransform() {
-        // The final transform is translation * scale
         let scaleMatrix = matrix_float4x4(diagonal: SIMD4<Float>(scale, scale, 1, 1))
         let translationMatrix = matrix_float4x4(columns: (
             SIMD4<Float>(1, 0, 0, 0),
@@ -201,21 +186,18 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             SIMD4<Float>(0, 0, 1, 0),
             SIMD4<Float>(translation.x, translation.y, 0, 1)
         ))
-        let transform = matrix_multiply(translationMatrix, scaleMatrix)
         
-        let bufferPointer = transformBuffer?.contents().bindMemory(
+        let finalTransform = matrix_multiply(translationMatrix, scaleMatrix)
+        
+        let ptr = transformBuffer?.contents().bindMemory(
             to: matrix_float4x4.self,
             capacity: 1
         )
-        bufferPointer?.pointee = transform
+        ptr?.pointee = finalTransform
     }
     
-    func updateViewport(to size: CGSize) {
-        viewportSize = size
-        print(">> updateViewport() - new size: \(size)")
-    }
-    
-    private func currentTransformMatrix() -> matrix_float4x4 {
+    /// Returns the current T*S matrix, which your coordinator might also need.
+    func currentTransformMatrix() -> matrix_float4x4 {
         let scaleMatrix = matrix_float4x4(diagonal: SIMD4<Float>(scale, scale, 1, 1))
         let translationMatrix = matrix_float4x4(columns: (
             SIMD4<Float>(1, 0, 0, 0),
@@ -226,37 +208,47 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         return matrix_multiply(translationMatrix, scaleMatrix)
     }
     
-    // MARK: - Coordinate Conversion
+    // MARK: - Coordinate Conversions (Gesture Coordinator Needs)
     
+    /// Convert a screen point (UIKit coords) -> NDC [-1..+1].
     func convertPointToNDC(_ point: CGPoint, viewSize: CGSize) -> SIMD2<Float> {
         let ndx = Float(point.x / viewSize.width) * 2.0 - 1.0
+        // Flip Y because UIKit top-left is (0,0)
         let ndy = Float((viewSize.height - point.y) / viewSize.height) * 2.0 - 1.0
         return SIMD2<Float>(ndx, ndy)
     }
     
+    /// Convert screen point -> data coords (like unproject).
     func convertPointToData(_ point: CGPoint, viewSize: CGSize) -> SIMD2<Float> {
-        let ndc = convertPointToNDC(point, viewSize: viewSize)
-        let ndcVec = SIMD4<Float>(ndc.x, ndc.y, 0, 1)
-        let inverseTransform = simd_inverse(currentTransformMatrix())
-        let dataVec = matrix_multiply(inverseTransform, ndcVec)
-        return SIMD2<Float>(dataVec.x, dataVec.y)
+        let ndc2 = convertPointToNDC(point, viewSize: viewSize)
+        let ndc4 = SIMD4<Float>(ndc2.x, ndc2.y, 0, 1)
+        let invT = simd_inverse(currentTransformMatrix())
+        let data4 = invT * ndc4
+        return SIMD2<Float>(data4.x, data4.y)
     }
     
+    /// Convert data coords -> screen points (like project).
     func convertDataToPoint(_ dataCoord: SIMD2<Float>, viewSize: CGSize) -> CGPoint {
-        let dataVec = SIMD4<Float>(dataCoord.x, dataCoord.y, 0, 1)
-        let ndcVec = matrix_multiply(currentTransformMatrix(), dataVec)
-        let xScreen = (ndcVec.x + 1) * 0.5 * Float(viewSize.width)
-        let yScreen = (1 - (ndcVec.y + 1) * 0.5) * Float(viewSize.height)
-        return CGPoint(x: CGFloat(xScreen), y: CGFloat(yScreen))
+        let d4 = SIMD4<Float>(dataCoord.x, dataCoord.y, 0, 1)
+        let ndc4 = currentTransformMatrix() * d4
+        let ndcX = ndc4.x / ndc4.w
+        let ndcY = ndc4.y / ndc4.w
+        
+        let screenX = CGFloat((ndcX + 1) * 0.5) * viewSize.width
+        let screenY = CGFloat(1 - ((ndcY + 1) * 0.5)) * viewSize.height
+        return CGPoint(x: screenX, y: screenY)
     }
     
     // MARK: - MTKViewDelegate
     
     func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
-        print(">> drawableSizeWillChange() - new drawableSize: \(size)")
+        // Called when the view changes size; do any needed recalculations here.
     }
     
     func draw(in view: MTKView) {
+        // 1) Pin the chart's left edge (the real minX in data) to the pinned axis
+        anchorLeftEdge()
+        
         guard let pipelineState = pipelineState,
               let drawable = view.currentDrawable,
               let rpd = view.currentRenderPassDescriptor,
@@ -266,32 +258,29 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             return
         }
         
-        // --- 1) Draw your chart lines ---
+        // 2) Draw lines
         renderEncoder.setRenderPipelineState(pipelineState)
         renderEncoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
         
-        // Provide your transform (scale+translate) buffer
         if let transformBuffer = transformBuffer {
             renderEncoder.setVertexBuffer(transformBuffer, offset: 0, index: 1)
         }
         
-        // Draw each simulation run’s line data
         var offsetIndex = 0
         for count in lineSizes {
-            renderEncoder.drawPrimitives(type: .lineStrip, vertexStart: offsetIndex, vertexCount: count)
+            renderEncoder.drawPrimitives(type: .lineStrip,
+                                         vertexStart: offsetIndex,
+                                         vertexCount: count)
             offsetIndex += count
         }
         
-        // --- 2) Update and Draw Pinned Axes ---
+        // 3) Draw pinned axes
         if let pinnedAxes = pinnedAxesRenderer {
-            // Pass the screen size to pinnedAxes, so it knows the viewport
             pinnedAxes.viewportSize = view.bounds.size
             
-            // Compute visible ranges (in data space) by inverting the chart transform
             let (xMinVis, xMaxVis) = computeVisibleRangeX()
             let (yMinVis, yMaxVis) = computeVisibleRangeY()
             
-            // Update pinned axes with the new visible data range + current transform
             pinnedAxes.updateAxes(
                 minX: xMinVis,
                 maxX: xMaxVis,
@@ -299,12 +288,10 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
                 maxY: yMaxVis,
                 chartTransform: currentTransformMatrix()
             )
-            
-            // Draw axis lines + tick labels in screen space
             pinnedAxes.drawAxes(renderEncoder: renderEncoder)
         }
         
-        // --- 3) Finish ---
+        // 4) Finish
         renderEncoder.endEncoding()
         commandBuffer.present(drawable)
         commandBuffer.commit()
@@ -312,7 +299,6 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     
     // MARK: - Build Vertex Data
     
-    /// A palette used when building line data (change colours as desired).
     let customPalette: [Color] = [
         .white,
         .yellow,
@@ -321,8 +307,6 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         .green
     ]
     
-    /// Builds an array of float-based vertex data (positions + colours) and
-    /// an array of line segment sizes, one per simulation run.
     func buildLineVertexData(
         simulations: [SimulationRun],
         simSettings: SimulationSettings,
@@ -337,34 +321,35 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         var vertexData: [Float] = []
         var lineSizes: [Int] = []
         
-        // Optionally, handle a "best fit" run separately
         let bestFitId = chartDataCache.bestFitRun?.first?.id
         
         for (runIndex, sim) in simulations.enumerated() {
             let isBestFit = (sim.id == bestFitId)
-            let chosenColor: Color = isBestFit ? .orange : customPalette[runIndex % customPalette.count]
+            let chosenColor = isBestFit ? Color.orange : customPalette[runIndex % customPalette.count]
             let chosenOpacity: Float = isBestFit ? 1.0 : 0.2
             let (r, g, b, a) = colorToFloats(chosenColor, opacity: Double(chosenOpacity))
             
             var vertexCount = 0
             for pt in sim.points {
+                // Convert 'week' to x in data space
                 let rawX = convertPeriodToYears(pt.week, simSettings)
+                // Convert the decimal to a Double for Y
                 let rawY = NSDecimalNumber(decimal: pt.value).doubleValue
                 
-                // normalise X -> [-1..1]
-                let ratioX = (rawX - xMin) / (xMax - xMin)
-                let nx = Float(ratioX * 2.0 - 1.0)
+                // Normalise X from [minX..maxX] to [-1..+1]
+                let ratioX = (rawX - xMin) / (xMax - xMin) // 0..1
+                let ndcX = Float(ratioX * 2.0 - 1.0)       // -1..+1
                 
-                // normalise Y on a log scale -> [-1..1]
+                // Normalise Y in log scale -> [-1..+1]
                 let logVal = log10(rawY)
                 let logMin = log10(yMin)
                 let logMax = log10(yMax)
-                let ratioY = (logVal - logMin) / (logMax - logMin)
-                let ny = Float(ratioY * 2.0 - 1.0)
+                let ratioY = (logVal - logMin) / (logMax - logMin) // 0..1
+                let ndcY = Float(ratioY * 2.0 - 1.0)               // -1..+1
                 
-                // Position
-                vertexData.append(nx)
-                vertexData.append(ny)
+                // Vertex position
+                vertexData.append(ndcX)
+                vertexData.append(ndcY)
                 vertexData.append(0.0)
                 vertexData.append(1.0)
                 
@@ -378,43 +363,35 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             }
             lineSizes.append(vertexCount)
         }
+        
         return (vertexData, lineSizes)
     }
     
-    /// Converts SwiftUI Color to RGBA floats, factoring in 'opacity'.
-    func colorToFloats(_ swiftColor: Color, opacity: Double) -> (Float, Float, Float, Float) {
-        let uiColor = UIColor(swiftColor)
-        var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
-        uiColor.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
-        alpha *= CGFloat(opacity)
-        return (Float(red), Float(green), Float(blue), Float(alpha))
+    func colorToFloats(_ c: Color, opacity: Double) -> (Float, Float, Float, Float) {
+        let ui = UIColor(c)
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        ui.getRed(&r, green: &g, blue: &b, alpha: &a)
+        a *= CGFloat(opacity)
+        return (Float(r), Float(g), Float(b), Float(a))
     }
     
-    // Helper functions to compute visible ranges
-    /// Returns the (minX, maxX) in data space currently visible on screen.
+    // MARK: - Visible Range
+    
     func computeVisibleRangeX() -> (Float, Float) {
-        // We'll invert the transform for screenX=0 and screenX=view.width
         let inv = simd_inverse(currentTransformMatrix())
-        
-        // bottom-left in screen coords => NDC => data
-        let leftNDC  = SIMD4<Float>(-1, 0, 0, 1)  // ignoring Y here, or use corners
+        let leftNDC  = SIMD4<Float>(-1, 0, 0, 1)
         let rightNDC = SIMD4<Float>(+1, 0, 0, 1)
         
-        // transform them
         let leftData  = inv * leftNDC
         let rightData = inv * rightNDC
         
-        // The x-component is our data X
         let xMinVis = min(leftData.x / leftData.w, rightData.x / rightData.w)
         let xMaxVis = max(leftData.x / leftData.w, rightData.x / rightData.w)
         return (xMinVis, xMaxVis)
     }
-
-    /// Returns the (minY, maxY) in data space currently visible on screen.
+    
     func computeVisibleRangeY() -> (Float, Float) {
         let inv = simd_inverse(currentTransformMatrix())
-        
-        // For Y, consider the top vs. bottom edges of NDC space
         let bottomNDC = SIMD4<Float>(0, -1, 0, 1)
         let topNDC    = SIMD4<Float>(0, +1, 0, 1)
         
@@ -424,5 +401,47 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         let yMinVis = min(bottomData.y / bottomData.w, topData.y / topData.w)
         let yMaxVis = max(bottomData.y / bottomData.w, topData.y / topData.w)
         return (yMinVis, yMaxVis)
+    }
+    
+    // MARK: - Possibly needed by your code
+    /// Example for turning weeks -> years or months -> years
+    func convertPeriodToYears(_ week: Int, _ simSettings: SimulationSettings) -> Double {
+        // fill in however you were doing it
+        if simSettings.periodUnit == .weeks {
+            return Double(week) / 52.0
+        } else {
+            return Double(week) / 12.0
+        }
+    }
+    
+    // MARK: - Pin the left edge so the chart's min X aligns with pinned Y-axis
+    
+    /// Forces the chart’s *true* min X data to remain at the pinned axis.
+    /// The pinned axis in `PinnedAxesRenderer` is typically 50 px from the left.
+    private func anchorLeftEdge() {
+        guard viewportSize.width > 0 else { return }
+        
+        // The PinnedAxesRenderer draws the vertical axis at 50 px from left.
+        let pinnedScreenX: Float = 50
+        
+        // Convert pinnedScreenX to NDC:  (0..width) -> (-1..+1)
+        let desiredNDC_X = (pinnedScreenX / Float(viewportSize.width)) * 2.0 - 1.0
+        
+        // The *true* minimum X in data space was normalised to -1 in the vertex data.
+        // So let’s see where “-1 in clip space” currently transforms to *now*:
+        // We can just directly check: a point at clipX=-1 => ( -1, 0, 0, 1 ).
+        // Where is that on screen after the current transform?
+        
+        let testClipPoint = SIMD4<Float>(-1, 0, 0, 1)
+        let ndc = currentTransformMatrix() * testClipPoint
+        let currentNDC_X = ndc.x / ndc.w
+        
+        // Compare to the desired pinned axis location in clip coords
+        let delta = desiredNDC_X - currentNDC_X
+        
+        if abs(delta) > 0.00001 {
+            translation.x += delta
+            updateTransform()
+        }
     }
 }
