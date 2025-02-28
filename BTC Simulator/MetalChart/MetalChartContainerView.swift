@@ -55,17 +55,30 @@ struct MetalChartContainerView: UIViewRepresentable {
         doubleTapGR.numberOfTapsRequired = 2
         
         //
+        // 5) Double-tap-and-slide (long press, 2 taps, zero duration)
+        //
+        let doubleTapSlideGR = UILongPressGestureRecognizer(
+            target: coordinator,
+            action: #selector(coordinator.handleDoubleTapSlide(_:))
+        )
+        doubleTapSlideGR.numberOfTapsRequired = 2
+        doubleTapSlideGR.minimumPressDuration = 0 // triggers immediately on second tap
+        
+        //
         // Allow them to recognize simultaneously
         //
         coordinator.configureRecognizerForSimultaneous(singleFingerPan)
         coordinator.configureRecognizerForSimultaneous(twoFingerPan)
         coordinator.configureRecognizerForSimultaneous(pinchGR)
         coordinator.configureRecognizerForSimultaneous(doubleTapGR)
+        coordinator.configureRecognizerForSimultaneous(doubleTapSlideGR)
         
+        // Add them all
         metalView.addGestureRecognizer(singleFingerPan)
         metalView.addGestureRecognizer(twoFingerPan)
         metalView.addGestureRecognizer(pinchGR)
         metalView.addGestureRecognizer(doubleTapGR)
+        metalView.addGestureRecognizer(doubleTapSlideGR)
         
         return metalView
     }

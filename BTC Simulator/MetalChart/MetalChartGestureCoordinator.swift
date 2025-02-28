@@ -18,11 +18,86 @@ class MetalChartGestureCoordinator: NSObject {
     
     private var initialPinchAnchorData: SIMD2<Float>?
     
+    // For the new double-tap-slide gesture
+    private var baseScaleX: Float = 1.0
+    private var baseScaleY: Float = 1.0
+    private var doubleTapSlideStartPoint: CGPoint = .zero
+    private let doubleTapSlideSensitivity: CGFloat = 0.01 // tweak to taste
+    
     // Zoom factor for double-tap
     private let doubleTapZoomFactor: Float = 1.5
     
     // Zoom factor for two-finger pan
     private let twoFingerZoomFactor: Float = 0.005
+}
+
+// MARK: - New Double-Tap-Slide
+extension MetalChartGestureCoordinator {
+    
+    /// Called when the user double-taps and immediately slides up or down to
+    /// scale the y-axis or x-axis.
+    @objc func handleDoubleTapSlide(_ recognizer: UILongPressGestureRecognizer) {
+        guard let chartView = recognizer.view as? MetalChartUIView else { return }
+        let renderer = chartView.renderer
+        
+        switch recognizer.state {
+        case .began:
+            // Store the initial scale
+            baseScaleX = renderer.scaleX
+            baseScaleY = renderer.scaleY
+            
+            // Where did the user first press?
+            doubleTapSlideStartPoint = recognizer.location(in: chartView)
+            
+        case .changed:
+            // Current finger location
+            let currentPoint = recognizer.location(in: chartView)
+            
+            // We'll do an example: vertical movement => scale Y, horizontal => scale X
+            // You can decide the formula
+            let dy = currentPoint.y - doubleTapSlideStartPoint.y
+            let dx = currentPoint.x - doubleTapSlideStartPoint.x
+            
+            // For instance, let newScaleY = baseScaleY * (1 + -dy * 0.01)
+            // negative dy for upward means bigger scale
+            let factorY = 1.0 + (-dy * doubleTapSlideSensitivity)
+            let newScaleY = max(0.0001, baseScaleY * Float(factorY))
+            
+            let factorX = 1.0 + (dx * doubleTapSlideSensitivity)
+            let newScaleX = max(0.0001, baseScaleX * Float(factorX))
+            
+            // Decide if you want to scale only Y or only X or both:
+            // Example: scale only Y:
+            // renderer.scaleY = newScaleY
+            //
+            // Example: scale only X:
+            // renderer.scaleX = newScaleX
+            //
+            // Example: scale both (like a uniform-ish approach):
+            // but that defeats the purpose of "slide up/down for Y-axis" vs "slide left/right for X-axis"
+            
+            // Let's show a quick approach:
+            //   If absolute vertical movement > horizontal, treat it as a Y-scale gesture
+            //   else treat as X-scale
+            if abs(dy) > abs(dx) {
+                // predominantly vertical => scale Y
+                renderer.scaleY = newScaleY
+            } else {
+                // predominantly horizontal => scale X
+                renderer.scaleX = newScaleX
+            }
+            
+            renderer.updateTransform()
+            
+        case .ended, .cancelled:
+            // Optionally clamp the edges if you want
+            // e.g. if you want to keep chart from going offscreen horizontally
+            renderer.anchorEdges()
+            
+        default:
+            break
+        }
+    }
 }
 
 // MARK: - Simultaneous Recognition
