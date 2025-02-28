@@ -57,6 +57,9 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     
     // MARK: - Setup
     
+    // IdleManager to manage idle state
+    private var idleManager = IdleManager()
+    
     func setupMetal(
         in size: CGSize,
         chartDataCache: ChartDataCache,
@@ -307,6 +310,9 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         else {
             return
         }
+        
+        // Reset the idle timer when rendering occurs
+        idleManager.resetIdleTimer()
         
         // 1) Ensure the viewport size is up-to-date
         let deviceScale = view.drawableSize.width / view.bounds.size.width

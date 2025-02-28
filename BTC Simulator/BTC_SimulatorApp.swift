@@ -30,6 +30,9 @@ struct BTCMonteCarloApp: App {
 
     // Declare a variable to store the font atlas and the text renderer
     @StateObject private var textRendererManager = TextRendererManager()
+    
+    // Initialize the IdleManager for tracking idle state
+    @StateObject private var idleManager = IdleManager()
 
     init() {
         let navBarAppearance = UINavigationBarAppearance()
@@ -131,10 +134,22 @@ struct BTCMonteCarloApp: App {
                             .environmentObject(simChartSelection)
                             .environmentObject(coordinator)
                             .environmentObject(textRendererManager)
+                            .onAppear {
+                                idleManager.resetIdleTimer() // Start idle timer when the view appears
+                            }
+                            .onChange(of: scenePhase) { phase in
+                                switch phase {
+                                case .active:
+                                    idleManager.resetIdleTimer() // Reset idle timer when app becomes active
+                                case .inactive, .background:
+                                    idleManager.resumeProcessing() // Handle background state
+                                default:
+                                    break
+                                }
+                            }
                     }
                     .tint(.white)
                     .preferredColorScheme(.dark)
-
                 } else {
                     NavigationStack {
                         OnboardingView(didFinishOnboarding: $didFinishOnboarding)

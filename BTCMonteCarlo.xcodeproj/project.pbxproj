@@ -33,6 +33,7 @@
 		E130935F2D70A0E000DA6418 /* RuntimeGPUTextRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = E130935E2D70A0DE00DA6418 /* RuntimeGPUTextRenderer.swift */; };
 		E13093612D70A35300DA6418 /* AxisShaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = E13093602D70A35300DA6418 /* AxisShaders.metal */; };
 		E13093632D71799400DA6418 /* TextRendererManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E13093622D71799200DA6418 /* TextRendererManager.swift */; };
+		E13093672D71CB1700DA6418 /* IdleManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E13093662D71CB1500DA6418 /* IdleManager.swift */; };
 		E14344D62D52D85600225A49 /* FactorState.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14344D52D52D85400225A49 /* FactorState.swift */; };
 		E14344D82D52DE5500225A49 /* FactorCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14344D72D52DE5300225A49 /* FactorCatalog.swift */; };
 		E14344DA2D53553D00225A49 /* SimulationSettings+FactorSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14344D92D53553800225A49 /* SimulationSettings+FactorSync.swift */; };
@@ -184,6 +185,7 @@
 		E130935E2D70A0DE00DA6418 /* RuntimeGPUTextRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuntimeGPUTextRenderer.swift; sourceTree = "<group>"; };
 		E13093602D70A35300DA6418 /* AxisShaders.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = AxisShaders.metal; sourceTree = "<group>"; };
 		E13093622D71799200DA6418 /* TextRendererManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextRendererManager.swift; sourceTree = "<group>"; };
+		E13093662D71CB1500DA6418 /* IdleManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdleManager.swift; sourceTree = "<group>"; };
 		E14344D52D52D85400225A49 /* FactorState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FactorState.swift; sourceTree = "<group>"; };
 		E14344D72D52DE5300225A49 /* FactorCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FactorCatalog.swift; sourceTree = "<group>"; };
 		E14344D92D53553800225A49 /* SimulationSettings+FactorSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SimulationSettings+FactorSync.swift"; sourceTree = "<group>"; };
@@ -450,6 +452,7 @@
 				E130935C2D70A0A600DA6418 /* FontAtlasGenerator.swift */,
 				E13093542D709BC800DA6418 /* GPUFontAtlas.swift */,
 				E13093562D709BF200DA6418 /* GPUTextRenderer.swift */,
+				E13093662D71CB1500DA6418 /* IdleManager.swift */,
 				E13093452D7076B700DA6418 /* MetalChartContainerView.swift */,
 				E130934A2D70773B00DA6418 /* MetalChartGestureCoordinator.swift */,
 				E130934C2D70779300DA6418 /* MetalChartRenderer.swift */,
@@ -709,6 +712,7 @@
 				E13093312D6D8AFC00DA6418 /* PortraitLayoutCoordinator.swift in Sources */,
 				E1E31C4F2D4349E000ED22E6 /* DataLoader.swift in Sources */,
 				E1B7B0A72D4753CF00B60EC6 /* ShiftFactors.swift in Sources */,
+				E13093672D71CB1700DA6418 /* IdleManager.swift in Sources */,
 				E14D240B2D3A698A007CC11A /* SimulationSettingsInit.swift in Sources */,
 				E1E31C512D438DD900ED22E6 /* GarchCalibrator.swift in Sources */,
 				E1942CA32D64334D00F5B9A1 /* PinnedColumnBridgeViewController.swift in Sources */,

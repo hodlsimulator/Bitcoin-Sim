@@ -13,6 +13,9 @@ import MetalKit
 struct MetalChartContainerView: UIViewRepresentable {
     let metalChart: MetalChartRenderer
     
+    // Declare IdleManager to manage idle state
+    @StateObject private var idleManager = IdleManager()
+    
     func makeUIView(context: Context) -> MetalChartUIView {
         // Ensure textRendererManager is available from metalChart
         guard let textRendererManager = metalChart.textRendererManager else {
@@ -73,6 +76,10 @@ struct MetalChartContainerView: UIViewRepresentable {
         metalView.addGestureRecognizer(doubleTapGR)
         metalView.addGestureRecognizer(doubleTapSlideGR)
         
+        // Reset the idle timer whenever there is any gesture interaction
+        metalView.addGestureRecognizer(UITapGestureRecognizer(target: coordinator, action: #selector(coordinator.resetIdleTimer)))
+        metalView.addGestureRecognizer(UIPanGestureRecognizer(target: coordinator, action: #selector(coordinator.resetIdleTimer)))
+        
         return metalView
     }
     
@@ -81,6 +88,7 @@ struct MetalChartContainerView: UIViewRepresentable {
     }
     
     func makeCoordinator() -> MetalChartGestureCoordinator {
-        MetalChartGestureCoordinator()
+        // Pass IdleManager to the Coordinator
+        MetalChartGestureCoordinator(idleManager: idleManager)
     }
 }

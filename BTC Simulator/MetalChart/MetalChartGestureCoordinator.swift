@@ -10,24 +10,29 @@ import UIKit
 
 /// Multi-touch gestures: single-finger pan, two-finger pan, pinch, double-tap zoom.
 class MetalChartGestureCoordinator: NSObject {
-    
+    private let idleManager: IdleManager // Use 'let' since it won’t change after initialization
+
+    // Initializer to accept idleManager from MetalChartContainerView
+    init(idleManager: IdleManager) {
+        self.idleManager = idleManager
+        super.init()
+    }
+
+    // Method for gesture recognizers to reset the idle timer
+    @objc func resetIdleTimer() {
+        idleManager.resetIdleTimer()
+    }
+
+    // Existing properties (unchanged)
     private var baseScale: Float = 1.0
     private var baseTranslation = SIMD2<Float>(0, 0)
-    
     private var baseScaleForTwoFingerPan: Float = 1.0
-    
     private var initialPinchAnchorData: SIMD2<Float>?
-    
-    // For the new double-tap-slide gesture
     private var baseScaleX: Float = 1.0
     private var baseScaleY: Float = 1.0
     private var doubleTapSlideStartPoint: CGPoint = .zero
-    private let doubleTapSlideSensitivity: CGFloat = 0.01 // tweak to taste
-    
-    // Zoom factor for double-tap
+    private let doubleTapSlideSensitivity: CGFloat = 0.01
     private let doubleTapZoomFactor: Float = 1.5
-    
-    // Zoom factor for two-finger pan
     private let twoFingerZoomFactor: Float = 0.005
 }
 
@@ -39,6 +44,9 @@ extension MetalChartGestureCoordinator {
     @objc func handleDoubleTapSlide(_ recognizer: UILongPressGestureRecognizer) {
         guard let chartView = recognizer.view as? MetalChartUIView else { return }
         let renderer = chartView.renderer
+        
+        // Reset the idle timer whenever there's gesture interaction
+        idleManager.resetIdleTimer()
         
         switch recognizer.state {
         case .began:
@@ -54,44 +62,25 @@ extension MetalChartGestureCoordinator {
             let currentPoint = recognizer.location(in: chartView)
             
             // We'll do an example: vertical movement => scale Y, horizontal => scale X
-            // You can decide the formula
             let dy = currentPoint.y - doubleTapSlideStartPoint.y
             let dx = currentPoint.x - doubleTapSlideStartPoint.x
             
-            // For instance, let newScaleY = baseScaleY * (1 + -dy * 0.01)
-            // negative dy for upward means bigger scale
             let factorY = 1.0 + (-dy * doubleTapSlideSensitivity)
             let newScaleY = max(0.0001, baseScaleY * Float(factorY))
             
             let factorX = 1.0 + (dx * doubleTapSlideSensitivity)
             let newScaleX = max(0.0001, baseScaleX * Float(factorX))
             
-            // Decide if you want to scale only Y or only X or both:
-            // Example: scale only Y:
-            // renderer.scaleY = newScaleY
-            //
-            // Example: scale only X:
-            // renderer.scaleX = newScaleX
-            //
-            // Example: scale both (like a uniform-ish approach):
-            // but that defeats the purpose of "slide up/down for Y-axis" vs "slide left/right for X-axis"
-            
-            // Let's show a quick approach:
-            //   If absolute vertical movement > horizontal, treat it as a Y-scale gesture
-            //   else treat as X-scale
+            // Decide if you want to scale only Y or only X or both
             if abs(dy) > abs(dx) {
-                // predominantly vertical => scale Y
                 renderer.scaleY = newScaleY
             } else {
-                // predominantly horizontal => scale X
                 renderer.scaleX = newScaleX
             }
             
             renderer.updateTransform()
             
         case .ended, .cancelled:
-            // Optionally clamp the edges if you want
-            // e.g. if you want to keep chart from going offscreen horizontally
             renderer.anchorEdges()
             
         default:
@@ -120,13 +109,15 @@ extension MetalChartGestureCoordinator {
         let renderer = chartView.renderer
         let translationPoint = recognizer.translation(in: chartView)
         
+        // Reset the idle timer whenever there's gesture interaction
+        idleManager.resetIdleTimer()
+        
         switch recognizer.state {
         case .began:
             baseScale = renderer.scale
             baseTranslation = renderer.translation
             
         case .changed:
-            // Just do normal panning (no clamp in changed for Option A)
             renderer.scale = baseScale
             renderer.translation = baseTranslation
             
@@ -138,10 +129,7 @@ extension MetalChartGestureCoordinator {
             renderer.updateTransform()
             
         case .ended, .cancelled:
-            // Now clamp once
             renderer.anchorEdges()
-            
-            // Update base
             baseScale = renderer.scale
             baseTranslation = renderer.translation
             
@@ -156,6 +144,9 @@ extension MetalChartGestureCoordinator {
         let renderer = chartView.renderer
         
         guard recognizer.numberOfTouches == 2 else { return }
+        
+        // Reset the idle timer whenever there's gesture interaction
+        idleManager.resetIdleTimer()
         
         switch recognizer.state {
         case .began:
@@ -183,7 +174,6 @@ extension MetalChartGestureCoordinator {
             renderer.updateTransform()
             
         case .ended, .cancelled:
-            // Single clamp at end
             renderer.anchorEdges()
             
         default:
@@ -196,12 +186,14 @@ extension MetalChartGestureCoordinator {
         guard let chartView = recognizer.view as? MetalChartUIView else { return }
         let renderer = chartView.renderer
         
+        // Reset the idle timer whenever there's gesture interaction
+        idleManager.resetIdleTimer()
+        
         switch recognizer.state {
         case .began:
             baseScale = renderer.scale
             baseTranslation = renderer.translation
             
-            // Midpoint
             let location: CGPoint
             if recognizer.numberOfTouches >= 2 {
                 let t1 = recognizer.location(ofTouch: 0, in: chartView)
@@ -222,7 +214,6 @@ extension MetalChartGestureCoordinator {
             let pinchScale = Float(recognizer.scale)
             let newScale   = baseScale * pinchScale
             
-            // Anchor logic
             let anchorOldScreen = anchorScreenCoord(
                 renderer: renderer,
                 dataCoord: anchorData,
@@ -250,9 +241,7 @@ extension MetalChartGestureCoordinator {
             renderer.updateTransform()
             
         case .ended, .cancelled:
-            // Once you release pinch, clamp
             renderer.anchorEdges()
-            
             baseScale = renderer.scale
             baseTranslation = renderer.translation
             initialPinchAnchorData = nil
@@ -273,13 +262,11 @@ extension MetalChartGestureCoordinator {
         let oldScale = renderer.scale
         let oldTrans = renderer.translation
         
-        // Temporarily override
         renderer.scale = scale
         renderer.translation = translation
         
         let screenPt = renderer.convertDataToPoint(dataCoord, viewSize: chartView.bounds.size)
         
-        // Restore
         renderer.scale = oldScale
         renderer.translation = oldTrans
         
@@ -290,6 +277,9 @@ extension MetalChartGestureCoordinator {
     @objc func handleDoubleTap(_ recognizer: UITapGestureRecognizer) {
         guard let chartView = recognizer.view as? MetalChartUIView else { return }
         let renderer = chartView.renderer
+        
+        // Reset the idle timer whenever there's gesture interaction
+        idleManager.resetIdleTimer()
         
         if recognizer.state == .ended {
             baseScale = renderer.scale
@@ -307,7 +297,6 @@ extension MetalChartGestureCoordinator {
             renderer.scale = newScale
             renderer.updateTransform()
             
-            // Finally clamp
             renderer.anchorEdges()
             
             baseScale = newScale

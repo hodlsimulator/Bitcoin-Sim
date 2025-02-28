@@ -287,6 +287,9 @@ struct ContentView: View {
     @EnvironmentObject var coordinator: SimulationCoordinator
     @EnvironmentObject var simChartSelection: SimChartSelection
     @EnvironmentObject var textRendererManager: TextRendererManager // Add this line for text rendering
+    
+    // IdleManager to manage idle state
+    @StateObject private var idleManager = IdleManager()
 
     var body: some View {
         NavigationStack {
@@ -357,17 +360,18 @@ struct ContentView: View {
                 for: .default
             )
             removeNavBarHairline()
+            
+            // Start tracking idle time when content view appears
+            idleManager.resetIdleTimer()
         }
-        // Using the new two-parameter onChange closure (available in iOS 17)
-        .onChange(of: coordinator.isLoading, initial: true) { oldValue, newValue in
-            if newValue {
-                lastViewedColumnIndex = 2
-                lastViewedRow = 0
-                print("DEBUG: Forcing lastViewedColumnIndex to default (2) and lastViewedRow to default (0) on new simulation start.")
-            }
+        .onChange(of: coordinator.isLoading) { newVal in
+            print("DEBUG: coordinator.isLoading changed to \(newVal)")
         }
-        .onChange(of: coordinator.isChartBuilding) { _ in
-            checkNavigationState()
+        .onChange(of: coordinator.isChartBuilding) { newVal in
+            print("DEBUG: coordinator.isChartBuilding changed to \(newVal)")
+        }
+        .onTapGesture {
+            idleManager.resetIdleTimer() // Reset idle timer on user interaction
         }
     }
 
@@ -380,12 +384,6 @@ struct ContentView: View {
             isKeyboardVisible: $isKeyboardVisible,
             showPinnedColumns: $showPinnedColumns
         )
-        .onChange(of: coordinator.isLoading) { newVal in
-            print("DEBUG: coordinator.isLoading changed to \(newVal)")
-        }
-        .onChange(of: coordinator.isChartBuilding) { newVal in
-            print("DEBUG: coordinator.isChartBuilding changed to \(newVal)")
-        }
     }
 
     // MARK: - Bottom Icons
