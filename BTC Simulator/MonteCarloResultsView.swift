@@ -11,23 +11,7 @@ import Combine
 import Foundation
 import UIKit
 
-/*
-// MARK: - Data Models
-
-struct WeekPoint: Identifiable {
-    let id = UUID()
-    let week: Int
-    let value: Decimal
-}
-
-struct SimulationRun: Identifiable {
-    let id = UUID()
-    let points: [WeekPoint]
-}
-*/
-
 // MARK: - SquishedLandscapePlaceholderView
-
 struct SquishedLandscapePlaceholderView: View {
     let image: UIImage
     
@@ -50,7 +34,6 @@ struct SquishedLandscapePlaceholderView: View {
 }
 
 // MARK: - SnapshotView
-
 struct SnapshotView: View {
     let snapshot: UIImage
     
@@ -65,8 +48,7 @@ struct SnapshotView: View {
     }
 }
 
-// MARK: - squishPortraitImage
-
+// MARK: - squishPortraitImage(...)
 func squishPortraitImage(_ portraitImage: UIImage) -> UIImage {
     let targetSize = CGSize(width: 800, height: 400)
     let scaleFactorX: CGFloat = 1.25
@@ -91,14 +73,12 @@ func squishPortraitImage(_ portraitImage: UIImage) -> UIImage {
 }
 
 // MARK: - ChartType
-
 enum ChartType {
     case btcPrice
     case cumulativePortfolio
 }
 
-// MARK: - MonteCarloChartView (Static)
-
+// MARK: - MonteCarloChartView
 struct MonteCarloChartView: View {
     @EnvironmentObject var orientationObserver: OrientationObserver
     @EnvironmentObject var chartDataCache: ChartDataCache
@@ -162,83 +142,25 @@ struct MonteCarloChartView: View {
                 Color.black.ignoresSafeArea()
                 
                 VStack(spacing: 0) {
-                    /*
-                    Chart {
-                        // Faint lines for normal runs
-                        // simulationLines(simulations: normalSimulations, simSettings: simSettings)
-                        
-                        // Bold orange best-fit
-                        if let bestFitRun = bestFit {
-                            bestFitLine(bestFitRun, simSettings: simSettings, iterationCount: iterationCount)
-                        }
-                    }
-                    .chartLegend(.hidden)
-                    .chartXScale(domain: 0.0...totalYears, type: .linear)
-                    .chartYScale(domain: domainMin...domainMax, type: .log)
-                    .chartPlotStyle { plotArea in
-                        plotArea
-                            .padding(.horizontal, 0)
-                            .padding(.vertical, 10)
-                    }
-                    
-                    // Y-axis => powers of ten
-                    .chartYAxis {
-                        AxisMarks(position: .leading, values: yTickValues) { axisValue in
-                            AxisGridLine().foregroundStyle(.white.opacity(0.3))
-                            AxisTick().foregroundStyle(.white.opacity(0.3))
-                            AxisValueLabel {
-                                if let dblVal = axisValue.as(Double.self) {
-                                    let exponent = Int(log10(dblVal))
-                                    Text(formatPowerOfTenLabel(exponent))
-                                        .foregroundColor(.white)
-                                } else {
-                                    Text("")
-                                }
-                            }
-                        }
-                    }
-                    
-                    // X-axis => months if <=2 years, else years
-                    .chartXAxis {
-                        AxisMarks(values: xAxisStrideValues) { axisValue in
-                            AxisGridLine().foregroundStyle(.white.opacity(0.3))
-                            AxisTick().foregroundStyle(.white.opacity(0.3))
-                            AxisValueLabel {
-                                Text(xAxisLabel(for: axisValue, totalYears: totalYears))
-                                    .foregroundColor(.white)
-                            }
-                        }
-                    }
-                    .frame(width: geo.size.width, height: geo.size.height)
-                    */
-                    
-                    // === With the above Chart code commented out, this section remains intact for future use or modifications ===
+                    // Chart code commented out
                 }
                 .padding(.top, orientationObserver.isLandscape ? 20 : 0)
                 .scaleEffect(x: 1.0, y: verticalScale, anchor: .bottom)
             }
         }
     }
-    
-    func xAxisLabel(for axisValue: AxisValue, totalYears: Double) -> String {
-        if let dblVal = axisValue.as(Double.self), dblVal > 0 {
-            if totalYears <= 2.0 {
-                return "\(Int(dblVal * 12))M"
-            } else {
-                return "\(Int(dblVal))Y"
-            }
-        } else {
-            return ""
-        }
-    }
 }
 
 // MARK: - MonteCarloResultsView
-
 struct MonteCarloResultsView: View {
     @EnvironmentObject var simChartSelection: SimChartSelection
     @EnvironmentObject var chartDataCache: ChartDataCache
     @EnvironmentObject var simSettings: SimulationSettings
+    // @EnvironmentObject var idleManager: IdleManager
+    
+    // Remove idleManager usage for now
+    // @EnvironmentObject var idleManager: IdleManager
+    
     @State private var showMetalChart = true  // Toggle for Metal chart
     
     var body: some View {
@@ -248,15 +170,15 @@ struct MonteCarloResultsView: View {
                     .environmentObject(simSettings)
                     .environmentObject(chartDataCache)
                     .environmentObject(simSettings)
+                    // .environmentObject(idleManager)
             } else {
-                // Fallback to regular chart view if needed
+                // Fallback to a SwiftUI-based chart if needed
             }
         }
     }
 }
 
-// MARK: - formatPowerOfTenLabel
-
+// MARK: - formatPowerOfTenLabel(...)
 func formatPowerOfTenLabel(_ exponent: Int) -> String {
     switch exponent {
     case 0:  return "1"
@@ -287,7 +209,6 @@ func formatPowerOfTenLabel(_ exponent: Int) -> String {
 }
 
 // MARK: - ForceReflowView
-
 struct ForceReflowView<Content: View>: View {
     let content: Content
     
@@ -311,7 +232,6 @@ struct ForceReflowView<Content: View>: View {
 }
 
 // MARK: - Helpers for drawing lines
-
 func convertWeeksToYears(_ week: Int, simSettings: SimulationSettings) -> Double {
     if simSettings.periodUnit == .weeks {
         return Double(week) / 52.0

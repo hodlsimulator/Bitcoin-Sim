@@ -38,7 +38,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
     /// Tracks the previously snapped column index to animate changes
     var previousColumnIndex: Int? = nil
     
-    var idleManager: IdleManager?
+    // var idleManager: IdleManager?
 
     /// Custom top bar UI
     private let customTopBar = UIView()
@@ -314,10 +314,10 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         }
 
         // If pinnedColumnBridgeViewController.idleManager is nil, we can't proceed
-        guard let manager = self.idleManager else {
-            print("No idleManager to pass!")
-            return
-        }
+        // guard let manager = self.idleManager else {
+        //    print("No idleManager to pass!")
+        //    return
+        // }
 
         // Build the SwiftUI chart
         let chartView = MonteCarloResultsView()
@@ -328,8 +328,8 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
 
         // Create your ChartHostingController with the manager
         let chartHostingController = ChartHostingController(
-            rootView: chartView,
-            idleManager: manager
+            rootView: chartView
+            // idleManager: manager
         )
 
         nav.pushViewController(chartHostingController, animated: true)

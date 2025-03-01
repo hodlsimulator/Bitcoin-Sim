@@ -13,8 +13,8 @@ class MetalChartUIView: UIView {
     let renderer: MetalChartRenderer
     let mtkView: MTKView
     
-    // IdleManager to track idle time and reset the timer
-    private var idleManager = IdleManager()
+    // Provide a callback instead of a separate manager
+    var onUserInteraction: (() -> Void)?
     
     init(frame: CGRect, renderer: MetalChartRenderer, textRendererManager: TextRendererManager) {
         self.renderer = renderer
@@ -59,6 +59,8 @@ class MetalChartUIView: UIView {
     
     // Method to reset the idle timer on user interaction
     @objc private func handleUserInteraction() {
-        idleManager.resetIdleTimer() // Reset idle timer whenever there is user interaction
+        // Instead of idleManager.resetIdleTimer(),
+        // call our callback so the environment manager is reset
+        onUserInteraction?()
     }
 }

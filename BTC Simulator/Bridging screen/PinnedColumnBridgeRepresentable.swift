@@ -18,12 +18,15 @@ struct PinnedColumnBridgeRepresentable: UIViewControllerRepresentable {
     @ObservedObject var simSettings: SimulationSettings
     @ObservedObject var simChartSelection: SimChartSelection
     @ObservedObject var chartDataCache: ChartDataCache
+    
+    // @EnvironmentObject var idleManager: IdleManager
 
     func makeUIViewController(context: Context) -> PinnedColumnBridgeViewController {
+        // print("IdleManager available: \(idleManager != nil ? "Yes" : "No")")
         let pinnedVC = PinnedColumnBridgeViewController()
         
         // If you have an IdleManager in scope, pass it:
-        // pinnedVC.idleManager = someIdleManager
+        // pinnedVC.idleManager = idleManager
 
         pinnedVC.representableContainer = .init(
             coordinator: coordinator,

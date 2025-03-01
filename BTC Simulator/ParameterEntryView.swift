@@ -20,6 +20,7 @@ struct ParameterEntryView: View {
     @ObservedObject var simSettings: SimulationSettings
     @ObservedObject var coordinator: SimulationCoordinator
     @EnvironmentObject var monthlySimSettings: MonthlySimulationSettings
+    // @EnvironmentObject var idleManager: IdleManager // Added to ensure it's available in the environment
 
     // Binding to let the parent know whether the keyboard is visible.
     @Binding var isKeyboardVisible: Bool
@@ -42,51 +43,60 @@ struct ParameterEntryView: View {
     // If advanced settings are locked
     @AppStorage("advancedSettingsUnlocked") private var advancedSettingsUnlocked: Bool = false
 
-    // We’ll keep this if the parent wants to do navigation after "Run Simulation."
-    @State private var navigateToPinnedColumns = false
+    // Loading state to delay access to idleManager
+    @State private var isLoaded = false
 
     var body: some View {
-        // A ZStack that aligns content to the top-right
-        ZStack(alignment: .topTrailing) {
-            // 1) The main content
-            GeometryReader { geo in
-                let isLandscape = geo.size.width > geo.size.height
+        Group {
+            if isLoaded {
+                // Full content of ParameterEntryView
+                ZStack(alignment: .topTrailing) {
+                    // 1) The main content
+                    GeometryReader { geo in
+                        let isLandscape = geo.size.width > geo.size.height
 
-                if !isLandscape {
-                    originalPortraitLayout
-                } else {
-                    landscapeLayout
+                        if !isLandscape {
+                            originalPortraitLayout
+                        } else {
+                            landscapeLayout
+                        }
+                    }
+                    .onChange(of: activeField) { newActive in
+                        isKeyboardVisible = (newActive != nil)
+                    }
+                    .onAppear {
+                        localIterations       = inputManager.iterations
+                        localAnnualCAGR       = inputManager.annualCAGR
+                        localAnnualVolatility = inputManager.annualVolatility
+                        localStandardDev      = inputManager.standardDeviation
+
+                        ephemeralIterations       = localIterations
+                        ephemeralAnnualCAGR       = localAnnualCAGR
+                        ephemeralAnnualVolatility = localAnnualVolatility
+                        ephemeralStandardDev      = localStandardDev
+                    }
+
+                    // 2) The forward chevron if there's at least 1 simulation result
+                    if !coordinator.monteCarloResults.isEmpty {
+                        Button {
+                            showPinnedColumns = true
+                        } label: {
+                            Image(systemName: "chevron.right")
+                                .font(.title2)            // slightly larger than .headline
+                                .foregroundColor(.white)
+                                .padding()                // keep padding for a larger tap area
+                                .contentShape(Rectangle())// ensures the entire padded area is tappable
+                        }
+                        .padding(.top, 8)
+                        .padding(.trailing, 16)
+                    }
                 }
+            } else {
+                ProgressView() // Placeholder until the view is fully loaded
             }
-            .onChange(of: activeField) { newActive in
-                isKeyboardVisible = (newActive != nil)
-            }
-            .onAppear {
-                localIterations       = inputManager.iterations
-                localAnnualCAGR       = inputManager.annualCAGR
-                localAnnualVolatility = inputManager.annualVolatility
-                localStandardDev      = inputManager.standardDeviation
-
-                ephemeralIterations       = localIterations
-                ephemeralAnnualCAGR       = localAnnualCAGR
-                ephemeralAnnualVolatility = localAnnualVolatility
-                ephemeralStandardDev      = localStandardDev
-            }
-
-            // 2) The forward chevron if there's at least 1 simulation result
-            if !coordinator.monteCarloResults.isEmpty {
-                Button {
-                    showPinnedColumns = true
-                } label: {
-                    Image(systemName: "chevron.right")
-                        .font(.title2)            // slightly larger than .headline
-                        .foregroundColor(.white)
-                        .padding()                // keep padding for a larger tap area
-                        .contentShape(Rectangle())// ensures the entire padded area is tappable
-                }
-                .padding(.top, 8)
-                .padding(.trailing, 16)
-            }
+        }
+        .onAppear {
+            isLoaded = true // Set to true once the view appears
         }
     }
 

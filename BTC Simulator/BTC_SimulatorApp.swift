@@ -32,7 +32,7 @@ struct BTCMonteCarloApp: App {
     @StateObject private var textRendererManager = TextRendererManager()
     
     // Initialize the IdleManager for tracking idle state
-    @StateObject private var idleManager = IdleManager()
+    // @StateObject private var idleManager = IdleManager()
 
     init() {    
         let navBarAppearance = UINavigationBarAppearance()
@@ -116,8 +116,9 @@ struct BTCMonteCarloApp: App {
                 GeometryReader { geo in
                     Color.clear
                         .onAppear {
-                            // Generate the font atlas when content view appears
-                            textRendererManager.generateFontAtlasAndRenderer(device: MTLCreateSystemDefaultDevice()!)
+                            textRendererManager.generateFontAtlasAndRenderer(
+                                device: MTLCreateSystemDefaultDevice()!
+                            )
                         }
                         .onChange(of: geo.size) { _, newSize in
                             // Handle any additional logic related to window resizing
@@ -127,37 +128,19 @@ struct BTCMonteCarloApp: App {
                 if didFinishOnboarding {
                     NavigationStack {
                         ContentView()
-                            .environmentObject(inputManager)
+                            .environmentObject(inputManager)        // <–– Added
                             .environmentObject(weeklySimSettings)
                             .environmentObject(monthlySimSettings)
                             .environmentObject(chartDataCache)
                             .environmentObject(simChartSelection)
                             .environmentObject(coordinator)
                             .environmentObject(textRendererManager)
-                            .onAppear {
-                                idleManager.resetIdleTimer() // Start idle timer when the view appears
-                            }
-                            .onChange(of: scenePhase) { _, newPhase in
-                                print("Scene phase changed to: \(newPhase)")
-                                switch newPhase {
-                                case .active:
-                                    print("Resetting idle timer")
-                                    idleManager.resetIdleTimer()
-                                case .inactive, .background:
-                                    print("Resuming processing")
-                                    idleManager.resumeProcessing()
-                                default:
-                                    print("Unhandled phase: \(newPhase)")
-                                    break
-                                }
-                            }
                     }
                     .tint(.white)
                     .preferredColorScheme(.dark)
                 } else {
                     NavigationStack {
                         OnboardingView(didFinishOnboarding: $didFinishOnboarding)
-                            .environmentObject(idleManager)
                             .environmentObject(inputManager)
                             .environmentObject(weeklySimSettings)
                             .environmentObject(monthlySimSettings)
@@ -172,7 +155,6 @@ struct BTCMonteCarloApp: App {
             .onAppear {
                 let hasLaunchedBefore = UserDefaults.standard.bool(forKey: "hasLaunchedBefore")
                 if !hasLaunchedBefore {
-                    print("🚀 First Launch, restoring defaults.")
                     weeklySimSettings.restoreDefaults()
                     weeklySimSettings.saveToUserDefaults()
                     monthlySimSettings.restoreDefaultsMonthly(whenIn: .months)

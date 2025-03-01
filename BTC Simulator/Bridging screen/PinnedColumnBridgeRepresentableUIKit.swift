@@ -5,6 +5,7 @@
 //  Created by . . on 22/02/2025.
 //
 
+/*
 import SwiftUI
 import UIKit
 
@@ -12,6 +13,8 @@ struct PinnedColumnBridgeRepresentableUIKit: UIViewControllerRepresentable {
 
     // A binding to track whether this screen is presented in SwiftUI
     @Binding var isPresented: Bool
+    
+    @EnvironmentObject var idleManager: IdleManager
 
     let coordinator: SimulationCoordinator
     let inputManager: PersistentInputManager
@@ -52,3 +55,4 @@ struct PinnedColumnBridgeRepresentableUIKit: UIViewControllerRepresentable {
         )
     }
 }
+*/

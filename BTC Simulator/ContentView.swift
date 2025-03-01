@@ -287,9 +287,10 @@ struct ContentView: View {
     @EnvironmentObject var coordinator: SimulationCoordinator
     @EnvironmentObject var simChartSelection: SimChartSelection
     @EnvironmentObject var textRendererManager: TextRendererManager // Add this line for text rendering
+    // @EnvironmentObject var idleManager: IdleManager
     
     // IdleManager to manage idle state
-    @StateObject private var idleManager = IdleManager()
+    // @StateObject private var idleManager = IdleManager()
 
     var body: some View {
         NavigationStack {
@@ -325,7 +326,7 @@ struct ContentView: View {
                     simChartSelection: simChartSelection,
                     chartDataCache: chartDataCache
                 )
-                .environmentObject(idleManager)
+                // .environmentObject(idleManager)
                 .fullBleedStyle()
                 .onAppear {
                     removeNavBarHairline()
@@ -363,7 +364,7 @@ struct ContentView: View {
             removeNavBarHairline()
             
             // Start tracking idle time when content view appears
-            idleManager.resetIdleTimer()
+            // idleManager.resetIdleTimer()
         }
         .onChange(of: coordinator.isLoading) { oldValue, newValue in
             if newValue {
@@ -376,7 +377,7 @@ struct ContentView: View {
             checkNavigationState()
         }
         .onTapGesture {
-            idleManager.resetIdleTimer() // Reset idle timer on user interaction
+            // idleManager.resetIdleTimer() // Reset idle timer on user interaction
         }
     }
 
@@ -389,6 +390,7 @@ struct ContentView: View {
             isKeyboardVisible: $isKeyboardVisible,
             showPinnedColumns: $showPinnedColumns
         )
+        // .environmentObject(idleManager)
     }
 
     // MARK: - Bottom Icons

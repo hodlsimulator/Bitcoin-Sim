@@ -10,12 +10,8 @@ import UIKit
 
 class ChartHostingController<Root: View>: UIHostingController<AnyView> {
 
-    /// Custom init: wrap your `Root` in `AnyView` after adding environmentObject.
-    init(rootView: Root, idleManager: IdleManager) {
-        let wrappedView = AnyView(
-            rootView.environmentObject(idleManager)
-        )
-        super.init(rootView: wrappedView)
+    init(rootView: Root) {
+        super.init(rootView: AnyView(rootView))
     }
     
     /// Required by UIHostingController for storyboard/XIB use
