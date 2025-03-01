@@ -363,24 +363,49 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         guard let container = representableContainer else { return }
         let coord = container.coordinator
         
+        // 1) Must have results
         guard !coord.monteCarloResults.isEmpty,
               let lastRow = coord.monteCarloResults.last else {
             return
         }
-
+        
+        // 2) Check if monthly or weekly
+        let isMonthlyMode = coord.useMonthly
+        
+        // 3) Use monthlySimSettings.currencyPreferenceMonthly vs. simSettings.currencyPreference
+        let currencyPref: PreferredCurrency = isMonthlyMode
+            ? container.monthlySimSettings.currencyPreferenceMonthly
+            : container.simSettings.currencyPreference
+        
+        // 4) BTC price for display.
+        //    (Still using USD price for the card, but you can swap in btcPriceEUR if you prefer in EUR mode.)
         let finalBTC = lastRow.btcPriceUSD
-
-        switch coord.simSettings.currencyPreference {
+        
+        switch currencyPref {
+            
         case .usd:
+            // Portfolio in USD
             let finalPortfolio = lastRow.portfolioValueUSD
+            
+            // Sum up all contributions in USD
             var totalContributed = Decimal(0)
             for row in coord.monteCarloResults {
                 totalContributed += Decimal(row.contributionUSD)
             }
-            totalContributed += Decimal(coord.simSettings.startingBalance)
+            
+            // Add either monthly or weekly startingBalance
+            let actualStartBalance = Decimal(
+                isMonthlyMode
+                ? container.monthlySimSettings.startingBalanceMonthly
+                : container.simSettings.startingBalance
+            )
+            totalContributed += actualStartBalance
+            
+            // Calculate growth
             let (growthPercentDouble, currencySymbol) =
                 growthCalcWithContributions(finalPortfolio, totalContributed, symbol: "$")
-
+            
+            // Build SwiftUI summary card
             hostingController.rootView = AnyView(
                 SimulationSummaryCardView(
                     finalBTCPrice: Double(truncating: finalBTC as NSNumber),
@@ -392,17 +417,30 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color(UIColor(white: 0.12, alpha: 1.0)))
             )
-
+            
         case .eur:
+            // Portfolio in EUR
             let finalPortfolio = lastRow.portfolioValueEUR
+            
+            // Sum up all contributions in EUR
             var totalContributed = Decimal(0)
             for row in coord.monteCarloResults {
                 totalContributed += Decimal(row.contributionEUR)
             }
-            totalContributed += Decimal(coord.simSettings.startingBalance)
+            
+            // Add either monthly or weekly startingBalance
+            let actualStartBalance = Decimal(
+                isMonthlyMode
+                ? container.monthlySimSettings.startingBalanceMonthly
+                : container.simSettings.startingBalance
+            )
+            totalContributed += actualStartBalance
+            
+            // Calculate growth
             let (growthPercentDouble, currencySymbol) =
                 growthCalcWithContributions(finalPortfolio, totalContributed, symbol: "€")
-
+            
+            // Build SwiftUI summary card
             hostingController.rootView = AnyView(
                 SimulationSummaryCardView(
                     finalBTCPrice: Double(truncating: finalBTC as NSNumber),
@@ -413,17 +451,31 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color(UIColor(white: 0.12, alpha: 1.0)))
             )
-
+            
         case .both:
+            // If user chooses "both," you appear to display USD portfolio in the card
+            // but might show both in the pinned table. We'll keep it matching your existing code:
             let finalPortfolio = lastRow.portfolioValueUSD
+            
+            // Sum up all contributions in USD
             var totalContributed = Decimal(0)
             for row in coord.monteCarloResults {
                 totalContributed += Decimal(row.contributionUSD)
             }
-            totalContributed += Decimal(coord.simSettings.startingBalance)
+            
+            // Add either monthly or weekly startingBalance
+            let actualStartBalance = Decimal(
+                isMonthlyMode
+                ? container.monthlySimSettings.startingBalanceMonthly
+                : container.simSettings.startingBalance
+            )
+            totalContributed += actualStartBalance
+            
+            // Calculate growth
             let (growthPercentDouble, currencySymbol) =
                 growthCalcWithContributions(finalPortfolio, totalContributed, symbol: "$")
-
+            
+            // Build SwiftUI summary card
             hostingController.rootView = AnyView(
                 SimulationSummaryCardView(
                     finalBTCPrice: Double(truncating: finalBTC as NSNumber),
