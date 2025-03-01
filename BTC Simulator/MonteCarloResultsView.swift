@@ -158,9 +158,6 @@ struct MonteCarloResultsView: View {
     @EnvironmentObject var simSettings: SimulationSettings
     @EnvironmentObject var idleManager: IdleManager
     
-    // Remove idleManager usage for now
-    // @EnvironmentObject var idleManager: IdleManager
-    
     @State private var showMetalChart = true  // Toggle for Metal chart
     
     var body: some View {

@@ -29,7 +29,7 @@ struct MetalChartContainerView: UIViewRepresentable {
         )
         
         // Store a reference to the MTKView in IdleManager, so we can pause it
-        // idleManager.metalView = metalView.mtkView
+        idleManager.metalView = metalView.mtkView
         
         // Access our coordinator
         let coordinator = context.coordinator
