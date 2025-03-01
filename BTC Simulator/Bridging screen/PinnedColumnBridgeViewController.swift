@@ -491,70 +491,89 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
 
     private func populatePinnedTable() {
         guard let container = representableContainer else { return }
-        let data = container.coordinator.monteCarloResults
-        let pref = container.simSettings.currencyPreference
-
-        // Debug
-        print("DEBUG: populatePinnedTable => data count = \(data.count). Passing row=\(lastViewedRowBinding?.wrappedValue ?? -999), col=\(lastViewedColumnIndexBinding?.wrappedValue ?? -999) to pinnedColumnTablesVC.")
-
+        let coord = container.coordinator
+        
+        // 1) The final Monte Carlo results
+        let data = coord.monteCarloResults
+        
+        // 2) Check if monthly or weekly
+        let isMonthlyMode = coord.useMonthly
+        
+        // 3) Pick the correct currency preference
+        let pref: PreferredCurrency = isMonthlyMode
+            ? container.monthlySimSettings.currencyPreferenceMonthly
+            : container.simSettings.currencyPreference
+        
+        // 4) Decide pinned column title
+        let pinnedColumnTitle = isMonthlyMode ? "Month" : "Week"
+        
+        // 5) Build an array of columns depending on the chosen currency
         let columns: [(String, PartialKeyPath<SimulationData>)]
         switch pref {
         case .usd:
             columns = [
                 ("Starting BTC (BTC)", \SimulationData.startingBTC),
-                ("Net BTC (BTC)", \SimulationData.netBTCHoldings),
-                ("BTC Price (USD)", \SimulationData.btcPriceUSD),
-                ("Portfolio (USD)", \SimulationData.portfolioValueUSD),
-                ("Contrib (USD)", \SimulationData.contributionUSD),
-                ("Fee (USD)", \SimulationData.transactionFeeUSD),
-                ("Net Contrib (BTC)", \SimulationData.netContributionBTC),
-                ("Withdraw (USD)", \SimulationData.withdrawalUSD)
+                ("Net BTC (BTC)",      \SimulationData.netBTCHoldings),
+                ("BTC Price (USD)",    \SimulationData.btcPriceUSD),
+                ("Portfolio (USD)",    \SimulationData.portfolioValueUSD),
+                ("Contrib (USD)",      \SimulationData.contributionUSD),
+                ("Fee (USD)",          \SimulationData.transactionFeeUSD),
+                ("Net Contrib (BTC)",  \SimulationData.netContributionBTC),
+                ("Withdraw (USD)",     \SimulationData.withdrawalUSD)
             ]
+            
         case .eur:
             columns = [
                 ("Starting BTC (BTC)", \SimulationData.startingBTC),
-                ("Net BTC (BTC)", \SimulationData.netBTCHoldings),
-                ("BTC Price (EUR)", \SimulationData.btcPriceEUR),
-                ("Portfolio (EUR)", \SimulationData.portfolioValueEUR),
-                ("Contrib (EUR)", \SimulationData.contributionEUR),
-                ("Fee (EUR)", \SimulationData.transactionFeeEUR),
-                ("Net Contrib (BTC)", \SimulationData.netContributionBTC),
-                ("Withdraw (EUR)", \SimulationData.withdrawalEUR)
+                ("Net BTC (BTC)",      \SimulationData.netBTCHoldings),
+                ("BTC Price (EUR)",    \SimulationData.btcPriceEUR),
+                ("Portfolio (EUR)",    \SimulationData.portfolioValueEUR),
+                ("Contrib (EUR)",      \SimulationData.contributionEUR),
+                ("Fee (EUR)",          \SimulationData.transactionFeeEUR),
+                ("Net Contrib (BTC)",  \SimulationData.netContributionBTC),
+                ("Withdraw (EUR)",     \SimulationData.withdrawalEUR)
             ]
+            
         case .both:
             columns = [
                 ("Starting BTC (BTC)", \SimulationData.startingBTC),
-                ("Net BTC (BTC)", \SimulationData.netBTCHoldings),
-                ("BTC Price (USD)", \SimulationData.btcPriceUSD),
-                ("BTC Price (EUR)", \SimulationData.btcPriceEUR),
-                ("Portfolio (USD)", \SimulationData.portfolioValueUSD),
-                ("Portfolio (EUR)", \SimulationData.portfolioValueEUR),
-                ("Contrib (USD)", \SimulationData.contributionUSD),
-                ("Contrib (EUR)", \SimulationData.contributionEUR),
-                ("Fee (USD)", \SimulationData.transactionFeeUSD),
-                ("Fee (EUR)", \SimulationData.transactionFeeEUR),
-                ("Net Contrib (BTC)", \SimulationData.netContributionBTC),
-                ("Withdraw (USD)", \SimulationData.withdrawalUSD),
-                ("Withdraw (EUR)", \SimulationData.withdrawalEUR)
+                ("Net BTC (BTC)",      \SimulationData.netBTCHoldings),
+                ("BTC Price (USD)",    \SimulationData.btcPriceUSD),
+                ("BTC Price (EUR)",    \SimulationData.btcPriceEUR),
+                ("Portfolio (USD)",    \SimulationData.portfolioValueUSD),
+                ("Portfolio (EUR)",    \SimulationData.portfolioValueEUR),
+                ("Contrib (USD)",      \SimulationData.contributionUSD),
+                ("Contrib (EUR)",      \SimulationData.contributionEUR),
+                ("Fee (USD)",          \SimulationData.transactionFeeUSD),
+                ("Fee (EUR)",          \SimulationData.transactionFeeEUR),
+                ("Net Contrib (BTC)",  \SimulationData.netContributionBTC),
+                ("Withdraw (USD)",     \SimulationData.withdrawalUSD),
+                ("Withdraw (EUR)",     \SimulationData.withdrawalEUR)
             ]
         }
-
+        
+        // 6) Assign representable to pinnedColumnTablesVC
         pinnedColumnTablesVC.representable = PinnedColumnTablesRepresentable(
             displayedData: data,
-            pinnedColumnTitle: "Week",
-            pinnedColumnKeyPath: \.week,
+            pinnedColumnTitle: pinnedColumnTitle,
+            pinnedColumnKeyPath: \.week,  // <-- Make sure you actually have 'week' in SimulationData
             columns: columns,
-            // Pass in the user’s row/col memory bindings
             lastViewedRow: lastViewedRowBinding ?? .constant(0),
             lastViewedColumnIndex: lastViewedColumnIndexBinding ?? .constant(0),
             scrollToBottomFlag: .constant(false),
             isAtBottom: .constant(false)
         )
 
+        // 7) Force a layout pass
         DispatchQueue.main.async {
             self.pinnedColumnTablesVC.view.setNeedsLayout()
             self.pinnedColumnTablesVC.view.layoutIfNeeded()
         }
+        
+        // Debug
+        print("DEBUG: populatePinnedTable => data count = \(data.count). "
+              + "Passing row=\(lastViewedRowBinding?.wrappedValue ?? -999), "
+              + "col=\(lastViewedColumnIndexBinding?.wrappedValue ?? -999) to pinnedColumnTablesVC.")
     }
 
     private func growthCalcWithContributions(
