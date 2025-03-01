@@ -62,7 +62,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     // MARK: - Setup
     
     // IdleManager to manage idle state
-    // private var idleManager = IdleManager()
+    private var idleManager = IdleManager()
     
     func setupMetal(
         in size: CGSize,
@@ -315,9 +315,9 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     
     func draw(in view: MTKView) {
         // If the app is idle, skip
-        // if idleManager.isIdle {
-        //    return
-        // }
+        if idleManager.isIdle {
+            return
+        }
         
         guard let pipelineState = pipelineState,
               let drawable = view.currentDrawable,
