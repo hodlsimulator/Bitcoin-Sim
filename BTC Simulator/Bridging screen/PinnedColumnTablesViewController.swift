@@ -404,7 +404,6 @@ extension PinnedColumnTablesViewController: UITableViewDelegate, UICollectionVie
                let visibleRows = pinnedTableView.indexPathsForVisibleRows,
                let firstIP = visibleRows.first {
                 rep.lastViewedRow = firstIP.row
-                print("Storing lastViewedRow = \(firstIP.row)")
             }
             
             // near-bottom detection

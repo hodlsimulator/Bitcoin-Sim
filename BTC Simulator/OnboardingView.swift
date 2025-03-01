@@ -365,11 +365,11 @@ extension OnboardingView {
 
             monthlySimSettings.saveToUserDefaultsMonthly()
             simSettings.periodUnit = .months
+            simSettings.userPeriods = totalPeriods  // Add this
             coordinator.useMonthly = true
-
         } else {
-            // Force monthlySimSettings to .weeks so it won't linger in monthly mode
             monthlySimSettings.periodUnitMonthly = .weeks
+            monthlySimSettings.userPeriodsMonthly = 1040  // Reset to avoid stale data
 
             weeklySimSettings.periodUnit         = .weeks
             weeklySimSettings.userPeriods        = totalPeriods
@@ -379,23 +379,20 @@ extension OnboardingView {
             weeklySimSettings.currencyPreference = currencyPreference
             weeklySimSettings.feePercentage      = feePercentage
 
-            inputManager.firstYearContribution   = String(contributionPerStep)
-            inputManager.threshold1              = threshold1
-            inputManager.withdrawAmount1         = withdraw1
-            inputManager.threshold2              = threshold2
-            inputManager.withdrawAmount2         = withdraw2
-
             weeklySimSettings.saveToUserDefaults()
             simSettings.periodUnit = .weeks
+            simSettings.userPeriods = totalPeriods
             coordinator.useMonthly = false
         }
 
-        UserDefaults.standard.set(startingBalanceDouble,      forKey: "savedStartingBalance")
-        UserDefaults.standard.set(averageCostBasis,           forKey: "savedAverageCostBasis")
-        UserDefaults.standard.set(totalPeriods,               forKey: "savedUserPeriods")
-        UserDefaults.standard.set(chosenPeriodUnit.rawValue,  forKey: "savedPeriodUnit")
-        UserDefaults.standard.set(finalBTCPrice,              forKey: "savedInitialBTCPriceUSD")
-        UserDefaults.standard.set(feePercentage,              forKey: "savedFeePercentage")
+        // Force UserDefaults sync
+        UserDefaults.standard.set(chosenPeriodUnit.rawValue, forKey: "savedPeriodUnit")
+        UserDefaults.standard.set(totalPeriods, forKey: "savedUserPeriods")
+        UserDefaults.standard.set(finalBTCPrice, forKey: "savedInitialBTCPriceUSD")
+        UserDefaults.standard.set(startingBalanceDouble, forKey: "savedStartingBalance")
+        UserDefaults.standard.set(averageCostBasis, forKey: "savedAverageCostBasis")
+        UserDefaults.standard.set(feePercentage, forKey: "savedFeePercentage")
+        UserDefaults.standard.synchronize()  // Ensure immediate write
     }
     
     func fetchBTCPriceFromAPI() async {
