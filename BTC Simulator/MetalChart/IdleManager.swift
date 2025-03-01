@@ -17,7 +17,7 @@ class IdleManager: ObservableObject {
     
     private var idleTimer: Timer?
     private var lastActivityTime: Date = Date()
-    private let idleTimeLimit: TimeInterval = 30.0 // 30 seconds
+    private let idleTimeLimit: TimeInterval = 5.0 // 30 seconds
     
     /// Reset idle timer on user interaction
     @objc func resetIdleTimer() {

@@ -132,8 +132,8 @@
             filePath = "BTC Simulator/MetalChart/Pinned Axes Renderer.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "104"
-            endingLineNumber = "104"
+            startingLineNumber = "108"
+            endingLineNumber = "108"
             landmarkName = "updateAxes(minX:maxX:minY:maxY:chartTransform:)"
             landmarkType = "7">
          </BreakpointContent>

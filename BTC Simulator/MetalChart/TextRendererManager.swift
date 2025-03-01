@@ -10,7 +10,7 @@ import UIKit
 
 class TextRendererManager: ObservableObject {
     private var fontAtlas: RuntimeFontAtlas?
-    private var textRenderer: RuntimeGPUTextRenderer?
+    private var textRenderer: GPUTextRenderer?
 
     // Generate font atlas and initialize the renderer
     func generateFontAtlasAndRenderer(device: MTLDevice) {
@@ -19,7 +19,7 @@ class TextRendererManager: ObservableObject {
         if let atlas = generateFontAtlas(device: device, font: UIFont.systemFont(ofSize: 16)) {
             self.fontAtlas = atlas
             // Create a text renderer with the generated atlas
-            self.textRenderer = RuntimeGPUTextRenderer(device: device, atlas: atlas, library: device.makeDefaultLibrary()!)
+            self.textRenderer = GPUTextRenderer(device: device, atlas: atlas, library: device.makeDefaultLibrary()!)
             print("Font atlas generated and text renderer initialized successfully.")
         } else {
             print("Failed to generate font atlas.")
@@ -27,7 +27,7 @@ class TextRendererManager: ObservableObject {
     }
 
     // Expose the text renderer for other views to use
-    func getTextRenderer() -> RuntimeGPUTextRenderer? {
+    func getTextRenderer() -> GPUTextRenderer? {
         if let renderer = textRenderer {
             print("Returning existing TextRenderer.")
             return renderer

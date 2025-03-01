@@ -30,7 +30,6 @@
 		E13093592D709C1300DA6418 /* TextSDFShaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = E13093582D709C1300DA6418 /* TextSDFShaders.metal */; };
 		E130935B2D709E6400DA6418 /* Pinned Axes Renderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = E130935A2D709E6200DA6418 /* Pinned Axes Renderer.swift */; };
 		E130935D2D70A0A800DA6418 /* FontAtlasGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = E130935C2D70A0A600DA6418 /* FontAtlasGenerator.swift */; };
-		E130935F2D70A0E000DA6418 /* RuntimeGPUTextRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = E130935E2D70A0DE00DA6418 /* RuntimeGPUTextRenderer.swift */; };
 		E13093612D70A35300DA6418 /* AxisShaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = E13093602D70A35300DA6418 /* AxisShaders.metal */; };
 		E13093632D71799400DA6418 /* TextRendererManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E13093622D71799200DA6418 /* TextRendererManager.swift */; };
 		E13093672D71CB1700DA6418 /* IdleManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E13093662D71CB1500DA6418 /* IdleManager.swift */; };
@@ -182,7 +181,6 @@
 		E13093582D709C1300DA6418 /* TextSDFShaders.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = TextSDFShaders.metal; sourceTree = "<group>"; };
 		E130935A2D709E6200DA6418 /* Pinned Axes Renderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Pinned Axes Renderer.swift"; sourceTree = "<group>"; };
 		E130935C2D70A0A600DA6418 /* FontAtlasGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FontAtlasGenerator.swift; sourceTree = "<group>"; };
-		E130935E2D70A0DE00DA6418 /* RuntimeGPUTextRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuntimeGPUTextRenderer.swift; sourceTree = "<group>"; };
 		E13093602D70A35300DA6418 /* AxisShaders.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = AxisShaders.metal; sourceTree = "<group>"; };
 		E13093622D71799200DA6418 /* TextRendererManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextRendererManager.swift; sourceTree = "<group>"; };
 		E13093662D71CB1500DA6418 /* IdleManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdleManager.swift; sourceTree = "<group>"; };
@@ -458,7 +456,6 @@
 				E130934C2D70779300DA6418 /* MetalChartRenderer.swift */,
 				E13093472D7076E000DA6418 /* MetalChartUIView.swift */,
 				E130935A2D709E6200DA6418 /* Pinned Axes Renderer.swift */,
-				E130935E2D70A0DE00DA6418 /* RuntimeGPUTextRenderer.swift */,
 				E13093522D709BB000DA6418 /* SDFGenerator.metal */,
 				E13093622D71799200DA6418 /* TextRendererManager.swift */,
 				E13093582D709C1300DA6418 /* TextSDFShaders.metal */,
@@ -703,7 +700,6 @@
 				E1F1CB602D4EF179003DB24F /* CalibrationManager.swift in Sources */,
 				E14344D62D52D85600225A49 /* FactorState.swift in Sources */,
 				E19D11402D42F97700E3A55E /* DampenOutliers.swift in Sources */,
-				E130935F2D70A0E000DA6418 /* RuntimeGPUTextRenderer.swift in Sources */,
 				E15DDF4B2D5AE1F700CDD30A /* RestoreDefaultsMonthly.swift in Sources */,
 				E12CCD8B2CF8235F0059931D /* BTC_SimulatorApp.swift in Sources */,
 				E13093552D709BCA00DA6418 /* GPUFontAtlas.swift in Sources */,

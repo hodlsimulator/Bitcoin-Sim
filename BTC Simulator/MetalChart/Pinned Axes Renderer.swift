@@ -18,7 +18,7 @@ class PinnedAxesRenderer {
     var textRendererManager: TextRendererManager
     
     private let device: MTLDevice
-    private let textRenderer: RuntimeGPUTextRenderer
+    private let textRenderer: GPUTextRenderer
     private var axisPipelineState: MTLRenderPipelineState?
     
     /// Current view size; set each frame.
@@ -57,8 +57,12 @@ class PinnedAxesRenderer {
     private var yTickTextBuffers: [MTLBuffer] = []
     private var yTickTextVertexCounts: [Int] = []
     
+    /// For testinng
+    private var circleBuffer: MTLBuffer?
+    private var circleVertexCount = 0
+
     init(device: MTLDevice,
-         textRenderer: RuntimeGPUTextRenderer,
+         textRenderer: GPUTextRenderer,
          textRendererManager: TextRendererManager,
          library: MTLLibrary) {
         self.device = device
@@ -145,6 +149,21 @@ class PinnedAxesRenderer {
         yAxisQuadBuffer = device.makeBuffer(
             bytes: yQuadVerts,
             length: yQuadVerts.count * MemoryLayout<Float>.size,
+            options: .storageModeShared
+        )
+        
+        // Build circle vertices
+        let circleVerts = buildCircleVertices(
+            cx: Float(viewportSize.width) * 0.5,
+            cy: Float(viewportSize.height) * 0.5,
+            radius: 50,
+            segments: 20,
+            color: SIMD4<Float>(1, 0, 0, 1)  // bright red
+        )
+        circleVertexCount = circleVerts.count / 8
+        circleBuffer = device.makeBuffer(
+            bytes: circleVerts,
+            length: circleVerts.count * MemoryLayout<Float>.size,
             options: .storageModeShared
         )
         
@@ -253,6 +272,11 @@ class PinnedAxesRenderer {
         if let buf = yAxisQuadBuffer, yAxisQuadVertexCount > 0 {
             renderEncoder.setVertexBuffer(buf, offset: 0, index: 0)
             renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: yAxisQuadVertexCount)
+        }
+        
+        if let circleBuf = circleBuffer {
+            renderEncoder.setVertexBuffer(circleBuf, offset: 0, index: 0)
+            renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: circleVertexCount)
         }
         
         // Draw tick label texts
@@ -389,7 +413,8 @@ extension PinnedAxesRenderer {
                 string: formattedTickValue,
                 x: sx,
                 y: y1 + 3,
-                color: tickColor
+                color: tickColor,
+                scale: 10.0  // Make the text 10x bigger
             )
             if let buffer = textBuffer {
                 textBuffers.append((buffer, vertexCount))
@@ -430,7 +455,8 @@ extension PinnedAxesRenderer {
                 string: formattedTickValue,
                 x: x0 - 5,
                 y: sy,
-                color: tickColor
+                color: tickColor,
+                scale: 10.0
             )
             if let buffer = textBuffer {
                 textBuffers.append((buffer, vertexCount))
@@ -549,5 +575,52 @@ extension PinnedAxesRenderer {
             v += step
         }
         return result
+    }
+    
+    func buildCircleVertices(cx: Float,
+                             cy: Float,
+                             radius: Float,
+                             segments: Int,
+                             color: SIMD4<Float>) -> [Float] {
+        // We'll do a triangle fan: center plus segments
+        // Each triangle has 3 vertices => 9 floats for position/color (but we also do no texture coords here, so let's do 8 floats: x, y, z, w, r, g, b, a? Or x, y, z, w, r, g, b, a. Up to you.
+        // Because your axis pipeline expects x, y, z, w, color.x, color.y, color.z, color.w
+        // we'll keep 8 floats per vertex.
+
+        var verts: [Float] = []
+        let angleStep = (2.0 * Float.pi) / Float(segments)
+
+        // The center is our first vertex for the fan
+        func appendVertex(x: Float, y: Float) {
+            verts.append(x)
+            verts.append(y)
+            verts.append(0) // z
+            verts.append(1) // w
+            verts.append(color.x)
+            verts.append(color.y)
+            verts.append(color.z)
+            verts.append(color.w)
+        }
+
+        // We'll generate triangles (center, v(i), v(i+1))
+        let centerX = cx
+        let centerY = cy
+
+        for i in 0..<segments {
+            // angle i, angle i+1
+            let theta0 = Float(i) * angleStep
+            let theta1 = Float(i + 1) * angleStep
+            let x0 = centerX + radius * cos(theta0)
+            let y0 = centerY + radius * sin(theta0)
+            let x1 = centerX + radius * cos(theta1)
+            let y1 = centerY + radius * sin(theta1)
+
+            // Triangle: center -> (x0,y0) -> (x1,y1)
+            appendVertex(x: centerX, y: centerY)
+            appendVertex(x: x0,     y: y0)
+            appendVertex(x: x1,     y: y1)
+        }
+
+        return verts
     }
 }
