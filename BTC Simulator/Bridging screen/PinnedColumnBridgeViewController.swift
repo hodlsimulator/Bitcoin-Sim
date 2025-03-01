@@ -37,6 +37,8 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
 
     /// Tracks the previously snapped column index to animate changes
     var previousColumnIndex: Int? = nil
+    
+    var idleManager: IdleManager?
 
     /// Custom top bar UI
     private let customTopBar = UIView()
@@ -306,20 +308,15 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
     }
 
     @objc private func handleChartButton() {
-        guard let container = representableContainer, let nav = navigationController else {
+        guard let container = representableContainer,
+              let nav       = navigationController else {
             return
         }
 
-        // Restore default edge-swipe for next screen
-        if let popGesture = nav.interactivePopGestureRecognizer {
-            popGesture.delegate = originalGestureDelegate
-            popGesture.isEnabled = true
-        }
-
-        // Clear bridging VC’s back text for the next screen
-        if let items = nav.navigationBar.items, items.count >= 1 {
-            let bridgingItem = items[items.count - 1]
-            bridgingItem.backBarButtonItem = UIBarButtonItem(title: "", style: .plain, target: nil, action: nil)
+        // If pinnedColumnBridgeViewController.idleManager is nil, we can't proceed
+        guard let manager = self.idleManager else {
+            print("No idleManager to pass!")
+            return
         }
 
         // Build the SwiftUI chart
@@ -329,7 +326,12 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
             .environmentObject(container.simChartSelection)
             .environmentObject(container.chartDataCache)
 
-        let chartHostingController = ChartHostingController(rootView: chartView)
+        // Create your ChartHostingController with the manager
+        let chartHostingController = ChartHostingController(
+            rootView: chartView,
+            idleManager: manager
+        )
+
         nav.pushViewController(chartHostingController, animated: true)
     }
 

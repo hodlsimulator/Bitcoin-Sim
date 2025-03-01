@@ -325,6 +325,7 @@ struct ContentView: View {
                     simChartSelection: simChartSelection,
                     chartDataCache: chartDataCache
                 )
+                .environmentObject(idleManager)
                 .fullBleedStyle()
                 .onAppear {
                     removeNavBarHairline()
@@ -516,11 +517,18 @@ struct ContentView: View {
 
 extension View {
     @ViewBuilder
-    func ifAvailableiOS16(_ transform: (Self) -> some View) -> some View {
+    func fullBleedStyle() -> some View {
         if #available(iOS 16.0, *) {
-            transform(self)
-        } else {
+            // iOS 16 style – e.g. hide the nav bar using .toolbarBackground
             self
+                .toolbarBackground(.hidden, for: .navigationBar)
+                .ignoresSafeArea(.all, edges: .top)
+        } else {
+            // Older iOS fallback – use .navigationBarHidden instead
+            self
+                .navigationBarHidden(true)
+                .navigationBarBackButtonHidden(true)
+                .ignoresSafeArea(.all, edges: .top)
         }
     }
 }

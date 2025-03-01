@@ -5,48 +5,53 @@
 //  Created by . . on 23/02/2025.
 //
 
-import UIKit
 import SwiftUI
+import UIKit
 
-class ChartHostingController<Content: View>: UIHostingController<Content> {
+class ChartHostingController<Root: View>: UIHostingController<AnyView> {
+
+    /// Custom init: wrap your `Root` in `AnyView` after adding environmentObject.
+    init(rootView: Root, idleManager: IdleManager) {
+        let wrappedView = AnyView(
+            rootView.environmentObject(idleManager)
+        )
+        super.init(rootView: wrappedView)
+    }
+    
+    /// Required by UIHostingController for storyboard/XIB use
+    @objc required dynamic init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
-
+        
         let appearance = UINavigationBarAppearance()
         appearance.configureWithOpaqueBackground()
         appearance.backgroundColor = .black
         appearance.titleTextAttributes = [.foregroundColor: UIColor.white]
         appearance.shadowColor = .clear
 
-        // Make the bar button (including back arrow) white
         let itemAppearance = UIBarButtonItemAppearance()
         itemAppearance.normal.titleTextAttributes = [.foregroundColor: UIColor.white]
         appearance.buttonAppearance = itemAppearance
         appearance.backButtonAppearance = itemAppearance
-
+        
         // Hide default back text
         appearance.backButtonAppearance.normal.titlePositionAdjustment =
             UIOffset(horizontal: -2000, vertical: 0)
-
-        // Apply to standard & scrollEdge
-        navigationItem.standardAppearance = appearance
-        navigationItem.scrollEdgeAppearance = appearance
         
-        // Also ensure 'Back' text is minimal
+        navigationItem.standardAppearance   = appearance
+        navigationItem.scrollEdgeAppearance = appearance
         navigationItem.backButtonDisplayMode = .minimal
         
-        // This sets the nav bar’s tint for the arrow icon
         navigationController?.navigationBar.tintColor = .white
     }
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
-        // Show the system nav bar for this screen
         navigationController?.setNavigationBarHidden(false, animated: false)
-        
-        // Make sure interactive swipe is on
         navigationController?.interactivePopGestureRecognizer?.isEnabled = true
     }
 }

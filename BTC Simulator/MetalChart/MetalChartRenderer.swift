@@ -11,6 +11,10 @@ import simd
 import SwiftUI // for Color
 
 class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
+    
+    private var glyphOutlineInfos: [GlyphOutlineInfo] = []
+    private var computePipelineState: MTLComputePipelineState?
+    
     // MARK: - Metal
     var device: MTLDevice!
     var commandQueue: MTLCommandQueue!
@@ -97,10 +101,12 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
                 print("TextRenderer is available. Proceeding with pipeline setup.")
                 
                 // Proceed with PinnedAxesRenderer setup
-                pinnedAxesRenderer = PinnedAxesRenderer(device: device,
-                                                         textRenderer: textRenderer,
-                                                         textRendererManager: textRendererManager,
-                                                         library: library)
+                pinnedAxesRenderer = PinnedAxesRenderer(
+                    device: device,
+                    textRenderer: textRenderer,
+                    textRendererManager: textRendererManager,
+                    library: library
+                )
             } else {
                 print("TextRenderer is nil after initialization. Cannot proceed.")
                 return
@@ -110,7 +116,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             return
         }
 
-        // Build pipeline
+        // Build the standard (render) pipeline
         let vertexFunction = library.makeFunction(name: "vertexShader")
         let fragmentFunction = library.makeFunction(name: "fragmentShader")
         
@@ -171,8 +177,14 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         let fontSize: CGFloat = 14
         if let fontAtlas = generateFontAtlas(device: device, font: UIFont.systemFont(ofSize: fontSize)) {
             if let textRendererManager = textRendererManager,
-               let textRenderer = textRendererManager.getTextRenderer() {
-                pinnedAxesRenderer = PinnedAxesRenderer(device: device, textRenderer: textRenderer, textRendererManager: textRendererManager, library: library)
+               let textRenderer = textRendererManager.getTextRenderer()
+            {
+                pinnedAxesRenderer = PinnedAxesRenderer(
+                    device: device,
+                    textRenderer: textRenderer,
+                    textRendererManager: textRendererManager,
+                    library: library
+                )
             } else {
                 print("TextRendererManager or TextRenderer is nil")
             }
@@ -302,6 +314,11 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     }
     
     func draw(in view: MTKView) {
+        // If the app is idle, skip
+        if idleManager.isIdle {
+            return
+        }
+        
         guard let pipelineState = pipelineState,
               let drawable = view.currentDrawable,
               let rpd = view.currentRenderPassDescriptor,
@@ -310,9 +327,6 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         else {
             return
         }
-        
-        // Reset the idle timer when rendering occurs
-        idleManager.resetIdleTimer()
         
         // 1) Ensure the viewport size is up-to-date
         let deviceScale = view.drawableSize.width / view.bounds.size.width
@@ -366,6 +380,24 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         // 3) End the encoding and present the drawable
         renderEncoder.endEncoding()
         commandBuffer.present(drawable)
+        commandBuffer.commit()
+    }
+    
+    func runComputePass() {
+        guard let commandBuffer = commandQueue.makeCommandBuffer(),
+              let computeEncoder = commandBuffer.makeComputeCommandEncoder(),
+              let computePipelineState = computePipelineState else {
+            return
+        }
+        computeEncoder.setComputePipelineState(computePipelineState)
+
+        var glyphCountValue: UInt32 = UInt32(glyphOutlineInfos.count)
+        computeEncoder.setBytes(&glyphCountValue,
+                                length: MemoryLayout<UInt32>.size,
+                                index: 2)
+
+        // Dispatch threads, etc...
+        computeEncoder.endEncoding()
         commandBuffer.commit()
     }
     

@@ -13,28 +13,34 @@ import MetalKit
 struct MetalChartContainerView: UIViewRepresentable {
     let metalChart: MetalChartRenderer
     
-    // Declare IdleManager to manage idle state
-    @StateObject private var idleManager = IdleManager()
+    @EnvironmentObject var idleManager: IdleManager
     
     func makeUIView(context: Context) -> MetalChartUIView {
-        // Ensure textRendererManager is available from metalChart
+        // Ensure textRendererManager is available
         guard let textRendererManager = metalChart.textRendererManager else {
-            fatalError("textRendererManager is nil in metalChart. Please ensure setupMetal() is called correctly.")
+            fatalError("textRendererManager is nil. Call setupMetal() first.")
         }
         
-        // Create MetalChartUIView with all required parameters
-        let metalView = MetalChartUIView(frame: .zero, renderer: metalChart, textRendererManager: textRendererManager)
+        // Create our custom UIView subclass that holds Metal
+        let metalView = MetalChartUIView(
+            frame: .zero,
+            renderer: metalChart,
+            textRendererManager: textRendererManager
+        )
+        
+        // Store a reference to the MTKView in IdleManager, so we can pause it
+        idleManager.metalView = metalView.mtkView
+        
+        // Access our coordinator
         let coordinator = context.coordinator
         
-        // Gesture recognizers setup...
-        // 1) Single-finger pan gesture
+        // Set up gestures…
         let singleFingerPan = UIPanGestureRecognizer(
             target: coordinator,
             action: #selector(coordinator.handleSingleFingerPan(_:))
         )
         singleFingerPan.maximumNumberOfTouches = 1
         
-        // 2) Two-finger pan for trackpad-like zoom
         let twoFingerPan = UIPanGestureRecognizer(
             target: coordinator,
             action: #selector(coordinator.handleTwoFingerPanToZoom(_:))
@@ -42,20 +48,17 @@ struct MetalChartContainerView: UIViewRepresentable {
         twoFingerPan.minimumNumberOfTouches = 2
         twoFingerPan.maximumNumberOfTouches = 2
         
-        // 3) Pinch to zoom
         let pinchGR = UIPinchGestureRecognizer(
             target: coordinator,
             action: #selector(coordinator.handlePinch(_:))
         )
         
-        // 4) Double-tap to zoom
         let doubleTapGR = UITapGestureRecognizer(
             target: coordinator,
             action: #selector(coordinator.handleDoubleTap(_:))
         )
         doubleTapGR.numberOfTapsRequired = 2
         
-        // 5) Double-tap-and-slide (long press, 2 taps, zero duration)
         let doubleTapSlideGR = UILongPressGestureRecognizer(
             target: coordinator,
             action: #selector(coordinator.handleDoubleTapSlide(_:))
@@ -63,22 +66,31 @@ struct MetalChartContainerView: UIViewRepresentable {
         doubleTapSlideGR.numberOfTapsRequired = 2
         doubleTapSlideGR.minimumPressDuration = 0
         
-        // Add gesture recognizers to the metalView
+        // Allow simultaneous recognition
         coordinator.configureRecognizerForSimultaneous(singleFingerPan)
         coordinator.configureRecognizerForSimultaneous(twoFingerPan)
         coordinator.configureRecognizerForSimultaneous(pinchGR)
         coordinator.configureRecognizerForSimultaneous(doubleTapGR)
         coordinator.configureRecognizerForSimultaneous(doubleTapSlideGR)
         
+        // Add them
         metalView.addGestureRecognizer(singleFingerPan)
         metalView.addGestureRecognizer(twoFingerPan)
         metalView.addGestureRecognizer(pinchGR)
         metalView.addGestureRecognizer(doubleTapGR)
         metalView.addGestureRecognizer(doubleTapSlideGR)
         
-        // Reset the idle timer whenever there is any gesture interaction
-        metalView.addGestureRecognizer(UITapGestureRecognizer(target: coordinator, action: #selector(coordinator.resetIdleTimer)))
-        metalView.addGestureRecognizer(UIPanGestureRecognizer(target: coordinator, action: #selector(coordinator.resetIdleTimer)))
+        // Idle timer resets on any tap or pan
+        let tapToReset = UITapGestureRecognizer(
+            target: coordinator,
+            action: #selector(coordinator.resetIdleTimer)
+        )
+        let panToReset = UIPanGestureRecognizer(
+            target: coordinator,
+            action: #selector(coordinator.resetIdleTimer)
+        )
+        metalView.addGestureRecognizer(tapToReset)
+        metalView.addGestureRecognizer(panToReset)
         
         return metalView
     }
@@ -88,7 +100,7 @@ struct MetalChartContainerView: UIViewRepresentable {
     }
     
     func makeCoordinator() -> MetalChartGestureCoordinator {
-        // Pass IdleManager to the Coordinator
+        // Pass the idleManager to the coordinator
         MetalChartGestureCoordinator(idleManager: idleManager)
     }
 }

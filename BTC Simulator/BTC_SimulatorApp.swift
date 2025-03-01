@@ -157,6 +157,7 @@ struct BTCMonteCarloApp: App {
                 } else {
                     NavigationStack {
                         OnboardingView(didFinishOnboarding: $didFinishOnboarding)
+                            .environmentObject(idleManager)
                             .environmentObject(inputManager)
                             .environmentObject(weeklySimSettings)
                             .environmentObject(monthlySimSettings)

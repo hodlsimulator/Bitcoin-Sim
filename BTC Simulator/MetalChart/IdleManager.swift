@@ -5,55 +5,73 @@
 //  Created by . . on 28/02/2025.
 //
 
+import MetalKit
 import Foundation
 
 class IdleManager: ObservableObject {
+    
+    // Provide one weak reference to the MTKView
+    weak var metalView: MTKView?
+    
+    @Published var isIdle: Bool = false
+    
     private var idleTimer: Timer?
     private var lastActivityTime: Date = Date()
-    private let idleTimeLimit: TimeInterval = 30.0 // 30 seconds for idle timeout
+    private let idleTimeLimit: TimeInterval = 30.0 // 30 seconds
     
-    // Call this method to reset the idle timer whenever there's user interaction (e.g., tapping, scrolling)
+    /// Reset idle timer on user interaction
     @objc func resetIdleTimer() {
         lastActivityTime = Date()
         
-        // Invalidate any existing timer to reset the idle state
+        // Invalidate existing timer
         idleTimer?.invalidate()
         
-        // Create a new timer to trigger idle timeout after the specified idleTimeLimit
-        idleTimer = Timer.scheduledTimer(timeInterval: idleTimeLimit,
-                                         target: self,
-                                         selector: #selector(idleTimeout),
-                                         userInfo: nil,
-                                         repeats: false)
+        // Schedule a new idle timeout
+        idleTimer = Timer.scheduledTimer(
+            timeInterval: idleTimeLimit,
+            target: self,
+            selector: #selector(idleTimeout),
+            userInfo: nil,
+            repeats: false
+        )
+        
+        // If we were idle, mark active again
+        isIdle = false
     }
     
-    // This method is triggered when idle time exceeds the limit (e.g., after 30 seconds of inactivity)
+    /// Called when idle timer fires
     @objc private func idleTimeout() {
-        // Pause ongoing tasks to save resources when the app is idle
         handleIdleState()
+        if let mv = metalView {
+            print("Pausing MTKView: \(mv) isPaused = true")
+            mv.isPaused = true
+        } else {
+            print("No metalView found to pause!")
+        }
     }
     
-    // Handles actions for when the app is idle, such as pausing tasks and releasing resources
+    /// Perform any idle actions (pause, free resources, etc.)
     private func handleIdleState() {
         pauseProcessing()
         releaseResources()
     }
     
-    // Pauses ongoing processing, rendering, or calculations to save resources
     private func pauseProcessing() {
         print("Pausing live processing due to inactivity.")
-        // Add code here to pause Metal rendering or any ongoing data processing
+        isIdle = true
     }
     
-    // Releases resources that are not needed during the idle state to conserve power and memory
     private func releaseResources() {
         print("Releasing resources to save power and memory.")
-        // Add code here to release GPU resources, reset buffers, or pause data updates
+        // Free or reduce usage if desired
     }
     
-    // Call this method when the app becomes active again (e.g., after user interaction)
+    /// Resume after user interaction
     func resumeProcessing() {
         print("Resuming live processing.")
-        // Add code here to restart rendering or resume data processing
+        isIdle = false
+        
+        // Unpause the MTKView so it redraws
+        metalView?.isPaused = false
     }
 }

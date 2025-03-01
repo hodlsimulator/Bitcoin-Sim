@@ -21,6 +21,10 @@ struct PinnedColumnBridgeRepresentable: UIViewControllerRepresentable {
 
     func makeUIViewController(context: Context) -> PinnedColumnBridgeViewController {
         let pinnedVC = PinnedColumnBridgeViewController()
+        
+        // If you have an IdleManager in scope, pass it:
+        // pinnedVC.idleManager = someIdleManager
+
         pinnedVC.representableContainer = .init(
             coordinator: coordinator,
             inputManager: inputManager,
@@ -30,8 +34,9 @@ struct PinnedColumnBridgeRepresentable: UIViewControllerRepresentable {
             chartDataCache: chartDataCache
         )
         pinnedVC.dismissBinding = $isPresented
-        pinnedVC.lastViewedRowBinding = $lastViewedRow  // Pass the binding
+        pinnedVC.lastViewedRowBinding = $lastViewedRow
         pinnedVC.lastViewedColumnIndexBinding = $lastViewedColumnIndex
+        
         return pinnedVC
     }
 

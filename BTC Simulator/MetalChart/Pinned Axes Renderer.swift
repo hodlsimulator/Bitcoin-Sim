@@ -394,6 +394,9 @@ extension PinnedAxesRenderer {
             if let buffer = textBuffer {
                 textBuffers.append((buffer, vertexCount))
             }
+            
+            print("XTicks -> val=\(val), screenX=\(sx)")
+
         }
         return (verts, textBuffers)
     }
