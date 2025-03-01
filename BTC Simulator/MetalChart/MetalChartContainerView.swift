@@ -13,7 +13,7 @@ import MetalKit
 struct MetalChartContainerView: UIViewRepresentable {
     let metalChart: MetalChartRenderer
     
-    // @EnvironmentObject var idleManager: IdleManager
+    @EnvironmentObject var idleManager: IdleManager
     
     func makeUIView(context: Context) -> MetalChartUIView {
         // Ensure textRendererManager is available
@@ -101,7 +101,6 @@ struct MetalChartContainerView: UIViewRepresentable {
     
     func makeCoordinator() -> MetalChartGestureCoordinator {
         // Pass the idleManager to the coordinator
-        // MetalChartGestureCoordinator(idleManager: idleManager)
-        return MetalChartGestureCoordinator()
+        MetalChartGestureCoordinator(idleManager: idleManager)
     }
 }

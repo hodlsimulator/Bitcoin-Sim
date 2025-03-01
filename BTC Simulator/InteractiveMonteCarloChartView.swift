@@ -16,7 +16,7 @@ struct InteractiveMonteCarloChartView: View {
     @EnvironmentObject var simSettings: SimulationSettings
     
     // Provide or read the same idleManager from environment here
-    // @EnvironmentObject var idleManager: IdleManager
+    @EnvironmentObject var idleManager: IdleManager
 
     @State private var metalChart = MetalChartRenderer()
     @State private var isMetalChartReady = false
@@ -28,7 +28,7 @@ struct InteractiveMonteCarloChartView: View {
                 
                 if isMetalChartReady {
                     MetalChartContainerView(metalChart: metalChart)
-                        // .environmentObject(idleManager) // <– pass it down
+                        .environmentObject(idleManager) // <– pass it down
                         .onAppear {
                             metalChart.viewportSize = geo.size
                             metalChart.setupMetal(

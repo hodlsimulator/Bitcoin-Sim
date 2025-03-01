@@ -38,7 +38,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
     /// Tracks the previously snapped column index to animate changes
     var previousColumnIndex: Int? = nil
     
-    // var idleManager: IdleManager?
+    var idleManager: IdleManager?
 
     /// Custom top bar UI
     private let customTopBar = UIView()
@@ -325,6 +325,7 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
             .environmentObject(container.simSettings)
             .environmentObject(container.simChartSelection)
             .environmentObject(container.chartDataCache)
+            .environmentObject(idleManager!)
 
         // Create your ChartHostingController with the manager
         let chartHostingController = ChartHostingController(

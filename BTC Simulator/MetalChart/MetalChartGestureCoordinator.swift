@@ -10,15 +10,17 @@ import UIKit
 
 /// Multi-touch gestures: single-finger pan, two-finger pan, pinch, double-tap zoom.
 class MetalChartGestureCoordinator: NSObject {
-    // private let idleManager: IdleManager // Use 'let' since it won’t change after initialization
+    private let idleManager: IdleManager // Use 'let' since it won’t change after initialization
 
-    override init() { // <-- no idleManager parameter now
-            super.init()
-        }
+    // Initializer to accept idleManager from MetalChartContainerView
+    init(idleManager: IdleManager) {
+        self.idleManager = idleManager
+        super.init()
+    }
 
     // Method for gesture recognizers to reset the idle timer
     @objc func resetIdleTimer() {
-        // idleManager.resetIdleTimer()
+        idleManager.resetIdleTimer()
     }
 
     // Existing properties (unchanged)
@@ -44,7 +46,7 @@ extension MetalChartGestureCoordinator {
         let renderer = chartView.renderer
         
         // Reset the idle timer whenever there's gesture interaction
-        // idleManager.resetIdleTimer()
+        idleManager.resetIdleTimer()
         
         switch recognizer.state {
         case .began:
@@ -108,7 +110,7 @@ extension MetalChartGestureCoordinator {
         let translationPoint = recognizer.translation(in: chartView)
         
         // Reset the idle timer whenever there's gesture interaction
-        // idleManager.resetIdleTimer()
+        idleManager.resetIdleTimer()
         
         switch recognizer.state {
         case .began:
@@ -144,7 +146,7 @@ extension MetalChartGestureCoordinator {
         guard recognizer.numberOfTouches == 2 else { return }
         
         // Reset the idle timer whenever there's gesture interaction
-        // idleManager.resetIdleTimer()
+        idleManager.resetIdleTimer()
         
         switch recognizer.state {
         case .began:
@@ -185,7 +187,7 @@ extension MetalChartGestureCoordinator {
         let renderer = chartView.renderer
         
         // Reset the idle timer whenever there's gesture interaction
-        // idleManager.resetIdleTimer()
+        idleManager.resetIdleTimer()
         
         switch recognizer.state {
         case .began:
@@ -277,7 +279,7 @@ extension MetalChartGestureCoordinator {
         let renderer = chartView.renderer
         
         // Reset the idle timer whenever there's gesture interaction
-        // idleManager.resetIdleTimer()
+        idleManager.resetIdleTimer()
         
         if recognizer.state == .ended {
             baseScale = renderer.scale

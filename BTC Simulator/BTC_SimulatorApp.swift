@@ -32,7 +32,7 @@ struct BTCMonteCarloApp: App {
     @StateObject private var textRendererManager = TextRendererManager()
     
     // Initialize the IdleManager for tracking idle state
-    // @StateObject private var idleManager = IdleManager()
+    @StateObject private var idleManager = IdleManager()
 
     init() {    
         let navBarAppearance = UINavigationBarAppearance()
@@ -96,7 +96,8 @@ struct BTCMonteCarloApp: App {
             simSettings: localWeeklySimSettings,
             monthlySimSettings: localMonthlySimSettings,
             inputManager: localInputManager,
-            simChartSelection: localSimChartSelection
+            simChartSelection: localSimChartSelection,
+            idleManager: IdleManager()
         )
 
         // Assign values to the properties
@@ -128,6 +129,7 @@ struct BTCMonteCarloApp: App {
                 if didFinishOnboarding {
                     NavigationStack {
                         ContentView()
+                            .environmentObject(idleManager)
                             .environmentObject(inputManager)        // <–– Added
                             .environmentObject(weeklySimSettings)
                             .environmentObject(monthlySimSettings)

@@ -4,7 +4,7 @@
 //
 //  Created by . . on 28/02/2025.
 //
-/*
+
 import MetalKit
 import Foundation
 
@@ -75,4 +75,3 @@ class IdleManager: ObservableObject {
         metalView?.isPaused = false
     }
 }
-*/

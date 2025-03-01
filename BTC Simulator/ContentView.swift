@@ -287,7 +287,7 @@ struct ContentView: View {
     @EnvironmentObject var coordinator: SimulationCoordinator
     @EnvironmentObject var simChartSelection: SimChartSelection
     @EnvironmentObject var textRendererManager: TextRendererManager // Add this line for text rendering
-    // @EnvironmentObject var idleManager: IdleManager
+    @EnvironmentObject var idleManager: IdleManager
     
     // IdleManager to manage idle state
     // @StateObject private var idleManager = IdleManager()
@@ -326,7 +326,7 @@ struct ContentView: View {
                     simChartSelection: simChartSelection,
                     chartDataCache: chartDataCache
                 )
-                // .environmentObject(idleManager)
+                .environmentObject(idleManager)
                 .fullBleedStyle()
                 .onAppear {
                     removeNavBarHairline()

@@ -156,7 +156,7 @@ struct MonteCarloResultsView: View {
     @EnvironmentObject var simChartSelection: SimChartSelection
     @EnvironmentObject var chartDataCache: ChartDataCache
     @EnvironmentObject var simSettings: SimulationSettings
-    // @EnvironmentObject var idleManager: IdleManager
+    @EnvironmentObject var idleManager: IdleManager
     
     // Remove idleManager usage for now
     // @EnvironmentObject var idleManager: IdleManager
@@ -170,7 +170,7 @@ struct MonteCarloResultsView: View {
                     .environmentObject(simSettings)
                     .environmentObject(chartDataCache)
                     .environmentObject(simSettings)
-                    // .environmentObject(idleManager)
+                    .environmentObject(idleManager)
             } else {
                 // Fallback to a SwiftUI-based chart if needed
             }

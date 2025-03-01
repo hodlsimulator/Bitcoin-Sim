@@ -51,19 +51,23 @@ class SimulationCoordinator: ObservableObject {
     private var sp500MonthlyReturns: [Double] = []
     
     private var monthlySimSettings: MonthlySimulationSettings
+    
+    private var idleManager: IdleManager
 
     init(
         chartDataCache: ChartDataCache,
         simSettings: SimulationSettings,
         monthlySimSettings: MonthlySimulationSettings,
         inputManager: PersistentInputManager,
-        simChartSelection: SimChartSelection
+        simChartSelection: SimChartSelection,
+        idleManager: IdleManager
     ) {
         self.chartDataCache = chartDataCache
         self.simSettings = simSettings
         self.monthlySimSettings = monthlySimSettings
         self.inputManager = inputManager
         self.simChartSelection = simChartSelection
+        self.idleManager = idleManager
     }
     
     func runSimulation(generateGraphs: Bool, lockRandomSeed: Bool) {
@@ -359,6 +363,8 @@ class SimulationCoordinator: ObservableObject {
                         .environmentObject(self.chartDataCache)
                         .environmentObject(self.simSettings)
                         .environmentObject(self.simChartSelection)
+                        .environmentObject(self.idleManager)
+
                     
                     DispatchQueue.main.async {
                         if self.isCancelled {
@@ -373,6 +379,7 @@ class SimulationCoordinator: ObservableObject {
                             .environmentObject(self.chartDataCache)
                             .environmentObject(self.simSettings)
                             .environmentObject(self.simChartSelection)
+                            .environmentObject(self.idleManager)
                         
                         DispatchQueue.main.async {
                             if self.isCancelled {
