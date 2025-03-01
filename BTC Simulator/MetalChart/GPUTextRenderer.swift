@@ -13,7 +13,7 @@ import Foundation
 public class GPUTextRenderer {
 
     public let device: MTLDevice
-    public let atlas: RuntimeFontAtlas  // or GPUFontAtlas if that’s what you have
+    public var atlas: RuntimeFontAtlas
     var pipelineState: MTLRenderPipelineState?
 
     public init(device: MTLDevice,

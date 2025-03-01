@@ -15,6 +15,8 @@ struct ViewportSize {
 
 class PinnedAxesRenderer {
     
+    var idleManager: IdleManager?
+    
     var textRendererManager: TextRendererManager
     
     private let device: MTLDevice
@@ -64,10 +66,13 @@ class PinnedAxesRenderer {
     init(device: MTLDevice,
          textRenderer: GPUTextRenderer,
          textRendererManager: TextRendererManager,
-         library: MTLLibrary) {
+         library: MTLLibrary,
+         idleManager: IdleManager? = nil)
+    {
         self.device = device
         self.textRenderer = textRenderer
         self.textRendererManager = textRendererManager
+        self.idleManager = idleManager
         buildAxisPipeline(library: library, textRendererManager: textRendererManager)
     }
     
@@ -234,8 +239,11 @@ class PinnedAxesRenderer {
     // MARK: - Draw
     
     func drawAxes(renderEncoder: MTLRenderCommandEncoder) {
+        // Mark this as user activity so we don't go idle
+        idleManager?.resetIdleTimer()
+
         guard let axisPipeline = axisPipelineState else { return }
-        
+
         // Build a viewport buffer for the axis vertex shader
         var vp = ViewportSize(size: SIMD2<Float>(Float(viewportSize.width),
                                                  Float(viewportSize.height)))
@@ -245,52 +253,72 @@ class PinnedAxesRenderer {
             return
         }
         renderEncoder.setVertexBuffer(vpBuffer, offset: 0, index: 1)
-        
-        // Draw axes, ticks, and grid lines
+
+        // Use the axis pipeline for grids, ticks, axes
         renderEncoder.setRenderPipelineState(axisPipeline)
-        
+
+        // --- 1) X Grid ---
         if let buf = xGridBuffer, xGridVertexCount > 0 {
+            print("DEBUG: Drawing xGrid with \(xGridVertexCount) vertices")
             renderEncoder.setVertexBuffer(buf, offset: 0, index: 0)
             renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: xGridVertexCount)
         }
+
+        // --- 2) Y Grid ---
         if let buf = yGridBuffer, yGridVertexCount > 0 {
+            print("DEBUG: Drawing yGrid with \(yGridVertexCount) vertices")
             renderEncoder.setVertexBuffer(buf, offset: 0, index: 0)
             renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: yGridVertexCount)
         }
+
+        // --- 3) X Ticks ---
         if let buf = xTickBuffer, xTickVertexCount > 0 {
+            print("DEBUG: Drawing xTicks with \(xTickVertexCount) vertices")
             renderEncoder.setVertexBuffer(buf, offset: 0, index: 0)
             renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: xTickVertexCount)
         }
+
+        // --- 4) Y Ticks ---
         if let buf = yTickBuffer, yTickVertexCount > 0 {
+            print("DEBUG: Drawing yTicks with \(yTickVertexCount) vertices")
             renderEncoder.setVertexBuffer(buf, offset: 0, index: 0)
             renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: yTickVertexCount)
         }
+
+        // --- 5) X Axis Quad ---
         if let buf = xAxisQuadBuffer, xAxisQuadVertexCount > 0 {
+            print("DEBUG: Drawing xAxisQuad with \(xAxisQuadVertexCount) vertices")
             renderEncoder.setVertexBuffer(buf, offset: 0, index: 0)
             renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: xAxisQuadVertexCount)
         }
+
+        // --- 6) Y Axis Quad ---
         if let buf = yAxisQuadBuffer, yAxisQuadVertexCount > 0 {
+            print("DEBUG: Drawing yAxisQuad with \(yAxisQuadVertexCount) vertices")
             renderEncoder.setVertexBuffer(buf, offset: 0, index: 0)
             renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: yAxisQuadVertexCount)
         }
-        
+
+        // --- 7) Debug Circle ---
         if let circleBuf = circleBuffer {
+            print("DEBUG: Drawing circle with \(circleVertexCount) vertices")
             renderEncoder.setVertexBuffer(circleBuf, offset: 0, index: 0)
             renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: circleVertexCount)
         }
-        
-        // Draw tick label texts
+
+        // --- 8) Tick Label Text ---
         if let textPipelineState = textRenderer.pipelineState {
+            // Switch pipeline to text rendering
             renderEncoder.setRenderPipelineState(textPipelineState)
-            
+
             // Create projection matrix for text (screen space to NDC)
             let width = Float(viewportSize.width)
             let height = Float(viewportSize.height)
             var projectionMatrix = matrix_float4x4(
-                [2/width, 0, 0, 0],
-                [0, -2/height, 0, 0],
-                [0, 0, 1, 0],
-                [-1, 1, 0, 1]
+                [2/width, 0,       0, 0],
+                [0,      -2/height,0, 0],
+                [0,       0,       1, 0],
+                [-1,      1,       0, 1]
             )
             guard let projectionBuffer = device.makeBuffer(bytes: &projectionMatrix,
                                                            length: MemoryLayout<matrix_float4x4>.size,
@@ -299,16 +327,20 @@ class PinnedAxesRenderer {
                 return
             }
             renderEncoder.setVertexBuffer(projectionBuffer, offset: 0, index: 1)
-            
-            // Set the font atlas texture for the fragment shader
+
+            // Font atlas texture
             renderEncoder.setFragmentTexture(textRenderer.atlas.texture, index: 0)
-            
-            // Draw all text buffers
-            for (buffer, vertexCount) in zip(xTickTextBuffers, xTickTextVertexCounts) {
+
+            // Draw X Tick Text
+            for (i, (buffer, vertexCount)) in zip(xTickTextBuffers, xTickTextVertexCounts).enumerated() {
+                print("DEBUG: Drawing xTickText[\(i)] with \(vertexCount) vertices")
                 renderEncoder.setVertexBuffer(buffer, offset: 0, index: 0)
                 renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: vertexCount)
             }
-            for (buffer, vertexCount) in zip(yTickTextBuffers, yTickTextVertexCounts) {
+
+            // Draw Y Tick Text
+            for (j, (buffer, vertexCount)) in zip(yTickTextBuffers, yTickTextVertexCounts).enumerated() {
+                print("DEBUG: Drawing yTickText[\(j)] with \(vertexCount) vertices")
                 renderEncoder.setVertexBuffer(buffer, offset: 0, index: 0)
                 renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: vertexCount)
             }

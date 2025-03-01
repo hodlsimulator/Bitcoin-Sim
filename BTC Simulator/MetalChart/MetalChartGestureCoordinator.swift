@@ -20,6 +20,7 @@ class MetalChartGestureCoordinator: NSObject {
 
     // Method for gesture recognizers to reset the idle timer
     @objc func resetIdleTimer() {
+        print("Gesture triggered, resetting idle timer now.")
         idleManager.resetIdleTimer()
     }
 

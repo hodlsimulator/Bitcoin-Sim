@@ -63,6 +63,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     
     // IdleManager to manage idle state
     private var idleManager = IdleManager()
+    private var chartHasLoaded = false
     
     func setupMetal(
         in size: CGSize,
@@ -175,19 +176,25 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         
         // If you have pinned axes with GPU-based text
         let fontSize: CGFloat = 14
-        if let fontAtlas = generateFontAtlas(device: device, font: UIFont.systemFont(ofSize: fontSize)) {
-            if let textRendererManager = textRendererManager,
-               let textRenderer = textRendererManager.getTextRenderer()
-            {
+        if let atlas = generateFontAtlas(device: device,
+                                         font: UIFont.systemFont(ofSize: fontSize)) {
+            // Update your textRendererManager with the new atlas
+            textRendererManager?.updateRuntimeAtlas(atlas)
+            
+            // Now retrieve a textRenderer that uses that atlas
+            if let textRenderer = textRendererManager?.getTextRenderer() {
+                // Proceed to build pinned axes
                 pinnedAxesRenderer = PinnedAxesRenderer(
                     device: device,
                     textRenderer: textRenderer,
-                    textRendererManager: textRendererManager,
+                    textRendererManager: textRendererManager!,
                     library: library
                 )
             } else {
-                print("TextRendererManager or TextRenderer is nil")
+                print("TextRenderer is nil")
             }
+        } else {
+            print("Failed to generate font atlas.")
         }
     }
     
@@ -314,8 +321,14 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     }
     
     func draw(in view: MTKView) {
-        // If the app is idle, skip
+        // 1) If idle, bail out immediately (don't enqueue more GPU commands)
         if idleManager.isIdle {
+                return
+            }
+        
+        // Also check if the MTKView is paused
+        if view.isPaused {
+            print("View is paused. Skipping draw.")
             return
         }
         
@@ -328,27 +341,26 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             return
         }
         
-        // 1) Ensure the viewport size is up-to-date
+        // 2) Normal drawing code follows...
+        
+        // Ensure the viewport size is up-to-date
         let deviceScale = view.drawableSize.width / view.bounds.size.width
         let scissorX = Int(pinnedAxisOffset * deviceScale)
         
-        // Set scissor rectangle for rendering axes and grid
+        // Configure scissor rect, etc.
         renderEncoder.setScissorRect(MTLScissorRect(
             x: scissorX,
             y: 0,
             width: max(0, Int(view.drawableSize.width) - scissorX),
             height: Int(view.drawableSize.height)
         ))
-
-        // Update pinned axes and grid data
+        
+        // Update pinned axes if needed
         if let pinnedAxes = pinnedAxesRenderer {
             pinnedAxes.viewportSize = view.bounds.size
-            
-            // Compute the visible ranges for axes
             let (xMinVis, xMaxVis) = computeVisibleRangeX()
             let (yMinVis, yMaxVis) = computeVisibleRangeY()
             
-            // Update axes data
             pinnedAxes.updateAxes(
                 minX: xMinVis,
                 maxX: xMaxVis,
@@ -357,18 +369,24 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
                 chartTransform: currentTransformMatrix()
             )
             
-            // Draw the axes and grid lines first
             pinnedAxes.drawAxes(renderEncoder: renderEncoder)
         }
         
-        // 2) Draw chart lines with scissor from x = 50
+        if !chartHasLoaded {
+                // The chart has just finished its first draw
+                chartHasLoaded = true
+                print("Chart finished initial load; starting idle timer.")
+                idleManager.resetIdleTimer()
+            }
+        
+        // Draw the chart lines
         renderEncoder.setRenderPipelineState(pipelineState)
         renderEncoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
         
         if let tbuf = transformBuffer {
             renderEncoder.setVertexBuffer(tbuf, offset: 0, index: 1)
         }
-
+        
         var offsetIndex = 0
         for count in lineSizes {
             renderEncoder.drawPrimitives(type: .lineStrip,
@@ -376,8 +394,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
                                          vertexCount: count)
             offsetIndex += count
         }
-
-        // 3) End the encoding and present the drawable
+        
         renderEncoder.endEncoding()
         commandBuffer.present(drawable)
         commandBuffer.commit()

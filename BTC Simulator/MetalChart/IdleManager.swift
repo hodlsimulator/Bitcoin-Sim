@@ -17,7 +17,7 @@ class IdleManager: ObservableObject {
     
     private var idleTimer: Timer?
     private var lastActivityTime: Date = Date()
-    private let idleTimeLimit: TimeInterval = 5.0 // 30 seconds
+    private let idleTimeLimit: TimeInterval = 5.0 // 5 seconds
     
     /// Reset idle timer on user interaction
     @objc func resetIdleTimer() {
@@ -34,10 +34,11 @@ class IdleManager: ObservableObject {
             userInfo: nil,
             repeats: false
         )
+        print("DEBUG: Timer scheduled for \(idleTimeLimit) seconds")
         
         // If we were idle, resume
         if isIdle {
-            resumeProcessing() // unpauses the metalView
+            resumeProcessing()
         }
         
         isIdle = false
@@ -46,9 +47,10 @@ class IdleManager: ObservableObject {
     /// Called when idle timer fires
     @objc private func idleTimeout() {
         handleIdleState()
+        // Inside idleTimeout or idleManager
         if let mv = metalView {
-            print("Pausing MTKView: \(mv) isPaused = true")
             mv.isPaused = true
+            print("Pausing \(mv). isPaused = \(mv.isPaused)")
         } else {
             print("No metalView found to pause!")
         }
