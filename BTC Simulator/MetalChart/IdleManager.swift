@@ -35,7 +35,11 @@ class IdleManager: ObservableObject {
             repeats: false
         )
         
-        // If we were idle, mark active again
+        // If we were idle, resume
+        if isIdle {
+            resumeProcessing() // unpauses the metalView
+        }
+        
         isIdle = false
     }
     
