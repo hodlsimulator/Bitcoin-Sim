@@ -211,11 +211,11 @@ class PinnedAxesRenderer {
         
         // 5) Axis labels (“Years”, “USD”) at smaller scale
         let (maybeXBuf, xCount) = textRenderer.buildTextVertices(
-            string: "Years",
+            string: "Period",
             x: pinnedScreenX + 100,
             y: pinnedScreenY + 15,
             color: axisColor,
-            scale: 1.5,
+            scale: 0.35,
             screenWidth: Float(viewportSize.width),
             screenHeight: Float(viewportSize.height)
         )
@@ -229,7 +229,7 @@ class PinnedAxesRenderer {
             x: pinnedScreenX - 40,
             y: pinnedScreenY * 0.5,
             color: axisColor,
-            scale: 1.5,
+            scale: 0.35,
             screenWidth: Float(viewportSize.width),
             screenHeight: Float(viewportSize.height)
         )
@@ -408,7 +408,7 @@ extension PinnedAxesRenderer {
                 x: sx,
                 y: textY,
                 color: tickColor,
-                scale: 1.5,
+                scale: 0.35,
                 screenWidth: Float(viewportSize.width),
                 screenHeight: Float(viewportSize.height)
             )
@@ -461,7 +461,7 @@ extension PinnedAxesRenderer {
                 x: textX,
                 y: textY,
                 color: tickColor,
-                scale: 1.5,
+                scale: 0.35,
                 screenWidth: Float(viewportSize.width),
                 screenHeight: Float(viewportSize.height)
             )
