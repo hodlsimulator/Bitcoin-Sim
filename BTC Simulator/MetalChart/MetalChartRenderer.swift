@@ -327,23 +327,63 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             return
         }
         
-        guard let pipelineState = pipelineState,
-              let drawable = view.currentDrawable,
-              let rpd = view.currentRenderPassDescriptor,
-              let commandBuffer = commandQueue.makeCommandBuffer(),
-              let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: rpd)
+        guard
+            let pipelineState    = pipelineState,
+            let drawable         = view.currentDrawable,
+            let rpd              = view.currentRenderPassDescriptor,
+            let commandBuffer    = commandQueue.makeCommandBuffer(),
+            let renderEncoder    = commandBuffer.makeRenderCommandEncoder(descriptor: rpd)
         else {
             return
         }
         
-        // 1) Draw pinned axes/labels *without* scissoring
-        renderEncoder.setScissorRect(MTLScissorRect(
+        //------------------------------------------------
+        // 1) Draw the chart lines first, *with* scissoring
+        //------------------------------------------------
+        let deviceScale  = view.drawableSize.width / view.bounds.size.width
+        let scissorX     = Int(pinnedAxisOffset * deviceScale)
+        let chartRect    = MTLScissorRect(
+            x: scissorX,
+            y: 0,
+            width: max(0, Int(view.drawableSize.width) - scissorX),
+            height: Int(view.drawableSize.height)
+        )
+        renderEncoder.setScissorRect(chartRect)
+        print("Scissor rect (chart lines): \(chartRect)")
+        
+        // Use the chart pipeline
+        renderEncoder.setRenderPipelineState(pipelineState)
+        
+        // Set the chart vertex buffer
+        renderEncoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
+        
+        // Any uniform/transform buffer for the chart
+        if let tbuf = transformBuffer {
+            renderEncoder.setVertexBuffer(tbuf, offset: 0, index: 1)
+        }
+        
+        // Draw all the line strips
+        var offsetIndex = 0
+        for count in lineSizes {
+            renderEncoder.drawPrimitives(type: .lineStrip,
+                                         vertexStart: offsetIndex,
+                                         vertexCount: count)
+            offsetIndex += count
+        }
+        
+        //----------------------------------------------------
+        // 2) Draw pinned axes & text *last*, without scissoring
+        //----------------------------------------------------
+        let fullRect = MTLScissorRect(
             x: 0,
             y: 0,
             width: Int(view.drawableSize.width),
             height: Int(view.drawableSize.height)
-        ))
+        )
+        renderEncoder.setScissorRect(fullRect)
+        print("Scissor rect (pinned axes): \(fullRect)")
         
+        // Update and draw pinned axes on top
         if let pinnedAxes = pinnedAxesRenderer {
             pinnedAxes.viewportSize = view.bounds.size
             
@@ -361,32 +401,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             pinnedAxes.drawAxes(renderEncoder: renderEncoder)
         }
         
-        // 2) Re‐enable scissor to clip chart lines
-        let deviceScale = view.drawableSize.width / view.bounds.size.width
-        let scissorX = Int(pinnedAxisOffset * deviceScale)
-        renderEncoder.setScissorRect(MTLScissorRect(
-            x: scissorX,
-            y: 0,
-            width: max(0, Int(view.drawableSize.width) - scissorX),
-            height: Int(view.drawableSize.height)
-        ))
-        
-        // Draw the chart lines
-        renderEncoder.setRenderPipelineState(pipelineState)
-        renderEncoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
-        
-        if let tbuf = transformBuffer {
-            renderEncoder.setVertexBuffer(tbuf, offset: 0, index: 1)
-        }
-        
-        var offsetIndex = 0
-        for count in lineSizes {
-            renderEncoder.drawPrimitives(type: .lineStrip,
-                                         vertexStart: offsetIndex,
-                                         vertexCount: count)
-            offsetIndex += count
-        }
-        
+        // Finish the pass
         renderEncoder.endEncoding()
         commandBuffer.present(drawable)
         commandBuffer.commit()

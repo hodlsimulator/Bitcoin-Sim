@@ -115,23 +115,25 @@ public func generateFontAtlas(
         let originX = CGFloat(col) * cellWidth  + padding / 2
         let originY = CGFloat(row) * cellHeight + padding / 2
         
-        // Draw single character
-        let attrString = NSAttributedString(
-            string: String(ch),
-            attributes: [
-                .font: font,
-                .foregroundColor: UIColor.white
-            ]
-        )
-        let line = CTLineCreateWithAttributedString(attrString)
+        // Get the glyph again for drawing
+        var glyph = CTFontGetGlyphWithName(ctFont, String(ch) as CFString)
+        if glyph == 0 {
+            let uniScalar = ch.unicodeScalars.first!
+            let glyphChar = UniChar(uniScalar.value)
+            var tempGlyph: CGGlyph = 0
+            if CTFontGetGlyphsForCharacters(ctFont, [glyphChar], &tempGlyph, 1) {
+                glyph = tempGlyph
+            }
+        }
         
+        // Draw glyph at precise position
         context.saveGState()
-        context.translateBy(x: originX, y: originY)
-        context.translateBy(x: 0, y: -boundingRect.origin.y)
-        CTLineDraw(line, context)
+        let position = CGPoint(x: originX, y: originY)
+        context.setFillColor(UIColor.white.cgColor)
+        CTFontDrawGlyphs(ctFont, [glyph], [position], 1, context)
         context.restoreGState()
         
-        // boundingRect in the atlas
+        // Calculate drawnRect based on drawing position
         let drawnRect = CGRect(
             x: originX + boundingRect.origin.x,
             y: originY + boundingRect.origin.y,
@@ -144,9 +146,8 @@ public func generateFontAtlas(
         let uMax = Float(drawnRect.maxX / CGFloat(atlasWidth))
         let vMax = Float(drawnRect.maxY / CGFloat(atlasHeight))
         
-        // measure advance
+        // Measure advance
         var advances = CGSize.zero
-        let glyph = CTFontGetGlyphWithName(ctFont, String(ch) as CFString)
         CTFontGetAdvancesForGlyphs(ctFont, .default, [glyph], &advances, 1)
         
         let glyphW = Float(boundingRect.width)
@@ -169,6 +170,14 @@ public func generateFontAtlas(
     
     // 6) Make CGImage
     guard let cgImage = context.makeImage() else { return nil }
+    
+    // Debug: Save the atlas to inspect it
+    let uiImage = UIImage(cgImage: cgImage)
+    if let data = uiImage.pngData() {
+        let url = URL(fileURLWithPath: "/tmp/atlas.png")
+        try? data.write(to: url)
+        print("Atlas saved to \(url.path)")
+    }
     
     // 7) Convert CGImage to MTLTexture
     let loader = MTKTextureLoader(device: device)

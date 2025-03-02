@@ -59,6 +59,7 @@ public class GPUTextRenderer {
 
         do {
             pipelineState = try device.makeRenderPipelineState(descriptor: descriptor)
+            print("GPUTextRenderer pipelineState is \(String(describing: pipelineState))")
         } catch {
             print("Failed to create text pipeline: \(error)")
         }
@@ -70,17 +71,16 @@ public class GPUTextRenderer {
         x: Float,
         y: Float,
         color: simd_float4,
-        scale: Float = 1.0
+        scale: Float = 1.0,
+        screenWidth: Float,
+        screenHeight: Float
     ) -> (MTLBuffer?, Int) {
+
         var vertices: [Float] = []
         var penX = x
         let penY = y
 
-        // We'll assume you have a way to get the viewport size inside here,
-        // e.g. `renderer.viewportSize`, so you might pass it in or store it.
-        let screenWidth  = Float( /* e.g. renderer.viewportSize.width  */  )
-        let screenHeight = Float( /* e.g. renderer.viewportSize.height */  )
-
+        print("buildTextVertices called with screenWidth=\(screenWidth), screenHeight=\(screenHeight)")
         for ch in string {
             guard let gm = atlas.glyphs[ch] else { continue }
 
@@ -88,15 +88,16 @@ public class GPUTextRenderer {
             let y0 = penY + (gm.yOffset - gm.height) * scale
             let x1 = x0 + gm.width * scale
             let y1 = y0 + gm.height * scale
+            
+            print("glyph=\(ch) x0=\(x0), x1=\(x1), y0=\(y0), y1=\(y1) screenW=\(screenWidth), screenH=\(screenHeight)")
 
-            // If the glyph is fully offscreen, skip it
+            // Cull if it's *truly* offscreen:
             if x1 < 0 || x0 > screenWidth || y1 < 0 || y0 > screenHeight {
-                // Just don't append anything
                 penX += gm.xAdvance * scale
                 continue
             }
 
-            // Otherwise, build the 2 triangles:
+            // Otherwise build the two triangles
             vertices.append(contentsOf: [
                 x0, y0, gm.uMin, gm.vMin, color.x, color.y, color.z, color.w,
                 x1, y0, gm.uMax, gm.vMin, color.x, color.y, color.z, color.w,
@@ -207,14 +208,25 @@ public extension GPUTextRenderer {
         val.formattedGroupedSuffix()
     }
     
+    /// Build a text buffer for a tick label at (x, y).
     func buildTickLabelVertices(
         value: Decimal,
         x: Float,
         y: Float,
         color: simd_float4,
-        scale: Float = 1.0
+        scale: Float = 1.0,
+        screenWidth: Float,
+        screenHeight: Float
     ) -> (MTLBuffer?, Int) {
         let text = formatTickDecimal(value)
-        return buildTextVertices(string: text, x: x, y: y, color: color, scale: scale)
+        return buildTextVertices(
+            string: text,
+            x: x,
+            y: y,
+            color: color,
+            scale: scale,
+            screenWidth: screenWidth,
+            screenHeight: screenHeight
+        )
     }
 }

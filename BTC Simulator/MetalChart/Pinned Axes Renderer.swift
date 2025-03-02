@@ -166,15 +166,19 @@ class PinnedAxesRenderer {
         let tickXValues = generateNiceTicks(minVal: Double(minX),
                                             maxVal: Double(maxX),
                                             desiredCount: 6)
+        print("DEBUG: Ticks -> \(tickXValues)")
         let tickYValues = generateNiceTicks(minVal: Double(minY),
                                             maxVal: Double(maxY),
                                             desiredCount: 6)
+        print("DEBUG: Ticks -> \(tickXValues)")
         let gridXValues = generateNiceTicks(minVal: Double(minX),
                                             maxVal: Double(maxX),
                                             desiredCount: 10)
+        print("DEBUG: Ticks -> \(tickXValues)")
         let gridYValues = generateNiceTicks(minVal: Double(minY),
                                             maxVal: Double(maxY),
                                             desiredCount: 10)
+        print("DEBUG: Ticks -> \(tickXValues)")
         
         // 3) Build short ticks and text labels on pinned axes
         let (xTickVerts, xTickTexts) = buildXTicks(
@@ -228,7 +232,9 @@ class PinnedAxesRenderer {
             x: pinnedScreenX + 100,
             y: pinnedScreenY + 15,
             color: axisColor,
-            scale: 2.0
+            scale: 2.0,
+            screenWidth: Float(viewportSize.width),
+            screenHeight: Float(viewportSize.height)
         )
         if let xBuf = maybeXBuf {
             xAxisLabelBuffer = xBuf
@@ -241,7 +247,9 @@ class PinnedAxesRenderer {
             x: pinnedScreenX - 40,
             y: pinnedScreenY * 0.5,
             color: axisColor,
-            scale: 2.0
+            scale: 2.0,
+            screenWidth: Float(viewportSize.width),
+            screenHeight: Float(viewportSize.height)
         )
         if let yBuf = maybeYBuf {
             yAxisLabelBuffer = yBuf
@@ -324,16 +332,6 @@ class PinnedAxesRenderer {
             renderEncoder.setVertexBuffer(buf, offset: 0, index: 0)
             renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: yAxisQuadVertexCount)
         }
-        
-        if let xBuf = xAxisLabelBuffer, xAxisLabelVertexCount > 0 {
-            renderEncoder.setVertexBuffer(xBuf, offset: 0, index: 0)
-            renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: xAxisLabelVertexCount)
-        }
-
-        if let yBuf = yAxisLabelBuffer, yAxisLabelVertexCount > 0 {
-            renderEncoder.setVertexBuffer(yBuf, offset: 0, index: 0)
-            renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: yAxisLabelVertexCount)
-        }
 
         // --- 7) Debug Circle ---
         // if let circleBuf = circleBuffer {
@@ -379,6 +377,16 @@ class PinnedAxesRenderer {
                 print("DEBUG: Drawing yTickText[\(j)] with \(vertexCount) vertices")
                 renderEncoder.setVertexBuffer(buffer, offset: 0, index: 0)
                 renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: vertexCount)
+            }
+            
+            if let xBuf = xAxisLabelBuffer, xAxisLabelVertexCount > 0 {
+                renderEncoder.setVertexBuffer(xBuf, offset: 0, index: 0)
+                renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: xAxisLabelVertexCount)
+            }
+
+            if let yBuf = yAxisLabelBuffer, yAxisLabelVertexCount > 0 {
+                renderEncoder.setVertexBuffer(yBuf, offset: 0, index: 0)
+                renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: yAxisLabelVertexCount)
             }
         }
     }
@@ -465,6 +473,8 @@ extension PinnedAxesRenderer {
         let halfT: Float = 0.5
         for val in xTicks {
             let sx = dataXtoScreenX(dataX: Float(val), transform: chartTransform)
+            
+            print("Tick val \(val) => screenX=\(sx)")
             if sx < 50 { continue }
 
             // Build tick line
@@ -480,9 +490,11 @@ extension PinnedAxesRenderer {
             let (textBuffer, vertexCount) = textRenderer.buildTextVertices(
                 string: formattedTickValue,
                 x: sx,
-                y: y1 + 3,
+                y: pinnedScreenY - 5,
                 color: tickColor,
-                scale: 10.0  // Make the text 10x bigger
+                scale: 2.0,
+                screenWidth: Float(viewportSize.width),
+                screenHeight: Float(viewportSize.height)
             )
             if let buffer = textBuffer {
                 textBuffers.append((buffer, vertexCount))
@@ -524,7 +536,9 @@ extension PinnedAxesRenderer {
                 x: x0 - 5,
                 y: sy,
                 color: tickColor,
-                scale: 10.0
+                scale: 10.0,
+                screenWidth: Float(viewportSize.width),
+                screenHeight: Float(viewportSize.height)
             )
             if let buffer = textBuffer {
                 textBuffers.append((buffer, vertexCount))
