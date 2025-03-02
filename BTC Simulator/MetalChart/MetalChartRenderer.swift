@@ -32,7 +32,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     var scaleX: Float = 1.0
     var scaleY: Float = 1.0
     
-    // If older code references `renderer.scale`, we keep it:
+    /// If older code references `renderer.scale`, we keep it:
     var scale: Float {
         get {
             (scaleX + scaleY) * 0.5
@@ -55,16 +55,15 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     var pinnedAxesRenderer: PinnedAxesRenderer?
     private let pinnedAxisOffset: CGFloat = 50
     
-    // This will remember how wide the chart was (in screen points) in its default layout,
-    // so we can clamp future zoom-outs.
+    /// Remember how wide the chart was (in screen points) in its default layout,
+    /// so we can clamp future zoom-outs.
     private var baseChartWidthScreen: CGFloat = 0
     
     // MARK: - Setup
     
-    // IdleManager to manage idle state
-    // private var idleManager = IdleManager()
     private var chartHasLoaded = false
     
+    /// Main setup for metal rendering
     func setupMetal(
         in size: CGSize,
         chartDataCache: ChartDataCache,
@@ -72,6 +71,16 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     ) {
         self.chartDataCache = chartDataCache
         self.simSettings = simSettings
+        
+        // ------------------------------------------------
+        // Optionally clamp minX (stored in ChartDataCache)
+        // if you never want negative.
+        // But if your data is guaranteed >=0 anyway,
+        // this clamp won't matter unless chartDataCache
+        // has negative minX.
+        // ------------------------------------------------
+        self.actualMinX = max(0, chartDataCache.minX)
+        self.actualMaxX = chartDataCache.maxX
         
         guard let device = MTLCreateSystemDefaultDevice() else {
             print("Metal not supported on this machine.")
@@ -101,7 +110,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             if let textRenderer = textRendererManager.getTextRenderer() {
                 print("TextRenderer is available. Proceeding with pipeline setup.")
                 
-                // Proceed with PinnedAxesRenderer setup
+                // Create pinned axes
                 pinnedAxesRenderer = PinnedAxesRenderer(
                     device: device,
                     textRenderer: textRenderer,
@@ -157,6 +166,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             pipelineState = nil
         }
         
+        // Build the line buffer from the data
         buildLineBuffer()
         
         // Create uniform buffer for the transform matrix
@@ -169,7 +179,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         // Move chart so left edge is pinned at x=50 initially
         anchorLeftEdgeAtLoad()
         
-        // Measure how wide the chart is now (default fill) so we can keep it from shrinking below that
+        // Measure how wide the chart is now
         let defaultLeftX = convertDataToPoint(SIMD2<Float>(actualMinX, 0), viewSize: size).x
         let defaultRightX = convertDataToPoint(SIMD2<Float>(actualMaxX, 0), viewSize: size).x
         baseChartWidthScreen = defaultRightX - defaultLeftX
@@ -183,7 +193,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             
             // Now retrieve a textRenderer that uses that atlas
             if let textRenderer = textRendererManager?.getTextRenderer() {
-                // Proceed to build pinned axes
+                // Build pinned axes
                 pinnedAxesRenderer = PinnedAxesRenderer(
                     device: device,
                     textRenderer: textRenderer,
@@ -202,7 +212,8 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     
     func buildLineBuffer() {
         guard let cache = chartDataCache, let simSettings = simSettings else { return }
-        
+
+        // Gather all X values from the data
         var allXValues: [Double] = []
         let simulations = cache.allRuns ?? []
         for sim in simulations {
@@ -211,32 +222,41 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
                 allXValues.append(rawX)
             }
         }
-        
-        guard let minX = allXValues.min(), let maxX = allXValues.max() else {
+
+        // (A) Find minX, maxX from the data
+        guard let rawMinX = allXValues.min(),
+              let rawMaxX = allXValues.max() else {
             print("No data to build line buffer.")
             return
         }
-        
-        actualMinX = Float(minX)
-        actualMaxX = Float(maxX)
-        
+
+        // (A) Clamp the minimum to 0 if you never want negative time
+        let clampedMinX = max(0, rawMinX)
+
+        // (A) Update actualMinX / actualMaxX so the rest of the code sees them
+        actualMinX = Float(clampedMinX)
+        actualMaxX = Float(rawMaxX)
+
+        // Build the vertex data with clampedMinX
         let (vertexData, lineCounts) = buildLineVertexData(
             simulations: simulations,
             simSettings: simSettings,
-            xMin: minX,
-            xMax: maxX,
+            xMin: clampedMinX,
+            xMax: rawMaxX,
             yMin: 1.0,
             yMax: 1_000_000_000_000.0,
             customPalette: customPalette,
             chartDataCache: cache
         )
-        
+
         self.lineSizes = lineCounts
-        
+
         let byteCount = vertexData.count * MemoryLayout<Float>.size
-        vertexBuffer = device.makeBuffer(bytes: vertexData,
-                                         length: byteCount,
-                                         options: .storageModeShared)
+        vertexBuffer = device.makeBuffer(
+            bytes: vertexData,
+            length: byteCount,
+            options: .storageModeShared
+        )
     }
     
     // MARK: - Updating Transform
@@ -246,7 +266,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     }
     
     func updateTransform() {
-        // SxSy
+        // Scale
         let scaleMatrix = matrix_float4x4(columns: (
             SIMD4<Float>(scaleX, 0, 0, 0),
             SIMD4<Float>(0, scaleY, 0, 0),
@@ -254,7 +274,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             SIMD4<Float>(0, 0, 0, 1)
         ))
         
-        // T
+        // Translation
         let translationMatrix = matrix_float4x4(columns: (
             SIMD4<Float>(1, 0, 0, 0),
             SIMD4<Float>(0, 1, 0, 0),
@@ -264,11 +284,12 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         
         let final = matrix_multiply(translationMatrix, scaleMatrix)
         
-        let ptr = transformBuffer?.contents().bindMemory(
+        if let ptr = transformBuffer?.contents().bindMemory(
             to: matrix_float4x4.self,
             capacity: 1
-        )
-        ptr?.pointee = final
+        ) {
+            ptr.pointee = final
+        }
     }
     
     func currentTransformMatrix() -> matrix_float4x4 {
@@ -287,7 +308,6 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         return matrix_multiply(translationMatrix, scaleMatrix)
     }
 
-    
     // MARK: - Coordinate Conversions
     
     func convertPointToNDC(_ point: CGPoint, viewSize: CGSize) -> SIMD2<Float> {
@@ -318,11 +338,11 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     // MARK: - MTKViewDelegate
     
     func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
-        // Typically handle if needed
+        // If your chart adjusts on size changes, do it here
     }
     
     func draw(in view: MTKView) {
-        // Bail if the view is paused
+        // If view is paused, skip
         if view.isPaused {
             print("View is paused. Skipping draw.")
             return
@@ -472,7 +492,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
                 let ratioY = (logVal - logMin) / (logMax - logMin)
                 let ndcY = Float(ratioY * 2.0 - 1.0)
                 
-                // Vertex position
+                // Position (x, y, z=0, w=1)
                 vertexData.append(ndcX)
                 vertexData.append(ndcY)
                 vertexData.append(0.0)
@@ -548,30 +568,66 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     func anchorEdges() {
         guard viewportSize.width > 0 else { return }
         
-        // pinnedLeft & pinnedRight in Float:
-        let pinnedLeft:  Float = 50
-        let pinnedRight: Float = Float(viewportSize.width) // cast from CGFloat
+        let pinnedLeft: CGFloat  = 50
+        let pinnedRight: CGFloat = viewportSize.width
         
-        // chartWidth is already a Float
-        let chartWidth: Float = 300  // example
+        // 1) Measure how wide the chart currently is in screen coords
+        let dataLeftScreenX  = convertDataToPoint(SIMD2<Float>(actualMinX, 0),
+                                                  viewSize: viewportSize).x
+        let dataRightScreenX = convertDataToPoint(SIMD2<Float>(actualMaxX, 0),
+                                                  viewSize: viewportSize).x
+        let chartWidth = dataRightScreenX - dataLeftScreenX
         
-        // Suppose baseChartWidthScreen is a CGFloat:
-        // convert it to Float if we want to do Float-based math
-        let baseChartWidthScreen: CGFloat = 400
-        let baseChartWidthF = Float(baseChartWidthScreen)
-        
-        // Now do comparisons & divisions in Float:
-        if chartWidth < Float(viewportSize.width) {
-            if chartWidth < baseChartWidthF {
-                let neededScaleFactor = baseChartWidthF / chartWidth
-                // do scale stuff here
+        // 2) If the chart is narrower/equal to the viewport, clamp edges
+        if chartWidth <= viewportSize.width {
+            
+            // 2a) If it's below the desired fill width, scale back up
+            if chartWidth < baseChartWidthScreen {
+                let neededScaleFactorCG = baseChartWidthScreen / chartWidth
+                let neededScaleFactor = Float(neededScaleFactorCG)
+                
+                scaleX *= neededScaleFactor
+                scaleY *= neededScaleFactor
+                updateTransform()
             }
             
-            // similarly, pinnedRight is in Float, so no error
-            if chartWidth > pinnedRight {
-                // ...
+            // 2b) Anchor the left edge so it can't go beyond pinnedLeft=50
+            let leftClipPoint = SIMD4<Float>(-1, 0, 0, 1)
+            let leftNDC       = currentTransformMatrix() * leftClipPoint
+            let leftNDCX      = leftNDC.x / leftNDC.w
+            let leftScreenX   = (leftNDCX + 1) * 0.5 * Float(viewportSize.width)
+            
+            if CGFloat(leftScreenX) > pinnedLeft {
+                let delta = Float(pinnedLeft) - leftScreenX
+                translation.x += delta / (0.5 * Float(viewportSize.width))
+                updateTransform()
             }
+            
+            // 2c) Anchor the right edge so it can't go beyond pinnedRight
+            let rightClipPoint = SIMD4<Float>(+1, 0, 0, 1)
+            let rightNDC       = currentTransformMatrix() * rightClipPoint
+            let rightNDCX      = rightNDC.x / rightNDC.w
+            let rightScreenX   = (rightNDCX + 1) * 0.5 * Float(viewportSize.width)
+            
+            if CGFloat(rightScreenX) < pinnedRight {
+                let delta = Float(pinnedRight) - rightScreenX
+                translation.x += delta / (0.5 * Float(viewportSize.width))
+                updateTransform()
+            }
+            
+            // 2d) Ensure dataX=0 sits exactly at pinnedLeft=50 if chart <= viewport
+            let zeroScreenPt = convertDataToPoint(SIMD2<Float>(0, 0), viewSize: viewportSize)
+            let zeroScreenX  = zeroScreenPt.x
+            if zeroScreenX != pinnedLeft {
+                let delta = pinnedLeft - zeroScreenX
+                translation.x += Float(delta) / (0.5 * Float(viewportSize.width))
+                updateTransform()
+            }
+        } else {
+            // 3) If the chart is wider than viewport, let user pan off edges
         }
+        
+        updateTransform()
     }
     
     // MARK: - Possibly needed

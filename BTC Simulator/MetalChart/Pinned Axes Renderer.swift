@@ -135,9 +135,11 @@ class PinnedAxesRenderer {
             color: axisColor
         )
         xAxisQuadVertexCount = xQuadVerts.count / 8
-        xAxisQuadBuffer = device.makeBuffer(bytes: xQuadVerts,
-                                            length: xQuadVerts.count * MemoryLayout<Float>.size,
-                                            options: .storageModeShared)
+        xAxisQuadBuffer = device.makeBuffer(
+            bytes: xQuadVerts,
+            length: xQuadVerts.count * MemoryLayout<Float>.size,
+            options: .storageModeShared
+        )
         
         // 2) Y axis
         let yQuadVerts = buildYAxisQuad(
@@ -150,22 +152,30 @@ class PinnedAxesRenderer {
             color: axisColor
         )
         yAxisQuadVertexCount = yQuadVerts.count / 8
-        yAxisQuadBuffer = device.makeBuffer(bytes: yQuadVerts,
-                                            length: yQuadVerts.count * MemoryLayout<Float>.size,
-                                            options: .storageModeShared)
+        yAxisQuadBuffer = device.makeBuffer(
+            bytes: yQuadVerts,
+            length: yQuadVerts.count * MemoryLayout<Float>.size,
+            options: .storageModeShared
+        )
         
         // Generate tick arrays
-        let tickXValues = generateNiceTicks(minVal: Double(minX),
-                                            maxVal: Double(maxX),
-                                            desiredCount: 6)
+        let tickXValues = generateNiceTicks(
+            minVal: Double(minX),
+            maxVal: Double(maxX),
+            desiredCount: 6
+        )
         // Increase Y ticks to 10 instead of 6
-        let tickYValues = generateNiceTicks(minVal: Double(minY),
-                                            maxVal: Double(maxY),
-                                            desiredCount: 10)
+        let tickYValues = generateNiceTicks(
+            minVal: Double(minY),
+            maxVal: Double(maxY),
+            desiredCount: 10
+        )
         
-        let gridXValues = generateNiceTicks(minVal: Double(minX),
-                                            maxVal: Double(maxX),
-                                            desiredCount: 10)
+        let gridXValues = generateNiceTicks(
+            minVal: Double(minX),
+            maxVal: Double(maxX),
+            desiredCount: 10
+        )
         // Use the exact same array so grid lines match the ticks
         let gridYValues = tickYValues
         
@@ -178,9 +188,11 @@ class PinnedAxesRenderer {
             maxX: maxX
         )
         xTickVertexCount = xTickVerts.count / 8
-        xTickBuffer = device.makeBuffer(bytes: xTickVerts,
-                                        length: xTickVerts.count * MemoryLayout<Float>.size,
-                                        options: .storageModeShared)
+        xTickBuffer = device.makeBuffer(
+            bytes: xTickVerts,
+            length: xTickVerts.count * MemoryLayout<Float>.size,
+            options: .storageModeShared
+        )
         xTickTextBuffers = xTickTexts.map { $0.0 }
         xTickTextVertexCounts = xTickTexts.map { $0.1 }
         
@@ -190,24 +202,37 @@ class PinnedAxesRenderer {
             pinnedScreenY: pinnedScreenY,
             chartTransform: chartTransform
         )
+        
+        // Only create yTickBuffer if there's data
+        if !yTickVerts.isEmpty {
+            yTickBuffer = device.makeBuffer(
+                bytes: yTickVerts,
+                length: yTickVerts.count * MemoryLayout<Float>.size,
+                options: .storageModeShared
+            )
+        } else {
+            yTickBuffer = nil
+        }
         yTickVertexCount = yTickVerts.count / 8
-        yTickBuffer = device.makeBuffer(bytes: yTickVerts,
-                                        length: yTickVerts.count * MemoryLayout<Float>.size,
-                                        options: .storageModeShared)
+        
         yTickTextBuffers = yTickTexts.map { $0.0 }
         yTickTextVertexCounts = yTickTexts.map { $0.1 }
         
         // 4) Grid lines
-        buildXGridLines(gridXValues,
-                        minY: 0,
-                        maxY: pinnedScreenY,
-                        pinnedScreenX: pinnedScreenX,
-                        chartTransform: chartTransform)
-        buildYGridLines(gridYValues,
-                        minX: pinnedScreenX,
-                        maxX: Float(viewportSize.width),
-                        pinnedScreenY: pinnedScreenY,
-                        chartTransform: chartTransform)
+        buildXGridLines(
+            gridXValues,
+            minY: 0,
+            maxY: pinnedScreenY,
+            pinnedScreenX: pinnedScreenX,
+            chartTransform: chartTransform
+        )
+        buildYGridLines(
+            gridYValues,
+            minX: pinnedScreenX,
+            maxX: Float(viewportSize.width),
+            pinnedScreenY: pinnedScreenY,
+            chartTransform: chartTransform
+        )
         
         // 5) Axis labels (“Years”, “USD”) at smaller scale
         let (maybeXBuf, xCount) = textRenderer.buildTextVertices(
@@ -497,18 +522,29 @@ extension PinnedAxesRenderer {
             if sx < pinnedScreenX { continue }
             if sx > Float(viewportSize.width) { continue }
             
-            verts.append(contentsOf: makeQuadList(
-                x0: sx - halfT,
-                y0: minY,
-                x1: sx + halfT,
-                y1: maxY,
-                color: gridColor
-            ))
+            verts.append(
+                contentsOf: makeQuadList(
+                    x0: sx - halfT,
+                    y0: minY,
+                    x1: sx + halfT,
+                    y1: maxY,
+                    color: gridColor
+                )
+            )
         }
+        
         xGridVertexCount = verts.count / 8
-        xGridBuffer = device.makeBuffer(bytes: verts,
-                                        length: verts.count * MemoryLayout<Float>.size,
-                                        options: .storageModeShared)
+        
+        // Only create the buffer if there's data
+        if !verts.isEmpty {
+            xGridBuffer = device.makeBuffer(
+                bytes: verts,
+                length: verts.count * MemoryLayout<Float>.size,
+                options: .storageModeShared
+            )
+        } else {
+            xGridBuffer = nil
+        }
     }
     
     private func buildYGridLines(
@@ -527,18 +563,29 @@ extension PinnedAxesRenderer {
             if sy < 0 { continue }
             if sy > pinnedScreenY { continue }
             
-            verts.append(contentsOf: makeQuadList(
-                x0: minX,
-                y0: sy - halfT,
-                x1: maxX,
-                y1: sy + halfT,
-                color: gridColor
-            ))
+            verts.append(
+                contentsOf: makeQuadList(
+                    x0: minX,
+                    y0: sy - halfT,
+                    x1: maxX,
+                    y1: sy + halfT,
+                    color: gridColor
+                )
+            )
         }
+        
         yGridVertexCount = verts.count / 8
-        yGridBuffer = device.makeBuffer(bytes: verts,
-                                        length: verts.count * MemoryLayout<Float>.size,
-                                        options: .storageModeShared)
+        
+        // Only create the buffer if there's data
+        if !verts.isEmpty {
+            yGridBuffer = device.makeBuffer(
+                bytes: verts,
+                length: verts.count * MemoryLayout<Float>.size,
+                options: .storageModeShared
+            )
+        } else {
+            yGridBuffer = nil
+        }
     }
 }
 

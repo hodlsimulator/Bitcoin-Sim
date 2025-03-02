@@ -206,6 +206,11 @@ fileprivate enum ChartLoadingState {
 // MARK: - ChartDataCache
 class ChartDataCache: ObservableObject {
     let id = UUID()
+    
+    // These let you store your x-range directly
+    @Published var minX: Float = 0
+    @Published var maxX: Float = 0
+
     @Published var allRuns: [SimulationRun]? = nil
     @Published var portfolioRuns: [SimulationRun]? = nil
     @Published var bestFitRun: [SimulationRun]? = nil
@@ -218,7 +223,7 @@ class ChartDataCache: ObservableObject {
     @Published var portfolioChartSnapshotLandscape: UIImage? = nil
     @Published var chartSnapshotPortfolio: UIImage? = nil
     @Published var chartSnapshotPortfolioLandscape: UIImage? = nil
-
+    
     init() {}
 }
 
