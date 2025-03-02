@@ -72,13 +72,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         self.chartDataCache = chartDataCache
         self.simSettings = simSettings
         
-        // ------------------------------------------------
-        // Optionally clamp minX (stored in ChartDataCache)
-        // if you never want negative.
-        // But if your data is guaranteed >=0 anyway,
-        // this clamp won't matter unless chartDataCache
-        // has negative minX.
-        // ------------------------------------------------
+        // Optionally clamp chartDataCache.minX so we don't go negative
         self.actualMinX = max(0, chartDataCache.minX)
         self.actualMaxX = chartDataCache.maxX
         
@@ -215,36 +209,57 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
 
         // Gather all X values from the data
         var allXValues: [Double] = []
+        // Also gather all Y values
+        var allYValues: [Double] = []
+        
         let simulations = cache.allRuns ?? []
         for sim in simulations {
             for pt in sim.points {
                 let rawX = convertPeriodToYears(pt.week, simSettings)
                 allXValues.append(rawX)
+                
+                // Collect Y
+                let rawY = NSDecimalNumber(decimal: pt.value).doubleValue
+                allYValues.append(rawY)
             }
         }
 
-        // (A) Find minX, maxX from the data
+        // (A) Find minX, maxX
         guard let rawMinX = allXValues.min(),
               let rawMaxX = allXValues.max() else {
             print("No data to build line buffer.")
             return
         }
+        
+        // (A) Also find minY, maxY
+        guard let rawMinY = allYValues.min(),
+              let rawMaxY = allYValues.max() else {
+            print("No data to build line buffer (no Y).")
+            return
+        }
 
-        // (A) Clamp the minimum to 0 if you never want negative time
+        // (A) Clamp the minimum X to 0
         let clampedMinX = max(0, rawMinX)
 
-        // (A) Update actualMinX / actualMaxX so the rest of the code sees them
+        // (A) Update actualMinX / actualMaxX
         actualMinX = Float(clampedMinX)
         actualMaxX = Float(rawMaxX)
 
-        // Build the vertex data with clampedMinX
+        // (B) Define yMin as the starting BTC price (must be > 0)
+        let startingBTC = max(0.000001, simSettings.initialBTCPriceUSD)
+        let yMin = startingBTC
+        
+        // (B) Define yMax from the data
+        let yMax = rawMaxY
+
+        // Build the vertex data with new yMin/yMax
         let (vertexData, lineCounts) = buildLineVertexData(
             simulations: simulations,
             simSettings: simSettings,
             xMin: clampedMinX,
             xMax: rawMaxX,
-            yMin: 1.0,
-            yMax: 1_000_000_000_000.0,
+            yMin: yMin,
+            yMax: yMax,
             customPalette: customPalette,
             chartDataCache: cache
         )
@@ -266,7 +281,6 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     }
     
     func updateTransform() {
-        // Scale
         let scaleMatrix = matrix_float4x4(columns: (
             SIMD4<Float>(scaleX, 0, 0, 0),
             SIMD4<Float>(0, scaleY, 0, 0),
@@ -274,7 +288,6 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             SIMD4<Float>(0, 0, 0, 1)
         ))
         
-        // Translation
         let translationMatrix = matrix_float4x4(columns: (
             SIMD4<Float>(1, 0, 0, 0),
             SIMD4<Float>(0, 1, 0, 0),
@@ -625,6 +638,19 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             }
         } else {
             // 3) If the chart is wider than viewport, let user pan off edges
+            //    but we still might disallow negative X if desired:
+        }
+        
+        // 4) Finally, ensure we never see negative X in the visible range:
+        let (xMinVis2, _) = computeVisibleRangeX()
+        if xMinVis2 < 0 {
+            let zeroScreenPt = convertDataToPoint(SIMD2<Float>(0, 0), viewSize: viewportSize)
+            let zeroScreenX  = zeroScreenPt.x
+            if zeroScreenX != pinnedLeft {
+                let delta = pinnedLeft - zeroScreenX
+                translation.x += Float(delta) / (0.5 * Float(viewportSize.width))
+                updateTransform()
+            }
         }
         
         updateTransform()
