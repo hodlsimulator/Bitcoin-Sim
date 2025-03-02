@@ -43,6 +43,13 @@ class MetalChartUIView: UIView {
     override func layoutSubviews() {
         super.layoutSubviews()
         mtkView.frame = self.bounds
+
+        // Let’s render at native resolution
+        let scale = UIScreen.main.scale
+        mtkView.drawableSize = CGSize(
+            width:  bounds.size.width  * scale,
+            height: bounds.size.height * scale
+        )
     }
     
     // Add gesture recognizers to reset idle timer on interaction

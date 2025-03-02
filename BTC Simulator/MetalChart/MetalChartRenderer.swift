@@ -349,7 +349,6 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             height: Int(view.drawableSize.height)
         )
         renderEncoder.setScissorRect(chartRect)
-        print("Scissor rect (chart lines): \(chartRect)")
         
         // Use the chart pipeline
         renderEncoder.setRenderPipelineState(pipelineState)
@@ -381,7 +380,6 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             height: Int(view.drawableSize.height)
         )
         renderEncoder.setScissorRect(fullRect)
-        print("Scissor rect (pinned axes): \(fullRect)")
         
         // Update and draw pinned axes on top
         if let pinnedAxes = pinnedAxesRenderer {

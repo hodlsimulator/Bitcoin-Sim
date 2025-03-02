@@ -15,8 +15,19 @@ class TextRendererManager: ObservableObject {
     // Generate font atlas and initialize the renderer
     func generateFontAtlasAndRenderer(device: MTLDevice) {
         print("Generating font atlas and initializing text renderer...")
-        if let atlas = generateFontAtlas(device: device, font: UIFont.systemFont(ofSize: 16)) {
+        
+        // Pick your desired base font + a moderate scaleFactor
+        let chosenFont = UIFont.systemFont(ofSize: 48)
+        let scaleFactor: CGFloat = 0.1
+        
+        // Pass them into our new generateFontAtlas function
+        if let atlas = generateFontAtlas(
+            device: device,
+            font: chosenFont,
+            scaleFactor: scaleFactor
+        ) {
             self.fontAtlas = atlas
+            
             // Create a text renderer with the generated atlas
             self.textRenderer = GPUTextRenderer(
                 device: device,
@@ -24,6 +35,7 @@ class TextRendererManager: ObservableObject {
                 library: device.makeDefaultLibrary()!
             )
             print("Font atlas generated and text renderer initialized successfully.")
+            
         } else {
             print("Failed to generate font atlas.")
         }

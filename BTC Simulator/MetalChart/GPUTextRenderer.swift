@@ -59,7 +59,6 @@ public class GPUTextRenderer {
 
         do {
             pipelineState = try device.makeRenderPipelineState(descriptor: descriptor)
-            print("GPUTextRenderer pipelineState is \(String(describing: pipelineState))")
         } catch {
             print("Failed to create text pipeline: \(error)")
         }
@@ -71,7 +70,7 @@ public class GPUTextRenderer {
         x: Float,
         y: Float,
         color: simd_float4,
-        scale: Float = 1.0,
+        scale: Float = 0.25,  // Lower scale leverages bigger atlas
         screenWidth: Float,
         screenHeight: Float
     ) -> (MTLBuffer?, Int) {
@@ -80,7 +79,6 @@ public class GPUTextRenderer {
         var penX = x
         let penY = y
 
-        print("buildTextVertices called with screenWidth=\(screenWidth), screenHeight=\(screenHeight)")
         for ch in string {
             guard let gm = atlas.glyphs[ch] else { continue }
 
@@ -88,8 +86,6 @@ public class GPUTextRenderer {
             let y0 = penY + (gm.yOffset - gm.height) * scale
             let x1 = x0 + gm.width * scale
             let y1 = y0 + gm.height * scale
-            
-            print("glyph=\(ch) x0=\(x0), x1=\(x1), y0=\(y0), y1=\(y1) screenW=\(screenWidth), screenH=\(screenHeight)")
 
             // Cull if it's *truly* offscreen:
             if x1 < 0 || x0 > screenWidth || y1 < 0 || y0 > screenHeight {
@@ -112,7 +108,9 @@ public class GPUTextRenderer {
         }
 
         let vertexCount = vertices.count / 8
-        if vertexCount == 0 { return (nil, 0) }
+        if vertexCount == 0 {
+            return (nil, 0)
+        }
 
         let length = vertices.count * MemoryLayout<Float>.size
         guard let buffer = device.makeBuffer(bytes: vertices,

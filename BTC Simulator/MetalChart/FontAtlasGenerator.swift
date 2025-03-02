@@ -9,7 +9,6 @@ import MetalKit
 import CoreText
 import UIKit
 
-/// Stores the UV region for each character, plus layout info
 public struct RuntimeGlyphMetrics {
     public let char: Character
     public let uMin, vMin, uMax, vMax: Float
@@ -19,69 +18,68 @@ public struct RuntimeGlyphMetrics {
     public let yOffset: Float
 }
 
-/// The result of generating a font atlas at runtime.
 public struct RuntimeFontAtlas {
     public let texture: MTLTexture
     public let glyphs: [Character: RuntimeGlyphMetrics]
 }
 
 /// Generates a texture containing all requested glyphs for the specified font.
-/// Returns a `RuntimeFontAtlas` with the texture + a dictionary of glyph metrics.
+/// We manually upscale the glyphs when drawing so we get a big atlas.
 public func generateFontAtlas(
     device: MTLDevice,
     font: UIFont,
+    scaleFactor: CGFloat = 4.0,
     characters: [Character] = Array("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,+-*/%()[]{}^$~:;?!_=<>'\"\\|&@#∞◊¥€£•π÷–…‰″′$฿∫∑√±≈≈≠≥≤§")
 ) -> RuntimeFontAtlas? {
     
-    // 1) Unique sorted list of characters
     let uniqueChars = Array(Set(characters)).sorted()
     guard !uniqueChars.isEmpty else { return nil }
     
-    // 2) Measure each glyph’s bounding rect
+    // CTFont with the base size
     let ctFont = CTFontCreateWithName(font.fontName as CFString, font.pointSize, nil)
+    
     var glyphRects: [Character: CGRect] = [:]
     var maxGlyphWidth: CGFloat = 0
     var maxGlyphHeight: CGFloat = 0
     
+    // Measure bounding rects in *points*
     for ch in uniqueChars {
         guard let uniScalar = ch.unicodeScalars.first else { continue }
-        
         var glyph = CTFontGetGlyphWithName(ctFont, "\(ch)" as CFString)
         if glyph == 0 {
             let glyphChar = UniChar(uniScalar.value)
             var tempGlyph: CGGlyph = 0
             if CTFontGetGlyphsForCharacters(ctFont, [glyphChar], &tempGlyph, 1) {
                 glyph = tempGlyph
-            } else {
-                glyph = 0
             }
         }
         
         if glyph != 0 {
             var boundingRect = CGRect.zero
             CTFontGetBoundingRectsForGlyphs(ctFont, .default, [glyph], &boundingRect, 1)
-            maxGlyphWidth = max(maxGlyphWidth, boundingRect.width)
+            
+            maxGlyphWidth  = max(maxGlyphWidth,  boundingRect.width)
             maxGlyphHeight = max(maxGlyphHeight, boundingRect.height)
             glyphRects[ch] = boundingRect
         }
     }
-    
     if glyphRects.isEmpty {
         return nil
     }
     
-    // 3) Create a grid for glyphs
     let totalGlyphCount = glyphRects.count
     let cols = Int(ceil(sqrt(Double(totalGlyphCount))))
     let rows = Int(ceil(Double(totalGlyphCount) / Double(cols)))
     
     let padding: CGFloat = 2
-    let cellWidth  = maxGlyphWidth  + padding
-    let cellHeight = maxGlyphHeight + padding
-    let atlasWidth  = Int(cellWidth * CGFloat(cols))
+    let cellWidth  = (maxGlyphWidth  * scaleFactor) + padding
+    let cellHeight = (maxGlyphHeight * scaleFactor) + padding
+    let atlasWidth  = Int(cellWidth  * CGFloat(cols))
     let atlasHeight = Int(cellHeight * CGFloat(rows))
     
-    // 4) Create a grayscale Core Graphics context
+    print("Building atlas \(atlasWidth)x\(atlasHeight) scaleFactor=\(scaleFactor)")
+    
+    // 1) DO NOT FLIP THE CONTEXT. We keep it in Apple’s default top-left origin.
     let colorSpace = CGColorSpaceCreateDeviceGray()
     guard let context = CGContext(
         data: nil,
@@ -95,64 +93,80 @@ public func generateFontAtlas(
         return nil
     }
     
-    // Flip context
-    context.translateBy(x: 0, y: CGFloat(atlasHeight))
-    context.scaleBy(x: 1, y: -1)
-    
-    // Fill black background
+    // Fill black
     context.setFillColor(UIColor.black.cgColor)
     context.fill(CGRect(x: 0, y: 0, width: atlasWidth, height: atlasHeight))
     
     var glyphMap: [Character: RuntimeGlyphMetrics] = [:]
     
-    // 5) Draw each glyph
     var idx = 0
     for ch in uniqueChars {
         guard let boundingRect = glyphRects[ch] else { continue }
         let col = idx % cols
         let row = idx / cols
         
-        let originX = CGFloat(col) * cellWidth  + padding / 2
-        let originY = CGFloat(row) * cellHeight + padding / 2
+        // The cell’s top-left in pixel space
+        let originX = CGFloat(col) * cellWidth  + padding/2
+        let originY = CGFloat(row) * cellHeight + padding/2
         
-        // Get the glyph again for drawing
-        var glyph = CTFontGetGlyphWithName(ctFont, String(ch) as CFString)
-        if glyph == 0 {
+        // We'll scale from boundingRect’s top-left corner
+        let scaledOffsetX = boundingRect.minX * scaleFactor
+        let scaledOffsetY = boundingRect.minY * scaleFactor
+        let drawnX = originX + scaledOffsetX
+        let drawnY = originY + scaledOffsetY
+        
+        context.saveGState()
+        // 2) We scale up by scaleFactor so glyph is physically larger in the bitmap
+        context.translateBy(x: originX, y: originY)
+        context.scaleBy(x: scaleFactor, y: scaleFactor)
+        
+        let position = CGPoint(x: boundingRect.minX, y: boundingRect.minY)
+        
+        context.setFillColor(UIColor.white.cgColor)
+        
+        var glyphID = CTFontGetGlyphWithName(ctFont, String(ch) as CFString)
+        if glyphID == 0 {
             let uniScalar = ch.unicodeScalars.first!
             let glyphChar = UniChar(uniScalar.value)
             var tempGlyph: CGGlyph = 0
             if CTFontGetGlyphsForCharacters(ctFont, [glyphChar], &tempGlyph, 1) {
-                glyph = tempGlyph
+                glyphID = tempGlyph
             }
         }
         
-        // Draw glyph at precise position
-        context.saveGState()
-        let position = CGPoint(x: originX, y: originY)
-        context.setFillColor(UIColor.white.cgColor)
-        CTFontDrawGlyphs(ctFont, [glyph], [position], 1, context)
+        CTFontDrawGlyphs(ctFont, [glyphID], [position], 1, context)
         context.restoreGState()
         
-        // Calculate drawnRect based on drawing position
+        let scaledWidth  = boundingRect.width  * scaleFactor
+        let scaledHeight = boundingRect.height * scaleFactor
+        
+        // This is the “unflipped” final rect in the top-left coordinate system
         let drawnRect = CGRect(
-            x: originX + boundingRect.origin.x,
-            y: originY + boundingRect.origin.y,
-            width: boundingRect.width,
-            height: boundingRect.height
+            x: drawnX,
+            y: drawnY,
+            width: scaledWidth,
+            height: scaledHeight
         )
         
+        // We'll compute the U coords as normal:
         let uMin = Float(drawnRect.minX / CGFloat(atlasWidth))
-        let vMin = Float(drawnRect.minY / CGFloat(atlasHeight))
         let uMax = Float(drawnRect.maxX / CGFloat(atlasWidth))
-        let vMax = Float(drawnRect.maxY / CGFloat(atlasHeight))
         
-        // Measure advance
+        // 3) Invert the V coords because in a typical Metal texture,
+        //    v=0 is at the *bottom*, but Apple’s CG context has y=0 at the top.
+        //    So we flip them here to ensure the text is upright in Metal.
+        let rawVMin = Float(drawnRect.minY / CGFloat(atlasHeight))
+        let rawVMax = Float(drawnRect.maxY / CGFloat(atlasHeight))
+        
+        let vMin = 1.0 - rawVMax  // invert
+        let vMax = 1.0 - rawVMin  // invert
+        
         var advances = CGSize.zero
-        CTFontGetAdvancesForGlyphs(ctFont, .default, [glyph], &advances, 1)
+        CTFontGetAdvancesForGlyphs(ctFont, .default, [glyphID], &advances, 1)
         
-        let glyphW = Float(boundingRect.width)
-        let glyphH = Float(boundingRect.height)
-        let xAdvance = Float(advances.width)
+        let glyphW = Float(scaledWidth)
+        let glyphH = Float(scaledHeight)
+        let xAdvance = Float(advances.width) // unscaled points, scale in buildTextVertices if needed
         
         glyphMap[ch] = RuntimeGlyphMetrics(
             char: ch,
@@ -168,18 +182,22 @@ public func generateFontAtlas(
         idx += 1
     }
     
-    // 6) Make CGImage
     guard let cgImage = context.makeImage() else { return nil }
     
-    // Debug: Save the atlas to inspect it
+    // Convert to UIImage and save in Documents so you can check it
     let uiImage = UIImage(cgImage: cgImage)
     if let data = uiImage.pngData() {
-        let url = URL(fileURLWithPath: "/tmp/atlas.png")
-        try? data.write(to: url)
-        print("Atlas saved to \(url.path)")
+        do {
+            let docsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+            let outURL = docsDir.appendingPathComponent("atlas.png")
+            try data.write(to: outURL)
+            print("Atlas PNG saved to \(outURL.path)")
+        } catch {
+            print("Failed to save atlas.png: \(error)")
+        }
     }
     
-    // 7) Convert CGImage to MTLTexture
+    // Now load into MTLTexture
     let loader = MTKTextureLoader(device: device)
     let textureOptions: [MTKTextureLoader.Option: Any] = [
         .SRGB: false,
@@ -188,6 +206,7 @@ public func generateFontAtlas(
     
     do {
         let atlasTexture = try loader.newTexture(cgImage: cgImage, options: textureOptions)
+        print("Metal texture size: \(atlasTexture.width)x\(atlasTexture.height)")
         return RuntimeFontAtlas(texture: atlasTexture, glyphs: glyphMap)
     } catch {
         print("Error creating MTLTexture: \(error)")

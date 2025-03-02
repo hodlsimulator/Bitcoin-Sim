@@ -16,44 +16,42 @@ struct ViewportSize {
 class PinnedAxesRenderer {
     
     var idleManager: IdleManager?
-    
     var textRendererManager: TextRendererManager
     
     private let device: MTLDevice
     private let textRenderer: GPUTextRenderer
     private var axisPipelineState: MTLRenderPipelineState?
     
-    /// Current view size; set each frame.
+    // Set each frame from outside
     var viewportSize: CGSize = .zero
     
-    /// Colours
+    // Colours
     var axisColor = SIMD4<Float>(1, 1, 1, 1)
     var tickColor = SIMD4<Float>(0.7, 0.7, 0.7, 1.0)
-    // Reduced opacity for grid lines (alpha 0.6)
-    var gridColor = SIMD4<Float>(0.4, 0.4, 0.4, 0.6)
-    
-    // MARK: - Axis geometry (triangle strips)
+    var gridColor = SIMD4<Float>(0.4, 0.4, 0.4, 0.6) // alpha=0.6 for grid
+
+    // --- Axis buffers ---
     private var xAxisQuadBuffer: MTLBuffer?
     private var xAxisQuadVertexCount = 0
     
     private var yAxisQuadBuffer: MTLBuffer?
     private var yAxisQuadVertexCount = 0
     
-    // MARK: - Ticks (short lines on the axes) - triangle list
+    // --- Tick line buffers ---
     private var xTickBuffer: MTLBuffer?
     private var xTickVertexCount = 0
     
     private var yTickBuffer: MTLBuffer?
     private var yTickVertexCount = 0
     
-    // MARK: - Grid lines (spanning inside chart) - triangle list
+    // --- Grid line buffers ---
     private var xGridBuffer: MTLBuffer?
     private var xGridVertexCount = 0
     
     private var yGridBuffer: MTLBuffer?
     private var yGridVertexCount = 0
     
-    // MARK: - Text buffers for tick labels
+    // --- Text buffers ---
     private var xTickTextBuffers: [MTLBuffer] = []
     private var xTickTextVertexCounts: [Int] = []
     private var yTickTextBuffers: [MTLBuffer] = []
@@ -65,6 +63,8 @@ class PinnedAxesRenderer {
     private var yAxisLabelBuffer: MTLBuffer?
     private var yAxisLabelVertexCount = 0
 
+    // MARK: - Init
+    
     init(device: MTLDevice,
          textRenderer: GPUTextRenderer,
          textRendererManager: TextRendererManager,
@@ -75,57 +75,56 @@ class PinnedAxesRenderer {
         self.textRenderer = textRenderer
         self.textRendererManager = textRendererManager
         self.idleManager = idleManager
-        buildAxisPipeline(library: library, textRendererManager: textRendererManager)
+        buildAxisPipeline(library: library)
     }
     
-    // Build a basic pipeline for the axes/ticks
-    private func buildAxisPipeline(library: MTLLibrary, textRendererManager: TextRendererManager) {
-        let descriptor = MTLRenderPipelineDescriptor()
-        descriptor.vertexFunction = library.makeFunction(name: "axisVertexShader_screenSpace")
-        descriptor.fragmentFunction = library.makeFunction(name: "axisFragmentShader")
-        descriptor.rasterSampleCount = 4  // if using MSAA
+    // Build the axis pipeline for lines/axes
+    private func buildAxisPipeline(library: MTLLibrary) {
+        let desc = MTLRenderPipelineDescriptor()
+        desc.vertexFunction = library.makeFunction(name: "axisVertexShader_screenSpace")
+        desc.fragmentFunction = library.makeFunction(name: "axisFragmentShader")
+        desc.rasterSampleCount = 4 // if using MSAA
         
-        let vertexDescriptor = MTLVertexDescriptor()
-        vertexDescriptor.attributes[0].format = .float4
-        vertexDescriptor.attributes[0].offset = 0
-        vertexDescriptor.attributes[0].bufferIndex = 0
+        let vDesc = MTLVertexDescriptor()
+        vDesc.attributes[0].format = .float4
+        vDesc.attributes[0].offset = 0
+        vDesc.attributes[0].bufferIndex = 0
         
-        vertexDescriptor.attributes[1].format = .float4
-        vertexDescriptor.attributes[1].offset = MemoryLayout<Float>.size * 4
-        vertexDescriptor.attributes[1].bufferIndex = 0
+        vDesc.attributes[1].format = .float4
+        vDesc.attributes[1].offset = MemoryLayout<Float>.size * 4
+        vDesc.attributes[1].bufferIndex = 0
         
-        vertexDescriptor.layouts[0].stride = MemoryLayout<Float>.size * 8
-        descriptor.vertexDescriptor = vertexDescriptor
+        vDesc.layouts[0].stride = MemoryLayout<Float>.size * 8
+        desc.vertexDescriptor = vDesc
         
-        descriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
-        descriptor.colorAttachments[0].isBlendingEnabled = true
-        descriptor.colorAttachments[0].sourceRGBBlendFactor = .sourceAlpha
-        descriptor.colorAttachments[0].destinationRGBBlendFactor = .oneMinusSourceAlpha
+        desc.colorAttachments[0].pixelFormat = .bgra8Unorm
+        desc.colorAttachments[0].isBlendingEnabled = true
+        desc.colorAttachments[0].sourceRGBBlendFactor = .sourceAlpha
+        desc.colorAttachments[0].destinationRGBBlendFactor = .oneMinusSourceAlpha
         
         do {
-            axisPipelineState = try device.makeRenderPipelineState(descriptor: descriptor)
+            axisPipelineState = try device.makeRenderPipelineState(descriptor: desc)
         } catch {
             print("Error building axis pipeline: \(error)")
         }
     }
     
-    // MARK: - Update
+    // MARK: - Update each frame
     
-    /// Called every frame to rebuild geometry for axes, ticks, and grid lines.
-    func updateAxes(minX: Float,
-                    maxX: Float,
-                    minY: Float,
-                    maxY: Float,
-                    chartTransform: matrix_float4x4) {
-        
-        // Pinned axis positions in screen space.
+    func updateAxes(
+        minX: Float,
+        maxX: Float,
+        minY: Float,
+        maxY: Float,
+        chartTransform: matrix_float4x4
+    ) {
+        // Where the pinned axes should be drawn
         let pinnedScreenX: Float = 50
         let pinnedScreenY: Float = Float(viewportSize.height) - 40
         
-        // Axis thickness.
-        let axisThickness: Float = 2
+        let axisThickness: Float = 1
         
-        // 1) Build pinned X axis
+        // 1) X axis
         let xQuadVerts = buildXAxisQuad(
             minDataX: minX,
             maxDataX: maxX,
@@ -136,13 +135,11 @@ class PinnedAxesRenderer {
             color: axisColor
         )
         xAxisQuadVertexCount = xQuadVerts.count / 8
-        xAxisQuadBuffer = device.makeBuffer(
-            bytes: xQuadVerts,
-            length: xQuadVerts.count * MemoryLayout<Float>.size,
-            options: .storageModeShared
-        )
+        xAxisQuadBuffer = device.makeBuffer(bytes: xQuadVerts,
+                                            length: xQuadVerts.count * MemoryLayout<Float>.size,
+                                            options: .storageModeShared)
         
-        // 2) Build pinned Y axis
+        // 2) Y axis
         let yQuadVerts = buildYAxisQuad(
             minDataY: minY,
             maxDataY: maxY,
@@ -153,59 +150,54 @@ class PinnedAxesRenderer {
             color: axisColor
         )
         yAxisQuadVertexCount = yQuadVerts.count / 8
-        yAxisQuadBuffer = device.makeBuffer(
-            bytes: yQuadVerts,
-            length: yQuadVerts.count * MemoryLayout<Float>.size,
-            options: .storageModeShared
-        )
+        yAxisQuadBuffer = device.makeBuffer(bytes: yQuadVerts,
+                                            length: yQuadVerts.count * MemoryLayout<Float>.size,
+                                            options: .storageModeShared)
         
-        // Generate tick and grid values.
+        // Generate tick arrays
         let tickXValues = generateNiceTicks(minVal: Double(minX),
                                             maxVal: Double(maxX),
                                             desiredCount: 6)
+        // Increase Y ticks to 10 instead of 6
         let tickYValues = generateNiceTicks(minVal: Double(minY),
-                                            maxVal: Double(maxY),
-                                            desiredCount: 6)
-        let gridXValues = generateNiceTicks(minVal: Double(minX),
-                                            maxVal: Double(maxX),
-                                            desiredCount: 10)
-        let gridYValues = generateNiceTicks(minVal: Double(minY),
                                             maxVal: Double(maxY),
                                             desiredCount: 10)
         
-        // 3) Build short ticks and text labels on pinned axes
+        let gridXValues = generateNiceTicks(minVal: Double(minX),
+                                            maxVal: Double(maxX),
+                                            desiredCount: 10)
+        // Use the exact same array so grid lines match the ticks
+        let gridYValues = tickYValues
+        
+        // 3) Ticks + labels
         let (xTickVerts, xTickTexts) = buildXTicks(
             tickXValues,
             pinnedScreenY: pinnedScreenY,
             chartTransform: chartTransform,
-            tickColor: tickColor
+            minX: minX,
+            maxX: maxX
         )
         xTickVertexCount = xTickVerts.count / 8
-        xTickBuffer = device.makeBuffer(
-            bytes: xTickVerts,
-            length: xTickVerts.count * MemoryLayout<Float>.size,
-            options: .storageModeShared
-        )
-        self.xTickTextBuffers = xTickTexts.map { $0.0 }
-        self.xTickTextVertexCounts = xTickTexts.map { $0.1 }
+        xTickBuffer = device.makeBuffer(bytes: xTickVerts,
+                                        length: xTickVerts.count * MemoryLayout<Float>.size,
+                                        options: .storageModeShared)
+        xTickTextBuffers = xTickTexts.map { $0.0 }
+        xTickTextVertexCounts = xTickTexts.map { $0.1 }
         
         let (yTickVerts, yTickTexts) = buildYTicks(
             tickYValues,
             pinnedScreenX: pinnedScreenX,
             pinnedScreenY: pinnedScreenY,
-            chartTransform: chartTransform,
-            tickColor: tickColor
+            chartTransform: chartTransform
         )
         yTickVertexCount = yTickVerts.count / 8
-        yTickBuffer = device.makeBuffer(
-            bytes: yTickVerts,
-            length: yTickVerts.count * MemoryLayout<Float>.size,
-            options: .storageModeShared
-        )
-        self.yTickTextBuffers = yTickTexts.map { $0.0 }
-        self.yTickTextVertexCounts = yTickTexts.map { $0.1 }
+        yTickBuffer = device.makeBuffer(bytes: yTickVerts,
+                                        length: yTickVerts.count * MemoryLayout<Float>.size,
+                                        options: .storageModeShared)
+        yTickTextBuffers = yTickTexts.map { $0.0 }
+        yTickTextVertexCounts = yTickTexts.map { $0.1 }
         
-        // 4) Build grid lines that span the chart interior
+        // 4) Grid lines
         buildXGridLines(gridXValues,
                         minY: 0,
                         maxY: pinnedScreenY,
@@ -217,13 +209,13 @@ class PinnedAxesRenderer {
                         pinnedScreenY: pinnedScreenY,
                         chartTransform: chartTransform)
         
-        // 5) Build axis labels
+        // 5) Axis labels (“Years”, “USD”) at smaller scale
         let (maybeXBuf, xCount) = textRenderer.buildTextVertices(
             string: "Years",
             x: pinnedScreenX + 100,
             y: pinnedScreenY + 15,
             color: axisColor,
-            scale: 2.0,
+            scale: 1.5,
             screenWidth: Float(viewportSize.width),
             screenHeight: Float(viewportSize.height)
         )
@@ -237,7 +229,7 @@ class PinnedAxesRenderer {
             x: pinnedScreenX - 40,
             y: pinnedScreenY * 0.5,
             color: axisColor,
-            scale: 2.0,
+            scale: 1.5,
             screenWidth: Float(viewportSize.width),
             screenHeight: Float(viewportSize.height)
         )
@@ -247,122 +239,105 @@ class PinnedAxesRenderer {
         }
     }
     
-    func renderTextBuffer(renderEncoder: MTLRenderCommandEncoder, buffer: MTLBuffer, vertexCount: Int) {
-        let bufferLength = buffer.length
-        let expectedSize = vertexCount * MemoryLayout<Float>.size * 8
-        if bufferLength != expectedSize {
-            print("Warning: Buffer size mismatch. Expected: \(expectedSize), Got: \(bufferLength)")
-        }
-        renderEncoder.setVertexBuffer(buffer, offset: 0, index: 0)
-        renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: vertexCount)
-    }
-    
     // MARK: - Draw
     
     func drawAxes(renderEncoder: MTLRenderCommandEncoder) {
         idleManager?.resetIdleTimer()
-
+        
         guard let axisPipeline = axisPipelineState else { return }
-
-        // Build a viewport buffer for the axis vertex shader
+        
+        // Build a viewport buffer for the vertex shader
         var vp = ViewportSize(size: SIMD2<Float>(Float(viewportSize.width),
                                                  Float(viewportSize.height)))
-        guard let vpBuffer = device.makeBuffer(bytes: &vp,
-                                               length: MemoryLayout<ViewportSize>.size,
-                                               options: .storageModeShared) else {
+        guard let vpBuf = device.makeBuffer(bytes: &vp,
+                                            length: MemoryLayout<ViewportSize>.size,
+                                            options: .storageModeShared) else {
             return
         }
-        renderEncoder.setVertexBuffer(vpBuffer, offset: 0, index: 1)
-
-        // Use the axis pipeline for grids, ticks, axes
+        renderEncoder.setVertexBuffer(vpBuf, offset: 0, index: 1)
+        
+        // Use axis pipeline for axis lines + grids + ticks
         renderEncoder.setRenderPipelineState(axisPipeline)
-
-        // --- 1) X Grid ---
+        
+        // Draw X grid
         if let buf = xGridBuffer, xGridVertexCount > 0 {
-            print("DEBUG: Drawing xGrid with \(xGridVertexCount) vertices")
             renderEncoder.setVertexBuffer(buf, offset: 0, index: 0)
             renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: xGridVertexCount)
         }
-
-        // --- 2) Y Grid ---
+        
+        // Draw Y grid
         if let buf = yGridBuffer, yGridVertexCount > 0 {
-            print("DEBUG: Drawing yGrid with \(yGridVertexCount) vertices")
             renderEncoder.setVertexBuffer(buf, offset: 0, index: 0)
             renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: yGridVertexCount)
         }
-
-        // --- 3) X Ticks ---
+        
+        // Draw X ticks
         if let buf = xTickBuffer, xTickVertexCount > 0 {
-            print("DEBUG: Drawing xTicks with \(xTickVertexCount) vertices")
             renderEncoder.setVertexBuffer(buf, offset: 0, index: 0)
             renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: xTickVertexCount)
         }
-
-        // --- 4) Y Ticks ---
+        
+        // Draw Y ticks
         if let buf = yTickBuffer, yTickVertexCount > 0 {
-            print("DEBUG: Drawing yTicks with \(yTickVertexCount) vertices")
             renderEncoder.setVertexBuffer(buf, offset: 0, index: 0)
             renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: yTickVertexCount)
         }
-
-        // --- 5) X Axis Quad ---
+        
+        // Draw X axis quad
         if let buf = xAxisQuadBuffer, xAxisQuadVertexCount > 0 {
-            print("DEBUG: Drawing xAxisQuad with \(xAxisQuadVertexCount) vertices")
             renderEncoder.setVertexBuffer(buf, offset: 0, index: 0)
             renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: xAxisQuadVertexCount)
         }
-
-        // --- 6) Y Axis Quad ---
+        
+        // Draw Y axis quad
         if let buf = yAxisQuadBuffer, yAxisQuadVertexCount > 0 {
-            print("DEBUG: Drawing yAxisQuad with \(yAxisQuadVertexCount) vertices")
             renderEncoder.setVertexBuffer(buf, offset: 0, index: 0)
             renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: yAxisQuadVertexCount)
         }
-
-        // --- 7) Tick Label Text ---
-        if let textPipelineState = textRenderer.pipelineState {
-            renderEncoder.setRenderPipelineState(textPipelineState)
-
-            // Create projection matrix for text (screen space to NDC)
+        
+        // Draw tick label text
+        if let textPipeline = textRenderer.pipelineState {
+            renderEncoder.setRenderPipelineState(textPipeline)
+            
+            // Setup orthographic projection (screen space)
             let width = Float(viewportSize.width)
             let height = Float(viewportSize.height)
-            var projectionMatrix = matrix_float4x4(
+            var proj = matrix_float4x4(
                 [2/width, 0,       0, 0],
-                [0,      -2/height,0, 0],
-                [0,       0,       1, 0],
-                [-1,      1,       0, 1]
+                [0,       -2/height,0, 0],
+                [0,        0,       1, 0],
+                [-1,       1,       0, 1]
             )
-            guard let projectionBuffer = device.makeBuffer(bytes: &projectionMatrix,
-                                                           length: MemoryLayout<matrix_float4x4>.size,
-                                                           options: .storageModeShared) else {
-                print("Failed to create projection buffer")
+            guard let pBuf = device.makeBuffer(bytes: &proj,
+                                               length: MemoryLayout<matrix_float4x4>.size,
+                                               options: .storageModeShared) else {
+                print("Failed to create projection buffer for text.")
                 return
             }
-            renderEncoder.setVertexBuffer(projectionBuffer, offset: 0, index: 1)
+            renderEncoder.setVertexBuffer(pBuf, offset: 0, index: 1)
             
-            // Font atlas texture
+            // Font atlas
             renderEncoder.setFragmentTexture(textRenderer.atlas.texture, index: 0)
-
-            // Draw X Tick Text
-            for (i, (buffer, vertexCount)) in zip(xTickTextBuffers, xTickTextVertexCounts).enumerated() {
-                print("DEBUG: Drawing xTickText[\(i)] with \(vertexCount) vertices")
-                renderEncoder.setVertexBuffer(buffer, offset: 0, index: 0)
-                renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: vertexCount)
-            }
-
-            // Draw Y Tick Text
-            for (j, (buffer, vertexCount)) in zip(yTickTextBuffers, yTickTextVertexCounts).enumerated() {
-                print("DEBUG: Drawing yTickText[\(j)] with \(vertexCount) vertices")
-                renderEncoder.setVertexBuffer(buffer, offset: 0, index: 0)
-                renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: vertexCount)
+            
+            // X tick text
+            for (buf, vCount) in zip(xTickTextBuffers, xTickTextVertexCounts) {
+                renderEncoder.setVertexBuffer(buf, offset: 0, index: 0)
+                renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: vCount)
             }
             
-            // Draw axis labels
+            // Y tick text
+            for (buf, vCount) in zip(yTickTextBuffers, yTickTextVertexCounts) {
+                renderEncoder.setVertexBuffer(buf, offset: 0, index: 0)
+                renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: vCount)
+            }
+            
+            // X axis label
             if let xBuf = xAxisLabelBuffer, xAxisLabelVertexCount > 0 {
                 renderEncoder.setVertexBuffer(xBuf, offset: 0, index: 0)
                 renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: xAxisLabelVertexCount)
             }
-
+            
+            // Y axis label
             if let yBuf = yAxisLabelBuffer, yAxisLabelVertexCount > 0 {
                 renderEncoder.setVertexBuffer(yBuf, offset: 0, index: 0)
                 renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: yAxisLabelVertexCount)
@@ -371,128 +346,88 @@ class PinnedAxesRenderer {
     }
 }
 
-// MARK: - Private Build Methods
+// MARK: - Building the Ticks (no decimals)
 
 extension PinnedAxesRenderer {
-
-    // 1) X axis quad as a triangle strip
-    private func buildXAxisQuad(minDataX: Float,
-                                maxDataX: Float,
-                                transform: matrix_float4x4,
-                                pinnedScreenX: Float,
-                                pinnedScreenY: Float,
-                                thickness: Float,
-                                color: SIMD4<Float>) -> [Float] {
-
-        var rightX = dataXtoScreenX(dataX: maxDataX, transform: transform)
-        if rightX < pinnedScreenX { rightX = pinnedScreenX }
-
-        let halfT = thickness * 0.5
-        let y0 = pinnedScreenY - halfT
-        let y1 = pinnedScreenY + halfT
-
-        var verts: [Float] = []
-        // v0
-        verts.append(pinnedScreenX); verts.append(y0); verts.append(0); verts.append(1)
-        verts.append(color.x); verts.append(color.y); verts.append(color.z); verts.append(color.w)
-        // v1
-        verts.append(pinnedScreenX); verts.append(y1); verts.append(0); verts.append(1)
-        verts.append(color.x); verts.append(color.y); verts.append(color.z); verts.append(color.w)
-        // v2
-        verts.append(rightX); verts.append(y0); verts.append(0); verts.append(1)
-        verts.append(color.x); verts.append(color.y); verts.append(color.z); verts.append(color.w)
-        // v3
-        verts.append(rightX); verts.append(y1); verts.append(0); verts.append(1)
-        verts.append(color.x); verts.append(color.y); verts.append(color.z); verts.append(color.w)
-
-        return verts
-    }
-
-    // 2) Y axis quad as a triangle strip
-    private func buildYAxisQuad(minDataY: Float,
-                                maxDataY: Float,
-                                transform: matrix_float4x4,
-                                pinnedScreenX: Float,
-                                pinnedScreenY: Float,
-                                thickness: Float,
-                                color: SIMD4<Float>) -> [Float] {
-
-        var topY = dataYtoScreenY(dataY: maxDataY, transform: transform)
-        if topY > pinnedScreenY { topY = pinnedScreenY }
-
-        let halfT = thickness * 0.5
-        let x0 = pinnedScreenX - halfT
-        let x1 = pinnedScreenX + halfT
-
-        var verts: [Float] = []
-        // v0
-        verts.append(x0); verts.append(pinnedScreenY); verts.append(0); verts.append(1)
-        verts.append(color.x); verts.append(color.y); verts.append(color.z); verts.append(color.w)
-        // v1
-        verts.append(x1); verts.append(pinnedScreenY); verts.append(0); verts.append(1)
-        verts.append(color.x); verts.append(color.y); verts.append(color.z); verts.append(color.w)
-        // v2
-        verts.append(x0); verts.append(topY); verts.append(0); verts.append(1)
-        verts.append(color.x); verts.append(color.y); verts.append(color.z); verts.append(color.w)
-        // v3
-        verts.append(x1); verts.append(topY); verts.append(0); verts.append(1)
-        verts.append(color.x); verts.append(color.y); verts.append(color.z); verts.append(color.w)
-
-        return verts
-    }
-
-    // 3) Short vertical ticks + text along the X axis
-    private func buildXTicks(_ xTicks: [Double],
-                             pinnedScreenY: Float,
-                             chartTransform: matrix_float4x4,
-                             tickColor: SIMD4<Float>) -> ([Float], [(MTLBuffer, Int)]) {
+    
+    /// X Ticks: Switch among years, months, or weeks (no decimals).
+    private func buildXTicks(
+        _ xTicks: [Double],
+        pinnedScreenY: Float,
+        chartTransform: matrix_float4x4,
+        minX: Float,
+        maxX: Float
+    ) -> ([Float], [(MTLBuffer, Int)]) {
+        
         var verts: [Float] = []
         var textBuffers: [(MTLBuffer, Int)] = []
+        
+        // We'll do a trivial cutoff:
+        // If (maxX - minX) > 2 => treat as years
+        // else if > 0.5 => treat as months
+        // else => weeks
+        let range = Double(maxX - minX)
+        
         let tickLen: Float = 6
         let halfT: Float = 0.5
         
         for val in xTicks {
             let sx = dataXtoScreenX(dataX: Float(val), transform: chartTransform)
-            // If you want to skip ticks left of pinned axis:
-            if sx < 50 { continue }
-
-            // Build tick line
+            if sx < 50 { continue } // skip left side
+            
+            // Build short tick line
             let y0 = pinnedScreenY
-            let y1 = pinnedScreenY - tickLen // draw upwards
-            verts.append(contentsOf: makeQuadList(x0: sx - halfT,
-                                                  y0: y1,
-                                                  x1: sx + halfT,
-                                                  y1: y0,
-                                                  color: tickColor))
-
-            // Format numeric tick with 2 decimals
-            let formattedTickValue = String(format: "%.2f", val)
+            let y1 = pinnedScreenY - tickLen
+            verts.append(contentsOf: makeQuadList(
+                x0: sx - halfT,
+                y0: y1,
+                x1: sx + halfT,
+                y1: y0,
+                color: tickColor
+            ))
             
-            // Draw label just above the axis
+            // Decide label format
+            var label = ""
+            if range > 2.0 {
+                // Show integer years with "y"
+                label = "\(Int(val))y"
+            } else if range > 0.5 {
+                // Show months
+                let months = Int(val * 12.0)
+                label = "\(months)m"
+            } else {
+                // Show weeks
+                let weeks = Int(val * 52.0)
+                label = "\(weeks)w"
+            }
+            
+            // Place the text just above the axis
             let textY = pinnedScreenY - tickLen - 10
-            
-            let (textBuffer, vertexCount) = textRenderer.buildTextVertices(
-                string: formattedTickValue,
+            let (tBuf, vCount) = textRenderer.buildTextVertices(
+                string: label,
                 x: sx,
                 y: textY,
                 color: tickColor,
-                scale: 2.0,
+                scale: 1.5,
                 screenWidth: Float(viewportSize.width),
                 screenHeight: Float(viewportSize.height)
             )
-            if let buffer = textBuffer {
-                textBuffers.append((buffer, vertexCount))
+            if let buf = tBuf {
+                textBuffers.append((buf, vCount))
             }
         }
+        
         return (verts, textBuffers)
     }
-
-    // 4) Short horizontal ticks + text along the Y axis
-    private func buildYTicks(_ yTicks: [Double],
-                             pinnedScreenX: Float,
-                             pinnedScreenY: Float,
-                             chartTransform: matrix_float4x4,
-                             tickColor: SIMD4<Float>) -> ([Float], [(MTLBuffer, Int)]) {
+    
+    /// Y Ticks: Use big number suffix, no decimals
+    private func buildYTicks(
+        _ yTicks: [Double],
+        pinnedScreenX: Float,
+        pinnedScreenY: Float,
+        chartTransform: matrix_float4x4
+    ) -> ([Float], [(MTLBuffer, Int)]) {
+        
         var verts: [Float] = []
         var textBuffers: [(MTLBuffer, Int)] = []
         let tickLen: Float = 6
@@ -502,38 +437,46 @@ extension PinnedAxesRenderer {
             let sy = dataYtoScreenY(dataY: Float(val), transform: chartTransform)
             if sy < 0 || sy > pinnedScreenY { continue }
 
-            // Build tick line to the left
+            // Short tick line to the left of the axis
             let x1 = pinnedScreenX
             let x0 = pinnedScreenX - tickLen
-            verts.append(contentsOf: makeQuadList(x0: x0,
-                                                  y0: sy - halfT,
-                                                  x1: x1,
-                                                  y1: sy + halfT,
-                                                  color: tickColor))
-
-            // Format with 2 decimals (or use .formattedGroupedSuffix() if you want)
-            let formattedTickValue = String(format: "%.2f", val)
-
-            // Position label left of the axis
-            let textX = pinnedScreenX - tickLen - 30
             
-            let (textBuffer, vertexCount) = textRenderer.buildTextVertices(
-                string: formattedTickValue,
+            verts.append(contentsOf: makeQuadList(
+                x0: x0,
+                y0: sy - halfT,
+                x1: x1,
+                y1: sy + halfT,
+                color: tickColor
+            ))
+            
+            // Format using a no‐decimal big number suffix
+            let formatted = val.formattedGroupedSuffixNoDecimals()
+            
+            // Put text left of the axis
+            let textX = pinnedScreenX - tickLen - 30
+            let textY = sy - 5
+            
+            let (tBuf, vCount) = textRenderer.buildTextVertices(
+                string: formatted,
                 x: textX,
-                y: sy - 5, // shift upward slightly
+                y: textY,
                 color: tickColor,
-                scale: 2.0,
+                scale: 1.5,
                 screenWidth: Float(viewportSize.width),
                 screenHeight: Float(viewportSize.height)
             )
-            if let buffer = textBuffer {
-                textBuffers.append((buffer, vertexCount))
+            if let buf = tBuf {
+                textBuffers.append((buf, vCount))
             }
         }
+        
         return (verts, textBuffers)
     }
+}
 
-    // 5) Vertical grid lines spanning top->bottom
+// MARK: - Grid Lines
+
+extension PinnedAxesRenderer {
     private func buildXGridLines(
         _ xTicks: [Double],
         minY: Float,
@@ -542,8 +485,8 @@ extension PinnedAxesRenderer {
         chartTransform: matrix_float4x4
     ) {
         var verts: [Float] = []
-        let lineThickness: Float = 1
-        let halfT = lineThickness * 0.5
+        let thickness: Float = 1
+        let halfT = thickness * 0.5
         
         for val in xTicks {
             let sx = dataXtoScreenX(dataX: Float(val), transform: chartTransform)
@@ -558,16 +501,12 @@ extension PinnedAxesRenderer {
                 color: gridColor
             ))
         }
-        
         xGridVertexCount = verts.count / 8
-        xGridBuffer = device.makeBuffer(
-            bytes: verts,
-            length: verts.count * MemoryLayout<Float>.size,
-            options: .storageModeShared
-        )
+        xGridBuffer = device.makeBuffer(bytes: verts,
+                                        length: verts.count * MemoryLayout<Float>.size,
+                                        options: .storageModeShared)
     }
-
-    // 6) Horizontal grid lines spanning left->right
+    
     private func buildYGridLines(
         _ yTicks: [Double],
         minX: Float,
@@ -576,8 +515,8 @@ extension PinnedAxesRenderer {
         chartTransform: matrix_float4x4
     ) {
         var verts: [Float] = []
-        let lineThickness: Float = 1
-        let halfT = lineThickness * 0.5
+        let thickness: Float = 1
+        let halfT = thickness * 0.5
         
         for val in yTicks {
             let sy = dataYtoScreenY(dataY: Float(val), transform: chartTransform)
@@ -592,25 +531,23 @@ extension PinnedAxesRenderer {
                 color: gridColor
             ))
         }
-        
         yGridVertexCount = verts.count / 8
-        yGridBuffer = device.makeBuffer(
-            bytes: verts,
-            length: verts.count * MemoryLayout<Float>.size,
-            options: .storageModeShared
-        )
+        yGridBuffer = device.makeBuffer(bytes: verts,
+                                        length: verts.count * MemoryLayout<Float>.size,
+                                        options: .storageModeShared)
     }
 }
 
-// MARK: - Shared Helpers
+// MARK: - Helpers
 
 extension PinnedAxesRenderer {
-    /// Builds a rectangle (2 triangles) for a .triangle draw call
-    private func makeQuadList(x0: Float,
-                              y0: Float,
-                              x1: Float,
-                              y1: Float,
-                              color: SIMD4<Float>) -> [Float] {
+    
+    /// Build 2 triangles (6 vertices) for a filled quad
+    func makeQuadList(
+        x0: Float, y0: Float,
+        x1: Float, y1: Float,
+        color: SIMD4<Float>
+    ) -> [Float] {
         return [
             // Triangle 1
             x0, y0, 0, 1, color.x, color.y, color.z, color.w,
@@ -622,31 +559,36 @@ extension PinnedAxesRenderer {
             x1, y1, 0, 1, color.x, color.y, color.z, color.w
         ]
     }
-
-    private func dataXtoScreenX(dataX: Float, transform: matrix_float4x4) -> Float {
+    
+    /// Converts data X to screen X
+    func dataXtoScreenX(dataX: Float, transform: matrix_float4x4) -> Float {
         let clip = transform * SIMD4<Float>(dataX, 0, 0, 1)
         let ndcX = clip.x / clip.w
         return (ndcX * 0.5 + 0.5) * Float(viewportSize.width)
     }
 
-    private func dataYtoScreenY(dataY: Float, transform: matrix_float4x4) -> Float {
+    /// Converts data Y to screen Y
+    func dataYtoScreenY(dataY: Float, transform: matrix_float4x4) -> Float {
         let clip = transform * SIMD4<Float>(0, dataY, 0, 1)
         let ndcY = clip.y / clip.w
         return (1 - (ndcY * 0.5 + 0.5)) * Float(viewportSize.height)
     }
 
-    private func generateNiceTicks(minVal: Double,
-                                   maxVal: Double,
-                                   desiredCount: Int) -> [Double] {
+    /// Simple "nice" ticks
+    func generateNiceTicks(
+        minVal: Double,
+        maxVal: Double,
+        desiredCount: Int
+    ) -> [Double] {
         guard minVal < maxVal, desiredCount > 0 else { return [] }
         let range = maxVal - minVal
         let rawStep = range / Double(desiredCount)
         let mag = pow(10.0, floor(log10(rawStep)))
         let leading = rawStep / mag
-        let niceLeading: Double = (leading < 2) ? 2 : (leading < 5 ? 5 : 10)
+        let niceLeading: Double = (leading < 2.0) ? 2.0 : (leading < 5.0 ? 5.0 : 10.0)
         let step = niceLeading * mag
         let start = floor(minVal / step) * step
-
+        
         var result: [Double] = []
         var v = start
         while v <= maxVal {
@@ -656,39 +598,74 @@ extension PinnedAxesRenderer {
         return result
     }
     
-    func buildCircleVertices(cx: Float,
-                             cy: Float,
-                             radius: Float,
-                             segments: Int,
-                             color: SIMD4<Float>) -> [Float] {
+    // X axis triangle strip
+    func buildXAxisQuad(
+        minDataX: Float,
+        maxDataX: Float,
+        transform: matrix_float4x4,
+        pinnedScreenX: Float,
+        pinnedScreenY: Float,
+        thickness: Float,
+        color: SIMD4<Float>
+    ) -> [Float] {
+        var rightX = dataXtoScreenX(dataX: maxDataX, transform: transform)
+        if rightX < pinnedScreenX {
+            rightX = pinnedScreenX
+        }
+        
+        let halfT = thickness * 0.5
+        let y0 = pinnedScreenY - halfT
+        let y1 = pinnedScreenY + halfT
+        
         var verts: [Float] = []
-        let angleStep = (2.0 * Float.pi) / Float(segments)
+        verts.append(pinnedScreenX); verts.append(y0); verts.append(0); verts.append(1)
+        verts.append(color.x); verts.append(color.y); verts.append(color.z); verts.append(color.w)
         
-        func appendVertex(x: Float, y: Float) {
-            verts.append(x)
-            verts.append(y)
-            verts.append(0)
-            verts.append(1)
-            verts.append(color.x)
-            verts.append(color.y)
-            verts.append(color.z)
-            verts.append(color.w)
+        verts.append(pinnedScreenX); verts.append(y1); verts.append(0); verts.append(1)
+        verts.append(color.x); verts.append(color.y); verts.append(color.z); verts.append(color.w)
+        
+        verts.append(rightX);        verts.append(y0); verts.append(0); verts.append(1)
+        verts.append(color.x); verts.append(color.y); verts.append(color.z); verts.append(color.w)
+        
+        verts.append(rightX);        verts.append(y1); verts.append(0); verts.append(1)
+        verts.append(color.x); verts.append(color.y); verts.append(color.z); verts.append(color.w)
+        
+        return verts
+    }
+    
+    // Y axis triangle strip
+    func buildYAxisQuad(
+        minDataY: Float,
+        maxDataY: Float,
+        transform: matrix_float4x4,
+        pinnedScreenX: Float,
+        pinnedScreenY: Float,
+        thickness: Float,
+        color: SIMD4<Float>
+    ) -> [Float] {
+        
+        var topY = dataYtoScreenY(dataY: maxDataY, transform: transform)
+        if topY > pinnedScreenY {
+            topY = pinnedScreenY
         }
         
-        let centerX = cx
-        let centerY = cy
-        for i in 0..<segments {
-            let theta0 = Float(i) * angleStep
-            let theta1 = Float(i + 1) * angleStep
-            let x0 = centerX + radius * cos(theta0)
-            let y0 = centerY + radius * sin(theta0)
-            let x1 = centerX + radius * cos(theta1)
-            let y1 = centerY + radius * sin(theta1)
-
-            appendVertex(x: centerX, y: centerY)
-            appendVertex(x: x0,     y: y0)
-            appendVertex(x: x1,     y: y1)
-        }
+        let halfT = thickness * 0.5
+        let x0 = pinnedScreenX - halfT
+        let x1 = pinnedScreenX + halfT
+        
+        var verts: [Float] = []
+        verts.append(x0); verts.append(pinnedScreenY); verts.append(0); verts.append(1)
+        verts.append(color.x); verts.append(color.y); verts.append(color.z); verts.append(color.w)
+        
+        verts.append(x1); verts.append(pinnedScreenY); verts.append(0); verts.append(1)
+        verts.append(color.x); verts.append(color.y); verts.append(color.z); verts.append(color.w)
+        
+        verts.append(x0); verts.append(topY);         verts.append(0); verts.append(1)
+        verts.append(color.x); verts.append(color.y); verts.append(color.z); verts.append(color.w)
+        
+        verts.append(x1); verts.append(topY);         verts.append(0); verts.append(1)
+        verts.append(color.x); verts.append(color.y); verts.append(color.z); verts.append(color.w)
+        
         return verts
     }
 }

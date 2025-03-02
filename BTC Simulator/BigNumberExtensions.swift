@@ -92,3 +92,33 @@ fileprivate func suffixForGroupedExponent(_ groupedExponent: Int) -> String {
         return ""
     }
 }
+
+extension Double {
+    /// Formats a raw number using K, M, B, etc., with **0** decimal places.
+    /// e.g. 1,234 => "1K", 1,234,567 => "1M", 999 => "999"
+    func formattedGroupedSuffixNoDecimals() -> String {
+        if self == 0 {
+            return "0"
+        }
+        let sign = (self < 0) ? "-" : ""
+        let absVal = abs(self)
+        
+        // If it's under 1K, just show e.g. "999"
+        if absVal < 1000 {
+            return sign + String(format: "%.0f", absVal)
+        }
+        
+        let exponent = Int(floor(log10(absVal)))
+        // If exponent is beyond 21, just show raw with 0 decimals
+        guard exponent <= 21 else {
+            return sign + String(format: "%.0f", absVal)
+        }
+        
+        let groupedExponent = exponent - (exponent % 3)
+        let leadingNumber = absVal / pow(10, Double(groupedExponent))
+        let suffix = suffixForGroupedExponent(groupedExponent)
+        
+        // Use "%.0f" for no decimals
+        return "\(sign)\(String(format: "%.0f", leadingNumber))\(suffix)"
+    }
+}
