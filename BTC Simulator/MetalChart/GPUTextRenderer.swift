@@ -76,6 +76,11 @@ public class GPUTextRenderer {
         var penX = x
         let penY = y
 
+        // We'll assume you have a way to get the viewport size inside here,
+        // e.g. `renderer.viewportSize`, so you might pass it in or store it.
+        let screenWidth  = Float( /* e.g. renderer.viewportSize.width  */  )
+        let screenHeight = Float( /* e.g. renderer.viewportSize.height */  )
+
         for ch in string {
             guard let gm = atlas.glyphs[ch] else { continue }
 
@@ -84,9 +89,14 @@ public class GPUTextRenderer {
             let x1 = x0 + gm.width * scale
             let y1 = y0 + gm.height * scale
 
-            // Print the corners
-            print("Glyph '\(ch)': (x0=\(x0), y0=\(y0)) to (x1=\(x1), y1=\(y1))")
+            // If the glyph is fully offscreen, skip it
+            if x1 < 0 || x0 > screenWidth || y1 < 0 || y0 > screenHeight {
+                // Just don't append anything
+                penX += gm.xAdvance * scale
+                continue
+            }
 
+            // Otherwise, build the 2 triangles:
             vertices.append(contentsOf: [
                 x0, y0, gm.uMin, gm.vMin, color.x, color.y, color.z, color.w,
                 x1, y0, gm.uMax, gm.vMin, color.x, color.y, color.z, color.w,
@@ -100,10 +110,7 @@ public class GPUTextRenderer {
             penX += gm.xAdvance * scale
         }
 
-        // Additional log to see how many triangles total
         let vertexCount = vertices.count / 8
-        print("Text '\(string)' => \(vertexCount) vertices")
-
         if vertexCount == 0 { return (nil, 0) }
 
         let length = vertices.count * MemoryLayout<Float>.size

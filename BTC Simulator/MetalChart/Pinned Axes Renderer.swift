@@ -498,57 +498,81 @@ extension PinnedAxesRenderer {
     }
 
     // 5) Vertical grid lines that span from top (0) to bottom (pinnedScreenY)
-    private func buildXGridLines(_ xTicks: [Double],
-                                 minY: Float,
-                                 maxY: Float,
-                                 pinnedScreenX: Float,
-                                 chartTransform: matrix_float4x4) {
+    private func buildXGridLines(
+        _ xTicks: [Double],
+        minY: Float,
+        maxY: Float,
+        pinnedScreenX: Float,
+        chartTransform: matrix_float4x4
+    ) {
         var verts: [Float] = []
         let lineThickness: Float = 1
         let halfT = lineThickness * 0.5
+        
         for val in xTicks {
             let sx = dataXtoScreenX(dataX: Float(val), transform: chartTransform)
+            
+            // Skip drawing if out of bounds
             if sx < pinnedScreenX { continue }
             if sx > Float(viewportSize.width) { continue }
+            
             let top = minY
             let bot = maxY
-            verts.append(contentsOf: makeQuadList(x0: sx - halfT,
-                                                  y0: top,
-                                                  x1: sx + halfT,
-                                                  y1: bot,
-                                                  color: gridColor))
+            
+            verts.append(contentsOf: makeQuadList(
+                x0: sx - halfT,
+                y0: top,
+                x1: sx + halfT,
+                y1: bot,
+                color: gridColor
+            ))
         }
+        
         xGridVertexCount = verts.count / 8
-        xGridBuffer = device.makeBuffer(bytes: verts,
-                                        length: verts.count * MemoryLayout<Float>.size,
-                                        options: .storageModeShared)
+        xGridBuffer = device.makeBuffer(
+            bytes: verts,
+            length: verts.count * MemoryLayout<Float>.size,
+            options: .storageModeShared
+        )
     }
 
     // 6) Horizontal grid lines that span from left (pinnedScreenX) to right (viewport width)
-    private func buildYGridLines(_ yTicks: [Double],
-                                 minX: Float,
-                                 maxX: Float,
-                                 pinnedScreenY: Float,
-                                 chartTransform: matrix_float4x4) {
+    private func buildYGridLines(
+        _ yTicks: [Double],
+        minX: Float,
+        maxX: Float,
+        pinnedScreenY: Float,
+        chartTransform: matrix_float4x4
+    ) {
         var verts: [Float] = []
         let lineThickness: Float = 1
         let halfT = lineThickness * 0.5
+        
         for val in yTicks {
             let sy = dataYtoScreenY(dataY: Float(val), transform: chartTransform)
+            
+            // Skip drawing if out of bounds
             if sy < 0 { continue }
             if sy > pinnedScreenY { continue }
+            
             let left = minX
             let right = maxX
-            verts.append(contentsOf: makeQuadList(x0: left,
-                                                  y0: sy - halfT,
-                                                  x1: right,
-                                                  y1: sy + halfT,
-                                                  color: gridColor))
+            
+            verts.append(contentsOf: makeQuadList(
+                x0: left,
+                y0: sy - halfT,
+                x1: right,
+                y1: sy + halfT,
+                color: gridColor
+            ))
         }
+        
         yGridVertexCount = verts.count / 8
-        yGridBuffer = device.makeBuffer(bytes: verts,
-                                        length: verts.count * MemoryLayout<Float>.size,
-                                        options: .storageModeShared)
+        yGridBuffer = device.makeBuffer(
+            bytes: verts,
+            length: verts.count * MemoryLayout<Float>.size,
+            options: .storageModeShared
+        )
     }
 }
 
