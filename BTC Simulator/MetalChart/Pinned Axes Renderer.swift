@@ -59,7 +59,7 @@ class PinnedAxesRenderer {
     private var yTickTextBuffers: [MTLBuffer] = []
     private var yTickTextVertexCounts: [Int] = []
     
-    // We add two new buffers + counts for axis labels
+    // Axis labels
     private var xAxisLabelBuffer: MTLBuffer?
     private var xAxisLabelVertexCount = 0
     private var yAxisLabelBuffer: MTLBuffer?
@@ -159,26 +159,19 @@ class PinnedAxesRenderer {
             options: .storageModeShared
         )
         
-        // -- Removed the old red circle code --
-        // e.g. buildCircleVertices(...), circleBuffer, etc.
-
         // Generate tick and grid values.
         let tickXValues = generateNiceTicks(minVal: Double(minX),
                                             maxVal: Double(maxX),
                                             desiredCount: 6)
-        print("DEBUG: Ticks -> \(tickXValues)")
         let tickYValues = generateNiceTicks(minVal: Double(minY),
                                             maxVal: Double(maxY),
                                             desiredCount: 6)
-        print("DEBUG: Ticks -> \(tickXValues)")
         let gridXValues = generateNiceTicks(minVal: Double(minX),
                                             maxVal: Double(maxX),
                                             desiredCount: 10)
-        print("DEBUG: Ticks -> \(tickXValues)")
         let gridYValues = generateNiceTicks(minVal: Double(minY),
                                             maxVal: Double(maxY),
                                             desiredCount: 10)
-        print("DEBUG: Ticks -> \(tickXValues)")
         
         // 3) Build short ticks and text labels on pinned axes
         let (xTickVerts, xTickTexts) = buildXTicks(
@@ -224,9 +217,7 @@ class PinnedAxesRenderer {
                         pinnedScreenY: pinnedScreenY,
                         chartTransform: chartTransform)
         
-        // 5) Build axis labels ("Years" and "USD") at a smaller scale
-        // textRenderer is presumably your GPUTextRenderer instance
-        // Build the "Years" label
+        // 5) Build axis labels
         let (maybeXBuf, xCount) = textRenderer.buildTextVertices(
             string: "Years",
             x: pinnedScreenX + 100,
@@ -241,7 +232,6 @@ class PinnedAxesRenderer {
             xAxisLabelVertexCount = xCount
         }
 
-        // Build the "USD" label
         let (maybeYBuf, yCount) = textRenderer.buildTextVertices(
             string: "USD",
             x: pinnedScreenX - 40,
@@ -258,14 +248,11 @@ class PinnedAxesRenderer {
     }
     
     func renderTextBuffer(renderEncoder: MTLRenderCommandEncoder, buffer: MTLBuffer, vertexCount: Int) {
-        // Check if the buffer's size is correct
         let bufferLength = buffer.length
-        let expectedSize = vertexCount * MemoryLayout<Float>.size * 8 // Assuming 8 elements per vertex (x, y, z, w, color)
+        let expectedSize = vertexCount * MemoryLayout<Float>.size * 8
         if bufferLength != expectedSize {
             print("Warning: Buffer size mismatch. Expected: \(expectedSize), Got: \(bufferLength)")
         }
-        
-        // Set the buffer and draw primitives
         renderEncoder.setVertexBuffer(buffer, offset: 0, index: 0)
         renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: vertexCount)
     }
@@ -273,7 +260,6 @@ class PinnedAxesRenderer {
     // MARK: - Draw
     
     func drawAxes(renderEncoder: MTLRenderCommandEncoder) {
-        // Mark this as user activity so we don't go idle
         idleManager?.resetIdleTimer()
 
         guard let axisPipeline = axisPipelineState else { return }
@@ -333,16 +319,8 @@ class PinnedAxesRenderer {
             renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: yAxisQuadVertexCount)
         }
 
-        // --- 7) Debug Circle ---
-        // if let circleBuf = circleBuffer {
-        //    print("DEBUG: Drawing circle with \(circleVertexCount) vertices")
-        //    renderEncoder.setVertexBuffer(circleBuf, offset: 0, index: 0)
-        //    renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: circleVertexCount)
-        // }
-
-        // --- 8) Tick Label Text ---
+        // --- 7) Tick Label Text ---
         if let textPipelineState = textRenderer.pipelineState {
-            // Switch pipeline to text rendering
             renderEncoder.setRenderPipelineState(textPipelineState)
 
             // Create projection matrix for text (screen space to NDC)
@@ -361,7 +339,7 @@ class PinnedAxesRenderer {
                 return
             }
             renderEncoder.setVertexBuffer(projectionBuffer, offset: 0, index: 1)
-
+            
             // Font atlas texture
             renderEncoder.setFragmentTexture(textRenderer.atlas.texture, index: 0)
 
@@ -379,6 +357,7 @@ class PinnedAxesRenderer {
                 renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: vertexCount)
             }
             
+            // Draw axis labels
             if let xBuf = xAxisLabelBuffer, xAxisLabelVertexCount > 0 {
                 renderEncoder.setVertexBuffer(xBuf, offset: 0, index: 0)
                 renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: xAxisLabelVertexCount)
@@ -462,7 +441,7 @@ extension PinnedAxesRenderer {
         return verts
     }
 
-    // 3) Short vertical ticks and text labels along the X axis
+    // 3) Short vertical ticks + text along the X axis
     private func buildXTicks(_ xTicks: [Double],
                              pinnedScreenY: Float,
                              chartTransform: matrix_float4x4,
@@ -471,26 +450,31 @@ extension PinnedAxesRenderer {
         var textBuffers: [(MTLBuffer, Int)] = []
         let tickLen: Float = 6
         let halfT: Float = 0.5
+        
         for val in xTicks {
             let sx = dataXtoScreenX(dataX: Float(val), transform: chartTransform)
-            
-            print("Tick val \(val) => screenX=\(sx)")
+            // If you want to skip ticks left of pinned axis:
             if sx < 50 { continue }
 
             // Build tick line
             let y0 = pinnedScreenY
-            let y1 = pinnedScreenY + tickLen
+            let y1 = pinnedScreenY - tickLen // draw upwards
             verts.append(contentsOf: makeQuadList(x0: sx - halfT,
-                                                  y0: y0,
+                                                  y0: y1,
                                                   x1: sx + halfT,
-                                                  y1: y1,
+                                                  y1: y0,
                                                   color: tickColor))
-            // Format and build text label for year ticks
-            let formattedTickValue = String(format: "%.0f", val)
+
+            // Format numeric tick with 2 decimals
+            let formattedTickValue = String(format: "%.2f", val)
+            
+            // Draw label just above the axis
+            let textY = pinnedScreenY - tickLen - 10
+            
             let (textBuffer, vertexCount) = textRenderer.buildTextVertices(
                 string: formattedTickValue,
                 x: sx,
-                y: pinnedScreenY - 5,
+                y: textY,
                 color: tickColor,
                 scale: 2.0,
                 screenWidth: Float(viewportSize.width),
@@ -499,14 +483,11 @@ extension PinnedAxesRenderer {
             if let buffer = textBuffer {
                 textBuffers.append((buffer, vertexCount))
             }
-            
-            print("XTicks -> val=\(val), screenX=\(sx)")
-
         }
         return (verts, textBuffers)
     }
 
-    // 4) Short horizontal ticks and text labels along the Y axis
+    // 4) Short horizontal ticks + text along the Y axis
     private func buildYTicks(_ yTicks: [Double],
                              pinnedScreenX: Float,
                              pinnedScreenY: Float,
@@ -516,27 +497,32 @@ extension PinnedAxesRenderer {
         var textBuffers: [(MTLBuffer, Int)] = []
         let tickLen: Float = 6
         let halfT: Float = 0.5
+        
         for val in yTicks {
             let sy = dataYtoScreenY(dataY: Float(val), transform: chartTransform)
             if sy < 0 || sy > pinnedScreenY { continue }
 
-            // Build tick line
-            let x0 = pinnedScreenX - tickLen
+            // Build tick line to the left
             let x1 = pinnedScreenX
+            let x0 = pinnedScreenX - tickLen
             verts.append(contentsOf: makeQuadList(x0: x0,
                                                   y0: sy - halfT,
                                                   x1: x1,
                                                   y1: sy + halfT,
                                                   color: tickColor))
 
-            // Use formattedGroupedSuffix() to format the USD values
-            let formattedTickValue = val.formattedGroupedSuffix() // Call the extension here for formatting
+            // Format with 2 decimals (or use .formattedGroupedSuffix() if you want)
+            let formattedTickValue = String(format: "%.2f", val)
+
+            // Position label left of the axis
+            let textX = pinnedScreenX - tickLen - 30
+            
             let (textBuffer, vertexCount) = textRenderer.buildTextVertices(
                 string: formattedTickValue,
-                x: x0 - 5,
-                y: sy,
+                x: textX,
+                y: sy - 5, // shift upward slightly
                 color: tickColor,
-                scale: 10.0,
+                scale: 2.0,
                 screenWidth: Float(viewportSize.width),
                 screenHeight: Float(viewportSize.height)
             )
@@ -547,7 +533,7 @@ extension PinnedAxesRenderer {
         return (verts, textBuffers)
     }
 
-    // 5) Vertical grid lines that span from top (0) to bottom (pinnedScreenY)
+    // 5) Vertical grid lines spanning top->bottom
     private func buildXGridLines(
         _ xTicks: [Double],
         minY: Float,
@@ -561,19 +547,14 @@ extension PinnedAxesRenderer {
         
         for val in xTicks {
             let sx = dataXtoScreenX(dataX: Float(val), transform: chartTransform)
-            
-            // Skip drawing if out of bounds
             if sx < pinnedScreenX { continue }
             if sx > Float(viewportSize.width) { continue }
             
-            let top = minY
-            let bot = maxY
-            
             verts.append(contentsOf: makeQuadList(
                 x0: sx - halfT,
-                y0: top,
+                y0: minY,
                 x1: sx + halfT,
-                y1: bot,
+                y1: maxY,
                 color: gridColor
             ))
         }
@@ -586,7 +567,7 @@ extension PinnedAxesRenderer {
         )
     }
 
-    // 6) Horizontal grid lines that span from left (pinnedScreenX) to right (viewport width)
+    // 6) Horizontal grid lines spanning left->right
     private func buildYGridLines(
         _ yTicks: [Double],
         minX: Float,
@@ -600,18 +581,13 @@ extension PinnedAxesRenderer {
         
         for val in yTicks {
             let sy = dataYtoScreenY(dataY: Float(val), transform: chartTransform)
-            
-            // Skip drawing if out of bounds
             if sy < 0 { continue }
             if sy > pinnedScreenY { continue }
             
-            let left = minX
-            let right = maxX
-            
             verts.append(contentsOf: makeQuadList(
-                x0: left,
+                x0: minX,
                 y0: sy - halfT,
-                x1: right,
+                x1: maxX,
                 y1: sy + halfT,
                 color: gridColor
             ))
@@ -629,7 +605,7 @@ extension PinnedAxesRenderer {
 // MARK: - Shared Helpers
 
 extension PinnedAxesRenderer {
-    /// Builds a rectangle (2 triangles, 6 vertices) for a .triangle draw call
+    /// Builds a rectangle (2 triangles) for a .triangle draw call
     private func makeQuadList(x0: Float,
                               y0: Float,
                               x1: Float,
@@ -647,21 +623,18 @@ extension PinnedAxesRenderer {
         ]
     }
 
-    /// Convert data X coordinate to screen X coordinate
     private func dataXtoScreenX(dataX: Float, transform: matrix_float4x4) -> Float {
         let clip = transform * SIMD4<Float>(dataX, 0, 0, 1)
         let ndcX = clip.x / clip.w
         return (ndcX * 0.5 + 0.5) * Float(viewportSize.width)
     }
 
-    /// Convert data Y coordinate to screen Y coordinate
     private func dataYtoScreenY(dataY: Float, transform: matrix_float4x4) -> Float {
         let clip = transform * SIMD4<Float>(0, dataY, 0, 1)
         let ndcY = clip.y / clip.w
         return (1 - (ndcY * 0.5 + 0.5)) * Float(viewportSize.height)
     }
 
-    /// Simple 'nice' ticks generator
     private func generateNiceTicks(minVal: Double,
                                    maxVal: Double,
                                    desiredCount: Int) -> [Double] {
@@ -688,32 +661,23 @@ extension PinnedAxesRenderer {
                              radius: Float,
                              segments: Int,
                              color: SIMD4<Float>) -> [Float] {
-        // We'll do a triangle fan: center plus segments
-        // Each triangle has 3 vertices => 9 floats for position/color (but we also do no texture coords here, so let's do 8 floats: x, y, z, w, r, g, b, a? Or x, y, z, w, r, g, b, a. Up to you.
-        // Because your axis pipeline expects x, y, z, w, color.x, color.y, color.z, color.w
-        // we'll keep 8 floats per vertex.
-
         var verts: [Float] = []
         let angleStep = (2.0 * Float.pi) / Float(segments)
-
-        // The center is our first vertex for the fan
+        
         func appendVertex(x: Float, y: Float) {
             verts.append(x)
             verts.append(y)
-            verts.append(0) // z
-            verts.append(1) // w
+            verts.append(0)
+            verts.append(1)
             verts.append(color.x)
             verts.append(color.y)
             verts.append(color.z)
             verts.append(color.w)
         }
-
-        // We'll generate triangles (center, v(i), v(i+1))
+        
         let centerX = cx
         let centerY = cy
-
         for i in 0..<segments {
-            // angle i, angle i+1
             let theta0 = Float(i) * angleStep
             let theta1 = Float(i + 1) * angleStep
             let x0 = centerX + radius * cos(theta0)
@@ -721,12 +685,10 @@ extension PinnedAxesRenderer {
             let x1 = centerX + radius * cos(theta1)
             let y1 = centerY + radius * sin(theta1)
 
-            // Triangle: center -> (x0,y0) -> (x1,y1)
             appendVertex(x: centerX, y: centerY)
             appendVertex(x: x0,     y: y0)
             appendVertex(x: x1,     y: y1)
         }
-
         return verts
     }
 }
