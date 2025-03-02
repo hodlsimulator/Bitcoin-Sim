@@ -170,7 +170,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         )
         updateTransform()
         
-        // Move chart so left edge is pinned at x=50 initially
+        // Move chart so dataX=0 is pinned at x=50 initially
         anchorLeftEdgeAtLoad()
         
         // Measure how wide the chart is now
@@ -566,13 +566,10 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     func anchorLeftEdgeAtLoad() {
         guard viewportSize.width > 0 else { return }
         
+        // Force data X=0 to appear at pinnedLeft=50
         let pinnedLeft: Float = 50
-        let leftClipPoint = SIMD4<Float>(-1, 0, 0, 1)
-        let ndc = currentTransformMatrix() * leftClipPoint
-        let leftNDCX = ndc.x / ndc.w
-        let leftScreenX = (leftNDCX + 1) * 0.5 * Float(viewportSize.width)
-        
-        let delta = pinnedLeft - leftScreenX
+        let zeroScreenPt = convertDataToPoint(SIMD2<Float>(0, 0), viewSize: viewportSize)
+        let delta = pinnedLeft - Float(zeroScreenPt.x)
         translation.x += delta / (0.5 * Float(viewportSize.width))
         updateTransform()
     }
@@ -604,50 +601,30 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
                 updateTransform()
             }
             
-            // 2b) Anchor the left edge so it can't go beyond pinnedLeft=50
-            let leftClipPoint = SIMD4<Float>(-1, 0, 0, 1)
-            let leftNDC       = currentTransformMatrix() * leftClipPoint
-            let leftNDCX      = leftNDC.x / leftNDC.w
-            let leftScreenX   = (leftNDCX + 1) * 0.5 * Float(viewportSize.width)
-            
-            if CGFloat(leftScreenX) > pinnedLeft {
-                let delta = Float(pinnedLeft) - leftScreenX
-                translation.x += delta / (0.5 * Float(viewportSize.width))
+            // 2b) Keep data X=0 pinned to pinnedLeft=50, if it drifts:
+            let zeroPt = convertDataToPoint(SIMD2<Float>(0, 0), viewSize: viewportSize)
+            if zeroPt.x != pinnedLeft {
+                let delta = pinnedLeft - zeroPt.x
+                translation.x += Float(delta) / (0.5 * Float(viewportSize.width))
                 updateTransform()
             }
             
-            // 2c) Anchor the right edge so it can't go beyond pinnedRight
-            let rightClipPoint = SIMD4<Float>(+1, 0, 0, 1)
-            let rightNDC       = currentTransformMatrix() * rightClipPoint
-            let rightNDCX      = rightNDC.x / rightNDC.w
-            let rightScreenX   = (rightNDCX + 1) * 0.5 * Float(viewportSize.width)
-            
-            if CGFloat(rightScreenX) < pinnedRight {
-                let delta = Float(pinnedRight) - rightScreenX
-                translation.x += delta / (0.5 * Float(viewportSize.width))
-                updateTransform()
-            }
-            
-            // 2d) Ensure dataX=0 sits exactly at pinnedLeft=50 if chart <= viewport
-            let zeroScreenPt = convertDataToPoint(SIMD2<Float>(0, 0), viewSize: viewportSize)
-            let zeroScreenX  = zeroScreenPt.x
-            if zeroScreenX != pinnedLeft {
-                let delta = pinnedLeft - zeroScreenX
+            // 2c) If you want to ensure the right side never goes left of pinnedRight:
+            let dataRightPt = convertDataToPoint(SIMD2<Float>(actualMaxX, 0),
+                                                 viewSize: viewportSize)
+            if dataRightPt.x < pinnedRight {
+                let delta = pinnedRight - dataRightPt.x
                 translation.x += Float(delta) / (0.5 * Float(viewportSize.width))
                 updateTransform()
             }
         } else {
-            // 3) If the chart is wider than viewport, let user pan off edges
-            //    but we still might disallow negative X if desired:
-        }
-        
-        // 4) Finally, ensure we never see negative X in the visible range:
-        let (xMinVis2, _) = computeVisibleRangeX()
-        if xMinVis2 < 0 {
-            let zeroScreenPt = convertDataToPoint(SIMD2<Float>(0, 0), viewSize: viewportSize)
-            let zeroScreenX  = zeroScreenPt.x
-            if zeroScreenX != pinnedLeft {
-                let delta = pinnedLeft - zeroScreenX
+            // 3) Chart is wider than the viewport, allow panning
+            //    But still block negative X:
+            let (xMinVis, _) = computeVisibleRangeX()
+            if xMinVis < 0 {
+                // Snap data X=0 to pinnedLeft again
+                let zeroPt = convertDataToPoint(SIMD2<Float>(0, 0), viewSize: viewportSize)
+                let delta = pinnedLeft - zeroPt.x
                 translation.x += Float(delta) / (0.5 * Float(viewportSize.width))
                 updateTransform()
             }
