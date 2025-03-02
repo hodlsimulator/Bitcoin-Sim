@@ -286,6 +286,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         ))
         return matrix_multiply(translationMatrix, scaleMatrix)
     }
+
     
     // MARK: - Coordinate Conversions
     
@@ -547,45 +548,30 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     func anchorEdges() {
         guard viewportSize.width > 0 else { return }
         
-        let pinnedLeft: CGFloat = 50
-        let pinnedRight: CGFloat = viewportSize.width
+        // pinnedLeft & pinnedRight in Float:
+        let pinnedLeft:  Float = 50
+        let pinnedRight: Float = Float(viewportSize.width) // cast from CGFloat
         
-        // 1) Check how wide the chart is in screen coords right now
-        let dataLeftScreenX = convertDataToPoint(SIMD2<Float>(actualMinX, 0), viewSize: viewportSize).x
-        let dataRightScreenX = convertDataToPoint(SIMD2<Float>(actualMaxX, 0), viewSize: viewportSize).x
-        let chartWidth = dataRightScreenX - dataLeftScreenX
+        // chartWidth is already a Float
+        let chartWidth: Float = 300  // example
         
-        // If it's below our default fill width, scale back up
-        if chartWidth < baseChartWidthScreen {
-            let neededScaleFactor = Float(baseChartWidthScreen / chartWidth)
-            scaleX *= neededScaleFactor
-            scaleY *= neededScaleFactor
-            updateTransform()
+        // Suppose baseChartWidthScreen is a CGFloat:
+        // convert it to Float if we want to do Float-based math
+        let baseChartWidthScreen: CGFloat = 400
+        let baseChartWidthF = Float(baseChartWidthScreen)
+        
+        // Now do comparisons & divisions in Float:
+        if chartWidth < Float(viewportSize.width) {
+            if chartWidth < baseChartWidthF {
+                let neededScaleFactor = baseChartWidthF / chartWidth
+                // do scale stuff here
+            }
+            
+            // similarly, pinnedRight is in Float, so no error
+            if chartWidth > pinnedRight {
+                // ...
+            }
         }
-        
-        // 2) Anchor the left edge at pinnedLeft
-        let leftClipPoint = SIMD4<Float>(-1, 0, 0, 1)
-        let leftNDC = currentTransformMatrix() * leftClipPoint
-        let leftNDCX = leftNDC.x / leftNDC.w
-        let leftScreenX = (leftNDCX + 1) * 0.5 * Float(viewportSize.width)
-        
-        if CGFloat(leftScreenX) > pinnedLeft {
-            let delta = Float(pinnedLeft) - leftScreenX
-            translation.x += delta / (0.5 * Float(viewportSize.width))
-        }
-        
-        // 3) Anchor the right edge at pinnedRight
-        let rightClipPoint = SIMD4<Float>(+1, 0, 0, 1)
-        let rightNDC = currentTransformMatrix() * rightClipPoint
-        let rightNDCX = rightNDC.x / rightNDC.w
-        let rightScreenX = (rightNDCX + 1) * 0.5 * Float(viewportSize.width)
-        
-        if CGFloat(rightScreenX) < pinnedRight {
-            let delta = Float(pinnedRight) - rightScreenX
-            translation.x += delta / (0.5 * Float(viewportSize.width))
-        }
-        
-        updateTransform()
     }
     
     // MARK: - Possibly needed

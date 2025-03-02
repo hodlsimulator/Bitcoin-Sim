@@ -217,7 +217,8 @@ class PinnedAxesRenderer {
             color: axisColor,
             scale: 0.35,
             screenWidth: Float(viewportSize.width),
-            screenHeight: Float(viewportSize.height)
+            screenHeight: Float(viewportSize.height),
+            letterSpacing: 7.0
         )
         if let xBuf = maybeXBuf {
             xAxisLabelBuffer = xBuf
@@ -231,7 +232,8 @@ class PinnedAxesRenderer {
             color: axisColor,
             scale: 0.35,
             screenWidth: Float(viewportSize.width),
-            screenHeight: Float(viewportSize.height)
+            screenHeight: Float(viewportSize.height),
+            letterSpacing: 9.0
         )
         if let yBuf = maybeYBuf {
             yAxisLabelBuffer = yBuf
@@ -410,7 +412,8 @@ extension PinnedAxesRenderer {
                 color: tickColor,
                 scale: 0.35,
                 screenWidth: Float(viewportSize.width),
-                screenHeight: Float(viewportSize.height)
+                screenHeight: Float(viewportSize.height),
+                letterSpacing: 6.0
             )
             if let buf = tBuf {
                 textBuffers.append((buf, vCount))
@@ -463,7 +466,8 @@ extension PinnedAxesRenderer {
                 color: tickColor,
                 scale: 0.35,
                 screenWidth: Float(viewportSize.width),
-                screenHeight: Float(viewportSize.height)
+                screenHeight: Float(viewportSize.height),
+                letterSpacing: 6.0
             )
             if let buf = tBuf {
                 textBuffers.append((buf, vCount))

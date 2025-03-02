@@ -70,9 +70,10 @@ public class GPUTextRenderer {
         x: Float,
         y: Float,
         color: simd_float4,
-        scale: Float = 0.25,  // Lower scale leverages bigger atlas
+        scale: Float = 1.0,
         screenWidth: Float,
-        screenHeight: Float
+        screenHeight: Float,
+        letterSpacing: Float = 0.0  // <— New parameter
     ) -> (MTLBuffer?, Int) {
 
         var vertices: [Float] = []
@@ -87,9 +88,10 @@ public class GPUTextRenderer {
             let x1 = x0 + gm.width * scale
             let y1 = y0 + gm.height * scale
 
-            // Cull if it's *truly* offscreen:
+            // Cull offscreen...
             if x1 < 0 || x0 > screenWidth || y1 < 0 || y0 > screenHeight {
-                penX += gm.xAdvance * scale
+                // Still add letterSpacing if you want uniform spacing
+                penX += (gm.xAdvance * scale) + letterSpacing
                 continue
             }
 
@@ -104,7 +106,8 @@ public class GPUTextRenderer {
                 x0, y1, gm.uMin, gm.vMax, color.x, color.y, color.z, color.w
             ])
 
-            penX += gm.xAdvance * scale
+            // Add the normal advance + letterSpacing
+            penX += (gm.xAdvance * scale) + letterSpacing
         }
 
         let vertexCount = vertices.count / 8

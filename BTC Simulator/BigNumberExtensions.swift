@@ -30,8 +30,8 @@ extension Double {
         
         // Find exponent (log base 10)
         let exponent = Int(floor(log10(absVal)))
-        // If exponent is beyond 21, just show it as a raw decimal with 2 places
-        guard exponent <= 21 else {
+        // New, maybe let it handle up to 39
+        guard exponent <= 39 else {
             return sign + String(format: "%.2f", absVal)
         }
         
@@ -78,17 +78,36 @@ extension Double {
 // MARK: - Mapping grouped exponent to suffix
 fileprivate func suffixForGroupedExponent(_ groupedExponent: Int) -> String {
     switch groupedExponent {
-    case 0: return ""
-    case 3: return "K"
-    case 6: return "M"
-    case 9: return "B"
-    case 12: return "T"
-    case 15: return "Q"
-    case 18: return "Qn"
-    case 21: return "Se"  // for 10^21
+    case 0:
+        return ""
+    case 3:
+        return "K"   // thousand
+    case 6:
+        return "M"   // million
+    case 9:
+        return "B"   // billion
+    case 12:
+        return "T"   // trillion
+    case 15:
+        return "Q"   // quadrillion
+    case 18:
+        return "Qn"  // quintillion
+    case 21:
+        return "Se"  // sextillion
+    case 24:
+        return "Sp"  // septillion
+    case 27:
+        return "Oc"  // octillion
+    case 30:
+        return "No"  // nonillion
+    case 33:
+        return "De"  // decillion
+    case 36:
+        return "Ud"  // undecillion
+    case 39:
+        return "Dd"  // duodecillion
     default:
-        // If we get a weird exponent not in this switch,
-        // just show "eX" or fallback to no suffix
+        // If it's bigger than the largest in this switch, fall back to raw format
         return ""
     }
 }
@@ -109,8 +128,8 @@ extension Double {
         }
         
         let exponent = Int(floor(log10(absVal)))
-        // If exponent is beyond 21, just show raw with 0 decimals
-        guard exponent <= 21 else {
+        // Now let it handle exponents up to 39. If exponent beyond 39, just show raw number.
+        guard exponent <= 39 else {
             return sign + String(format: "%.0f", absVal)
         }
         
@@ -120,5 +139,26 @@ extension Double {
         
         // Use "%.0f" for no decimals
         return "\(sign)\(String(format: "%.0f", leadingNumber))\(suffix)"
+    }
+
+    /// Updated suffix lookup supporting up to 10^39
+    fileprivate func suffixForGroupedExponent(_ groupedExponent: Int) -> String {
+        switch groupedExponent {
+        case 0:  return ""
+        case 3:  return "K"    // thousand
+        case 6:  return "M"    // million
+        case 9:  return "B"    // billion
+        case 12: return "T"    // trillion
+        case 15: return "Q"    // quadrillion
+        case 18: return "Qn"   // quintillion
+        case 21: return "Se"   // sextillion
+        case 24: return "Sp"   // septillion
+        case 27: return "Oc"   // octillion
+        case 30: return "No"   // nonillion
+        case 33: return "De"   // decillion
+        case 36: return "Ud"   // undecillion (unofficial but often used)
+        case 39: return "Dd"   // duodecillion
+        default: return ""     // if not in this list, just no suffix
+        }
     }
 }
