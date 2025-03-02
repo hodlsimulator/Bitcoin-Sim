@@ -321,12 +321,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     }
     
     func draw(in view: MTKView) {
-        // 1) If idle, bail out immediately (don't enqueue more GPU commands)
-        // if idleManager.isIdle {
-        //         return
-        //     }
-        
-        // Also check if the MTKView is paused
+        // Bail if the view is paused
         if view.isPaused {
             print("View is paused. Skipping draw.")
             return
@@ -341,23 +336,17 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             return
         }
         
-        // 2) Normal drawing code follows...
-        
-        // Ensure the viewport size is up-to-date
-        let deviceScale = view.drawableSize.width / view.bounds.size.width
-        let scissorX = Int(pinnedAxisOffset * deviceScale)
-        
-        // Configure scissor rect, etc.
+        // 1) Draw pinned axes/labels *without* scissoring
         renderEncoder.setScissorRect(MTLScissorRect(
-            x: scissorX,
+            x: 0,
             y: 0,
-            width: max(0, Int(view.drawableSize.width) - scissorX),
+            width: Int(view.drawableSize.width),
             height: Int(view.drawableSize.height)
         ))
         
-        // Update pinned axes if needed
         if let pinnedAxes = pinnedAxesRenderer {
             pinnedAxes.viewportSize = view.bounds.size
+            
             let (xMinVis, xMaxVis) = computeVisibleRangeX()
             let (yMinVis, yMaxVis) = computeVisibleRangeY()
             
@@ -372,12 +361,15 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             pinnedAxes.drawAxes(renderEncoder: renderEncoder)
         }
         
-        // if !chartHasLoaded {
-                // The chart has just finished its first draw
-        //        chartHasLoaded = true
-        //        print("Chart finished initial load; starting idle timer.")
-        //        idleManager.resetIdleTimer()
-        //    }
+        // 2) Re‐enable scissor to clip chart lines
+        let deviceScale = view.drawableSize.width / view.bounds.size.width
+        let scissorX = Int(pinnedAxisOffset * deviceScale)
+        renderEncoder.setScissorRect(MTLScissorRect(
+            x: scissorX,
+            y: 0,
+            width: max(0, Int(view.drawableSize.width) - scissorX),
+            height: Int(view.drawableSize.height)
+        ))
         
         // Draw the chart lines
         renderEncoder.setRenderPipelineState(pipelineState)

@@ -59,9 +59,11 @@ class PinnedAxesRenderer {
     private var yTickTextBuffers: [MTLBuffer] = []
     private var yTickTextVertexCounts: [Int] = []
     
-    /// For testinng
-    private var circleBuffer: MTLBuffer?
-    private var circleVertexCount = 0
+    // We add two new buffers + counts for axis labels
+    private var xAxisLabelBuffer: MTLBuffer?
+    private var xAxisLabelVertexCount = 0
+    private var yAxisLabelBuffer: MTLBuffer?
+    private var yAxisLabelVertexCount = 0
 
     init(device: MTLDevice,
          textRenderer: GPUTextRenderer,
@@ -157,26 +159,22 @@ class PinnedAxesRenderer {
             options: .storageModeShared
         )
         
-        // Build circle vertices
-        let circleVerts = buildCircleVertices(
-            cx: Float(viewportSize.width) * 0.5,
-            cy: Float(viewportSize.height) * 0.5,
-            radius: 50,
-            segments: 20,
-            color: SIMD4<Float>(1, 0, 0, 1)  // bright red
-        )
-        circleVertexCount = circleVerts.count / 8
-        circleBuffer = device.makeBuffer(
-            bytes: circleVerts,
-            length: circleVerts.count * MemoryLayout<Float>.size,
-            options: .storageModeShared
-        )
-        
+        // -- Removed the old red circle code --
+        // e.g. buildCircleVertices(...), circleBuffer, etc.
+
         // Generate tick and grid values.
-        let tickXValues = generateNiceTicks(minVal: Double(minX), maxVal: Double(maxX), desiredCount: 6)
-        let tickYValues = generateNiceTicks(minVal: Double(minY), maxVal: Double(maxY), desiredCount: 6)
-        let gridXValues = generateNiceTicks(minVal: Double(minX), maxVal: Double(maxX), desiredCount: 10)
-        let gridYValues = generateNiceTicks(minVal: Double(minY), maxVal: Double(maxY), desiredCount: 10)
+        let tickXValues = generateNiceTicks(minVal: Double(minX),
+                                            maxVal: Double(maxX),
+                                            desiredCount: 6)
+        let tickYValues = generateNiceTicks(minVal: Double(minY),
+                                            maxVal: Double(maxY),
+                                            desiredCount: 6)
+        let gridXValues = generateNiceTicks(minVal: Double(minX),
+                                            maxVal: Double(maxX),
+                                            desiredCount: 10)
+        let gridYValues = generateNiceTicks(minVal: Double(minY),
+                                            maxVal: Double(maxY),
+                                            desiredCount: 10)
         
         // 3) Build short ticks and text labels on pinned axes
         let (xTickVerts, xTickTexts) = buildXTicks(
@@ -221,6 +219,34 @@ class PinnedAxesRenderer {
                         maxX: Float(viewportSize.width),
                         pinnedScreenY: pinnedScreenY,
                         chartTransform: chartTransform)
+        
+        // 5) Build axis labels ("Years" and "USD") at a smaller scale
+        // textRenderer is presumably your GPUTextRenderer instance
+        // Build the "Years" label
+        let (maybeXBuf, xCount) = textRenderer.buildTextVertices(
+            string: "Years",
+            x: pinnedScreenX + 100,
+            y: pinnedScreenY + 15,
+            color: axisColor,
+            scale: 2.0
+        )
+        if let xBuf = maybeXBuf {
+            xAxisLabelBuffer = xBuf
+            xAxisLabelVertexCount = xCount
+        }
+
+        // Build the "USD" label
+        let (maybeYBuf, yCount) = textRenderer.buildTextVertices(
+            string: "USD",
+            x: pinnedScreenX - 40,
+            y: pinnedScreenY * 0.5,
+            color: axisColor,
+            scale: 2.0
+        )
+        if let yBuf = maybeYBuf {
+            yAxisLabelBuffer = yBuf
+            yAxisLabelVertexCount = yCount
+        }
     }
     
     func renderTextBuffer(renderEncoder: MTLRenderCommandEncoder, buffer: MTLBuffer, vertexCount: Int) {
@@ -298,13 +324,23 @@ class PinnedAxesRenderer {
             renderEncoder.setVertexBuffer(buf, offset: 0, index: 0)
             renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: yAxisQuadVertexCount)
         }
+        
+        if let xBuf = xAxisLabelBuffer, xAxisLabelVertexCount > 0 {
+            renderEncoder.setVertexBuffer(xBuf, offset: 0, index: 0)
+            renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: xAxisLabelVertexCount)
+        }
+
+        if let yBuf = yAxisLabelBuffer, yAxisLabelVertexCount > 0 {
+            renderEncoder.setVertexBuffer(yBuf, offset: 0, index: 0)
+            renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: yAxisLabelVertexCount)
+        }
 
         // --- 7) Debug Circle ---
-        if let circleBuf = circleBuffer {
-            print("DEBUG: Drawing circle with \(circleVertexCount) vertices")
-            renderEncoder.setVertexBuffer(circleBuf, offset: 0, index: 0)
-            renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: circleVertexCount)
-        }
+        // if let circleBuf = circleBuffer {
+        //    print("DEBUG: Drawing circle with \(circleVertexCount) vertices")
+        //    renderEncoder.setVertexBuffer(circleBuf, offset: 0, index: 0)
+        //    renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: circleVertexCount)
+        // }
 
         // --- 8) Tick Label Text ---
         if let textPipelineState = textRenderer.pipelineState {
