@@ -62,7 +62,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     // MARK: - Setup
     
     // IdleManager to manage idle state
-    private var idleManager = IdleManager()
+    // private var idleManager = IdleManager()
     private var chartHasLoaded = false
     
     func setupMetal(
@@ -322,9 +322,9 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     
     func draw(in view: MTKView) {
         // 1) If idle, bail out immediately (don't enqueue more GPU commands)
-        if idleManager.isIdle {
-                return
-            }
+        // if idleManager.isIdle {
+        //         return
+        //     }
         
         // Also check if the MTKView is paused
         if view.isPaused {
@@ -372,12 +372,12 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             pinnedAxes.drawAxes(renderEncoder: renderEncoder)
         }
         
-        if !chartHasLoaded {
+        // if !chartHasLoaded {
                 // The chart has just finished its first draw
-                chartHasLoaded = true
-                print("Chart finished initial load; starting idle timer.")
-                idleManager.resetIdleTimer()
-            }
+        //        chartHasLoaded = true
+        //        print("Chart finished initial load; starting idle timer.")
+        //        idleManager.resetIdleTimer()
+        //    }
         
         // Draw the chart lines
         renderEncoder.setRenderPipelineState(pipelineState)
