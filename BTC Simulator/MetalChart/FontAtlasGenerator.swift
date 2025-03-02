@@ -55,9 +55,15 @@ public func generateFontAtlas(
         }
         
         if glyph != 0 {
+            // Right after we get boundingRect, we expand it slightly
             var boundingRect = CGRect.zero
             CTFontGetBoundingRectsForGlyphs(ctFont, .default, [glyph], &boundingRect, 1)
-            
+
+            // Add some extra padding to the glyph bounds
+            let extraBound: CGFloat = 2  // You can tweak this
+            boundingRect = boundingRect.insetBy(dx: -extraBound, dy: -extraBound)
+
+            // Now boundingRect is guaranteed to have more space, so we don't clip
             maxGlyphWidth  = max(maxGlyphWidth,  boundingRect.width)
             maxGlyphHeight = max(maxGlyphHeight, boundingRect.height)
             glyphRects[ch] = boundingRect
