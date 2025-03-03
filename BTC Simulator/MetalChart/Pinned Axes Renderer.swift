@@ -20,7 +20,8 @@ class PinnedAxesRenderer {
     
     private let device: MTLDevice
     private let textRenderer: GPUTextRenderer
-    private var axisPipelineState: MTLRenderPipelineState?
+    
+    var axisPipelineState: MTLRenderPipelineState?
     
     // Set each frame from outside
     var viewportSize: CGSize = .zero
@@ -163,6 +164,7 @@ class PinnedAxesRenderer {
         )
         
         // Generate tick arrays
+        // NOTE: minY..maxY are log10 domain values. We'll exponentiate them for display.
         let tickXValues = generateNiceTicks(
             minVal: Double(minX),
             maxVal: Double(maxX),
@@ -181,8 +183,7 @@ class PinnedAxesRenderer {
             maxVal: Double(maxX),
             desiredCount: 10
         )
-        // Use the exact same array so grid lines match the ticks
-        let gridYValues = tickYValues
+        let gridYValues = tickYValues // same array
         
         // 3) Ticks + labels
         let (xTickVerts, xTickTexts) = buildXTicks(
@@ -238,7 +239,7 @@ class PinnedAxesRenderer {
             chartTransform: chartTransform
         )
         
-        // 5) Axis labels (“Period”, “USD”) at smaller scale
+        // 5) Axis labels
         let (maybeXBuf, xCount) = textRenderer.buildTextVertices(
             string: "Period",
             x: pinnedScreenX + 100,
@@ -334,10 +335,10 @@ class PinnedAxesRenderer {
             let width = Float(viewportSize.width)
             let height = Float(viewportSize.height)
             var proj = matrix_float4x4(
-                [2/width, 0,       0, 0],
-                [0,       -2/height,0, 0],
-                [0,        0,       1, 0],
-                [-1,       1,       0, 1]
+                [2/width,  0,        0, 0],
+                [0,       -2/height, 0, 0],
+                [0,        0,        1, 0],
+                [-1,       1,        0, 1]
             )
             guard let pBuf = device.makeBuffer(bytes: &proj,
                                                length: MemoryLayout<matrix_float4x4>.size,
@@ -377,11 +378,11 @@ class PinnedAxesRenderer {
     }
 }
 
-// MARK: - Building the Ticks (no decimals)
+// MARK: - Building the Ticks (Modified Y to show "real" log values)
 
 extension PinnedAxesRenderer {
     
-    /// X Ticks: Switch among years, months, or weeks (no decimals).
+    /// X Ticks remain the same, because we're still in linear X domain
     private func buildXTicks(
         _ xTicks: [Double],
         pinnedScreenY: Float,
@@ -397,10 +398,6 @@ extension PinnedAxesRenderer {
         let tickLen: Float = 6
         let halfT: Float = 0.5
         
-        // We'll do a trivial cutoff:
-        // If (maxX - minX) > 2 => treat as years
-        // else if > 0.5 => treat as months
-        // else => weeks
         let range = Double(maxX - minX)
         
         for val in xTicks {
@@ -425,14 +422,11 @@ extension PinnedAxesRenderer {
             // Decide label format
             var label = ""
             if range > 2.0 {
-                // Show integer years with "y"
                 label = "\(Int(val))y"
             } else if range > 0.5 {
-                // Show months
                 let months = Int(val * 12.0)
                 label = "\(months)m"
             } else {
-                // Show weeks
                 let weeks = Int(val * 52.0)
                 label = "\(weeks)w"
             }
@@ -457,7 +451,8 @@ extension PinnedAxesRenderer {
         return (verts, textBuffers)
     }
     
-    /// Y Ticks: Use big number suffix, no decimals
+    /// Y Ticks: now we treat 'val' as a log10-domain value,
+    /// so we exponentiate it to get the "real" data for the label.
     private func buildYTicks(
         _ yTicks: [Double],
         pinnedScreenX: Float,
@@ -470,11 +465,11 @@ extension PinnedAxesRenderer {
         let tickLen: Float = 6
         let halfT: Float = 0.5
         
-        for val in yTicks {
-            let sy = dataYtoScreenY(dataY: Float(val), transform: chartTransform)
+        for logVal in yTicks {
+            let sy = dataYtoScreenY(dataY: Float(logVal), transform: chartTransform)
             if sy < 0 || sy > pinnedScreenY { continue }
-
-            // Short tick line to the left of the axis
+            
+            // Draw short tick line to the left of the axis
             let x1 = pinnedScreenX
             let x0 = pinnedScreenX - tickLen
             
@@ -486,8 +481,11 @@ extension PinnedAxesRenderer {
                 color: tickColor
             ))
             
-            // Format using a no‐decimal big number suffix
-            let formatted = val.formattedGroupedSuffixNoDecimals()
+            // Convert logVal -> real = 10^(logVal)
+            let realVal = pow(10.0, logVal)
+            
+            // Format your label (maybe big suffix, or no decimals)
+            let formatted = realVal.formattedGroupedSuffixNoDecimals()
             
             // Put text left of the axis
             let textX = pinnedScreenX - tickLen - 30
@@ -566,8 +564,8 @@ extension PinnedAxesRenderer {
         let thickness: Float = 1
         let halfT = thickness * 0.5
         
-        for val in yTicks {
-            let sy = dataYtoScreenY(dataY: Float(val), transform: chartTransform)
+        for logVal in yTicks {
+            let sy = dataYtoScreenY(dataY: Float(logVal), transform: chartTransform)
             if sy < 0 { continue }
             if sy > pinnedScreenY { continue }
             
@@ -626,6 +624,7 @@ extension PinnedAxesRenderer {
     }
 
     /// Converts data Y to screen Y
+    /// If your domain is log, dataY is log10(value).
     func dataYtoScreenY(dataY: Float, transform: matrix_float4x4) -> Float {
         let clip = transform * SIMD4<Float>(0, dataY, 0, 1)
         let ndcY = clip.y / clip.w

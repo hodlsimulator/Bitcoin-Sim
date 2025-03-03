@@ -3,7 +3,7 @@
 //  BTCMonteCarlo
 //
 //  Created by . . on 27/02/2025.
-//  Orthographic-based version
+//  Orthographic-based version with pinned axes pass
 //
 
 import Foundation
@@ -11,7 +11,7 @@ import MetalKit
 import simd
 import SwiftUI
 
-// 1) Struct for the uniform buffer (placed at top of file or inside class – either is fine)
+// 1) Uniform struct
 struct TransformUniform {
     var transformMatrix: matrix_float4x4
 }
@@ -19,8 +19,6 @@ struct TransformUniform {
 class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     
     // MARK: - Domain & Transform
-    // For a strictly forward-looking chart, domainMinX=0 so we never show negative X.
-    // domainMaxX, domainMinY, domainMaxY come from data.
     var domainMinX: Float = 0
     var domainMaxX: Float = 1
     var domainMinY: Float = 0
@@ -30,10 +28,10 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     var offsetX: Float = 0
     var offsetY: Float = 0
     
-    // Single scale factor controlling zoom on both axes.
+    // Single scale factor for both axes
     var chartScale: Float = 1.0
     
-    // The orthographic projection matrix
+    // Orthographic matrix
     private var projectionMatrix = matrix_float4x4(1.0)
 
     // MARK: - Metal
@@ -41,24 +39,26 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     var commandQueue: MTLCommandQueue!
     var pipelineState: MTLRenderPipelineState!
     
-    // We'll store the projection matrix in a small uniform buffer
     private var uniformBuffer: MTLBuffer?
     
-    // If you have text rendering
+    // For text rendering (optional)
     var textRendererManager: TextRendererManager?
     
-    // For lines
+    // The line buffer
     var vertexBuffer: MTLBuffer?
     var lineSizes: [Int] = []
     
     // The size of the MTKView in points
     var viewportSize: CGSize = .zero
     
-    // The local data or chart cache
+    // For data
     var chartDataCache: ChartDataCache?
     var simSettings: SimulationSettings?
 
-    // For debugging or reference
+    // (Optional) pinned axes
+    var pinnedAxesRenderer: PinnedAxesRenderer?
+    
+    // Debug/tracking
     private var chartHasLoaded = false
     
     // MARK: - Setup
@@ -69,44 +69,36 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         self.chartDataCache = chartDataCache
         self.simSettings = simSettings
         
-        // domainMinX = 0 if strictly forward.
-        // domainMaxX, domainMinY, domainMaxY extracted from data in buildLineBuffer() below.
-        
-        // 1) Create Metal device & commandQueue
         guard let device = MTLCreateSystemDefaultDevice() else {
             print("Metal not supported on this machine.")
             return
         }
         self.device = device
-        self.commandQueue = device.makeCommandQueue()
+        commandQueue = device.makeCommandQueue()
         
-        // 2) Load default library
         guard let library = device.makeDefaultLibrary() else {
             print("Failed to create default library.")
             return
         }
         
-        // 3) Optionally set up text rendering
+        // Optionally set up text rendering
         textRendererManager = TextRendererManager()
         textRendererManager?.generateFontAtlasAndRenderer(device: device)
         
-        // 4) Create pipeline state
+        // 1) Create the main chart pipeline (orthographicVertex -> fragmentShader)
         let vertexFunction   = library.makeFunction(name: "orthographicVertex")
         let fragmentFunction = library.makeFunction(name: "fragmentShader")
         
         let vertexDescriptor = MTLVertexDescriptor()
-        // Position
-        vertexDescriptor.attributes[0].format = .float4
+        vertexDescriptor.attributes[0].format = .float4 // position
         vertexDescriptor.attributes[0].offset = 0
         vertexDescriptor.attributes[0].bufferIndex = 0
-        // Colour
-        vertexDescriptor.attributes[1].format = .float4
+        
+        vertexDescriptor.attributes[1].format = .float4 // color
         vertexDescriptor.attributes[1].offset = MemoryLayout<Float>.size * 4
         vertexDescriptor.attributes[1].bufferIndex = 0
         
         vertexDescriptor.layouts[0].stride = MemoryLayout<Float>.size * 8
-        vertexDescriptor.layouts[0].stepRate = 1
-        vertexDescriptor.layouts[0].stepFunction = .perVertex
         
         let pipelineDesc = MTLRenderPipelineDescriptor()
         pipelineDesc.vertexFunction = vertexFunction
@@ -114,15 +106,12 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         pipelineDesc.vertexDescriptor = vertexDescriptor
         pipelineDesc.colorAttachments[0].pixelFormat = .bgra8Unorm
         
-        // Enable alpha blending if desired
+        pipelineDesc.rasterSampleCount = 4
+        
+        // blending
         pipelineDesc.colorAttachments[0].isBlendingEnabled = true
         pipelineDesc.colorAttachments[0].sourceRGBBlendFactor = .sourceAlpha
         pipelineDesc.colorAttachments[0].destinationRGBBlendFactor = .oneMinusSourceAlpha
-        pipelineDesc.colorAttachments[0].sourceAlphaBlendFactor = .one
-        pipelineDesc.colorAttachments[0].destinationAlphaBlendFactor = .oneMinusSourceAlpha
-        
-        // Possibly enable MSAA
-        pipelineDesc.rasterSampleCount = 4
         
         do {
             pipelineState = try device.makeRenderPipelineState(descriptor: pipelineDesc)
@@ -130,33 +119,45 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             print("Error creating pipeline state: \(error)")
         }
         
-        // 5) Create uniform buffer for projection matrix
-        //    Use 'MemoryLayout<TransformUniform>.size' to match the struct
+        // 2) Uniform buffer
         uniformBuffer = device.makeBuffer(
             length: MemoryLayout<TransformUniform>.size,
             options: .storageModeShared
         )
         
-        // 6) Build line buffer from data
+        // 3) Build the lines in log space
         buildLineBuffer()
         
-        // 7) Set initial offset/scale so x=0 is at the left, etc.
+        // 4) init transforms
         offsetX = 0
         offsetY = 0
         chartScale = 1.0
         
-        // 8) Update orthographic matrix
         viewportSize = size
         updateOrthographic()
+        
+        // 5) Create pinned axes renderer (if you want axes)
+        //    Provide the same device & library you used above, plus any textRenderer:
+        if let textRenderer = textRendererManager?.getTextRenderer() {
+            pinnedAxesRenderer = PinnedAxesRenderer(
+                device: device,
+                textRenderer: textRenderer,
+                textRendererManager: textRendererManager!,
+                library: library
+            )
+            
+            // Example: Pin the axis at x=50
+            pinnedAxesRenderer?.pinnedAxisX = 50
+        } else {
+            print("No textRenderer => pinned axes won't show text.")
+        }
     }
     
-    // MARK: - Build data => domain coords
+    // MARK: - Build Data in Log Space
     
-    /// Reads the chart data, finds min/max X/Y, and creates a buffer of domain coordinates + color
     func buildLineBuffer() {
-        guard let cache = chartDataCache,
-              let simSettings = simSettings else {
-            print("No chartDataCache or simSettings, cannot build lines.")
+        guard let cache = chartDataCache, let simSettings = simSettings else {
+            print("No chartDataCache or simSettings => skipping")
             return
         }
         
@@ -169,7 +170,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
                 let xVal = convertPeriodToYears(pt.week, simSettings)
                 allXVals.append(xVal)
                 
-                // If your data can’t be negative, clamp to a small positive number:
+                // clamp to 1e-9
                 let rawY = max(1e-9, NSDecimalNumber(decimal: pt.value).doubleValue)
                 allYVals.append(rawY)
             }
@@ -183,18 +184,14 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             return
         }
         
-        // Domain: [0..]
-        // If minX is negative or small, clamp to 0
         let finalMinX = max(0.0, minX)
-        
-        // Y in log space => domainMinY=log10(rawMinY), domainMaxY=log10(rawMaxY)
         let logMinY = log10(rawMinY)
         let logMaxY = log10(rawMaxY)
         
-        self.domainMinX = Float(finalMinX)
-        self.domainMaxX = Float(maxX)
-        self.domainMinY = Float(logMinY)
-        self.domainMaxY = Float(logMaxY)
+        domainMinX = Float(finalMinX)
+        domainMaxX = Float(maxX)
+        domainMinY = Float(logMinY)
+        domainMaxY = Float(logMaxY)
         
         var vertexData: [Float] = []
         var lineCounts: [Int] = []
@@ -210,20 +207,15 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             
             var vertexCount = 0
             for pt in sim.points {
-                let rawX = convertPeriodToYears(pt.week, simSettings)
-                let floatX = Float(rawX)
-                
-                // clamp to 1e-9 before log
+                let rawX = Float(convertPeriodToYears(pt.week, simSettings))
                 let rawY = max(1e-9, NSDecimalNumber(decimal: pt.value).doubleValue)
                 let logY = Float(log10(rawY))
                 
-                // domain coords => x= floatX, y= logY
-                vertexData.append(floatX)
+                vertexData.append(rawX)
                 vertexData.append(logY)
-                vertexData.append(0.0)
-                vertexData.append(1.0)
+                vertexData.append(0)
+                vertexData.append(1)
                 
-                // RGBA
                 vertexData.append(r)
                 vertexData.append(g)
                 vertexData.append(b)
@@ -234,25 +226,17 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             lineCounts.append(vertexCount)
         }
         
-        self.lineSizes = lineCounts
+        lineSizes = lineCounts
         
         let byteCount = vertexData.count * MemoryLayout<Float>.size
-        vertexBuffer = device.makeBuffer(
-            bytes: vertexData,
-            length: byteCount,
-            options: .storageModeShared
-        )
+        vertexBuffer = device.makeBuffer(bytes: vertexData,
+                                         length: byteCount,
+                                         options: .storageModeShared)
         
-        print("Created line buffer with \(vertexData.count) floats for log-scale Y coords.")
+        print("Created line buffer with \(vertexData.count) floats. Y is log scale.")
     }
     
-    let customPalette: [Color] = [
-        .white,
-        .yellow,
-        .red,
-        .blue,
-        .green
-    ]
+    let customPalette: [Color] = [.white, .yellow, .red, .blue, .green]
     
     func colorToFloats(_ c: Color, opacity: Double) -> (Float, Float, Float, Float) {
         let ui = UIColor(c)
@@ -262,19 +246,16 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         return (Float(rr), Float(gg), Float(bb), Float(aa))
     }
     
-    // Convert from e.g. week => years, if needed
     func convertPeriodToYears(_ week: Int, _ simSettings: SimulationSettings) -> Double {
         if simSettings.periodUnit == .weeks {
             return Double(week) / 52.0
         } else {
-            // if months
             return Double(week) / 12.0
         }
     }
     
-    // MARK: - Orthographic updates
+    // MARK: - Orthographic
     
-    /// Rebuild the orthographic matrix from offsetX..offsetX+visibleWidth, etc.
     func updateOrthographic() {
         let domainWidth  = domainMaxX - domainMinX
         let domainHeight = domainMaxY - domainMinY
@@ -287,7 +268,13 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         let bottom = offsetY
         let top    = offsetY + visibleHeight
         
-        // near/far for 2D
+        // For debugging, print domain & transform details
+        print("DEBUG [updateOrthographic]:")
+        print("  domainMinX=\(domainMinX), domainMaxX=\(domainMaxX), domainMinY=\(domainMinY), domainMaxY=\(domainMaxY)")
+        print("  offsetX=\(offsetX), offsetY=\(offsetY), chartScale=\(chartScale)")
+        print("  => orthographic left=\(left), right=\(right), bottom=\(bottom), top=\(top)")
+        
+        // Build the projection matrix
         let near: Float = 0
         let far:  Float = 1
         
@@ -298,29 +285,23 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
                                                   near: near,
                                                   far: far)
         
-        // 9) Store it in uniformBuffer
+        // Store it in the uniform buffer
         if let ptr = uniformBuffer?.contents().bindMemory(to: matrix_float4x4.self, capacity: 1) {
             ptr.pointee = projectionMatrix
         }
     }
     
-    /// A classic 2D orthographic matrix
-    func makeOrthographicMatrix(left: Float,
-                                right: Float,
-                                bottom: Float,
-                                top: Float,
-                                near: Float,
-                                far: Float) -> matrix_float4x4 {
+    func makeOrthographicMatrix(left: Float, right: Float,
+                                bottom: Float, top: Float,
+                                near: Float,   far: Float) -> matrix_float4x4 {
         let rml = right - left
         let tmb = top - bottom
         let fmn = far - near
         
-        // scale
-        let sx =  2.0 / rml
-        let sy =  2.0 / tmb
-        let sz =  1.0 / fmn
+        let sx = 2.0 / rml
+        let sy = 2.0 / tmb
+        let sz = 1.0 / fmn
         
-        // translation
         let tx = -(right + left) / rml
         let ty = -(top + bottom) / tmb
         let tz = -near / fmn
@@ -340,11 +321,8 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     }
     
     func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
-        // If you need to handle auto resizing
         let newSize = view.bounds.size
         viewportSize = newSize
-        // We typically keep the same domain offset/scale,
-        // just re-calling updateOrthographic() might suffice
         updateOrthographic()
     }
     
@@ -356,33 +334,47 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         else {
             return
         }
+
+        // One pass, one encoder
+        let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: rpd)
         
-        let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: rpd)
-        renderEncoder?.setRenderPipelineState(pipelineState)
-        
-        // Provide the line buffer
-        renderEncoder?.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
-        
-        // Provide the uniform buffer (matrix)
-        if let ubuf = uniformBuffer {
-            renderEncoder?.setVertexBuffer(ubuf, offset: 0, index: 1)
-        }
-        
-        // Draw each line
+        // 1) Chart lines
+        encoder?.setRenderPipelineState(pipelineState)
+        encoder?.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
+        encoder?.setVertexBuffer(uniformBuffer, offset: 0, index: 1)
         var startIndex = 0
         for count in lineSizes {
-            renderEncoder?.drawPrimitives(type: .lineStrip,
-                                          vertexStart: startIndex,
-                                          vertexCount: count)
+            encoder?.drawPrimitives(type: .lineStrip,
+                                    vertexStart: startIndex,
+                                    vertexCount: count)
             startIndex += count
         }
         
-        renderEncoder?.endEncoding()
+        // 2) pinnedAxes
+        if let pinnedAxes = pinnedAxesRenderer {
+            // Must set the pinned axis pipeline
+            if let axisPipeline = pinnedAxes.axisPipelineState {
+                encoder?.setRenderPipelineState(axisPipeline)
+            }
+            
+            pinnedAxes.viewportSize = view.bounds.size
+            pinnedAxes.updateAxes(
+                minX: domainMinX,
+                maxX: domainMaxX,
+                minY: domainMinY,
+                maxY: domainMaxY,
+                chartTransform: projectionMatrix
+            )
+            pinnedAxes.drawAxes(renderEncoder: encoder!)
+        }
+
+        // end
+        encoder?.endEncoding()
         commandBuffer.present(drawable)
         commandBuffer.commit()
     }
     
-    // Example usage for pinch anchor: convert a screen point to domain coords
+    // Convert a screen point to domain coords for pinch anchors, etc.
     func screenToDomain(_ screenPoint: CGPoint, viewSize: CGSize) -> SIMD2<Float> {
         let domainWidth  = domainMaxX - domainMinX
         let visibleWidth = domainWidth / chartScale
