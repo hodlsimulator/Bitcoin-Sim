@@ -34,8 +34,7 @@ class IdleManager: ObservableObject {
             userInfo: nil,
             repeats: false
         )
-        print("DEBUG: Timer scheduled for \(idleTimeLimit) seconds")
-        
+    
         // If we were idle, resume
         if isIdle {
             resumeProcessing()

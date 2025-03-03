@@ -106,7 +106,6 @@ extension MetalChartGestureCoordinator {
     
     // MARK: Single-finger Pan
     @objc func handleSingleFingerPan(_ recognizer: UIPanGestureRecognizer) {
-        print("Tap/pan recognized!")
         guard let chartView = recognizer.view as? MetalChartUIView else { return }
         let renderer = chartView.renderer
         let translationPoint = recognizer.translation(in: chartView)
