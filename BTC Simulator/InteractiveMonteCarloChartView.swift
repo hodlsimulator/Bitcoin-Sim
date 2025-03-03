@@ -14,48 +14,48 @@ import simd
 struct InteractiveMonteCarloChartView: View {
     @EnvironmentObject var chartDataCache: ChartDataCache
     @EnvironmentObject var simSettings: SimulationSettings
-    
-    // Provide or read the same idleManager from environment here
     @EnvironmentObject var idleManager: IdleManager
 
     @State private var metalChart = MetalChartRenderer()
     @State private var isMetalChartReady = false
-    
+
     var body: some View {
         GeometryReader { geo in
             ZStack {
                 Color.black.ignoresSafeArea()
-                
+
                 if isMetalChartReady {
+                    // Once true, we show the container with a valid textRendererManager
                     MetalChartContainerView(metalChart: metalChart)
-                        .environmentObject(idleManager) // <– pass it down
-                        .onAppear {
-                            metalChart.viewportSize = geo.size
-                            metalChart.setupMetal(
-                                in: geo.size,
-                                chartDataCache: chartDataCache,
-                                simSettings: simSettings
-                            )
-                        }
+                        .environmentObject(idleManager)
                         .onChange(of: geo.size) { _, newSize in
+                            // If the view size changes (e.g., device rotation),
+                            // update the renderer’s viewport.
                             metalChart.viewportSize = newSize
                             metalChart.updateViewport(to: newSize)
+                            // Optionally call `metalChart.anchorEdges()` here if needed.
                         }
                 } else {
                     Text("Loading chart...")
                         .foregroundColor(.white)
                 }
             }
-        }
-        .onAppear {
-            // Initialize setupMetal and then mark as ready
-            DispatchQueue.main.async {
-                metalChart.setupMetal(
-                    in: CGSize(width: 100, height: 100),
-                    chartDataCache: chartDataCache,
-                    simSettings: simSettings
-                )
-                isMetalChartReady = true
+            .onAppear {
+                // We wait until onAppear so 'geo.size' is valid
+                DispatchQueue.main.async {
+                    // 1) Provide the actual size to the renderer
+                    metalChart.viewportSize = geo.size
+
+                    // 2) Call setupMetal ONCE
+                    metalChart.setupMetal(
+                        in: geo.size,
+                        chartDataCache: chartDataCache,
+                        simSettings: simSettings
+                    )
+
+                    // 3) Mark it ready; triggers the if isMetalChartReady block
+                    isMetalChartReady = true
+                }
             }
         }
     }

@@ -1,6 +1,6 @@
 //
-// ChartShaders.metal
-// BTC Simulator
+//  ChartShaders.metal
+//  BTC Simulator
 //
 //  Created by . . on 27/02/2025.
 //
@@ -23,7 +23,12 @@ struct TransformUniform {
     float4x4 transformMatrix;
 };
 
-vertex VertexOut vertexShader(
+/*
+  Orthographic-based vertex function.
+  If your Swift code calls library.makeFunction(name: "orthographicVertex"),
+  it will find this function.
+*/
+vertex VertexOut orthographicVertex(
     VertexIn inVertex [[stage_in]],
     constant TransformUniform &uniforms [[buffer(1)]]
 )
@@ -31,7 +36,7 @@ vertex VertexOut vertexShader(
     VertexOut out;
     // Apply the transform to the vertex position
     out.position = uniforms.transformMatrix * inVertex.position;
-    out.color = inVertex.color;
+    out.color    = inVertex.color;
     return out;
 }
 

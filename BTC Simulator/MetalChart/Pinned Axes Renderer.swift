@@ -25,6 +25,9 @@ class PinnedAxesRenderer {
     // Set each frame from outside
     var viewportSize: CGSize = .zero
     
+    // Pinned at the left edge (x=0)
+    var pinnedAxisX: Float = 0
+    
     // Colours
     var axisColor = SIMD4<Float>(1, 1, 1, 1)
     var tickColor = SIMD4<Float>(0.7, 0.7, 0.7, 1.0)
@@ -118,8 +121,9 @@ class PinnedAxesRenderer {
         maxY: Float,
         chartTransform: matrix_float4x4
     ) {
-        // Where the pinned axes should be drawn
-        let pinnedScreenX: Float = 50
+        // pinnedAxisX is the horizontal screen coordinate where we pin the y-axis
+        let pinnedScreenX = pinnedAxisX
+        // pinnedScreenY is how tall we want the x-axis region. This example uses (height - 40).
         let pinnedScreenY: Float = Float(viewportSize.height) - 40
         
         let axisThickness: Float = 1
@@ -171,6 +175,7 @@ class PinnedAxesRenderer {
             desiredCount: 10
         )
         
+        // Grid lines
         let gridXValues = generateNiceTicks(
             minVal: Double(minX),
             maxVal: Double(maxX),
@@ -203,7 +208,6 @@ class PinnedAxesRenderer {
             chartTransform: chartTransform
         )
         
-        // Only create yTickBuffer if there's data
         if !yTickVerts.isEmpty {
             yTickBuffer = device.makeBuffer(
                 bytes: yTickVerts,
@@ -234,7 +238,7 @@ class PinnedAxesRenderer {
             chartTransform: chartTransform
         )
         
-        // 5) Axis labels (“Years”, “USD”) at smaller scale
+        // 5) Axis labels (“Period”, “USD”) at smaller scale
         let (maybeXBuf, xCount) = textRenderer.buildTextVertices(
             string: "Period",
             x: pinnedScreenX + 100,
@@ -389,18 +393,23 @@ extension PinnedAxesRenderer {
         var verts: [Float] = []
         var textBuffers: [(MTLBuffer, Int)] = []
         
+        let pinned = pinnedAxisX
+        let tickLen: Float = 6
+        let halfT: Float = 0.5
+        
         // We'll do a trivial cutoff:
         // If (maxX - minX) > 2 => treat as years
         // else if > 0.5 => treat as months
         // else => weeks
         let range = Double(maxX - minX)
         
-        let tickLen: Float = 6
-        let halfT: Float = 0.5
-        
         for val in xTicks {
             let sx = dataXtoScreenX(dataX: Float(val), transform: chartTransform)
-            if sx < 50 { continue } // skip left side
+            
+            // Skip ticks that are left of the pinned axis
+            if sx < pinned {
+                continue
+            }
             
             // Build short tick line
             let y0 = pinnedScreenY
@@ -535,7 +544,6 @@ extension PinnedAxesRenderer {
         
         xGridVertexCount = verts.count / 8
         
-        // Only create the buffer if there's data
         if !verts.isEmpty {
             xGridBuffer = device.makeBuffer(
                 bytes: verts,
@@ -576,7 +584,6 @@ extension PinnedAxesRenderer {
         
         yGridVertexCount = verts.count / 8
         
-        // Only create the buffer if there's data
         if !verts.isEmpty {
             yGridBuffer = device.makeBuffer(
                 bytes: verts,
@@ -668,16 +675,17 @@ extension PinnedAxesRenderer {
         let y0 = pinnedScreenY - halfT
         let y1 = pinnedScreenY + halfT
         
+        // Force the left side of the axis to pinnedScreenX
         var verts: [Float] = []
         verts.append(pinnedScreenX); verts.append(y0); verts.append(0); verts.append(1)
         verts.append(color.x); verts.append(color.y); verts.append(color.z); verts.append(color.w)
-        
+
         verts.append(pinnedScreenX); verts.append(y1); verts.append(0); verts.append(1)
         verts.append(color.x); verts.append(color.y); verts.append(color.z); verts.append(color.w)
-        
+
         verts.append(rightX);        verts.append(y0); verts.append(0); verts.append(1)
         verts.append(color.x); verts.append(color.y); verts.append(color.z); verts.append(color.w)
-        
+
         verts.append(rightX);        verts.append(y1); verts.append(0); verts.append(1)
         verts.append(color.x); verts.append(color.y); verts.append(color.z); verts.append(color.w)
         
@@ -705,18 +713,19 @@ extension PinnedAxesRenderer {
         let x1 = pinnedScreenX + halfT
         
         var verts: [Float] = []
+
         verts.append(x0); verts.append(pinnedScreenY); verts.append(0); verts.append(1)
         verts.append(color.x); verts.append(color.y); verts.append(color.z); verts.append(color.w)
-        
+
         verts.append(x1); verts.append(pinnedScreenY); verts.append(0); verts.append(1)
         verts.append(color.x); verts.append(color.y); verts.append(color.z); verts.append(color.w)
-        
+
         verts.append(x0); verts.append(topY);         verts.append(0); verts.append(1)
         verts.append(color.x); verts.append(color.y); verts.append(color.z); verts.append(color.w)
-        
+
         verts.append(x1); verts.append(topY);         verts.append(0); verts.append(1)
         verts.append(color.x); verts.append(color.y); verts.append(color.z); verts.append(color.w)
-        
+
         return verts
     }
 }

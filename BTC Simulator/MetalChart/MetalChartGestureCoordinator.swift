@@ -3,94 +3,49 @@
 //  BTCMonteCarlo
 //
 //  Created by . . on 27/02/2025.
+//  Orthographic-based approach with corrected function labels.
+//  Full file, no placeholders/truncations.
 //
 
 import Foundation
 import UIKit
 
-/// Multi-touch gestures: single-finger pan, two-finger pan, pinch, double-tap zoom.
 class MetalChartGestureCoordinator: NSObject {
-    private let idleManager: IdleManager // Use 'let' since it won’t change after initialization
-
-    // Initializer to accept idleManager from MetalChartContainerView
-    init(idleManager: IdleManager) {
-        self.idleManager = idleManager
-        super.init()
-    }
-
-    // Method for gesture recognizers to reset the idle timer
-    @objc func resetIdleTimer() {
-        print("Gesture triggered, resetting idle timer now.")
-        idleManager.resetIdleTimer()
-    }
-
-    // Existing properties (unchanged)
+    
+    private let idleManager: IdleManager
+    
+    // Base values for gestures
+    private var baseOffsetX: Float = 0
+    private var baseOffsetY: Float = 0
     private var baseScale: Float = 1.0
-    private var baseTranslation = SIMD2<Float>(0, 0)
-    private var baseScaleForTwoFingerPan: Float = 1.0
-    private var initialPinchAnchorData: SIMD2<Float>?
+    
+    // For double-tap-slide
     private var baseScaleX: Float = 1.0
     private var baseScaleY: Float = 1.0
     private var doubleTapSlideStartPoint: CGPoint = .zero
     private let doubleTapSlideSensitivity: CGFloat = 0.01
     private let doubleTapZoomFactor: Float = 1.5
-    private let twoFingerZoomFactor: Float = 0.005
-}
-
-// MARK: - New Double-Tap-Slide
-extension MetalChartGestureCoordinator {
     
-    /// Called when the user double-taps and immediately slides up or down to
-    /// scale the y-axis or x-axis.
-    @objc func handleDoubleTapSlide(_ recognizer: UILongPressGestureRecognizer) {
-        guard let chartView = recognizer.view as? MetalChartUIView else { return }
-        let renderer = chartView.renderer
-        
-        // Reset the idle timer whenever there's gesture interaction
+    // For pinch anchor
+    private var pinchAnchorDomainX: Float?
+    private var pinchAnchorDomainY: Float?
+    
+    // For trackpad two-finger zoom
+    private var baseScaleForTwoFingerPan: Float = 1.0
+    private let twoFingerZoomFactor: Float = 0.005
+    
+    init(idleManager: IdleManager) {
+        self.idleManager = idleManager
+        super.init()
+    }
+    
+    @objc func resetIdleTimer() {
+        print("Gesture triggered, resetting idle timer now.")
         idleManager.resetIdleTimer()
-        
-        switch recognizer.state {
-        case .began:
-            // Store the initial scale
-            baseScaleX = renderer.scaleX
-            baseScaleY = renderer.scaleY
-            
-            // Where did the user first press?
-            doubleTapSlideStartPoint = recognizer.location(in: chartView)
-            
-        case .changed:
-            // Current finger location
-            let currentPoint = recognizer.location(in: chartView)
-            
-            // We'll do an example: vertical movement => scale Y, horizontal => scale X
-            let dy = currentPoint.y - doubleTapSlideStartPoint.y
-            let dx = currentPoint.x - doubleTapSlideStartPoint.x
-            
-            let factorY = 1.0 + (-dy * doubleTapSlideSensitivity)
-            let newScaleY = max(0.0001, baseScaleY * Float(factorY))
-            
-            let factorX = 1.0 + (dx * doubleTapSlideSensitivity)
-            let newScaleX = max(0.0001, baseScaleX * Float(factorX))
-            
-            // Decide if you want to scale only Y or only X or both
-            if abs(dy) > abs(dx) {
-                renderer.scaleY = newScaleY
-            } else {
-                renderer.scaleX = newScaleX
-            }
-            
-            renderer.updateTransform()
-            
-        case .ended, .cancelled:
-            renderer.anchorEdges()
-            
-        default:
-            break
-        }
     }
 }
 
-// MARK: - Simultaneous Recognition
+// MARK: - UIGestureRecognizerDelegate
 extension MetalChartGestureCoordinator: UIGestureRecognizerDelegate {
     func configureRecognizerForSimultaneous(_ recognizer: UIGestureRecognizer) {
         recognizer.delegate = self
@@ -104,79 +59,45 @@ extension MetalChartGestureCoordinator: UIGestureRecognizerDelegate {
 // MARK: - Gesture Handlers
 extension MetalChartGestureCoordinator {
     
-    // MARK: Single-finger Pan
+    // MARK: Single-Finger Pan
     @objc func handleSingleFingerPan(_ recognizer: UIPanGestureRecognizer) {
         guard let chartView = recognizer.view as? MetalChartUIView else { return }
         let renderer = chartView.renderer
-        let translationPoint = recognizer.translation(in: chartView)
         
-        // Reset the idle timer whenever there's gesture interaction
         idleManager.resetIdleTimer()
         
         switch recognizer.state {
         case .began:
-            baseScale = renderer.scale
-            baseTranslation = renderer.translation
-            
-        case .changed:
-            renderer.scale = baseScale
-            renderer.translation = baseTranslation
-            
-            let dx = Float(translationPoint.x / chartView.bounds.width) * 2.0
-            let dy = Float(translationPoint.y / chartView.bounds.height) * 2.0
-            
-            renderer.translation.x += dx
-            renderer.translation.y -= dy
-            renderer.updateTransform()
-            
-        case .ended, .cancelled:
-            renderer.anchorEdges()
-            baseScale = renderer.scale
-            baseTranslation = renderer.translation
-            
-        default:
-            break
-        }
-    }
-    
-    // MARK: Two-finger Pan (Trackpad Zoom)
-    @objc func handleTwoFingerPanToZoom(_ recognizer: UIPanGestureRecognizer) {
-        guard let chartView = recognizer.view as? MetalChartUIView else { return }
-        let renderer = chartView.renderer
-        
-        guard recognizer.numberOfTouches == 2 else { return }
-        
-        // Reset the idle timer whenever there's gesture interaction
-        idleManager.resetIdleTimer()
-        
-        switch recognizer.state {
-        case .began:
-            baseScaleForTwoFingerPan = renderer.scale
+            baseOffsetX = renderer.offsetX
+            baseOffsetY = renderer.offsetY
             
         case .changed:
             let translation = recognizer.translation(in: chartView)
-            let deltaY = Float(-translation.y)
-            let factor = 1.0 + (deltaY * twoFingerZoomFactor)
-            let newScale = max(0.00001, baseScaleForTwoFingerPan * factor)
-            let scaleRatio = newScale / renderer.scale
             
-            // Midpoint
-            let t1 = recognizer.location(ofTouch: 0, in: chartView)
-            let t2 = recognizer.location(ofTouch: 1, in: chartView)
-            let mx = (t1.x + t2.x) / 2.0
-            let my = (t1.y + t2.y) / 2.0
+            // domainPerPixel for X
+            let domainWidth = renderer.domainMaxX - renderer.domainMinX
+            let visibleWidth = domainWidth / renderer.chartScale
+            let domainPerPixelX = visibleWidth / Float(chartView.bounds.width)
             
-            let anchorNDC = renderer.convertPointToNDC(CGPoint(x: mx, y: my),
-                                                       viewSize: chartView.bounds.size)
-            renderer.translation.x -= anchorNDC.x * (scaleRatio - 1)
-            renderer.translation.y -= anchorNDC.y * (scaleRatio - 1)
+            // domainPerPixel for Y
+            let domainHeight = renderer.domainMaxY - renderer.domainMinY
+            let visibleHeight = domainHeight / renderer.chartScale
+            let domainPerPixelY = visibleHeight / Float(chartView.bounds.height)
             
-            renderer.scale = newScale
-            renderer.updateTransform()
+            // Pan in domain space
+            let dxInDomain = Float(translation.x) * domainPerPixelX
+            let dyInDomain = Float(translation.y) * domainPerPixelY
+            
+            // Negative for x if dragging to the right => offset goes up, or adjust sign as needed
+            renderer.offsetX = baseOffsetX - dxInDomain
+            // Typically "up" drag => offsetY increases, but see what you prefer
+            renderer.offsetY = baseOffsetY + dyInDomain
+            
+            clampOffsets(renderer: renderer, view: chartView)
+            renderer.updateOrthographic()
             
         case .ended, .cancelled:
-            renderer.anchorEdges()
-            
+            break
         default:
             break
         }
@@ -187,91 +108,58 @@ extension MetalChartGestureCoordinator {
         guard let chartView = recognizer.view as? MetalChartUIView else { return }
         let renderer = chartView.renderer
         
-        // Reset the idle timer whenever there's gesture interaction
         idleManager.resetIdleTimer()
         
         switch recognizer.state {
         case .began:
-            baseScale = renderer.scale
-            baseTranslation = renderer.translation
+            baseScale = renderer.chartScale
             
-            let location: CGPoint
+            // If 2 touches, anchor in domain coords
             if recognizer.numberOfTouches >= 2 {
-                let t1 = recognizer.location(ofTouch: 0, in: chartView)
-                let t2 = recognizer.location(ofTouch: 1, in: chartView)
-                location = CGPoint(
-                    x: (t1.x + t2.x) / 2.0,
-                    y: (t1.y + t2.y) / 2.0
-                )
+                let pt1 = recognizer.location(ofTouch: 0, in: chartView)
+                let pt2 = recognizer.location(ofTouch: 1, in: chartView)
+                let midX = (pt1.x + pt2.x) * 0.5
+                let midY = (pt1.y + pt2.y) * 0.5
+                
+                let domainCoord = renderer.screenToDomain(CGPoint(x: midX, y: midY),
+                                                          viewSize: chartView.bounds.size)
+                pinchAnchorDomainX = domainCoord.x
+                pinchAnchorDomainY = domainCoord.y
             } else {
-                location = recognizer.location(in: chartView)
+                pinchAnchorDomainX = nil
+                pinchAnchorDomainY = nil
             }
-            initialPinchAnchorData = renderer.convertPointToData(location,
-                                                                 viewSize: chartView.bounds.size)
             
         case .changed:
-            guard let anchorData = initialPinchAnchorData else { return }
+            let scaleDelta = Float(recognizer.scale)
+            let newScale   = baseScale * scaleDelta
             
-            let pinchScale = Float(recognizer.scale)
-            let newScale   = baseScale * pinchScale
+            // clamp
+            let minScale: Float = 0.5
+            let maxScale: Float = 100.0
+            let clampedScale = max(minScale, min(maxScale, newScale))
+            renderer.chartScale = clampedScale
             
-            let anchorOldScreen = anchorScreenCoord(
-                renderer: renderer,
-                dataCoord: anchorData,
-                scale: baseScale,
-                translation: baseTranslation,
-                in: chartView
-            )
-            let anchorNewScreen = anchorScreenCoord(
-                renderer: renderer,
-                dataCoord: anchorData,
-                scale: newScale,
-                translation: baseTranslation,
-                in: chartView
-            )
-            let dxScreen = anchorOldScreen.x - anchorNewScreen.x
-            let dyScreen = anchorOldScreen.y - anchorNewScreen.y
+            // If anchor, keep it on-screen
+            if let ax = pinchAnchorDomainX, let ay = pinchAnchorDomainY {
+                preserveDomainPointOnScreen(renderer: renderer,
+                                            domainX: ax,
+                                            domainY: ay,
+                                            oldScale: baseScale,
+                                            newScale: clampedScale,
+                                            view: chartView)
+            }
             
-            let ndcDx = Float(dxScreen / chartView.bounds.width)  * 2.0
-            let ndcDy = -Float(dyScreen / chartView.bounds.height) * 2.0
-            
-            renderer.scale = newScale
-            renderer.translation.x = baseTranslation.x + ndcDx
-            renderer.translation.y = baseTranslation.y + ndcDy
-            
-            renderer.updateTransform()
+            clampOffsets(renderer: renderer, view: chartView)
+            renderer.updateOrthographic()
             
         case .ended, .cancelled:
-            renderer.anchorEdges()
-            baseScale = renderer.scale
-            baseTranslation = renderer.translation
-            initialPinchAnchorData = nil
+            pinchAnchorDomainX = nil
+            pinchAnchorDomainY = nil
             
         default:
             break
         }
-    }
-    
-    /// Helper to see where a dataCoord would be on screen for a hypothetical (scale,translation).
-    private func anchorScreenCoord(
-        renderer: MetalChartRenderer,
-        dataCoord: SIMD2<Float>,
-        scale: Float,
-        translation: SIMD2<Float>,
-        in chartView: UIView
-    ) -> CGPoint {
-        let oldScale = renderer.scale
-        let oldTrans = renderer.translation
-        
-        renderer.scale = scale
-        renderer.translation = translation
-        
-        let screenPt = renderer.convertDataToPoint(dataCoord, viewSize: chartView.bounds.size)
-        
-        renderer.scale = oldScale
-        renderer.translation = oldTrans
-        
-        return screenPt
     }
     
     // MARK: Double Tap
@@ -279,29 +167,175 @@ extension MetalChartGestureCoordinator {
         guard let chartView = recognizer.view as? MetalChartUIView else { return }
         let renderer = chartView.renderer
         
-        // Reset the idle timer whenever there's gesture interaction
         idleManager.resetIdleTimer()
         
         if recognizer.state == .ended {
-            baseScale = renderer.scale
-            baseTranslation = renderer.translation
-            
             let location = recognizer.location(in: chartView)
-            let anchorNDC = renderer.convertPointToNDC(location, viewSize: chartView.bounds.size)
+            let domainCoord = renderer.screenToDomain(location, viewSize: chartView.bounds.size)
             
-            let newScale = baseScale * doubleTapZoomFactor
-            let scaleRatio = newScale / baseScale
+            let oldScale = renderer.chartScale
+            let newScale = oldScale * doubleTapZoomFactor
             
-            renderer.translation.x -= anchorNDC.x * (scaleRatio - 1)
-            renderer.translation.y -= anchorNDC.y * (scaleRatio - 1)
+            let minScale: Float = 0.5
+            let maxScale: Float = 100.0
+            let clampedScale = max(minScale, min(maxScale, newScale))
+            renderer.chartScale = clampedScale
             
-            renderer.scale = newScale
-            renderer.updateTransform()
+            preserveDomainPointOnScreen(renderer: renderer,
+                                        domainX: domainCoord.x,
+                                        domainY: domainCoord.y,
+                                        oldScale: oldScale,
+                                        newScale: clampedScale,
+                                        view: chartView)
             
-            renderer.anchorEdges()
+            clampOffsets(renderer: renderer, view: chartView)
+            renderer.updateOrthographic()
+        }
+    }
+    
+    // MARK: Double-Tap-Slide
+    @objc func handleDoubleTapSlide(_ recognizer: UILongPressGestureRecognizer) {
+        guard let chartView = recognizer.view as? MetalChartUIView else { return }
+        let renderer = chartView.renderer
+        
+        idleManager.resetIdleTimer()
+        
+        switch recognizer.state {
+        case .began:
+            baseScaleX = renderer.chartScale
+            baseScaleY = renderer.chartScale
+            doubleTapSlideStartPoint = recognizer.location(in: chartView)
             
-            baseScale = newScale
-            baseTranslation = renderer.translation
+        case .changed:
+            let currentPoint = recognizer.location(in: chartView)
+            let dy = currentPoint.y - doubleTapSlideStartPoint.y
+            let dx = currentPoint.x - doubleTapSlideStartPoint.x
+            
+            // Single scale approach
+            if abs(dy) > abs(dx) {
+                let factorY = 1.0 + (-dy * doubleTapSlideSensitivity)
+                let rawScale = baseScaleY * Float(factorY)
+                let minScale: Float = 0.5
+                let maxScale: Float = 100.0
+                renderer.chartScale = max(minScale, min(maxScale, rawScale))
+            } else {
+                let factorX = 1.0 + (dx * doubleTapSlideSensitivity)
+                let rawScale = baseScaleX * Float(factorX)
+                let minScale: Float = 0.5
+                let maxScale: Float = 100.0
+                renderer.chartScale = max(minScale, min(maxScale, rawScale))
+            }
+            
+            clampOffsets(renderer: renderer, view: chartView)
+            renderer.updateOrthographic()
+            
+        default:
+            break
+        }
+    }
+    
+    // MARK: Two-Finger Pan (Trackpad Zoom)
+    @objc func handleTwoFingerPanToZoom(_ recognizer: UIPanGestureRecognizer) {
+        guard let chartView = recognizer.view as? MetalChartUIView else { return }
+        let renderer = chartView.renderer
+        
+        guard recognizer.numberOfTouches == 2 else { return }
+        
+        idleManager.resetIdleTimer()
+        
+        switch recognizer.state {
+        case .began:
+            baseScaleForTwoFingerPan = renderer.chartScale
+            
+        case .changed:
+            let translation = recognizer.translation(in: chartView)
+            let deltaY = Float(-translation.y)
+            let factor = 1.0 + (deltaY * twoFingerZoomFactor)
+            let rawScale = baseScaleForTwoFingerPan * factor
+            
+            let minScale: Float = 0.5
+            let maxScale: Float = 100.0
+            renderer.chartScale = max(minScale, min(maxScale, rawScale))
+            
+            // zoom about midpoint
+            let t0 = recognizer.location(ofTouch: 0, in: chartView)
+            let t1 = recognizer.location(ofTouch: 1, in: chartView)
+            let mx = (t0.x + t1.x) * 0.5
+            let my = (t0.y + t1.y) * 0.5
+            
+            let dom = renderer.screenToDomain(CGPoint(x: mx, y: my), viewSize: chartView.bounds.size)
+            
+            preserveDomainPointOnScreen(renderer: renderer,
+                                        domainX: dom.x,
+                                        domainY: dom.y,
+                                        oldScale: baseScaleForTwoFingerPan,
+                                        newScale: renderer.chartScale,
+                                        view: chartView)
+            
+            clampOffsets(renderer: renderer, view: chartView)
+            renderer.updateOrthographic()
+            
+        default:
+            break
+        }
+    }
+}
+
+// MARK: - Private Helpers
+extension MetalChartGestureCoordinator {
+    
+    /// Keep (domainX, domainY) at same screen position when scale changes
+    private func preserveDomainPointOnScreen(
+        renderer: MetalChartRenderer,
+        domainX: Float,
+        domainY: Float,
+        oldScale: Float,
+        newScale: Float,
+        view: UIView
+    ) {
+        // old visible
+        let fullW = renderer.domainMaxX - renderer.domainMinX
+        let oldVisW = fullW / oldScale
+        
+        let fullH = renderer.domainMaxY - renderer.domainMinY
+        let oldVisH = fullH / oldScale
+        
+        let fracX = (domainX - renderer.offsetX) / oldVisW
+        let fracY = (domainY - renderer.offsetY) / oldVisH
+        
+        // new visible
+        let newVisW = fullW / newScale
+        let newVisH = fullH / newScale
+        
+        let newOffsetX = domainX - fracX * newVisW
+        let newOffsetY = domainY - fracY * newVisH
+        
+        renderer.offsetX = newOffsetX
+        renderer.offsetY = newOffsetY
+    }
+    
+    /// Ensure offsetX >= 0, offsetY >= 0, etc. so no negative domain.
+    private func clampOffsets(renderer: MetalChartRenderer, view: UIView) {
+        let fullW = renderer.domainMaxX - renderer.domainMinX
+        let visW = fullW / renderer.chartScale
+        
+        if renderer.offsetX < 0 {
+            renderer.offsetX = 0
+        }
+        let maxOffX = renderer.domainMaxX - visW
+        if maxOffX > 0, renderer.offsetX > maxOffX {
+            renderer.offsetX = maxOffX
+        }
+        
+        let fullH = renderer.domainMaxY - renderer.domainMinY
+        let visH = fullH / renderer.chartScale
+        
+        if renderer.offsetY < 0 {
+            renderer.offsetY = 0
+        }
+        let maxOffY = renderer.domainMaxY - visH
+        if maxOffY > 0, renderer.offsetY > maxOffY {
+            renderer.offsetY = maxOffY
         }
     }
 }
