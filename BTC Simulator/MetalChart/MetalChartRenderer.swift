@@ -3,7 +3,7 @@
 //  BTCMonteCarlo
 //
 //  Created by . . on 27/02/2025.
-//  Orthographic-based version with pinned axes pass
+//  Orthographic-based version with pinned axes pass.
 //
 
 import Foundation
@@ -11,7 +11,7 @@ import MetalKit
 import simd
 import SwiftUI
 
-// 1) Uniform struct
+// MARK: - Uniform struct for transformation matrix
 struct TransformUniform {
     var transformMatrix: matrix_float4x4
 }
@@ -19,50 +19,64 @@ struct TransformUniform {
 class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     
     // MARK: - Domain & Transform
+    
+    /// Minimum x-value in domain space
     var domainMinX: Float = 0
+    /// Maximum x-value in domain space
     var domainMaxX: Float = 1
+    /// Minimum y-value in domain space (log scale)
     var domainMinY: Float = 0
+    /// Maximum y-value in domain space (log scale)
     var domainMaxY: Float = 1000
     
-    // Offsets in domain space
+    /// X-offset in domain space for panning
     var offsetX: Float = 0
+    /// Y-offset in domain space for panning
     var offsetY: Float = 0
     
-    // Single scale factor for both axes
+    /// Single scale factor for zooming both axes
     var chartScale: Float = 1.0
     
-    // Orthographic matrix
+    /// Orthographic projection matrix
     private var projectionMatrix = matrix_float4x4(1.0)
+    
+    /// Left margin in pixels where the y-axis is pinned
+    var pinnedLeft: CGFloat = 50
 
-    // MARK: - Metal
+    // MARK: - Metal Properties
+    
+    /// Metal device
     var device: MTLDevice!
+    /// Command queue for rendering
     var commandQueue: MTLCommandQueue!
+    /// Pipeline state for rendering chart lines
     var pipelineState: MTLRenderPipelineState!
     
+    /// Buffer for storing the projection matrix
     private var uniformBuffer: MTLBuffer?
     
-    // For text rendering (optional)
+    /// Manager for text rendering (optional)
     var textRendererManager: TextRendererManager?
     
-    // The line buffer
+    /// Buffer containing vertex data for chart lines
     var vertexBuffer: MTLBuffer?
+    /// Number of vertices per line
     var lineSizes: [Int] = []
     
-    // The size of the MTKView in points
+    /// Size of the MTKView in points
     var viewportSize: CGSize = .zero
     
-    // For data
+    /// Cached chart data (declared elsewhere in your project)
     var chartDataCache: ChartDataCache?
+    /// Simulation settings (declared elsewhere in your project)
     var simSettings: SimulationSettings?
 
-    // (Optional) pinned axes
+    /// Renderer for pinned axes (declared elsewhere in your project)
     var pinnedAxesRenderer: PinnedAxesRenderer?
-    
-    // Debug/tracking
-    private var chartHasLoaded = false
     
     // MARK: - Setup
     
+    /// Initializes Metal and sets up the renderer
     func setupMetal(in size: CGSize,
                     chartDataCache: ChartDataCache,
                     simSettings: SimulationSettings) {
@@ -81,12 +95,12 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             return
         }
         
-        // Optionally set up text rendering
+        // Set up text rendering (optional)
         textRendererManager = TextRendererManager()
         textRendererManager?.generateFontAtlasAndRenderer(device: device)
         
-        // 1) Create the main chart pipeline (orthographicVertex -> fragmentShader)
-        let vertexFunction   = library.makeFunction(name: "orthographicVertex")
+        // Create the main chart pipeline
+        let vertexFunction = library.makeFunction(name: "orthographicVertex")
         let fragmentFunction = library.makeFunction(name: "fragmentShader")
         
         let vertexDescriptor = MTLVertexDescriptor()
@@ -106,9 +120,10 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         pipelineDesc.vertexDescriptor = vertexDescriptor
         pipelineDesc.colorAttachments[0].pixelFormat = .bgra8Unorm
         
+        // Enable MSAA if you’d like
         pipelineDesc.rasterSampleCount = 4
         
-        // blending
+        // Enable blending
         pipelineDesc.colorAttachments[0].isBlendingEnabled = true
         pipelineDesc.colorAttachments[0].sourceRGBBlendFactor = .sourceAlpha
         pipelineDesc.colorAttachments[0].destinationRGBBlendFactor = .oneMinusSourceAlpha
@@ -119,25 +134,20 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             print("Error creating pipeline state: \(error)")
         }
         
-        // 2) Uniform buffer
+        // Create uniform buffer
         uniformBuffer = device.makeBuffer(
             length: MemoryLayout<TransformUniform>.size,
             options: .storageModeShared
         )
         
-        // 3) Build the lines in log space
+        // Build the vertex buffer for chart lines
         buildLineBuffer()
         
-        // 4) init transforms
-        offsetX = 0
-        offsetY = 0
-        chartScale = 1.0
-        
+        // Initialise transforms
         viewportSize = size
-        updateOrthographic()
+        autoFitChartWithLeftMargin(viewSize: size, pinnedLeft: pinnedLeft)
         
-        // 5) Create pinned axes renderer (if you want axes)
-        //    Provide the same device & library you used above, plus any textRenderer:
+        // Create pinned axes renderer (optional)
         if let textRenderer = textRendererManager?.getTextRenderer() {
             pinnedAxesRenderer = PinnedAxesRenderer(
                 device: device,
@@ -146,8 +156,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
                 library: library
             )
             
-            // Example: Pin the axis at x=50
-            pinnedAxesRenderer?.pinnedAxisX = 50
+            pinnedAxesRenderer?.pinnedAxisX = Float(pinnedLeft)
         } else {
             print("No textRenderer => pinned axes won't show text.")
         }
@@ -155,6 +164,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     
     // MARK: - Build Data in Log Space
     
+    /// Builds the vertex buffer for chart lines in log space
     func buildLineBuffer() {
         guard let cache = chartDataCache, let simSettings = simSettings else {
             print("No chartDataCache or simSettings => skipping")
@@ -170,7 +180,6 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
                 let xVal = convertPeriodToYears(pt.week, simSettings)
                 allXVals.append(xVal)
                 
-                // clamp to 1e-9
                 let rawY = max(1e-9, NSDecimalNumber(decimal: pt.value).doubleValue)
                 allYVals.append(rawY)
             }
@@ -184,6 +193,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             return
         }
         
+        // Convert to float
         let finalMinX = max(0.0, minX)
         let logMinY = log10(rawMinY)
         let logMaxY = log10(rawMaxY)
@@ -211,11 +221,13 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
                 let rawY = max(1e-9, NSDecimalNumber(decimal: pt.value).doubleValue)
                 let logY = Float(log10(rawY))
                 
+                // Position
                 vertexData.append(rawX)
                 vertexData.append(logY)
                 vertexData.append(0)
                 vertexData.append(1)
                 
+                // Colour
                 vertexData.append(r)
                 vertexData.append(g)
                 vertexData.append(b)
@@ -236,8 +248,32 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         print("Created line buffer with \(vertexData.count) floats. Y is log scale.")
     }
     
+    /// Automatically fits the chart to display the entire domain with a pinned left margin
+    func autoFitChartWithLeftMargin(viewSize: CGSize, pinnedLeft: CGFloat = 50) {
+        self.pinnedLeft = pinnedLeft
+        let domainW = domainMaxX - domainMinX
+        let domainH = domainMaxY - domainMinY
+        guard domainW > 0, domainH > 0 else { return }
+        
+        let chartWidthPx = max(1, viewSize.width - pinnedLeft)
+        let chartHeightPx = max(1, viewSize.height)
+        
+        let scaleX = Float(chartWidthPx) / domainW
+        let scaleY = Float(chartHeightPx) / domainH
+        
+        chartScale = min(scaleX, scaleY)
+        offsetX = domainMinX
+        offsetY = domainMinY
+        viewportSize = viewSize
+        updateOrthographic()
+        
+        print("AutoFit => pinnedLeft=\(pinnedLeft), chartScale=\(chartScale), offsetX=\(offsetX), offsetY=\(offsetY)")
+    }
+    
+    /// Colour palette for chart lines
     let customPalette: [Color] = [.white, .yellow, .red, .blue, .green]
     
+    /// Converts a SwiftUI Color to RGBA floats
     func colorToFloats(_ c: Color, opacity: Double) -> (Float, Float, Float, Float) {
         let ui = UIColor(c)
         var rr: CGFloat = 0, gg: CGFloat = 0, bb: CGFloat = 0, aa: CGFloat = 0
@@ -246,7 +282,9 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         return (Float(rr), Float(gg), Float(bb), Float(aa))
     }
     
+    /// Converts simulation period to years
     func convertPeriodToYears(_ week: Int, _ simSettings: SimulationSettings) -> Double {
+        // Keep as Double here, but we cast to Float later when needed
         if simSettings.periodUnit == .weeks {
             return Double(week) / 52.0
         } else {
@@ -254,46 +292,89 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         }
     }
     
-    // MARK: - Orthographic
+    // MARK: - Orthographic Projection
     
+    /// Updates the orthographic projection matrix
     func updateOrthographic() {
-        let domainWidth  = domainMaxX - domainMinX
-        let domainHeight = domainMaxY - domainMinY
+        let viewWidth = Float(viewportSize.width)
+        let pinnedLeftFloat = Float(pinnedLeft)
         
-        let visibleWidth  = domainWidth  / chartScale
-        let visibleHeight = domainHeight / chartScale
+        // Define the screen space mapping fractions
+        let fracLeft = pinnedLeftFloat / viewWidth   // pinned side
+        let fracRight: Float = 1.0                   // right edge is 1.0 in fraction
         
-        let left   = offsetX
-        let right  = offsetX + visibleWidth
-        let bottom = offsetY
-        let top    = offsetY + visibleHeight
+        // Calculate the visible domain width based on the scale
+        let domainWidth = domainMaxX - domainMinX
+        let visibleWidth = domainWidth / chartScale
         
-        // For debugging, print domain & transform details
-        print("DEBUG [updateOrthographic]:")
-        print("  domainMinX=\(domainMinX), domainMaxX=\(domainMaxX), domainMinY=\(domainMinY), domainMaxY=\(domainMaxY)")
-        print("  offsetX=\(offsetX), offsetY=\(offsetY), chartScale=\(chartScale)")
-        print("  => orthographic left=\(left), right=\(right), bottom=\(bottom), top=\(top)")
+        // Calculate visible range with offset, clamped to domain bounds
+        var visibleMinX = offsetX
+        var visibleMaxX = offsetX + visibleWidth
+        
+        // Clamp the visible range to stay within domainMinX and domainMaxX
+        if visibleMinX < domainMinX {
+            visibleMinX = domainMinX
+            visibleMaxX = visibleMinX + visibleWidth
+            if visibleMaxX > domainMaxX {
+                visibleMaxX = domainMaxX
+                visibleMinX = visibleMaxX - visibleWidth
+            }
+        } else if visibleMaxX > domainMaxX {
+            visibleMaxX = domainMaxX
+            visibleMinX = visibleMaxX - visibleWidth
+            if visibleMinX < domainMinX {
+                visibleMinX = domainMinX
+                visibleMaxX = visibleMinX + visibleWidth
+            }
+        }
+        
+        // Update offsetX to reflect clamped visibleMinX
+        offsetX = visibleMinX
+        
+        // Break it into smaller pieces to avoid compiler confusion
+        let rangeX = (domainMaxX - domainMinX)
+        let denom = (fracRight - fracLeft)
+        
+        let leftPart = fracLeft * rangeX / denom
+        let one: Float = 1.0
+        let rightPart = (one - fracRight) * rangeX / denom
+        
+        let left = domainMinX - leftPart
+        let right = domainMaxX + rightPart
+        
+        let bottom = domainMinY
+        let top = domainMaxY
         
         // Build the projection matrix
         let near: Float = 0
-        let far:  Float = 1
-        
-        projectionMatrix = makeOrthographicMatrix(left: left,
-                                                  right: right,
-                                                  bottom: bottom,
-                                                  top: top,
-                                                  near: near,
-                                                  far: far)
+        let far: Float = 1
+        projectionMatrix = makeOrthographicMatrix(
+            left: left,
+            right: right,
+            bottom: bottom,
+            top: top,
+            near: near,
+            far: far
+        )
         
         // Store it in the uniform buffer
         if let ptr = uniformBuffer?.contents().bindMemory(to: matrix_float4x4.self, capacity: 1) {
             ptr.pointee = projectionMatrix
         }
+        
+        // Debugging
+        print("DEBUG [updateOrthographic]:")
+        print("  domainMinX=\(domainMinX), domainMaxX=\(domainMaxX), domainMinY=\(domainMinY), domainMaxY=\(domainMaxY)")
+        print("  offsetX=\(offsetX), offsetY=\(offsetY), chartScale=\(chartScale)")
+        print("  pinnedLeft=\(pinnedLeft), viewWidth=\(viewWidth)")
+        print("  visibleMinX=\(visibleMinX), visibleMaxX=\(visibleMaxX)")
+        print("  => orthographic left=\(left), right=\(right), bottom=\(bottom), top=\(top)")
     }
     
+    /// Creates an orthographic projection matrix
     func makeOrthographicMatrix(left: Float, right: Float,
                                 bottom: Float, top: Float,
-                                near: Float,   far: Float) -> matrix_float4x4 {
+                                near: Float, far: Float) -> matrix_float4x4 {
         let rml = right - left
         let tmb = top - bottom
         let fmn = far - near
@@ -307,25 +388,28 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         let tz = -near / fmn
         
         return matrix_float4x4(columns: (
-            SIMD4<Float>( sx,  0,  0,  0),
-            SIMD4<Float>( 0,  sy,  0,  0),
-            SIMD4<Float>( 0,   0,  sz,  0),
-            SIMD4<Float>( tx,  ty, tz,  1)
+            SIMD4<Float>(sx, 0, 0, 0),
+            SIMD4<Float>(0, sy, 0, 0),
+            SIMD4<Float>(0, 0, sz, 0),
+            SIMD4<Float>(tx, ty, tz, 1)
         ))
     }
     
-    // MARK: - MTKViewDelegate
+    // MARK: - MTKViewDelegate Methods
     
+    /// Updates the viewport size
     func updateViewport(to size: CGSize) {
         viewportSize = size
     }
     
+    /// Handles drawable size changes
     func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
         let newSize = view.bounds.size
         viewportSize = newSize
         updateOrthographic()
     }
     
+    /// Renders the chart
     func draw(in view: MTKView) {
         guard let pipelineState = pipelineState,
               let drawable = view.currentDrawable,
@@ -335,24 +419,25 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             return
         }
 
-        // One pass, one encoder
         let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: rpd)
         
-        // 1) Chart lines
+        // Render chart lines
         encoder?.setRenderPipelineState(pipelineState)
         encoder?.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
         encoder?.setVertexBuffer(uniformBuffer, offset: 0, index: 1)
+        
         var startIndex = 0
         for count in lineSizes {
-            encoder?.drawPrimitives(type: .lineStrip,
-                                    vertexStart: startIndex,
-                                    vertexCount: count)
+            encoder?.drawPrimitives(
+                type: .lineStrip,
+                vertexStart: startIndex,
+                vertexCount: count
+            )
             startIndex += count
         }
         
-        // 2) pinnedAxes
+        // Render pinned axes (if available)
         if let pinnedAxes = pinnedAxesRenderer {
-            // Must set the pinned axis pipeline
             if let axisPipeline = pinnedAxes.axisPipelineState {
                 encoder?.setRenderPipelineState(axisPipeline)
             }
@@ -368,26 +453,35 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             pinnedAxes.drawAxes(renderEncoder: encoder!)
         }
 
-        // end
         encoder?.endEncoding()
         commandBuffer.present(drawable)
         commandBuffer.commit()
     }
     
-    // Convert a screen point to domain coords for pinch anchors, etc.
+    /// Converts screen coordinates to domain coordinates
     func screenToDomain(_ screenPoint: CGPoint, viewSize: CGSize) -> SIMD2<Float> {
-        let domainWidth  = domainMaxX - domainMinX
-        let visibleWidth = domainWidth / chartScale
-        
-        let fracX = Float(screenPoint.x) / Float(viewSize.width)
+        let pinnedLeftFloat = Float(pinnedLeft)
+        let chartWidth = Float(viewSize.width) - pinnedLeftFloat
+        let fracX = (Float(screenPoint.x) - pinnedLeftFloat) / chartWidth
+        let visibleWidth = (domainMaxX - domainMinX) / chartScale
         let domainX = offsetX + fracX * visibleWidth
         
         let domainHeight = domainMaxY - domainMinY
-        let visibleHeight = domainHeight / chartScale
-        
         let fracY = 1.0 - (Float(screenPoint.y) / Float(viewSize.height))
-        let domainY = offsetY + fracY * visibleHeight
+        let domainY = domainMinY + fracY * domainHeight
         
         return SIMD2<Float>(domainX, domainY)
+    }
+}
+
+// Helper extension for matrix initialisation
+extension matrix_float4x4 {
+    init(_ scalar: Float) {
+        self.init(
+            SIMD4<Float>(scalar, 0, 0, 0),
+            SIMD4<Float>(0, scalar, 0, 0),
+            SIMD4<Float>(0, 0, scalar, 0),
+            SIMD4<Float>(0, 0, 0, scalar)
+        )
     }
 }

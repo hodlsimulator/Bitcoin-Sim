@@ -194,11 +194,15 @@ class PinnedAxesRenderer {
             maxX: maxX
         )
         xTickVertexCount = xTickVerts.count / 8
-        xTickBuffer = device.makeBuffer(
-            bytes: xTickVerts,
-            length: xTickVerts.count * MemoryLayout<Float>.size,
-            options: .storageModeShared
-        )
+        if !xTickVerts.isEmpty {
+            xTickBuffer = device.makeBuffer(
+                bytes: xTickVerts,
+                length: xTickVerts.count * MemoryLayout<Float>.size,
+                options: .storageModeShared
+            )
+        } else {
+            xTickBuffer = nil
+        }
         xTickTextBuffers = xTickTexts.map { $0.0 }
         xTickTextVertexCounts = xTickTexts.map { $0.1 }
         
