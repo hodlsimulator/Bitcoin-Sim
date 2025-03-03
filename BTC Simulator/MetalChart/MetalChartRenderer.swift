@@ -169,15 +169,16 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
                 let xVal = convertPeriodToYears(pt.week, simSettings)
                 allXVals.append(xVal)
                 
-                let yVal = NSDecimalNumber(decimal: pt.value).doubleValue
-                allYVals.append(yVal)
+                // If your data can’t be negative, clamp to a small positive number:
+                let rawY = max(1e-9, NSDecimalNumber(decimal: pt.value).doubleValue)
+                allYVals.append(rawY)
             }
         }
         
         guard let minX = allXVals.min(),
               let maxX = allXVals.max(),
-              let minY = allYVals.min(),
-              let maxY = allYVals.max() else {
+              let rawMinY = allYVals.min(),
+              let rawMaxY = allYVals.max() else {
             print("No data => skipping line build.")
             return
         }
@@ -186,18 +187,20 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         // If minX is negative or small, clamp to 0
         let finalMinX = max(0.0, minX)
         
+        // Y in log space => domainMinY=log10(rawMinY), domainMaxY=log10(rawMaxY)
+        let logMinY = log10(rawMinY)
+        let logMaxY = log10(rawMaxY)
+        
         self.domainMinX = Float(finalMinX)
         self.domainMaxX = Float(maxX)
-        self.domainMinY = Float(minY)
-        self.domainMaxY = Float(maxY)
+        self.domainMinY = Float(logMinY)
+        self.domainMaxY = Float(logMaxY)
         
         var vertexData: [Float] = []
         var lineCounts: [Int] = []
         
-        // If you want special coloring for "best fit"
         let bestFitId = cache.bestFitRun?.first?.id
         
-        // build the lines in domain coords (no normalisation!)
         for (runIndex, sim) in simulations.enumerated() {
             let isBestFit = (sim.id == bestFitId)
             let chosenColor: Color = isBestFit ? .orange : customPalette[runIndex % customPalette.count]
@@ -207,12 +210,16 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             
             var vertexCount = 0
             for pt in sim.points {
-                let xVal = Float(convertPeriodToYears(pt.week, simSettings))
-                let yVal = Float(NSDecimalNumber(decimal: pt.value).doubleValue)
+                let rawX = convertPeriodToYears(pt.week, simSettings)
+                let floatX = Float(rawX)
                 
-                // Domain space position
-                vertexData.append(xVal)
-                vertexData.append(yVal)
+                // clamp to 1e-9 before log
+                let rawY = max(1e-9, NSDecimalNumber(decimal: pt.value).doubleValue)
+                let logY = Float(log10(rawY))
+                
+                // domain coords => x= floatX, y= logY
+                vertexData.append(floatX)
+                vertexData.append(logY)
                 vertexData.append(0.0)
                 vertexData.append(1.0)
                 
@@ -229,7 +236,6 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         
         self.lineSizes = lineCounts
         
-        // create a single buffer
         let byteCount = vertexData.count * MemoryLayout<Float>.size
         vertexBuffer = device.makeBuffer(
             bytes: vertexData,
@@ -237,7 +243,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             options: .storageModeShared
         )
         
-        print("Created line buffer with \(vertexData.count) floats for domain-based coords.")
+        print("Created line buffer with \(vertexData.count) floats for log-scale Y coords.")
     }
     
     let customPalette: [Color] = [
