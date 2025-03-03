@@ -381,9 +381,6 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         if let ptr = uniformBuffer?.contents().bindMemory(to: matrix_float4x4.self, capacity: 1) {
             ptr.pointee = projectionMatrix
         }
-        
-        // Debug
-        print("DEBUG [updateOrthographic]: chartScale=\(chartScale)")
     }
     
     /// Creates an orthographic projection matrix

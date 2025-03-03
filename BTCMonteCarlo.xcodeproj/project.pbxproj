@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		E112E3712D58B00F00167E92 /* PocketSVG in Embed Frameworks */ = {isa = PBXBuildFile; productRef = E17DDF9B2D1BD13E008700A8 /* PocketSVG */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		E112E3762D58B73A00167E92 /* MailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E112E3752D58B73800167E92 /* MailView.swift */; };
+		E12687492D7650E100CCB818 /* PinnedAxesRenderer+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = E12687482D7650DF00CCB818 /* PinnedAxesRenderer+Extensions.swift */; };
 		E12CCD8B2CF8235F0059931D /* BTC_SimulatorApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E12CCD8A2CF8235F0059931D /* BTC_SimulatorApp.swift */; };
 		E12CCD8F2CF823610059931D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E12CCD8E2CF823610059931D /* Assets.xcassets */; };
 		E12CCD922CF823610059931D /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E12CCD912CF823610059931D /* Preview Assets.xcassets */; };
@@ -159,6 +160,7 @@
 /* Begin PBXFileReference section */
 		E112E3752D58B73800167E92 /* MailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailView.swift; sourceTree = "<group>"; };
 		E11B459A2CEE8D53006B0594 /* BTCMonteCarlo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BTCMonteCarlo.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E12687482D7650DF00CCB818 /* PinnedAxesRenderer+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PinnedAxesRenderer+Extensions.swift"; sourceTree = "<group>"; };
 		E12CCD882CF8235F0059931D /* Bitcoin HODL Simulator.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Bitcoin HODL Simulator.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		E12CCD8A2CF8235F0059931D /* BTC_SimulatorApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BTC_SimulatorApp.swift; sourceTree = "<group>"; };
 		E12CCD8E2CF823610059931D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -456,6 +458,7 @@
 				E130934C2D70779300DA6418 /* MetalChartRenderer.swift */,
 				E13093472D7076E000DA6418 /* MetalChartUIView.swift */,
 				E130935A2D709E6200DA6418 /* Pinned Axes Renderer.swift */,
+				E12687482D7650DF00CCB818 /* PinnedAxesRenderer+Extensions.swift */,
 				E13093522D709BB000DA6418 /* SDFGenerator.metal */,
 				E13093622D71799200DA6418 /* TextRendererManager.swift */,
 				E13093582D709C1300DA6418 /* TextSDFShaders.metal */,
@@ -654,6 +657,7 @@
 				E130935B2D709E6400DA6418 /* Pinned Axes Renderer.swift in Sources */,
 				E13093532D709BB000DA6418 /* SDFGenerator.metal in Sources */,
 				E19D113C2D42F81C00E3A55E /* UtilityExtensions.swift in Sources */,
+				E12687492D7650E100CCB818 /* PinnedAxesRenderer+Extensions.swift in Sources */,
 				E13093632D71799400DA6418 /* TextRendererManager.swift in Sources */,
 				E19D113A2D42F75000E3A55E /* MarketRegime.swift in Sources */,
 				E14AED742D6857A50068B2A5 /* CenterSnapFlowLayout.swift in Sources */,
