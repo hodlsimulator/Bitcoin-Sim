@@ -257,16 +257,11 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         let domainW = domainMaxX - domainMinX
         guard domainW > 0 else { return }
         
-        // Available screen width after pinnedLeft margin
-        let chartWidthPx = max(1, viewSize.width - pinnedLeft)
-        
-        // Set chartScale to 1.0 so visibleWidth = domainWidth
+        // Set chartScale = 1.0 so visibleWidth = domainWidth
         chartScale = 1.0
         
-        // So that the entire domain is initially visible
+        // Entire domain initially visible
         offsetX = domainMinX
-        
-        // Similarly for Y
         offsetY = domainMinY
         
         // Save size
@@ -302,6 +297,9 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     
     /// Updates the orthographic projection matrix
     func updateOrthographic() {
+        // Clamp so we can't zoom out smaller than the initial size
+        chartScale = max(1.0, chartScale)
+        
         let viewWidth = Float(viewportSize.width)
         let pinnedLeftFloat = Float(pinnedLeft)
         
@@ -347,7 +345,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         let left  = visibleMinX - leftPart
         let right = visibleMaxX + rightPart
         
-        // --- Y dimension: do same logic for vertical zoom/pan ---
+        // --- Y dimension: same logic for vertical zoom/pan ---
         let domainHeight = domainMaxY - domainMinY
         let visibleHeight = domainHeight / chartScale
         
@@ -364,7 +362,6 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         }
         offsetY = visibleMinY
         
-        // now actually use them so the chart zooms
         let bottom = visibleMinY
         let top    = visibleMaxY
         
@@ -386,10 +383,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         }
         
         // Debug
-        print("DEBUG [updateOrthographic]:")
-        print("  domainMinX=\(domainMinX), domainMaxX=\(domainMaxX), domainMinY=\(domainMinY), domainMaxY=\(domainMaxY)")
-        print("  offsetX=\(offsetX), offsetY=\(offsetY), chartScale=\(chartScale)")
-        print("  => left=\(left), right=\(right), bottom=\(bottom), top=\(top)")
+        print("DEBUG [updateOrthographic]: chartScale=\(chartScale)")
     }
     
     /// Creates an orthographic projection matrix
