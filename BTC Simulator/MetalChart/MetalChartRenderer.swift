@@ -108,7 +108,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         vertexDescriptor.attributes[0].offset = 0
         vertexDescriptor.attributes[0].bufferIndex = 0
         
-        vertexDescriptor.attributes[1].format = .float4 // color
+        vertexDescriptor.attributes[1].format = .float4 // colour
         vertexDescriptor.attributes[1].offset = MemoryLayout<Float>.size * 4
         vertexDescriptor.attributes[1].bufferIndex = 0
         
@@ -120,7 +120,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         pipelineDesc.vertexDescriptor = vertexDescriptor
         pipelineDesc.colorAttachments[0].pixelFormat = .bgra8Unorm
         
-        // Enable MSAA if you want
+        // Enable MSAA if you like
         pipelineDesc.rasterSampleCount = 4
         
         // Enable blending
@@ -140,7 +140,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             options: .storageModeShared
         )
         
-        // Build the vertex buffer for chart lines (in log space, if you like)
+        // Build the vertex buffer for chart lines (log scale if you like)
         buildLineBuffer()
         
         // Prepare initial transforms & pinned left margin
@@ -211,7 +211,9 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         
         for (runIndex, sim) in simulations.enumerated() {
             let isBestFit = (sim.id == bestFitId)
-            let chosenColor: Color = isBestFit ? .orange : customPalette[runIndex % customPalette.count]
+            let chosenColor: Color = isBestFit
+                ? .orange
+                : customPalette[runIndex % customPalette.count]
             let chosenOpacity: Float = isBestFit ? 1.0 : 0.2
             
             let (r, g, b, a) = colorToFloats(chosenColor, opacity: Double(chosenOpacity))
@@ -239,7 +241,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             lineCounts.append(vertexCount)
         }
         
-        // Finalize
+        // Finalise
         lineSizes = lineCounts
         let byteCount = vertexData.count * MemoryLayout<Float>.size
         vertexBuffer = device.makeBuffer(bytes: vertexData,
@@ -258,13 +260,13 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         // Available screen width after pinnedLeft margin
         let chartWidthPx = max(1, viewSize.width - pinnedLeft)
         
-        // Set chartScale to 1.0 so visibleWidth = domainWidth, fitting the entire domain initially
+        // Set chartScale to 1.0 so visibleWidth = domainWidth
         chartScale = 1.0
         
         // So that the entire domain is initially visible
         offsetX = domainMinX
         
-        // If you want vertical auto-fitting, do similarly for offsetY
+        // Similarly for Y
         offsetY = domainMinY
         
         // Save size
@@ -307,13 +309,13 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         let fracLeft = pinnedLeftFloat / viewWidth
         let fracRight: Float = 1.0 // right edge fraction = 1.0
         
-        // total domain
+        // total domain in X
         let domainWidth = domainMaxX - domainMinX
         
         // given chartScale, find how wide the visible domain is
         let visibleWidth = domainWidth / chartScale
         
-        // figure out the portion of domain we are actually showing
+        // portion of domain we are showing
         var visibleMinX = offsetX
         var visibleMaxX = offsetX + visibleWidth
         
@@ -345,7 +347,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         let left  = visibleMinX - leftPart
         let right = visibleMaxX + rightPart
         
-        // If you want vertical panning, do the same logic for Y:
+        // --- Y dimension: do same logic for vertical zoom/pan ---
         let domainHeight = domainMaxY - domainMinY
         let visibleHeight = domainHeight / chartScale
         
@@ -362,9 +364,9 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         }
         offsetY = visibleMinY
         
-        // For now, just keep entire vertical domain in view
-        let bottom = domainMinY
-        let top    = domainMaxY
+        // now actually use them so the chart zooms
+        let bottom = visibleMinY
+        let top    = visibleMaxY
         
         // Build orthographic matrix
         let near: Float = 0
@@ -387,7 +389,6 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         print("DEBUG [updateOrthographic]:")
         print("  domainMinX=\(domainMinX), domainMaxX=\(domainMaxX), domainMinY=\(domainMinY), domainMaxY=\(domainMaxY)")
         print("  offsetX=\(offsetX), offsetY=\(offsetY), chartScale=\(chartScale)")
-        print("  pinnedLeft=\(pinnedLeft), viewWidth=\(viewWidth)")
         print("  => left=\(left), right=\(right), bottom=\(bottom), top=\(top)")
     }
     
