@@ -5,7 +5,7 @@
 //  Created by . . on 27/02/2025.
 //  Orthographic-based approach with corrected function labels.
 //  Single-finger pan with inertia, plus two-finger pinch+pan simultaneously.
-//  Revised to reduce "jumping" when pinch & zoom starts/ends.
+//  Revised to reduce "jumping" when pinch & zoom starts/ends with zoom deceleration.
 //
 
 import Foundation
@@ -34,6 +34,13 @@ class MetalChartGestureCoordinator: NSObject {
     private var pinchBaseMidDomainY: Float = 0
     /// Lower => slower (more precise) zoom
     private let pinchSensitivity: Float = 0.5
+
+    // MARK: - Zoom Deceleration
+    private var zoomDecelerationDisplayLink: CADisplayLink?
+    private var zoomDecelerationVelocity: Float = 0
+    private var isZoomDecelerating: Bool = false
+    private let zoomDecelerationRate: Float = 0.95
+    private weak var chartViewForZoomDeceleration: MetalChartUIView?
 
     // MARK: - Double-Tap Smooth Zoom
     private var zoomAnimationDisplayLink: CADisplayLink?
@@ -67,6 +74,7 @@ class MetalChartGestureCoordinator: NSObject {
     }
 
     @objc func resetIdleTimer() {
+        print("Gesture triggered, resetting idle timer now.")
         idleManager.resetIdleTimer()
     }
 }
@@ -97,6 +105,7 @@ extension MetalChartGestureCoordinator {
         switch recognizer.state {
         case .began:
             stopDeceleration()
+            stopZoomDeceleration() // Ensure no zoom deceleration interferes
             chartViewForDeceleration = chartView
 
             baseOffsetX = renderer.offsetX
@@ -134,7 +143,7 @@ extension MetalChartGestureCoordinator {
             let domainPerPixelY = visibleHeight / Float(chartView.bounds.height)
 
             decelerationVelocityX = -Float(velocity.x) * domainPerPixelX
-            decelerationVelocityY =  Float(velocity.y) * domainPerPixelY
+            decelerationVelocityY = Float(velocity.y) * domainPerPixelY
 
             startDeceleration()
 
@@ -154,8 +163,9 @@ extension MetalChartGestureCoordinator {
             // Reset the gesture scale so it starts at 1.0
             recognizer.scale = 1.0
 
-            // Stop single-finger deceleration if needed
+            // Stop any ongoing decelerations
             stopDeceleration()
+            stopZoomDeceleration()
 
             // Record starting scale and midpoint
             pinchBaseScale = renderer.chartScale
@@ -169,8 +179,11 @@ extension MetalChartGestureCoordinator {
             applyPinchZoom(recognizer, chartView: chartView)
 
         case .ended, .cancelled:
-            // Apply the same pinch logic one last time so there's no jump
             applyPinchZoom(recognizer, chartView: chartView)
+            let velocity = Float(recognizer.velocity)
+            if abs(velocity) > 0.1 { // Threshold to trigger deceleration
+                startZoomDeceleration(withVelocity: velocity, chartView: chartView)
+            }
 
         default:
             break
@@ -391,6 +404,53 @@ extension MetalChartGestureCoordinator {
     }
 }
 
+// MARK: - Zoom Deceleration
+extension MetalChartGestureCoordinator {
+
+    private func startZoomDeceleration(withVelocity velocity: Float, chartView: MetalChartUIView) {
+        guard !isZoomDecelerating else { return }
+        isZoomDecelerating = true
+        zoomDecelerationVelocity = velocity
+        chartViewForZoomDeceleration = chartView
+        zoomDecelerationDisplayLink = CADisplayLink(target: self, selector: #selector(handleZoomDecelerationTick))
+        zoomDecelerationDisplayLink?.add(to: .current, forMode: .common)
+    }
+
+    private func stopZoomDeceleration() {
+        isZoomDecelerating = false
+        zoomDecelerationDisplayLink?.invalidate()
+        zoomDecelerationDisplayLink = nil
+    }
+
+    @objc private func handleZoomDecelerationTick() {
+        guard let chartView = chartViewForZoomDeceleration else {
+            stopZoomDeceleration()
+            return
+        }
+
+        let renderer = chartView.renderer
+        let dt = Float(zoomDecelerationDisplayLink?.duration ?? 0.016)
+        let dScale = zoomDecelerationVelocity * dt
+        let oldScale = renderer.chartScale
+        let newScale = oldScale * (1.0 + dScale)
+        let clampedScale = clamp(newScale, minScale, maxScale)
+        renderer.chartScale = clampedScale
+
+        // Keep the center fixed during deceleration
+        let centerScreen = CGPoint(x: chartView.bounds.width / 2, y: chartView.bounds.height / 2)
+        let dom = renderer.screenToDomain(centerScreen, viewSize: chartView.bounds.size)
+        preserveDomainPointOnScreen(renderer: renderer, domainX: dom.x, domainY: dom.y, oldScale: oldScale, newScale: clampedScale, view: chartView)
+
+        clampOffsets(renderer: renderer, view: chartView)
+        renderer.updateOrthographic()
+
+        zoomDecelerationVelocity *= zoomDecelerationRate
+        if abs(zoomDecelerationVelocity) < 0.001 {
+            stopZoomDeceleration()
+        }
+    }
+}
+
 // MARK: - Smooth Zoom Animation
 extension MetalChartGestureCoordinator {
 
@@ -405,7 +465,7 @@ extension MetalChartGestureCoordinator {
 
         chartViewForZoom = chartView
         initialScaleForZoomAnimation = oldScale
-        targetScaleForZoomAnimation  = newScale
+        targetScaleForZoomAnimation = newScale
         zoomAnchorX = anchorDomainX
         zoomAnchorY = anchorDomainY
         zoomAnimationDuration = duration
