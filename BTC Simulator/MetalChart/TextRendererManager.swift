@@ -18,8 +18,8 @@ class TextRendererManager: ObservableObject {
         
         // FontAtlasGenerator
         // Make the glyphs 4x bigger in the atlas
-        let chosenFont = UIFont.systemFont(ofSize: 48)
-        let scaleFactor: CGFloat = 4.0  // Upscale 4× in the atlas
+        let chosenFont = UIFont.systemFont(ofSize: 18)
+        let scaleFactor: CGFloat = 2.0  // Upscale 2× in the atlas
 
         if let atlas = generateFontAtlas(
                 device: device,
