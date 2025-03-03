@@ -311,7 +311,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         var visibleMinX = offsetX
         var visibleMaxX = offsetX + visibleWidth
         
-        // Clamp the visible range to stay within domainMinX and domainMaxX
+        // Clamp the visible range to stay within [domainMinX, domainMaxX]
         if visibleMinX < domainMinX {
             visibleMinX = domainMinX
             visibleMaxX = visibleMinX + visibleWidth
@@ -331,19 +331,30 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         // Update offsetX to reflect clamped visibleMinX
         offsetX = visibleMinX
         
-        // Break it into smaller pieces to avoid compiler confusion
-        let rangeX = (domainMaxX - domainMinX)
+        // Break it into smaller pieces
+        let rangeX = (visibleMaxX - visibleMinX)
         let denom = (fracRight - fracLeft)
         
         let leftPart = fracLeft * rangeX / denom
         let one: Float = 1.0
         let rightPart = (one - fracRight) * rangeX / denom
         
-        let left = domainMinX - leftPart
-        let right = domainMaxX + rightPart
+        // These final `left` and `right` now use the *current* visible range
+        let left = visibleMinX - leftPart
+        let right = visibleMaxX + rightPart
         
-        let bottom = domainMinY
-        let top = domainMaxY
+        // If you also want vertical panning, do the same clamp logic for Y:
+        let domainHeight = domainMaxY - domainMinY
+        let visibleHeight = domainHeight / chartScale
+        var visibleMinY = offsetY
+        var visibleMaxY = offsetY + visibleHeight
+        
+        // (Optional: clamp if you want to prevent scrolling below domainMinY)
+        // if visibleMinY < domainMinY { ... etc. }
+        // offsetY = visibleMinY
+        
+        let bottom = domainMinY  // or visibleMinY if you want vertical panning
+        let top    = domainMaxY  // or visibleMaxY
         
         // Build the projection matrix
         let near: Float = 0
