@@ -10,6 +10,7 @@
 		E112E3712D58B00F00167E92 /* PocketSVG in Embed Frameworks */ = {isa = PBXBuildFile; productRef = E17DDF9B2D1BD13E008700A8 /* PocketSVG */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		E112E3762D58B73A00167E92 /* MailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E112E3752D58B73800167E92 /* MailView.swift */; };
 		E12687492D7650E100CCB818 /* PinnedAxesRenderer+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = E12687482D7650DF00CCB818 /* PinnedAxesRenderer+Extensions.swift */; };
+		E12687AE2D779C5300CCB818 /* TestHarnessView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E12687AD2D779C5100CCB818 /* TestHarnessView.swift */; };
 		E12CCD8B2CF8235F0059931D /* BTC_SimulatorApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E12CCD8A2CF8235F0059931D /* BTC_SimulatorApp.swift */; };
 		E12CCD8F2CF823610059931D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E12CCD8E2CF823610059931D /* Assets.xcassets */; };
 		E12CCD922CF823610059931D /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E12CCD912CF823610059931D /* Preview Assets.xcassets */; };
@@ -161,6 +162,7 @@
 		E112E3752D58B73800167E92 /* MailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailView.swift; sourceTree = "<group>"; };
 		E11B459A2CEE8D53006B0594 /* BTCMonteCarlo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BTCMonteCarlo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E12687482D7650DF00CCB818 /* PinnedAxesRenderer+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PinnedAxesRenderer+Extensions.swift"; sourceTree = "<group>"; };
+		E12687AD2D779C5100CCB818 /* TestHarnessView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestHarnessView.swift; sourceTree = "<group>"; };
 		E12CCD882CF8235F0059931D /* Bitcoin HODL Simulator.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Bitcoin HODL Simulator.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		E12CCD8A2CF8235F0059931D /* BTC_SimulatorApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BTC_SimulatorApp.swift; sourceTree = "<group>"; };
 		E12CCD8E2CF823610059931D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -419,6 +421,7 @@
 				E14D23F42D374258007CC11A /* SimulationSummaryCardView.swift */,
 				E1F1CB672D4F3366003DB24F /* SimulationUtilities.swift */,
 				E1A1E52C2D2E39E3008F7658 /* SnapshotExtensions.swift */,
+				E12687AD2D779C5100CCB818 /* TestHarnessView.swift */,
 				E1A1E5262D2E371B008F7658 /* TipsData.swift */,
 				E1B7B0A42D47532B00B60EC6 /* UIComponents.swift */,
 				E19D113B2D42F81A00E3A55E /* UtilityExtensions.swift */,
@@ -635,6 +638,7 @@
 				E1B7B0A92D47575400B60EC6 /* SettingsSections.swift in Sources */,
 				E191AD5D2D1B06E600020DBE /* BitcoinHistoricalData.swift in Sources */,
 				E1883F482D1E8E21007AA90B /* AboutView.swift in Sources */,
+				E12687AE2D779C5300CCB818 /* TestHarnessView.swift in Sources */,
 				E18B2D6B2D6C1C7F005E5EDE /* SnapOneColumnFlowLayout.swift in Sources */,
 				E15DDF492D5AD0F100CDD30A /* MonthlySimulationSettings+FactorSync.swift in Sources */,
 				E17B2F282D27505300ECE087 /* LandscapePlaceholderView.swift in Sources */,

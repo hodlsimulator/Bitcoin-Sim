@@ -283,6 +283,8 @@ struct ContentView: View {
         let stored = UserDefaults.standard.object(forKey: "LastViewedColumnIndex") as? Int
         return stored ?? 2  // If no stored value, default to 2
     }()
+    
+    @State private var showTestHarness = false
 
     // MARK: - Environment Objects
     @EnvironmentObject var simSettings: SimulationSettings
@@ -300,25 +302,35 @@ struct ContentView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // The main parameter entry screen
+                // -----------------
+                // 1) Main parameter screen
+                // -----------------
                 parametersScreen
 
-                // Bottom icons bar (only if not loading/keyboard)
+                // 2) Bottom icons bar (only if not loading/keyboard)
                 if !coordinator.isLoading && !coordinator.isChartBuilding && !isKeyboardVisible {
                     bottomIcons
                 }
 
-                // Loading overlay if coordinator is busy
+                // 3) Loading overlay if coordinator is busy
                 if coordinator.isLoading || coordinator.isChartBuilding {
                     LoadingOverlayView()
                         .environmentObject(coordinator)
                         .environmentObject(simSettings)
                 }
+                
+                // 4) **Add a debug button** to navigate to TestHarnessView
+                VStack {
+                    Spacer()
+                    Button("Go to Test Harness") {
+                        showTestHarness = true
+                    }
+                    .padding(.bottom, 50)
+                }
             }
-            // Hide the nav bar on the main screen
             .navigationBarHidden(true)
-
-            // Bridging screen
+            
+            // Existing navigation destinations
             .navigationDestination(isPresented: $showPinnedColumns) {
                 PinnedColumnBridgeRepresentable(
                     isPresented: $showPinnedColumns,
@@ -337,8 +349,6 @@ struct ContentView: View {
                     removeNavBarHairline()
                 }
             }
-
-            // Settings screen
             .navigationDestination(isPresented: $showSettings) {
                 SettingsView()
                     .environmentObject(simSettings)
@@ -348,10 +358,16 @@ struct ContentView: View {
                         removeNavBarHairline()
                     }
             }
-
-            // About screen
             .navigationDestination(isPresented: $showAbout) {
                 AboutView()
+                    .onAppear {
+                        removeNavBarHairline()
+                    }
+            }
+
+            // 5) **New** navigation destination for the test harness
+            .navigationDestination(isPresented: $showTestHarness) {
+                TestHarnessView()  // <--- Provide your harness here
                     .onAppear {
                         removeNavBarHairline()
                     }
@@ -368,7 +384,7 @@ struct ContentView: View {
             )
             removeNavBarHairline()
             
-            // Start tracking idle time when content view appears
+            // If you want to reset idle time here:
             // idleManager.resetIdleTimer()
         }
         .onChange(of: coordinator.isLoading) { oldValue, newValue in
@@ -378,11 +394,12 @@ struct ContentView: View {
                 print("DEBUG: Forcing lastViewedColumnIndex to default (2) and lastViewedRow to default (0) on new simulation start.")
             }
         }
-        .onChange(of: coordinator.isChartBuilding) {
+        .onChange(of: coordinator.isChartBuilding) { oldValue, newValue in
             checkNavigationState()
         }
         .onTapGesture {
-            // idleManager.resetIdleTimer() // Reset idle timer on user interaction
+            // If you want to reset idle time on taps:
+            // idleManager.resetIdleTimer()
         }
     }
 
