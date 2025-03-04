@@ -41,6 +41,7 @@ struct MetalChartContainerView: UIViewRepresentable {
         )
         singleFingerPan.maximumNumberOfTouches = 1
         
+        
         let twoFingerPan = UIPanGestureRecognizer(
             target: coordinator,
             action: #selector(coordinator.handleTwoFingerPanToZoom(_:))

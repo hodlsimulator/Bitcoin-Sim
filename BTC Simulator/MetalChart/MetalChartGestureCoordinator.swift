@@ -5,7 +5,8 @@
 //  Created by . . on 27/02/2025.
 //  Orthographic-based approach with corrected function labels.
 //  Single-finger pan with inertia, plus two-finger pinch+pan simultaneously.
-//  Revised to reduce "jumping" when pinch & zoom starts/ends with zoom deceleration.
+//  Revised to reduce "jumping" when pinch & zoom starts/ends with smooth blending and animation cleanup.
+//  Enhanced for smoother transitions by anchoring zoom deceleration to the final pinch midpoint.
 //
 
 import Foundation
@@ -18,6 +19,9 @@ class MetalChartGestureCoordinator: NSObject {
     // MARK: - Single-Finger Pan / Inertia
     private var baseOffsetX: Float = 0
     private var baseOffsetY: Float = 0
+    // Store finger’s domain coords at the start of the pan
+    private var panStartDomainX: Float = 0
+    private var panStartDomainY: Float = 0
 
     private var decelerationDisplayLink: CADisplayLink?
     private var decelerationVelocityX: Float = 0
@@ -34,6 +38,14 @@ class MetalChartGestureCoordinator: NSObject {
     private var pinchBaseMidDomainY: Float = 0
     /// Lower => slower (more precise) zoom
     private let pinchSensitivity: Float = 0.5
+
+    // Smooth transition for quick repeated pinches
+    /// Track the last pinch midpoint to gently transition
+    private var lastPinchMidX: Float = 0
+    private var lastPinchMidY: Float = 0
+    private var lastPinchTime: TimeInterval = 0
+    /// If a new pinch occurs quickly (e.g., within 0.2s), smoothly blend anchors
+    private let pinchReentryThreshold: TimeInterval = 0.2
 
     // MARK: - Zoom Deceleration
     private var zoomDecelerationDisplayLink: CADisplayLink?
@@ -68,13 +80,18 @@ class MetalChartGestureCoordinator: NSObject {
     // MARK: - Double-Tap Zoom Factor
     private let doubleTapZoomFactor: Float = 1.5
 
+    // MARK: - Final Pinch Midpoint for Deceleration
+    private var finalPinchMidScreenX: Float = 0
+    private var finalPinchMidScreenY: Float = 0
+    private var finalPinchDomainX: Float = 0
+    private var finalPinchDomainY: Float = 0
+
     init(idleManager: IdleManager) {
         self.idleManager = idleManager
         super.init()
     }
 
     @objc func resetIdleTimer() {
-        print("Gesture triggered, resetting idle timer now.")
         idleManager.resetIdleTimer()
     }
 }
@@ -96,7 +113,7 @@ extension MetalChartGestureCoordinator: UIGestureRecognizerDelegate {
 // MARK: - Gesture Handlers
 extension MetalChartGestureCoordinator {
 
-    // MARK: Single-Finger Pan (with inertia)
+    // MARK: Single-Finger Pan (domain-based)
     @objc func handleSingleFingerPan(_ recognizer: UIPanGestureRecognizer) {
         guard let chartView = recognizer.view as? MetalChartUIView else { return }
         let renderer = chartView.renderer
@@ -104,36 +121,43 @@ extension MetalChartGestureCoordinator {
 
         switch recognizer.state {
         case .began:
-            stopDeceleration()
-            stopZoomDeceleration() // Ensure no zoom deceleration interferes
-            chartViewForDeceleration = chartView
+            // Stop only any ongoing single-finger deceleration or zoom animation,
+            // but allow zoom deceleration to continue so we can pan while zoom is decelerating.
+            if isDecelerating {
+                stopDeceleration()
+            }
+            stopZoomAnimation()
 
+            chartViewForDeceleration = chartView
             baseOffsetX = renderer.offsetX
             baseOffsetY = renderer.offsetY
 
+            // Figure out where the finger is in domain coordinates
+            let location = recognizer.location(in: chartView)
+            let domainCoord = renderer.screenToDomain(location, viewSize: chartView.bounds.size)
+            panStartDomainX = Float(domainCoord.x)
+            panStartDomainY = Float(domainCoord.y)
+
         case .changed:
-            let translation = recognizer.translation(in: chartView)
+            let location = recognizer.location(in: chartView)
+            let domainCoord = renderer.screenToDomain(location, viewSize: chartView.bounds.size)
+            let currentDomainX = Float(domainCoord.x)
+            let currentDomainY = Float(domainCoord.y)
 
-            let domainWidth = renderer.domainMaxX - renderer.domainMinX
-            let visibleWidth = domainWidth / renderer.chartScale
-            let domainPerPixelX = visibleWidth / Float(chartView.bounds.width)
-
-            let domainHeight = renderer.domainMaxY - renderer.domainMinY
-            let visibleHeight = domainHeight / renderer.chartScale
-            let domainPerPixelY = visibleHeight / Float(chartView.bounds.height)
-
-            let dxInDomain = Float(translation.x) * domainPerPixelX
-            let dyInDomain = Float(translation.y) * domainPerPixelY
-
-            renderer.offsetX = baseOffsetX - dxInDomain
-            renderer.offsetY = baseOffsetY + dyInDomain
+            // Adjust offset by how much the finger has moved in domain space
+            let dx = currentDomainX - panStartDomainX
+            let dy = currentDomainY - panStartDomainY
+            renderer.offsetX = baseOffsetX - dx
+            renderer.offsetY = baseOffsetY - dy
 
             clampOffsets(renderer: renderer, view: chartView)
             renderer.updateOrthographic()
 
         case .ended, .cancelled:
-            let velocity = recognizer.velocity(in: chartView)
+            // Get velocity in points
+            let velocityPoints = recognizer.velocity(in: chartView)
 
+            // Convert points velocity to domain velocity
             let domainWidth = renderer.domainMaxX - renderer.domainMinX
             let visibleWidth = domainWidth / renderer.chartScale
             let domainPerPixelX = visibleWidth / Float(chartView.bounds.width)
@@ -142,8 +166,8 @@ extension MetalChartGestureCoordinator {
             let visibleHeight = domainHeight / renderer.chartScale
             let domainPerPixelY = visibleHeight / Float(chartView.bounds.height)
 
-            decelerationVelocityX = -Float(velocity.x) * domainPerPixelX
-            decelerationVelocityY = Float(velocity.y) * domainPerPixelY
+            decelerationVelocityX = -Float(velocityPoints.x) * domainPerPixelX
+            decelerationVelocityY = Float(velocityPoints.y) * domainPerPixelY
 
             startDeceleration()
 
@@ -160,30 +184,44 @@ extension MetalChartGestureCoordinator {
 
         switch recognizer.state {
         case .began:
-            // Reset the gesture scale so it starts at 1.0
-            recognizer.scale = 1.0
+            // Stop only zoom-related animations so pinch can override them,
+            // but keep pan deceleration alive.
+            if isZoomDecelerating {
+                stopZoomDeceleration()
+            }
+            stopZoomAnimation()
 
-            // Stop any ongoing decelerations
-            stopDeceleration()
-            stopZoomDeceleration()
-
-            // Record starting scale and midpoint
-            pinchBaseScale = renderer.chartScale
+            let currentTime = CACurrentMediaTime()
+            let timeDiff = currentTime - lastPinchTime
+            let blendFactor = min(1.0, timeDiff / pinchReentryThreshold)
+            let blendAlpha = Float(blendFactor) // 0 => use last midpoint, 1 => use new midpoint
 
             let midScreen = midpointOfTouches(recognizer, in: chartView)
             let dom = renderer.screenToDomain(midScreen, viewSize: chartView.bounds.size)
-            pinchBaseMidDomainX = dom.x
-            pinchBaseMidDomainY = dom.y
+
+            pinchBaseMidDomainX = (Float(dom.x) * blendAlpha) + (lastPinchMidX * (1.0 - blendAlpha))
+            pinchBaseMidDomainY = (Float(dom.y) * blendAlpha) + (lastPinchMidY * (1.0 - blendAlpha))
+
+            pinchBaseScale = renderer.chartScale
+            recognizer.scale = 1.0
 
         case .changed:
             applyPinchZoom(recognizer, chartView: chartView)
 
         case .ended, .cancelled:
             applyPinchZoom(recognizer, chartView: chartView)
+            let finalMidScreen = midpointOfTouches(recognizer, in: chartView)
+            finalPinchMidScreenX = Float(finalMidScreen.x)
+            finalPinchMidScreenY = Float(finalMidScreen.y)
+            finalPinchDomainX = pinchBaseMidDomainX
+            finalPinchDomainY = pinchBaseMidDomainY
             let velocity = Float(recognizer.velocity)
             if abs(velocity) > 0.1 { // Threshold to trigger deceleration
                 startZoomDeceleration(withVelocity: velocity, chartView: chartView)
             }
+            lastPinchMidX = pinchBaseMidDomainX
+            lastPinchMidY = pinchBaseMidDomainY
+            lastPinchTime = CACurrentMediaTime()
 
         default:
             break
@@ -193,17 +231,14 @@ extension MetalChartGestureCoordinator {
     private func applyPinchZoom(_ recognizer: UIPinchGestureRecognizer, chartView: MetalChartUIView) {
         let renderer = chartView.renderer
 
-        // Convert the total pinch amount to a final multiplier
         let rawPinch = Float(recognizer.scale) - 1.0
         let scaledPinch = rawPinch * pinchSensitivity
         let finalFactor = 1.0 + scaledPinch
 
-        // Proposed scale
         let proposedScale = pinchBaseScale * finalFactor
         let newScale = clamp(proposedScale, minScale, maxScale)
         renderer.chartScale = newScale
 
-        // Keep pinchBaseMidDomain in the same visual midpoint
         let midScreen = midpointOfTouches(recognizer, in: chartView)
         let fullW = renderer.domainMaxX - renderer.domainMinX
         let fullH = renderer.domainMaxY - renderer.domainMinY
@@ -228,6 +263,12 @@ extension MetalChartGestureCoordinator {
         idleManager.resetIdleTimer()
 
         if recognizer.state == .ended {
+            // Stop only zoom deceleration and zoom animation so double-tap can override them.
+            if isZoomDecelerating {
+                stopZoomDeceleration()
+            }
+            stopZoomAnimation()
+
             let location = recognizer.location(in: chartView)
             let domainCoord = renderer.screenToDomain(location, viewSize: chartView.bounds.size)
 
@@ -237,8 +278,8 @@ extension MetalChartGestureCoordinator {
 
             animateZoom(from: oldScale,
                         to: clampedScale,
-                        anchorDomainX: domainCoord.x,
-                        anchorDomainY: domainCoord.y,
+                        anchorDomainX: Float(domainCoord.x),
+                        anchorDomainY: Float(domainCoord.y),
                         duration: 0.25,
                         chartView: chartView)
         }
@@ -253,6 +294,12 @@ extension MetalChartGestureCoordinator {
 
         switch recognizer.state {
         case .began:
+            // Stop only zoom deceleration and zoom animation; keep pan deceleration alive.
+            if isZoomDecelerating {
+                stopZoomDeceleration()
+            }
+            stopZoomAnimation()
+
             baseScale = renderer.chartScale
             doubleTapSlideStartPoint = recognizer.location(in: chartView)
 
@@ -284,6 +331,12 @@ extension MetalChartGestureCoordinator {
 
         switch recognizer.state {
         case .began:
+            // Stop only zoom deceleration and zoom animation; keep pan deceleration alive.
+            if isZoomDecelerating {
+                stopZoomDeceleration()
+            }
+            stopZoomAnimation()
+
             baseScaleForTwoFingerPan = renderer.chartScale
 
         case .changed:
@@ -301,8 +354,8 @@ extension MetalChartGestureCoordinator {
 
             let dom = renderer.screenToDomain(CGPoint(x: mx, y: my), viewSize: chartView.bounds.size)
             preserveDomainPointOnScreen(renderer: renderer,
-                                        domainX: dom.x,
-                                        domainY: dom.y,
+                                        domainX: Float(dom.x),
+                                        domainY: Float(dom.y),
                                         oldScale: baseScaleForTwoFingerPan,
                                         newScale: renderer.chartScale,
                                         view: chartView)
@@ -323,7 +376,6 @@ extension MetalChartGestureCoordinator {
         return max(minVal, min(maxVal, value))
     }
 
-    /// Returns the average location of all touches, so if it's a 2-finger pinch, it's the midpoint.
     private func midpointOfTouches(_ recognizer: UIGestureRecognizer, in view: UIView) -> CGPoint {
         guard recognizer.numberOfTouches > 0 else { return .zero }
         var sumX: CGFloat = 0
@@ -359,6 +411,12 @@ extension MetalChartGestureCoordinator {
         if maxOffY > 0, renderer.offsetY > maxOffY {
             renderer.offsetY = maxOffY
         }
+    }
+
+    private func stopAllAnimations() {
+        stopDeceleration()
+        stopZoomDeceleration()
+        stopZoomAnimation()
     }
 }
 
@@ -436,10 +494,16 @@ extension MetalChartGestureCoordinator {
         let clampedScale = clamp(newScale, minScale, maxScale)
         renderer.chartScale = clampedScale
 
-        // Keep the center fixed during deceleration
-        let centerScreen = CGPoint(x: chartView.bounds.width / 2, y: chartView.bounds.height / 2)
-        let dom = renderer.screenToDomain(centerScreen, viewSize: chartView.bounds.size)
-        preserveDomainPointOnScreen(renderer: renderer, domainX: dom.x, domainY: dom.y, oldScale: oldScale, newScale: clampedScale, view: chartView)
+        // Preserve the final pinch domain point at its screen position
+        let fullW = renderer.domainMaxX - renderer.domainMinX
+        let visW_new = fullW / clampedScale
+        let fracX = finalPinchMidScreenX / Float(chartView.bounds.width)
+        renderer.offsetX = finalPinchDomainX - fracX * visW_new
+
+        let fullH = renderer.domainMaxY - renderer.domainMinY
+        let visH_new = fullH / clampedScale
+        let fracY = finalPinchMidScreenY / Float(chartView.bounds.height)
+        renderer.offsetY = finalPinchDomainY - fracY * visH_new
 
         clampOffsets(renderer: renderer, view: chartView)
         renderer.updateOrthographic()
@@ -491,9 +555,8 @@ extension MetalChartGestureCoordinator {
         let elapsed = now - zoomAnimationStartTime
         let progress = CGFloat(min(1.0, elapsed / zoomAnimationDuration))
 
-        // Linear interpolation
         let currentScale = initialScaleForZoomAnimation
-                         + Float(progress) * (targetScaleForZoomAnimation - initialScaleForZoomAnimation)
+            + Float(progress) * (targetScaleForZoomAnimation - initialScaleForZoomAnimation)
 
         let oldScale = renderer.chartScale
         renderer.chartScale = currentScale

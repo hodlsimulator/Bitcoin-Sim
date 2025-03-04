@@ -72,7 +72,7 @@ extension PinnedAxesRenderer {
                 scale: 0.35,
                 screenWidth: Float(viewportSize.width),
                 screenHeight: Float(viewportSize.height),
-                letterSpacing: 6.0
+                letterSpacing: 4.0
             )
             if let buf = tBuf {
                 textBuffers.append((buf, vCount))
@@ -129,7 +129,7 @@ extension PinnedAxesRenderer {
                 scale: 0.35,
                 screenWidth: Float(viewportSize.width),
                 screenHeight: Float(viewportSize.height),
-                letterSpacing: 6.0
+                letterSpacing: 4.0
             )
             if let buf = tBuf {
                 textBuffers.append((buf, vCount))

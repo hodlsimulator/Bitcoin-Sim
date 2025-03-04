@@ -258,7 +258,7 @@ class PinnedAxesRenderer {
             scale: 0.35,
             screenWidth: Float(viewportSize.width),
             screenHeight: Float(viewportSize.height),
-            letterSpacing: 7.0
+            letterSpacing: 5.0
         )
         if let xBuf = maybeXBuf {
             xAxisLabelBuffer = xBuf
@@ -273,7 +273,7 @@ class PinnedAxesRenderer {
             scale: 0.35,
             screenWidth: Float(viewportSize.width),
             screenHeight: Float(viewportSize.height),
-            letterSpacing: 9.0
+            letterSpacing: 7.0
         )
         if let yBuf = maybeYBuf {
             yAxisLabelBuffer = yBuf
