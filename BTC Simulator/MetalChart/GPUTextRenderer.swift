@@ -69,11 +69,12 @@ public class GPUTextRenderer {
         string: String,
         x: Float,
         y: Float,
-        color: simd_float4,
+        // Force white text by default:
+        color: simd_float4 = simd_float4(1, 1, 1, 1),
         scale: Float = 1.0,
         screenWidth: Float,
         screenHeight: Float,
-        letterSpacing: Float = 0.0  // <— New parameter
+        letterSpacing: Float = 0.0
     ) -> (MTLBuffer?, Int) {
 
         var vertices: [Float] = []
@@ -88,14 +89,13 @@ public class GPUTextRenderer {
             let x1 = x0 + gm.width * scale
             let y1 = y0 + gm.height * scale
 
-            // Cull offscreen...
+            // Cull offscreen
             if x1 < 0 || x0 > screenWidth || y1 < 0 || y0 > screenHeight {
-                // Still add letterSpacing if you want uniform spacing
                 penX += (gm.xAdvance * scale) + letterSpacing
                 continue
             }
 
-            // Otherwise build the two triangles
+            // Build triangles
             vertices.append(contentsOf: [
                 x0, y0, gm.uMin, gm.vMin, color.x, color.y, color.z, color.w,
                 x1, y0, gm.uMax, gm.vMin, color.x, color.y, color.z, color.w,
@@ -106,7 +106,7 @@ public class GPUTextRenderer {
                 x0, y1, gm.uMin, gm.vMax, color.x, color.y, color.z, color.w
             ])
 
-            // Add the normal advance + letterSpacing
+            // Advance pen
             penX += (gm.xAdvance * scale) + letterSpacing
         }
 
@@ -116,9 +116,11 @@ public class GPUTextRenderer {
         }
 
         let length = vertices.count * MemoryLayout<Float>.size
-        guard let buffer = device.makeBuffer(bytes: vertices,
-                                             length: length,
-                                             options: .storageModeShared) else {
+        guard let buffer = device.makeBuffer(
+            bytes: vertices,
+            length: length,
+            options: .storageModeShared
+        ) else {
             return (nil, 0)
         }
 
