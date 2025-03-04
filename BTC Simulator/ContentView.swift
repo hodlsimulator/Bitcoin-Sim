@@ -283,8 +283,6 @@ struct ContentView: View {
         let stored = UserDefaults.standard.object(forKey: "LastViewedColumnIndex") as? Int
         return stored ?? 2  // If no stored value, default to 2
     }()
-    
-    @State private var showTestHarness = false
 
     // MARK: - Environment Objects
     @EnvironmentObject var simSettings: SimulationSettings
@@ -305,7 +303,7 @@ struct ContentView: View {
                 // -----------------
                 // 1) Main parameter screen
                 // -----------------
-                parametersScreen
+                    parametersScreen
 
                 // 2) Bottom icons bar (only if not loading/keyboard)
                 if !coordinator.isLoading && !coordinator.isChartBuilding && !isKeyboardVisible {
@@ -318,18 +316,11 @@ struct ContentView: View {
                         .environmentObject(coordinator)
                         .environmentObject(simSettings)
                 }
-                
-                // 4) **Add a debug button** to navigate to TestHarnessView
-                VStack {
-                    Spacer()
-                    Button("Go to Test Harness") {
-                        showTestHarness = true
-                    }
-                    .padding(.bottom, 50)
-                }
+
+                // (Removed the debug button for TestHarnessView)
             }
             .navigationBarHidden(true)
-            
+
             // Existing navigation destinations
             .navigationDestination(isPresented: $showPinnedColumns) {
                 PinnedColumnBridgeRepresentable(
@@ -365,27 +356,18 @@ struct ContentView: View {
                     }
             }
 
-            // 5) **New** navigation destination for the test harness
-            .navigationDestination(isPresented: $showTestHarness) {
-                TestHarnessView()  // <--- Provide your harness here
-                    .onAppear {
-                        removeNavBarHairline()
-                    }
-            }
+            // (Removed the navigation destination for showTestHarness)
         }
         .onAppear {
             // Generate font atlas when content view appears
             textRendererManager.generateFontAtlasAndRenderer(device: MTLCreateSystemDefaultDevice()!)
-            
+
             // Shift back button title off-screen globally
             UIBarButtonItem.appearance().setBackButtonTitlePositionAdjustment(
                 UIOffset(horizontal: -1000, vertical: 0),
                 for: .default
             )
             removeNavBarHairline()
-            
-            // If you want to reset idle time here:
-            // idleManager.resetIdleTimer()
         }
         .onChange(of: coordinator.isLoading) { oldValue, newValue in
             if newValue {
@@ -398,8 +380,7 @@ struct ContentView: View {
             checkNavigationState()
         }
         .onTapGesture {
-            // If you want to reset idle time on taps:
-            // idleManager.resetIdleTimer()
+            // idleManager.resetIdleTimer() if you want
         }
     }
 
