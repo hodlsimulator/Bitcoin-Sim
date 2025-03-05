@@ -157,6 +157,7 @@ class PinnedAxesRenderer {
             maxDataY: maxY,
             transform: chartTransform,
             pinnedScreenX: pinnedScreenX,
+            pinnedScreenY: pinnedScreenY,
             thickness: axisThickness,
             color: axisColor
         )

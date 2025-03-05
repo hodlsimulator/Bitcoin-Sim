@@ -99,7 +99,6 @@ extension PinnedAxesRenderer {
         if adjTicks.count >= 2 {
             let topTick = adjTicks.last!
             let secondTop = adjTicks[adjTicks.count - 2]
-            let tickSpacing = topTick - secondTop
             
             // Convert your real max data value into log10 space:
             let dataMaxLog = log10(maxDataValue)
@@ -330,10 +329,11 @@ extension PinnedAxesRenderer {
         maxDataY: Float,
         transform: matrix_float4x4,
         pinnedScreenX: Float,
+        pinnedScreenY: Float, // <-- Pass in so we can clamp
         thickness: Float,
         color: SIMD4<Float>
     ) -> [Float] {
-        // Let's compute actual screen coords:
+        // Convert data space -> screen coords
         let topY = dataYtoScreenY(dataY: maxDataY, transform: transform)
         let botY = dataYtoScreenY(dataY: minDataY, transform: transform)
         
@@ -341,25 +341,28 @@ extension PinnedAxesRenderer {
         let x0 = pinnedScreenX - halfT
         let x1 = pinnedScreenX + halfT
         
-        var verts: [Float] = []
-        
-        // We'll just go from botY to topY (if top is smaller in screen coords, we swap).
+        // In screen coords, smaller Y is visually "up"
         let scrTop = min(topY, botY)
         let scrBot = max(topY, botY)
         
-        // Make a triangle strip
-        verts.append(x0); verts.append(scrTop); verts.append(0); verts.append(1)
-        verts.append(color.x); verts.append(color.y); verts.append(color.z); verts.append(color.w)
+        // Clamp the bottom so it won’t go below the x-axis line:
+        let clampedBottom = min(scrBot, pinnedScreenY)
         
-        verts.append(x1); verts.append(scrTop); verts.append(0); verts.append(1)
-        verts.append(color.x); verts.append(color.y); verts.append(color.z); verts.append(color.w)
+        // If the top is also below pinnedScreenY, it’s fine.
+        // But if somehow scrTop is bigger than pinnedScreenY, clamp that too:
+        let clampedTop = min(scrTop, pinnedScreenY)
         
-        verts.append(x0); verts.append(scrBot); verts.append(0); verts.append(1)
-        verts.append(color.x); verts.append(color.y); verts.append(color.z); verts.append(color.w)
+        // If they end up reversed, no axis to draw:
+        if clampedTop >= clampedBottom {
+            return []
+        }
         
-        verts.append(x1); verts.append(scrBot); verts.append(0); verts.append(1)
-        verts.append(color.x); verts.append(color.y); verts.append(color.z); verts.append(color.w)
-        
-        return verts
+        // Build a triangle strip from clampedTop..clampedBottom
+        return [
+            x0, clampedTop, 0, 1,  color.x, color.y, color.z, color.w,
+            x1, clampedTop, 0, 1,  color.x, color.y, color.z, color.w,
+            x0, clampedBottom, 0, 1, color.x, color.y, color.z, color.w,
+            x1, clampedBottom, 0, 1, color.x, color.y, color.z, color.w
+        ]
     }
 }
