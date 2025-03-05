@@ -123,9 +123,9 @@ extension MetalChartGestureCoordinator {
 
         switch recognizer.state {
         case .began:
-            // Stop any existing deceleration so we can take over
-            if isDecelerating { stopDeceleration() }
-
+            // Stop all ongoing animations to prevent interference
+            stopAllAnimations()
+            
             // Save offsets + initial finger position
             baseOffsetX = renderer.offsetX
             baseOffsetY = renderer.offsetY
@@ -148,15 +148,10 @@ extension MetalChartGestureCoordinator {
             renderer.offsetX = baseOffsetX - (dxPx * domainPerPxX)
             renderer.offsetY = baseOffsetY + (dyPx * domainPerPxY)
 
-            // Just update. We won't clamp here – we let the user drag out of bounds if you want
-            // or you can do a partial "rubber-band" if you prefer
             renderer.updateOrthographic()
 
         case .ended, .cancelled:
-            // 1) get velocity in points
             let velocityPoints = recognizer.velocity(in: chartView)
-
-            // 2) convert to domain velocity
             let domainW = renderer.domainMaxX - renderer.domainMinX
             let visW = domainW / renderer.chartScale
             let domainPerPxX = visW / Float(chartView.bounds.width)
@@ -166,9 +161,8 @@ extension MetalChartGestureCoordinator {
             let domainPerPxY = visH / Float(chartView.bounds.height)
 
             decelerationVelocityX = -Float(velocityPoints.x) * domainPerPxX
-            decelerationVelocityY = Float(velocityPoints.y)  * domainPerPxY
+            decelerationVelocityY = Float(velocityPoints.y) * domainPerPxY
 
-            // 3) start deceleration
             startDeceleration()
 
         default:
@@ -184,17 +178,13 @@ extension MetalChartGestureCoordinator {
 
         switch recognizer.state {
         case .began:
-            // Stop only zoom-related animations so pinch can override them,
-            // but keep pan deceleration alive.
-            if isZoomDecelerating {
-                stopZoomDeceleration()
-            }
-            stopZoomAnimation()
-
+            // Stop all ongoing animations for a clean start
+            stopAllAnimations()
+            
             let currentTime = CACurrentMediaTime()
             let timeDiff = currentTime - lastPinchTime
             let blendFactor = min(1.0, timeDiff / pinchReentryThreshold)
-            let blendAlpha = Float(blendFactor) // 0 => use last midpoint, 1 => use new midpoint
+            let blendAlpha = Float(blendFactor)
 
             let midScreen = midpointOfTouches(recognizer, in: chartView)
             let dom = renderer.screenToDomain(midScreen, viewSize: chartView.bounds.size)
@@ -218,7 +208,7 @@ extension MetalChartGestureCoordinator {
             finalPinchDomainY = pinchBaseMidDomainY
 
             let velocity = Float(recognizer.velocity)
-            if abs(velocity) > 0.1 { // Threshold to trigger deceleration
+            if abs(velocity) > 0.1 {
                 startZoomDeceleration(withVelocity: velocity, chartView: chartView)
             }
             lastPinchMidX = pinchBaseMidDomainX
