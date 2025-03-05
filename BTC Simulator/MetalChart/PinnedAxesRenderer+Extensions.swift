@@ -28,7 +28,6 @@ extension PinnedAxesRenderer {
         let pinned = pinnedAxisX
         let tickLen: Float = 6
         let halfT: Float = 0.5
-        
         let range = Double(maxX - minX)
         
         for val in xTicks {
@@ -39,7 +38,7 @@ extension PinnedAxesRenderer {
                 continue
             }
             
-            // Build short tick line
+            // Build short tick line in grey
             let y0 = pinnedScreenY
             let y1 = pinnedScreenY - tickLen
             verts.append(contentsOf: makeQuadList(
@@ -47,7 +46,7 @@ extension PinnedAxesRenderer {
                 y0: y1,
                 x1: sx + halfT,
                 y1: y0,
-                color: tickColor
+                color: tickColor  // <-- Remains grey
             ))
             
             // Decide label format
@@ -62,13 +61,16 @@ extension PinnedAxesRenderer {
                 label = "\(weeks)w"
             }
             
+            // White text for label
+            let textColor = SIMD4<Float>(1,1,1,1)
+            
             // Place the text just above the axis
             let textY = pinnedScreenY - tickLen - 10
             let (tBuf, vCount) = textRenderer.buildTextVertices(
                 string: label,
                 x: sx,
                 y: textY,
-                color: tickColor,
+                color: textColor,   // <-- Use pure white
                 scale: 0.35,
                 screenWidth: Float(viewportSize.width),
                 screenHeight: Float(viewportSize.height),
@@ -82,7 +84,6 @@ extension PinnedAxesRenderer {
         return (verts, textBuffers)
     }
     
-    /// Y Ticks: domain is log10(value). So we exponentiate it for the label.
     func buildYTicks(
         _ yTicks: [Double],
         pinnedScreenX: Float,
@@ -99,33 +100,32 @@ extension PinnedAxesRenderer {
             let sy = dataYtoScreenY(dataY: Float(logVal), transform: chartTransform)
             if sy < 0 || sy > pinnedScreenY { continue }
             
-            // Draw short tick line to the left of the axis
+            // Draw short tick line in grey
             let x1 = pinnedScreenX
             let x0 = pinnedScreenX - tickLen
-            
             verts.append(contentsOf: makeQuadList(
                 x0: x0,
                 y0: sy - halfT,
                 x1: x1,
                 y1: sy + halfT,
-                color: tickColor
+                color: tickColor  // <-- Remains grey
             ))
             
             // Convert logVal -> real = 10^(logVal)
             let realVal = pow(10.0, logVal)
-            
-            // Example label formatting
             let formatted = realVal.formattedGroupedSuffixNoDecimals()
+            
+            // White text for label
+            let textColor = SIMD4<Float>(1,1,1,1)
             
             // Put text left of the axis
             let textX = pinnedScreenX - tickLen - 30
             let textY = sy - 5
-            
             let (tBuf, vCount) = textRenderer.buildTextVertices(
                 string: formatted,
                 x: textX,
                 y: textY,
-                color: tickColor,
+                color: textColor,   // <-- Use pure white
                 scale: 0.35,
                 screenWidth: Float(viewportSize.width),
                 screenHeight: Float(viewportSize.height),
