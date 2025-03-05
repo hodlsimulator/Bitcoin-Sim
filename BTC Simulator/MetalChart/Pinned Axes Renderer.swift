@@ -127,8 +127,9 @@ class PinnedAxesRenderer {
         maxY: Float,
         chartTransform: matrix_float4x4
     ) {
-        
         let pinnedScreenX = pinnedAxisX
+        
+        // We'll place the X-axis near the bottom of the screen
         let pinnedScreenY: Float = Float(viewportSize.height) - 40
         
         let axisThickness: Float = 1
@@ -156,7 +157,6 @@ class PinnedAxesRenderer {
             maxDataY: maxY,
             transform: chartTransform,
             pinnedScreenX: pinnedScreenX,
-            pinnedScreenY: pinnedScreenY,
             thickness: axisThickness,
             color: axisColor
         )
@@ -215,12 +215,14 @@ class PinnedAxesRenderer {
         xTickTextBuffers = xTickTexts.map { $0.0 }
         xTickTextVertexCounts = xTickTexts.map { $0.1 }
         
+        let maxDataValue = Double(maxY)
+
         // Build Y ticks
         let (yTickVerts, yTickTexts) = buildYTicks(
             tickYValues,
             pinnedScreenX: pinnedScreenX,
-            pinnedScreenY: pinnedScreenY,
-            chartTransform: chartTransform
+            chartTransform: chartTransform,
+            maxDataValue: maxDataValue
         )
         if !yTickVerts.isEmpty {
             yTickBuffer = device.makeBuffer(
@@ -239,7 +241,7 @@ class PinnedAxesRenderer {
         buildXGridLines(
             gridXValues,
             minY: 0,
-            maxY: pinnedScreenY,
+            maxY: pinnedScreenY, // or full height if you like
             pinnedScreenX: pinnedScreenX,
             chartTransform: chartTransform
         )
@@ -247,7 +249,6 @@ class PinnedAxesRenderer {
             gridYValues,
             minX: pinnedScreenX,
             maxX: Float(viewportSize.width),
-            pinnedScreenY: pinnedScreenY,
             chartTransform: chartTransform
         )
         
@@ -270,7 +271,7 @@ class PinnedAxesRenderer {
         let (maybeYBuf, yCount) = textRenderer.buildTextVertices(
             string: "USD",
             x: pinnedScreenX - 40,
-            y: pinnedScreenY * 0.5,
+            y: Float(viewportSize.height) * 0.5,
             color: axisColor,
             scale: 0.35,
             screenWidth: Float(viewportSize.width),
@@ -319,8 +320,6 @@ class PinnedAxesRenderer {
     // MARK: - Draw
     
     func drawAxes(renderEncoder: MTLRenderCommandEncoder) {
-        // We deliberately do NOT call idleManager?.resetIdleTimer() so it can go idle after 5s.
-        
         guard let axisPipeline = axisPipelineState else { return }
         
         // Build a viewport buffer for the vertex shader

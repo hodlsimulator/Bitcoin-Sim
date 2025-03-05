@@ -38,7 +38,7 @@ extension PinnedAxesRenderer {
                 continue
             }
             
-            // Build short tick line in grey (move it downward from the axis)
+            // Build short tick line in grey
             let y0 = pinnedScreenY
             let y1 = pinnedScreenY + tickLen
             verts.append(contentsOf: makeQuadList(
@@ -46,7 +46,7 @@ extension PinnedAxesRenderer {
                 y0: y0,
                 x1: sx + halfT,
                 y1: y1,
-                color: tickColor  // <-- Remains grey
+                color: tickColor
             ))
             
             // Decide label format
@@ -70,7 +70,7 @@ extension PinnedAxesRenderer {
                 string: label,
                 x: sx,
                 y: textY,
-                color: textColor,   // <-- Use pure white
+                color: textColor,
                 scale: 0.35,
                 screenWidth: Float(viewportSize.width),
                 screenHeight: Float(viewportSize.height),
@@ -84,38 +84,48 @@ extension PinnedAxesRenderer {
         return (verts, textBuffers)
     }
     
+    /// Modify this to accept a maxDataValue so we can shift yTicks if needed
     func buildYTicks(
-        _ yTicksIn: [Double],
+        _ yTicks: [Double],
         pinnedScreenX: Float,
-        pinnedScreenY: Float,
-        chartTransform: matrix_float4x4
+        chartTransform: matrix_float4x4,
+        maxDataValue: Double  // <-- new parameter
     ) -> ([Float], [(MTLBuffer, Int)]) {
         
-        // 1) Make a local copy
-        var yTicks = yTicksIn
-
-        // 2) Check if we already have a tick above the top log domain
-        //    If domainMaxLogY is 5.2, and we have no tick above 5.2, then add one.
-        let hasTickAbove = yTicks.contains { $0 > Double(domainMaxLogY) }
-        if !hasTickAbove {
-            // Add 0.1 in log space or whatever offset you like:
-            yTicks.append(Double(domainMaxLogY) + 0.1)
+        // 1) Make a mutable copy of yTicks
+        var adjTicks = yTicks
+        
+        // 2) Shift them if the topmost data exceeds the top tick
+        if adjTicks.count >= 2 {
+            let topTick = adjTicks.last!
+            let secondTop = adjTicks[adjTicks.count - 2]
+            let tickSpacing = topTick - secondTop
+            
+            // Convert your real max data value into log10 space:
+            let dataMaxLog = log10(maxDataValue)
+            
+            // If your data extends beyond or right at the topTick, push everything up
+            if dataMaxLog >= topTick {
+                let shiftUp = dataMaxLog - topTick + 0.000_001  // tiny buffer
+                for i in 0..<adjTicks.count {
+                    adjTicks[i] += shiftUp
+                }
+            }
         }
-
-        // 3) Normal Y‐tick rendering
+        
         var verts: [Float] = []
         var textBuffers: [(MTLBuffer, Int)] = []
-
         let tickLen: Float = 6
         let halfT: Float = 0.5
 
-        for logVal in yTicks {
+        // Now build the lines and labels using our adjusted ticks
+        for logVal in adjTicks {
             let sy = dataYtoScreenY(dataY: Float(logVal), transform: chartTransform)
             
-            // clip to within the pinned area
-            if sy < 0 || sy > pinnedScreenY { continue }
-
-            // short tick
+            // If you definitely don’t want ticks that go above the top or below 0, skip them:
+            if sy < 0 || sy > Float(viewportSize.height) { continue }
+            
+            // short tick line in grey
             let x1 = pinnedScreenX
             let x0 = pinnedScreenX - tickLen
             verts.append(contentsOf: makeQuadList(
@@ -126,13 +136,13 @@ extension PinnedAxesRenderer {
                 color: tickColor
             ))
 
-            // label
+            // label (convert logVal back to 10^logVal)
             let realVal = pow(10.0, logVal)
             let formatted = realVal.formattedGroupedSuffixNoDecimals()
             let textColor = SIMD4<Float>(1,1,1,1)
+
             let textX = pinnedScreenX - tickLen - 30
             let textY = sy - 5
-
             let (tBuf, vCount) = textRenderer.buildTextVertices(
                 string: formatted,
                 x: textX,
@@ -147,7 +157,7 @@ extension PinnedAxesRenderer {
                 textBuffers.append((buf, vCount))
             }
         }
-        
+
         return (verts, textBuffers)
     }
 }
@@ -196,26 +206,24 @@ extension PinnedAxesRenderer {
     }
     
     /// Horizontal lines from pinnedLeft..(viewport width)
-    /// clipped to [pinnedTop..pinnedBottom]
     func buildYGridLines(
         _ yTicks: [Double],
         minX: Float,
         maxX: Float,
-        pinnedScreenY: Float,   // we won’t actually use pinnedScreenY now
         chartTransform: matrix_float4x4
     ) {
         var verts: [Float] = []
         let thickness: Float = 1
         let halfT = thickness * 0.5
         
-        let pinnedTop: Float = 50
-        let pinnedBottom: Float = Float(viewportSize.height) - 40
-        
         for logVal in yTicks {
             let sy = dataYtoScreenY(dataY: Float(logVal), transform: chartTransform)
+            print("[DEBUG] logVal:", logVal, "=> sy:", sy)
             
-            if sy < pinnedTop { continue }
-            if sy > pinnedBottom { continue }
+            if sy < 0 || sy > Float(viewportSize.height) {
+                print("Skipping grid line, sy out of [0..height]")
+                continue
+            }
             
             verts.append(contentsOf: makeQuadList(
                 x0: minX,
@@ -269,26 +277,17 @@ extension PinnedAxesRenderer {
         return (ndcX * 0.5 + 0.5) * Float(viewportSize.width)
     }
 
-    /// Converts data Y to screen Y
-    /// If your domain is log, dataY is log10(value).
-    /// Converts dataY (log scale) -> pinned top..bottom
+    /// Converts data Y (log scale or otherwise) to screen Y
+    /// WITHOUT forcibly clamping to `[pinnedTop..pinnedBottom]`.
     func dataYtoScreenY(dataY: Float, transform: matrix_float4x4) -> Float {
-        // original logic => rawScreenY in [0..height]
+        // Map domain->NDC, then NDC->screen
         let clip = transform * SIMD4<Float>(0, dataY, 0, 1)
         let ndcY = clip.y / clip.w
         let rawScreenY = (1.0 - (ndcY * 0.5 + 0.5)) * Float(viewportSize.height)
-        
-        let pinnedTop: Float = 50
-        let pinnedBottom: Float = Float(viewportSize.height) - 40
-        let chartHeight = pinnedBottom - pinnedTop
-        
-        let ratio = rawScreenY / Float(viewportSize.height)
-        let finalY = pinnedTop + ratio*chartHeight
-        
-        return finalY
+        return rawScreenY
     }
     
-    // X axis triangle strip
+    /// X axis triangle strip
     func buildXAxisQuad(
         minDataX: Float,
         maxDataX: Float,
@@ -324,55 +323,43 @@ extension PinnedAxesRenderer {
         return verts
     }
     
-    // Y axis triangle strip
-    /// The left axis from pinnedBottom..pinnedTop
+    // Y axis triangle strip:
+    // pinned at x = pinnedScreenX, from screen Y=0 up to Y=viewport height (or however you like).
     func buildYAxisQuad(
         minDataY: Float,
         maxDataY: Float,
         transform: matrix_float4x4,
         pinnedScreenX: Float,
-        pinnedScreenY: Float,  // ignoring pinnedScreenY
         thickness: Float,
         color: SIMD4<Float>
     ) -> [Float] {
-        let pinnedTop: Float = 50
-        let pinnedBottom: Float = Float(viewportSize.height) - 40
-        
-        // The top in domain is maxDataY
-        // The bottom in domain is minDataY
-        var topY = dataYtoScreenY(dataY: maxDataY, transform: transform)
-        var botY = dataYtoScreenY(dataY: minDataY, transform: transform)
-        
-        // clamp to [pinnedTop..pinnedBottom]
-        if topY < pinnedTop { topY = pinnedTop }
-        if topY > pinnedBottom { topY = pinnedBottom }
-        if botY < pinnedTop { botY = pinnedTop }
-        if botY > pinnedBottom { botY = pinnedBottom }
+        // Let's compute actual screen coords:
+        let topY = dataYtoScreenY(dataY: maxDataY, transform: transform)
+        let botY = dataYtoScreenY(dataY: minDataY, transform: transform)
         
         let halfT = thickness * 0.5
         let x0 = pinnedScreenX - halfT
         let x1 = pinnedScreenX + halfT
         
         var verts: [Float] = []
-        // We make a triangle strip from (x0,botY) -> (x0,topY)
         
-        // 1
-        verts.append(x0); verts.append(botY); verts.append(0); verts.append(1)
+        // We'll just go from botY to topY (if top is smaller in screen coords, we swap).
+        let scrTop = min(topY, botY)
+        let scrBot = max(topY, botY)
+        
+        // Make a triangle strip
+        verts.append(x0); verts.append(scrTop); verts.append(0); verts.append(1)
         verts.append(color.x); verts.append(color.y); verts.append(color.z); verts.append(color.w)
         
-        // 2
-        verts.append(x1); verts.append(botY); verts.append(0); verts.append(1)
+        verts.append(x1); verts.append(scrTop); verts.append(0); verts.append(1)
         verts.append(color.x); verts.append(color.y); verts.append(color.z); verts.append(color.w)
         
-        // 3
-        verts.append(x0); verts.append(topY); verts.append(0); verts.append(1)
+        verts.append(x0); verts.append(scrBot); verts.append(0); verts.append(1)
         verts.append(color.x); verts.append(color.y); verts.append(color.z); verts.append(color.w)
         
-        // 4
-        verts.append(x1); verts.append(topY); verts.append(0); verts.append(1)
+        verts.append(x1); verts.append(scrBot); verts.append(0); verts.append(1)
         verts.append(color.x); verts.append(color.y); verts.append(color.z); verts.append(color.w)
         
         return verts
     }
 }
-    
