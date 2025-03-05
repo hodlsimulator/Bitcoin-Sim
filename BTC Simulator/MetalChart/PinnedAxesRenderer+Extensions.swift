@@ -89,7 +89,7 @@ extension PinnedAxesRenderer {
         _ yTicks: [Double],
         pinnedScreenX: Float,
         chartTransform: matrix_float4x4,
-        maxDataValue: Double  // <-- new parameter
+        maxDataValue: Double
     ) -> ([Float], [(MTLBuffer, Int)]) {
         
         // 1) Make a mutable copy of yTicks
@@ -98,7 +98,7 @@ extension PinnedAxesRenderer {
         // 2) Shift them if the topmost data exceeds the top tick
         if adjTicks.count >= 2 {
             let topTick = adjTicks.last!
-            let secondTop = adjTicks[adjTicks.count - 2]
+            // let secondTop = adjTicks[adjTicks.count - 2] // not used anymore, so it's removed
             
             // Convert your real max data value into log10 space:
             let dataMaxLog = log10(maxDataValue)
@@ -116,13 +116,20 @@ extension PinnedAxesRenderer {
         var textBuffers: [(MTLBuffer, Int)] = []
         let tickLen: Float = 6
         let halfT: Float = 0.5
-
-        // Now build the lines and labels using our adjusted ticks
+        
+        // We'll hide ticks below the pinned X-axis (which is 40 pts from bottom)
+        // so anything that ends up with sy > pinnedScreenY is skipped.
+        let pinnedScreenY = Float(viewportSize.height) - 40
+        
+        // Build lines and labels using our adjusted ticks
         for logVal in adjTicks {
             let sy = dataYtoScreenY(dataY: Float(logVal), transform: chartTransform)
             
-            // If you definitely don’t want ticks that go above the top or below 0, skip them:
+            // Skip if off-screen
             if sy < 0 || sy > Float(viewportSize.height) { continue }
+            
+            // NEW: Skip if below the pinned X-axis
+            if sy > pinnedScreenY { continue }
             
             // short tick line in grey
             let x1 = pinnedScreenX
