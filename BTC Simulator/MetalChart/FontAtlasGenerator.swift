@@ -61,15 +61,34 @@ public func generateFontAtlas(
         }
         
         if glyph != 0 {
-            var boundingRect = CGRect.zero
-            CTFontGetBoundingRectsForGlyphs(ctFont, .default, [glyph], &boundingRect, 1)
-            
-            // Add extra padding so we don’t clip the edges
-            let extraBound: CGFloat = 2
-            boundingRect = boundingRect.insetBy(dx: -extraBound, dy: -extraBound)
-            
-            maxGlyphWidth  = max(maxGlyphWidth,  boundingRect.width)
-            maxGlyphHeight = max(maxGlyphHeight, boundingRect.height)
+            // Get how wide this glyph is
+            var tempRect = CGRect.zero
+            CTFontGetBoundingRectsForGlyphs(ctFont, .default, [glyph], &tempRect, 1)
+            let glyphWidth = tempRect.width
+
+            // Overall font ascent + descent
+            let ascent  = CTFontGetAscent(ctFont)
+            let descent = CTFontGetDescent(ctFont)
+            let lineHeight = ascent + descent
+
+            // Make a top‐aligned bounding box of (width × lineHeight),
+            // plus optional extra padding around all sides to avoid clipping.
+            let extra: CGFloat = 2
+            let fullWidth  = glyphWidth   + extra * 2
+            let fullHeight = lineHeight   + extra * 2
+
+            // We keep the origin at (0,0) so it’s top‐aligned in the cell:
+            let boundingRect = CGRect(
+                x: 0,
+                y: 0,
+                width: fullWidth,
+                height: fullHeight
+            )
+
+            // Track the maximum needed cell size
+            maxGlyphWidth  = max(maxGlyphWidth,  fullWidth)
+            maxGlyphHeight = max(maxGlyphHeight, fullHeight)
+
             glyphRects[ch] = boundingRect
         }
     }
@@ -122,43 +141,45 @@ public func generateFontAtlas(
         let originX = CGFloat(col) * cellWidth  + padding/2
         let originY = CGFloat(row) * cellHeight + padding/2
         
-        // Where we will eventually draw in the context
-        let scaledOffsetX = boundingRect.minX * scaleFactor
-        let scaledOffsetY = boundingRect.minY * scaleFactor
-        let drawnX = originX + scaledOffsetX
-        let drawnY = originY + scaledOffsetY
-        
+        // Save state
         context.saveGState()
-        // Scale up the glyph so it’s physically larger in the bitmap
+        
+        // 1) Move to the top-left of this cell
         context.translateBy(x: originX, y: originY)
+        
+        // 2) Scale up for higher resolution
         context.scaleBy(x: scaleFactor, y: scaleFactor)
         
-        let position = CGPoint(x: boundingRect.minX, y: boundingRect.minY)
-        context.setFillColor(UIColor.white.cgColor)
+        // 3) Shift downward to place the baseline wherever you want.
+        //    This is the key line: increase baselineShift if you want letters lower.
+        let baselineShift: CGFloat = 8
+        context.translateBy(x: 0, y: baselineShift)
         
-        // Get the glyph ID again in case we didn’t store it
+        // 4) Draw the glyph at (0,0).
+        //    (No more boundingRect.minX/minY offset!)
         var glyphID = CTFontGetGlyphWithName(ctFont, String(ch) as CFString)
         if glyphID == 0 {
-            let uniScalar = ch.unicodeScalars.first!
-            let glyphChar = UniChar(uniScalar.value)
-            var tempGlyph: CGGlyph = 0
-            if CTFontGetGlyphsForCharacters(ctFont, [glyphChar], &tempGlyph, 1) {
-                glyphID = tempGlyph
+            if let uniScalar = ch.unicodeScalars.first {
+                let glyphChar = UniChar(uniScalar.value)
+                var tempGlyph: CGGlyph = 0
+                if CTFontGetGlyphsForCharacters(ctFont, [glyphChar], &tempGlyph, 1) {
+                    glyphID = tempGlyph
+                }
             }
         }
+        context.setFillColor(UIColor.white.cgColor)
+        CTFontDrawGlyphs(ctFont, [glyphID], [.zero], 1, context)
         
-        // Draw the glyph in white
-        CTFontDrawGlyphs(ctFont, [glyphID], [position], 1, context)
         context.restoreGState()
         
-        // The final size in pixels
+        // 5) The final size in pixels for this glyph cell
         let scaledWidth  = boundingRect.width  * scaleFactor
         let scaledHeight = boundingRect.height * scaleFactor
         
-        // The unflipped rect
+        // 6) Compute unflipped rect used for the texture coordinates
         let drawnRect = CGRect(
-            x: drawnX,
-            y: drawnY,
+            x: originX,
+            y: originY,
             width: scaledWidth,
             height: scaledHeight
         )
@@ -173,15 +194,14 @@ public func generateFontAtlas(
         let vMin = 1.0 - rawVMax
         let vMax = 1.0 - rawVMin
         
-        // We can retrieve glyph advance in points
+        // Get glyph advance
         var advances = CGSize.zero
         CTFontGetAdvancesForGlyphs(ctFont, .default, [glyphID], &advances, 1)
-        
-        // Fill in the map
-        let glyphW = Float(scaledWidth)
-        let glyphH = Float(scaledHeight)
         let xAdvance = Float(advances.width)
         
+        // Store in the map
+        let glyphW = Float(scaledWidth)
+        let glyphH = Float(scaledHeight)
         glyphMap[ch] = RuntimeGlyphMetrics(
             char: ch,
             uMin: uMin, vMin: vMin,
@@ -189,8 +209,8 @@ public func generateFontAtlas(
             width: glyphW,
             height: glyphH,
             xAdvance: xAdvance,
-            xOffset: Float(boundingRect.minX),
-            yOffset: Float(-boundingRect.minY)
+            xOffset: 0,      // now we always draw at .zero
+            yOffset: 0
         )
         
         idx += 1
