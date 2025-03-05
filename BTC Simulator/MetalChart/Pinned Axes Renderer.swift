@@ -55,6 +55,8 @@ class PinnedAxesRenderer {
     var yGridBuffer: MTLBuffer?
     var yGridVertexCount = 0
     
+    var domainMaxLogY: Float = 0
+    
     // --- Text buffers ---
     private var xTickTextBuffers: [MTLBuffer] = []
     private var xTickTextVertexCounts: [Int] = []
@@ -125,6 +127,7 @@ class PinnedAxesRenderer {
         maxY: Float,
         chartTransform: matrix_float4x4
     ) {
+        
         let pinnedScreenX = pinnedAxisX
         let pinnedScreenY: Float = Float(viewportSize.height) - 40
         
@@ -164,7 +167,7 @@ class PinnedAxesRenderer {
             options: .storageModeShared
         )
         
-        // Dynamic calculation for how many ticks we want based on screen space:
+        // Dynamic calculation of ticks
         let screenDomainWidth = dataXtoScreenX(dataX: maxX, transform: chartTransform)
                               - dataXtoScreenX(dataX: minX, transform: chartTransform)
         let approxDesiredCountX = Int((screenDomainWidth / 80.0).rounded())
@@ -191,7 +194,7 @@ class PinnedAxesRenderer {
         let gridXValues = tickXValues
         let gridYValues = tickYValues
         
-        // Build X Ticks + Label
+        // Build X ticks
         let (xTickVerts, xTickTexts) = buildXTicks(
             tickXValues,
             pinnedScreenY: pinnedScreenY,
@@ -212,14 +215,13 @@ class PinnedAxesRenderer {
         xTickTextBuffers = xTickTexts.map { $0.0 }
         xTickTextVertexCounts = xTickTexts.map { $0.1 }
         
-        // Build Y Ticks + Label
+        // Build Y ticks
         let (yTickVerts, yTickTexts) = buildYTicks(
             tickYValues,
             pinnedScreenX: pinnedScreenX,
             pinnedScreenY: pinnedScreenY,
             chartTransform: chartTransform
         )
-        
         if !yTickVerts.isEmpty {
             yTickBuffer = device.makeBuffer(
                 bytes: yTickVerts,
@@ -233,7 +235,7 @@ class PinnedAxesRenderer {
         yTickTextBuffers = yTickTexts.map { $0.0 }
         yTickTextVertexCounts = yTickTexts.map { $0.1 }
         
-        // Build Grid lines
+        // Build grid lines
         buildXGridLines(
             gridXValues,
             minY: 0,
@@ -279,6 +281,39 @@ class PinnedAxesRenderer {
             yAxisLabelBuffer = yBuf
             yAxisLabelVertexCount = yCount
         }
+    }
+    
+    func generateNiceTicks(
+        minVal: Double,
+        maxVal: Double,
+        desiredCount: Int
+    ) -> [Double] {
+        guard minVal < maxVal, desiredCount > 0 else { return [] }
+        let range = maxVal - minVal
+        let rawStep = range / Double(desiredCount)
+        let mag = pow(10.0, floor(log10(rawStep)))
+        let leading = rawStep / mag
+        
+        // for a simple approach, use {1,2,5,10}
+        let niceLeading: Double
+        if leading < 2.0 {
+            niceLeading = 2.0
+        } else if leading < 5.0 {
+            niceLeading = 5.0
+        } else {
+            niceLeading = 10.0
+        }
+        
+        let step = niceLeading * mag
+        let start = floor(minVal / step) * step
+        
+        var result: [Double] = []
+        var v = start
+        while v <= maxVal {
+            if v >= minVal { result.append(v) }
+            v += step
+        }
+        return result
     }
     
     // MARK: - Draw

@@ -82,7 +82,8 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     /// Initializes Metal and sets up the renderer
     func setupMetal(in size: CGSize,
                     chartDataCache: ChartDataCache,
-                    simSettings: SimulationSettings) {
+                    simSettings: SimulationSettings)
+    {
         self.chartDataCache = chartDataCache
         self.simSettings = simSettings
         
@@ -150,7 +151,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         viewportSize = size
         autoFitChartWithLeftMargin(viewSize: size, pinnedLeft: pinnedLeft)
         
-        // Create pinned axes renderer (optional)
+        // Create pinned axes renderer
         if let textRenderer = textRendererManager?.getTextRenderer() {
             pinnedAxesRenderer = PinnedAxesRenderer(
                 device: device,
@@ -158,7 +159,13 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
                 textRendererManager: textRendererManager!,
                 library: library
             )
+            
             pinnedAxesRenderer?.pinnedAxisX = Float(pinnedLeft)
+            
+            // Make sure the new instance gets the domainMaxLogY we computed
+            // in buildLineBuffer() (assuming that sets self.domainMaxY).
+            pinnedAxesRenderer?.domainMaxLogY = self.domainMaxY
+            
         } else {
             print("No textRenderer => pinned axes won't show text.")
         }
@@ -182,13 +189,13 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
                 let xVal = convertPeriodToYears(pt.week, simSettings)
                 allXVals.append(xVal)
                 
-                // clamp Y > 0
+                // clamp Y>0
                 let rawY = max(1e-9, NSDecimalNumber(decimal: pt.value).doubleValue)
                 allYVals.append(rawY)
             }
         }
         
-        // Find overall min/max
+        // 1) find overall min/max
         guard let minX = allXVals.min(),
               let maxX = allXVals.max(),
               let rawMinY = allYVals.min(),
@@ -197,16 +204,33 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             return
         }
         
-        // Store them in domain variables
+        // set domain in X
         let finalMinX = max(0.0, minX)
         domainMinX = Float(finalMinX)
         domainMaxX = Float(maxX)
         
-        // log scale for Y
-        domainMinY = Float(log10(rawMinY))
-        domainMaxY = Float(log10(rawMaxY))
+        // 2) build “candidate” ticks up to e.g. 10× or 100× rawMaxY
+        let candidateTicks = generateNiceTicks(
+            minVal: rawMinY,
+            maxVal: rawMaxY*100, // or any factor
+            desiredCount: 15
+        )
         
-        // Build one big vertex array
+        // pick the first candidate >= rawMaxY
+        var topTick = rawMaxY
+        if let nextAbove = candidateTicks.first(where: { $0 >= rawMaxY }) {
+            topTick = nextAbove
+        }
+        
+        // domain in log space
+        domainMinY = Float(log10(rawMinY))
+        domainMaxY = Float(log10(topTick))
+        print("DEBUG: domainMaxY =>", domainMaxY)
+        
+        pinnedAxesRenderer?.domainMaxLogY = domainMaxY
+        print("DEBUG: Just set pinnedAxesRenderer.domainMaxLogY to", domainMaxY)
+        
+        // 3) build the big vertex array
         var vertexData: [Float] = []
         var lineCounts: [Int] = []
         
@@ -227,13 +251,13 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
                 let rawY = max(1e-9, NSDecimalNumber(decimal: pt.value).doubleValue)
                 let logY = Float(log10(rawY))
                 
-                // Position in "domain space" (x, log10(y))
+                // position in domain space (x, log10(y))
                 vertexData.append(rawX)
                 vertexData.append(logY)
                 vertexData.append(0)
                 vertexData.append(1)
                 
-                // Colour
+                // colour
                 vertexData.append(r)
                 vertexData.append(g)
                 vertexData.append(b)
@@ -244,12 +268,14 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             lineCounts.append(vertexCount)
         }
         
-        // Finalise
+        // finalise
         lineSizes = lineCounts
         let byteCount = vertexData.count * MemoryLayout<Float>.size
-        vertexBuffer = device.makeBuffer(bytes: vertexData,
-                                         length: byteCount,
-                                         options: .storageModeShared)
+        vertexBuffer = device.makeBuffer(
+            bytes: vertexData,
+            length: byteCount,
+            options: .storageModeShared
+        )
         print("Created line buffer with \(vertexData.count) floats. Y is log scale.")
     }
     
@@ -300,27 +326,20 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     
     /// Updates the orthographic projection matrix
     func updateOrthographic() {
-        // Clamp so we can't zoom out smaller than the initial size
         chartScale = max(1.0, chartScale)
         
         let viewWidth = Float(viewportSize.width)
         let pinnedLeftFloat = Float(pinnedLeft)
-        
-        // fraction of total width that is pinned margin
         let fracLeft = pinnedLeftFloat / viewWidth
-        let fracRight: Float = 1.0 // right edge fraction = 1.0
+        let fracRight: Float = 1.0
         
-        // total domain in X
         let domainWidth = domainMaxX - domainMinX
-        
-        // given chartScale, find how wide the visible domain is
         let visibleWidth = domainWidth / chartScale
         
-        // portion of domain we are showing
         var visibleMinX = offsetX
         var visibleMaxX = offsetX + visibleWidth
         
-        // clamp to [domainMinX..domainMaxX]
+        // -- clamp X to domain
         if visibleMinX < domainMinX {
             visibleMinX = domainMinX
             visibleMaxX = visibleMinX + visibleWidth
@@ -338,24 +357,22 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         }
         offsetX = visibleMinX
         
-        // pinned transform: map [visibleMinX..visibleMaxX] => [fracLeft..1.0]
+        // pinned transform for X
         let rangeX = visibleMaxX - visibleMinX
         let denom = fracRight - fracLeft
-        
         let leftPart  = fracLeft * rangeX / denom
         let rightPart = (1.0 - fracRight) * rangeX / denom
-        
         let left  = visibleMinX - leftPart
         let right = visibleMaxX + rightPart
         
-        // --- Y dimension: same logic for vertical zoom/pan ---
+        // -- Y dimension (log domain)
         let domainHeight = domainMaxY - domainMinY
         let visibleHeight = domainHeight / chartScale
         
         var visibleMinY = offsetY
         var visibleMaxY = offsetY + visibleHeight
         
-        // clamp Y if you want
+        // clamp Y
         if visibleMinY < domainMinY {
             visibleMinY = domainMinY
             visibleMaxY = visibleMinY + visibleHeight
@@ -365,10 +382,21 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         }
         offsetY = visibleMinY
         
-        let bottom = visibleMinY
-        let top    = visibleMaxY
+        // *** ADD A TOP MARGIN in screen space. ***
+        let screenMarginTop: Float = 50
+        let totalScreenHeight = Float(viewportSize.height)
         
-        // Build orthographic matrix
+        // domainPerPixel is how many domain units 1 screen pixel is
+        let domainPerPixel = visibleHeight / totalScreenHeight
+        
+        // So 50 px => this many domain units
+        let domainMargin = screenMarginTop * domainPerPixel
+        
+        // SHIFT the top domain upward by domainMargin
+        let bottom = visibleMinY
+        let top    = visibleMaxY + domainMargin
+        
+        // Build your orthographic matrix using that new top
         let near: Float = 0
         let far:  Float = 1
         projectionMatrix = makeOrthographicMatrix(
@@ -512,4 +540,37 @@ extension matrix_float4x4 {
             SIMD4<Float>(0, 0, 0, scalar)
         )
     }
+}
+
+fileprivate func generateNiceTicks(
+    minVal: Double,
+    maxVal: Double,
+    desiredCount: Int
+) -> [Double] {
+    guard minVal < maxVal, desiredCount > 0 else { return [] }
+    let range = maxVal - minVal
+    let rawStep = range / Double(desiredCount)
+    let mag = pow(10.0, floor(log10(rawStep)))
+    let leading = rawStep / mag
+    
+    // For a simple approach, we use {1,2,5,10}
+    let niceLeading: Double
+    if leading < 2.0 {
+        niceLeading = 2.0
+    } else if leading < 5.0 {
+        niceLeading = 5.0
+    } else {
+        niceLeading = 10.0
+    }
+    
+    let step = niceLeading * mag
+    let start = floor(minVal / step) * step
+    
+    var result: [Double] = []
+    var v = start
+    while v <= maxVal {
+        if v >= minVal { result.append(v) }
+        v += step
+    }
+    return result
 }

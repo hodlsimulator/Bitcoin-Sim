@@ -85,22 +85,37 @@ extension PinnedAxesRenderer {
     }
     
     func buildYTicks(
-        _ yTicks: [Double],
+        _ yTicksIn: [Double],
         pinnedScreenX: Float,
         pinnedScreenY: Float,
         chartTransform: matrix_float4x4
     ) -> ([Float], [(MTLBuffer, Int)]) {
         
+        // 1) Make a local copy
+        var yTicks = yTicksIn
+
+        // 2) Check if we already have a tick above the top log domain
+        //    If domainMaxLogY is 5.2, and we have no tick above 5.2, then add one.
+        let hasTickAbove = yTicks.contains { $0 > Double(domainMaxLogY) }
+        if !hasTickAbove {
+            // Add 0.1 in log space or whatever offset you like:
+            yTicks.append(Double(domainMaxLogY) + 0.1)
+        }
+
+        // 3) Normal Y‐tick rendering
         var verts: [Float] = []
         var textBuffers: [(MTLBuffer, Int)] = []
+
         let tickLen: Float = 6
         let halfT: Float = 0.5
-        
+
         for logVal in yTicks {
             let sy = dataYtoScreenY(dataY: Float(logVal), transform: chartTransform)
-            if sy < 0 || sy > pinnedScreenY { continue }
             
-            // Draw short tick line in grey
+            // clip to within the pinned area
+            if sy < 0 || sy > pinnedScreenY { continue }
+
+            // short tick
             let x1 = pinnedScreenX
             let x0 = pinnedScreenX - tickLen
             verts.append(contentsOf: makeQuadList(
@@ -108,24 +123,21 @@ extension PinnedAxesRenderer {
                 y0: sy - halfT,
                 x1: x1,
                 y1: sy + halfT,
-                color: tickColor  // <-- Remains grey
+                color: tickColor
             ))
-            
-            // Convert logVal -> real = 10^(logVal)
+
+            // label
             let realVal = pow(10.0, logVal)
             let formatted = realVal.formattedGroupedSuffixNoDecimals()
-            
-            // White text for label
             let textColor = SIMD4<Float>(1,1,1,1)
-            
-            // Put text left of the axis
             let textX = pinnedScreenX - tickLen - 30
             let textY = sy - 5
+
             let (tBuf, vCount) = textRenderer.buildTextVertices(
                 string: formatted,
                 x: textX,
                 y: textY,
-                color: textColor,   // <-- Use pure white
+                color: textColor,
                 scale: 0.35,
                 screenWidth: Float(viewportSize.width),
                 screenHeight: Float(viewportSize.height),
@@ -183,31 +195,35 @@ extension PinnedAxesRenderer {
         }
     }
     
+    /// Horizontal lines from pinnedLeft..(viewport width)
+    /// clipped to [pinnedTop..pinnedBottom]
     func buildYGridLines(
         _ yTicks: [Double],
         minX: Float,
         maxX: Float,
-        pinnedScreenY: Float,
+        pinnedScreenY: Float,   // we won’t actually use pinnedScreenY now
         chartTransform: matrix_float4x4
     ) {
         var verts: [Float] = []
         let thickness: Float = 1
         let halfT = thickness * 0.5
         
+        let pinnedTop: Float = 50
+        let pinnedBottom: Float = Float(viewportSize.height) - 40
+        
         for logVal in yTicks {
             let sy = dataYtoScreenY(dataY: Float(logVal), transform: chartTransform)
-            if sy < 0 { continue }
-            if sy > pinnedScreenY { continue }
             
-            verts.append(
-                contentsOf: makeQuadList(
-                    x0: minX,
-                    y0: sy - halfT,
-                    x1: maxX,
-                    y1: sy + halfT,
-                    color: gridColor
-                )
-            )
+            if sy < pinnedTop { continue }
+            if sy > pinnedBottom { continue }
+            
+            verts.append(contentsOf: makeQuadList(
+                x0: minX,
+                y0: sy - halfT,
+                x1: maxX,
+                y1: sy + halfT,
+                color: gridColor
+            ))
         }
         
         yGridVertexCount = verts.count / 8
@@ -255,44 +271,21 @@ extension PinnedAxesRenderer {
 
     /// Converts data Y to screen Y
     /// If your domain is log, dataY is log10(value).
+    /// Converts dataY (log scale) -> pinned top..bottom
     func dataYtoScreenY(dataY: Float, transform: matrix_float4x4) -> Float {
+        // original logic => rawScreenY in [0..height]
         let clip = transform * SIMD4<Float>(0, dataY, 0, 1)
         let ndcY = clip.y / clip.w
-        return (1 - (ndcY * 0.5 + 0.5)) * Float(viewportSize.height)
-    }
-
-    /// Simple "nice" ticks: picks a step based on the range & `desiredCount`.
-    func generateNiceTicks(
-        minVal: Double,
-        maxVal: Double,
-        desiredCount: Int
-    ) -> [Double] {
-        guard minVal < maxVal, desiredCount > 0 else { return [] }
-        let range = maxVal - minVal
-        let rawStep = range / Double(desiredCount)
-        let mag = pow(10.0, floor(log10(rawStep)))
-        let leading = rawStep / mag
+        let rawScreenY = (1.0 - (ndcY * 0.5 + 0.5)) * Float(viewportSize.height)
         
-        // for a simple approach, use {1,2,5,10}
-        let niceLeading: Double
-        if leading < 2.0 {
-            niceLeading = 2.0
-        } else if leading < 5.0 {
-            niceLeading = 5.0
-        } else {
-            niceLeading = 10.0
-        }
+        let pinnedTop: Float = 50
+        let pinnedBottom: Float = Float(viewportSize.height) - 40
+        let chartHeight = pinnedBottom - pinnedTop
         
-        let step = niceLeading * mag
-        let start = floor(minVal / step) * step
+        let ratio = rawScreenY / Float(viewportSize.height)
+        let finalY = pinnedTop + ratio*chartHeight
         
-        var result: [Double] = []
-        var v = start
-        while v <= maxVal {
-            if v >= minVal { result.append(v) }
-            v += step
-        }
-        return result
+        return finalY
     }
     
     // X axis triangle strip
@@ -332,39 +325,53 @@ extension PinnedAxesRenderer {
     }
     
     // Y axis triangle strip
+    /// The left axis from pinnedBottom..pinnedTop
     func buildYAxisQuad(
         minDataY: Float,
         maxDataY: Float,
         transform: matrix_float4x4,
         pinnedScreenX: Float,
-        pinnedScreenY: Float,
+        pinnedScreenY: Float,  // ignoring pinnedScreenY
         thickness: Float,
         color: SIMD4<Float>
     ) -> [Float] {
+        let pinnedTop: Float = 50
+        let pinnedBottom: Float = Float(viewportSize.height) - 40
         
+        // The top in domain is maxDataY
+        // The bottom in domain is minDataY
         var topY = dataYtoScreenY(dataY: maxDataY, transform: transform)
-        if topY > pinnedScreenY {
-            topY = pinnedScreenY
-        }
+        var botY = dataYtoScreenY(dataY: minDataY, transform: transform)
+        
+        // clamp to [pinnedTop..pinnedBottom]
+        if topY < pinnedTop { topY = pinnedTop }
+        if topY > pinnedBottom { topY = pinnedBottom }
+        if botY < pinnedTop { botY = pinnedTop }
+        if botY > pinnedBottom { botY = pinnedBottom }
         
         let halfT = thickness * 0.5
         let x0 = pinnedScreenX - halfT
         let x1 = pinnedScreenX + halfT
         
         var verts: [Float] = []
-
-        verts.append(x0); verts.append(pinnedScreenY); verts.append(0); verts.append(1)
+        // We make a triangle strip from (x0,botY) -> (x0,topY)
+        
+        // 1
+        verts.append(x0); verts.append(botY); verts.append(0); verts.append(1)
         verts.append(color.x); verts.append(color.y); verts.append(color.z); verts.append(color.w)
-
-        verts.append(x1); verts.append(pinnedScreenY); verts.append(0); verts.append(1)
+        
+        // 2
+        verts.append(x1); verts.append(botY); verts.append(0); verts.append(1)
         verts.append(color.x); verts.append(color.y); verts.append(color.z); verts.append(color.w)
-
-        verts.append(x0); verts.append(topY);         verts.append(0); verts.append(1)
+        
+        // 3
+        verts.append(x0); verts.append(topY); verts.append(0); verts.append(1)
         verts.append(color.x); verts.append(color.y); verts.append(color.z); verts.append(color.w)
-
-        verts.append(x1); verts.append(topY);         verts.append(0); verts.append(1)
+        
+        // 4
+        verts.append(x1); verts.append(topY); verts.append(0); verts.append(1)
         verts.append(color.x); verts.append(color.y); verts.append(color.z); verts.append(color.w)
-
+        
         return verts
     }
 }
