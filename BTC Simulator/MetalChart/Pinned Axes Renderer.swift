@@ -79,6 +79,9 @@ class PinnedAxesRenderer {
         self.textRenderer = textRenderer
         self.textRendererManager = textRendererManager
         self.idleManager = idleManager
+        
+        print("[PinnedAxesRenderer] init with idleManager = \(String(describing: idleManager))")
+        
         buildAxisPipeline(library: library)
     }
     
@@ -122,9 +125,7 @@ class PinnedAxesRenderer {
         maxY: Float,
         chartTransform: matrix_float4x4
     ) {
-        // pinnedAxisX is the horizontal screen coordinate where we pin the y-axis
         let pinnedScreenX = pinnedAxisX
-        // pinnedScreenY is how tall we want the x-axis region. This example uses (height - 40).
         let pinnedScreenY: Float = Float(viewportSize.height) - 40
         
         let axisThickness: Float = 1
@@ -164,11 +165,10 @@ class PinnedAxesRenderer {
         )
         
         // Dynamic calculation for how many ticks we want based on screen space:
-        // We'll aim for ~80 pixels between ticks.
         let screenDomainWidth = dataXtoScreenX(dataX: maxX, transform: chartTransform)
                               - dataXtoScreenX(dataX: minX, transform: chartTransform)
         let approxDesiredCountX = Int((screenDomainWidth / 80.0).rounded())
-        let desiredCountX = max(2, min(50, approxDesiredCountX))  // clamp to something reasonable
+        let desiredCountX = max(2, min(50, approxDesiredCountX))
         
         let screenDomainHeight = dataYtoScreenY(dataY: minY, transform: chartTransform)
                                - dataYtoScreenY(dataY: maxY, transform: chartTransform)
@@ -249,7 +249,7 @@ class PinnedAxesRenderer {
             chartTransform: chartTransform
         )
         
-        // 5) Axis labels (unchanged)
+        // 5) Axis labels
         let (maybeXBuf, xCount) = textRenderer.buildTextVertices(
             string: "Period",
             x: pinnedScreenX + 100,
@@ -284,7 +284,7 @@ class PinnedAxesRenderer {
     // MARK: - Draw
     
     func drawAxes(renderEncoder: MTLRenderCommandEncoder) {
-        idleManager?.resetIdleTimer()
+        // We deliberately do NOT call idleManager?.resetIdleTimer() so it can go idle after 5s.
         
         guard let axisPipeline = axisPipelineState else { return }
         
@@ -341,15 +341,13 @@ class PinnedAxesRenderer {
         if let textPipeline = textRenderer.pipelineState {
             renderEncoder.setRenderPipelineState(textPipeline)
             
-            // Setup orthographic projection (screen space)
-            let width = Float(viewportSize.width)
-            let height = Float(viewportSize.height)
-            var proj = matrix_float4x4(
-                [2/width,  0,        0, 0],
-                [0,       -2/height, 0, 0],
-                [0,        0,        1, 0],
-                [-1,       1,        0, 1]
-            )
+            let col0 = SIMD4<Float>(2.0 / Float(viewportSize.width), 0, 0, 0)
+            let col1 = SIMD4<Float>(0, -2.0 / Float(viewportSize.height), 0, 0)
+            let col2 = SIMD4<Float>(0, 0, 1, 0)
+            let col3 = SIMD4<Float>(-1, 1, 0, 1)
+            
+            var proj = matrix_float4x4(col0, col1, col2, col3)
+            
             guard let pBuf = device.makeBuffer(bytes: &proj,
                                                length: MemoryLayout<matrix_float4x4>.size,
                                                options: .storageModeShared) else {
@@ -385,5 +383,13 @@ class PinnedAxesRenderer {
                 renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: yAxisLabelVertexCount)
             }
         }
+    }
+}
+
+// Optional extension to allow building a matrix from four SIMD4 columns
+extension matrix_float4x4 {
+    init(_ col0: SIMD4<Float>, _ col1: SIMD4<Float>, _ col2: SIMD4<Float>, _ col3: SIMD4<Float>) {
+        self.init()
+        self.columns = (col0, col1, col2, col3)
     }
 }

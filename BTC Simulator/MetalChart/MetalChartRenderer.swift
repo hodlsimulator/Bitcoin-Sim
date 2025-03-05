@@ -74,6 +74,9 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     /// Renderer for pinned axes (declared elsewhere in your project)
     var pinnedAxesRenderer: PinnedAxesRenderer?
     
+    // Add a flag so we can print once in draw(in:).
+    private var hasLoggedOnce = false
+    
     // MARK: - Setup
     
     /// Initializes Metal and sets up the renderer
@@ -423,6 +426,12 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     
     /// Renders the chart each frame
     func draw(in view: MTKView) {
+        // Print one time, not every frame
+        if !hasLoggedOnce {
+            print("[MetalChartRenderer] draw(in:) called for the first time. Not resetting idle timer.")
+            hasLoggedOnce = true
+        }
+        
         guard let pipelineState = pipelineState,
               let drawable = view.currentDrawable,
               let rpd = view.currentRenderPassDescriptor,
