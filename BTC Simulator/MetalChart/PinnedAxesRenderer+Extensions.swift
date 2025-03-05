@@ -222,9 +222,23 @@ extension PinnedAxesRenderer {
         let thickness: Float = 1
         let halfT = thickness * 0.5
         
+        // The pinned X-axis is 40 points from bottom => pinnedScreenY = height - 40
+        let pinnedScreenY = Float(viewportSize.height) - 40
+        
         for logVal in yTicks {
             let sy = dataYtoScreenY(dataY: Float(logVal), transform: chartTransform)
             
+            // Skip if the line is off-screen
+            if sy < 0 || sy > Float(viewportSize.height) {
+                continue
+            }
+            
+            // **Also skip if it's below the pinned X-axis**:
+            if sy > pinnedScreenY {
+                continue
+            }
+            
+            // Build horizontal grid line
             verts.append(contentsOf: makeQuadList(
                 x0: minX,
                 y0: sy - halfT,
