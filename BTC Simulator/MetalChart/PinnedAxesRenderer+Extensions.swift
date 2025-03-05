@@ -38,14 +38,14 @@ extension PinnedAxesRenderer {
                 continue
             }
             
-            // Build short tick line in grey
+            // Build short tick line in grey (move it downward from the axis)
             let y0 = pinnedScreenY
-            let y1 = pinnedScreenY - tickLen
+            let y1 = pinnedScreenY + tickLen
             verts.append(contentsOf: makeQuadList(
                 x0: sx - halfT,
-                y0: y1,
+                y0: y0,
                 x1: sx + halfT,
-                y1: y0,
+                y1: y1,
                 color: tickColor  // <-- Remains grey
             ))
             
@@ -64,8 +64,8 @@ extension PinnedAxesRenderer {
             // White text for label
             let textColor = SIMD4<Float>(1,1,1,1)
             
-            // Place the text just above the axis
-            let textY = pinnedScreenY - tickLen - 10
+            // Place text below the axis
+            let textY = pinnedScreenY + tickLen + 20
             let (tBuf, vCount) = textRenderer.buildTextVertices(
                 string: label,
                 x: sx,
@@ -368,3 +368,4 @@ extension PinnedAxesRenderer {
         return verts
     }
 }
+    
