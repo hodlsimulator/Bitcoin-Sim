@@ -217,12 +217,6 @@ extension PinnedAxesRenderer {
         
         for logVal in yTicks {
             let sy = dataYtoScreenY(dataY: Float(logVal), transform: chartTransform)
-            print("[DEBUG] logVal:", logVal, "=> sy:", sy)
-            
-            if sy < 0 || sy > Float(viewportSize.height) {
-                print("Skipping grid line, sy out of [0..height]")
-                continue
-            }
             
             verts.append(contentsOf: makeQuadList(
                 x0: minX,

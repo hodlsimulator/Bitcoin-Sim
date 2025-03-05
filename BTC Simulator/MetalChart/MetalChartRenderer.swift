@@ -389,9 +389,9 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         // --------------------------------------------------
         
         // Choose how many screen pixels to spare from the top:
-        let topScreenMargin: Float = 200
+        let topScreenMargin: Float = 30
         // ...and from the bottom:
-        let bottomScreenMargin: Float = 120
+        let bottomScreenMargin: Float = 20
         
         // domainPerPixel => how many domain units per 1 screen pixel
         let totalScreenHeight = Float(viewportSize.height)
@@ -481,9 +481,25 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             return
         }
 
+        // Create the render command encoder
         let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: rpd)
         
-        // Render the lines
+        // Calculate pixel values for scissor rectangle
+        let scale = view.contentScaleFactor
+        let pinnedLeftPixels = Int(pinnedLeft * scale) // Convert pinnedLeft from points to pixels
+        let viewWidthPixels = Int(view.drawableSize.width) // Drawable width in pixels
+        let viewHeightPixels = Int(view.drawableSize.height) // Drawable height in pixels
+        
+        // **Set scissor rectangle for chart lines**
+        // Only render to the right of the y-axis (from pinnedLeft to the right edge)
+        encoder?.setScissorRect(MTLScissorRect(
+            x: pinnedLeftPixels,
+            y: 0,
+            width: viewWidthPixels - pinnedLeftPixels,
+            height: viewHeightPixels
+        ))
+        
+        // Render the chart lines
         encoder?.setRenderPipelineState(pipelineState)
         encoder?.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
         encoder?.setVertexBuffer(uniformBuffer, offset: 0, index: 1)
@@ -496,7 +512,16 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             startIndex += count
         }
         
-        // Render pinned axes (if available)
+        // **Set scissor rectangle for axes**
+        // Reset to the entire view to ensure axes and labels are fully visible
+        encoder?.setScissorRect(MTLScissorRect(
+            x: 0,
+            y: 0,
+            width: viewWidthPixels,
+            height: viewHeightPixels
+        ))
+        
+        // Render pinned axes
         if let pinnedAxes = pinnedAxesRenderer {
             if let axisPipeline = pinnedAxes.axisPipelineState {
                 encoder?.setRenderPipelineState(axisPipeline)
@@ -504,18 +529,18 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             
             pinnedAxes.viewportSize = view.bounds.size
             
-            // Pass the 'effective' domain if you want the axes
-            // to know about your extra top/bottom margin:
+            // Pass the effective domain with margins to the axes renderer
             pinnedAxes.updateAxes(
                 minX: domainMinX,
                 maxX: domainMaxX,
                 minY: effectiveDomainMinY,
-                maxY: effectiveDomainMaxY,  // the domain w/ margins
+                maxY: effectiveDomainMaxY,
                 chartTransform: projectionMatrix
             )
             pinnedAxes.drawAxes(renderEncoder: encoder!)
         }
 
+        // Finish encoding and present the drawable
         encoder?.endEncoding()
         commandBuffer.present(drawable)
         commandBuffer.commit()
