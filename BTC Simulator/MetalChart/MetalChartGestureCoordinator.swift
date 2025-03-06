@@ -16,17 +16,10 @@ class MetalChartGestureCoordinator: NSObject {
 
     private let idleManager: IdleManager
 
-    // If you want direct references to the pan and pinch recognizers, store them here
-    // (helpful for e.g. resetting translations). Otherwise, you can manage them externally.
-    // public var singleFingerPanRecognizer: UIPanGestureRecognizer?
-    // public var twoFingerPinchRecognizer: UIPinchGestureRecognizer?
-
     // MARK: - Single-Finger Pan / Inertia
     private var baseOffsetX: Float = 0
     private var baseOffsetY: Float = 0
-    // Store finger’s domain coords at the start of the pan
-    private var panStartDomainX: Float = 0
-    private var panStartDomainY: Float = 0
+    private var panStartScreenPt: CGPoint = .zero
 
     private var decelerationDisplayLink: CADisplayLink?
     private var decelerationVelocityX: Float = 0
@@ -36,20 +29,15 @@ class MetalChartGestureCoordinator: NSObject {
     private weak var chartViewForDeceleration: MetalChartUIView?
 
     // MARK: - Two-Finger Pinch+Pan
-    /// Stores the scale at pinch start
     private var pinchBaseScale: Float = 1.0
-    /// Domain coords of the initial pinch midpoint
     private var pinchBaseMidDomainX: Float = 0
     private var pinchBaseMidDomainY: Float = 0
-    /// Lower => slower (more precise) zoom
     private let pinchSensitivity: Float = 0.5
 
     // Smooth transition for quick repeated pinches
-    /// Track the last pinch midpoint to gently transition
     private var lastPinchMidX: Float = 0
     private var lastPinchMidY: Float = 0
     private var lastPinchTime: TimeInterval = 0
-    /// If a new pinch occurs quickly (e.g., within 0.2s), smoothly blend anchors
     private let pinchReentryThreshold: TimeInterval = 0.2
 
     // MARK: - Zoom Deceleration
@@ -90,8 +78,6 @@ class MetalChartGestureCoordinator: NSObject {
     private var finalPinchMidScreenY: Float = 0
     private var finalPinchDomainX: Float = 0
     private var finalPinchDomainY: Float = 0
-    
-    private var panStartScreenPt: CGPoint = .zero
 
     init(idleManager: IdleManager) {
         self.idleManager = idleManager
@@ -109,17 +95,11 @@ extension MetalChartGestureCoordinator: UIGestureRecognizerDelegate {
         recognizer.delegate = self
     }
 
-    /// Decide which gestures can run simultaneously.
-    /// Return true to let pinch + pan both be recognized, but we'll selectively ignore
-    /// events if the touch count isn't right for each gesture.
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
                            shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-
-        // NEW / UPDATED: If a new gesture begins while deceleration is active, stop it.
         if isDecelerating || isZoomDecelerating {
             stopAllAnimations()
         }
-        
         return true
     }
 }
@@ -128,7 +108,6 @@ extension MetalChartGestureCoordinator: UIGestureRecognizerDelegate {
 extension MetalChartGestureCoordinator {
 
     // MARK: Single-Finger Pan (domain-based)
-    /// In handleSingleFingerPan, store velocities and no clamp calls there
     @objc func handleSingleFingerPan(_ recognizer: UIPanGestureRecognizer) {
         guard let chartView = recognizer.view as? MetalChartUIView, recognizer.numberOfTouches == 1 else { return }
         let renderer = chartView.renderer
@@ -154,6 +133,7 @@ extension MetalChartGestureCoordinator {
 
             renderer.offsetX = baseOffsetX - (dxPx * domainPerPxX)
             renderer.offsetY = baseOffsetY + (dyPx * domainPerPxY)
+            clampOffsets(renderer: renderer, view: chartView)
             renderer.updateOrthographic()
 
         case .ended, .cancelled:
@@ -194,10 +174,9 @@ extension MetalChartGestureCoordinator {
 
         case .ended, .cancelled:
             applyPinchZoom(recognizer, chartView: chartView)
-            // Optionally reset pan translation for seamless transition (see Seamless Transitions)
             let velocity = Float(recognizer.velocity)
             if abs(velocity) > 0.1 {
-                let finalMidScreen = midpointOfTouches(recognizer, in: chartView)
+                let finalMidScreen = recognizer.location(in: chartView)
                 finalPinchMidScreenX = Float(finalMidScreen.x)
                 finalPinchMidScreenY = Float(finalMidScreen.y)
                 let finalDomain = renderer.screenToDomain(finalMidScreen, viewSize: chartView.bounds.size)
@@ -216,8 +195,8 @@ extension MetalChartGestureCoordinator {
 
     private func applyPinchZoom(_ recognizer: UIPinchGestureRecognizer, chartView: MetalChartUIView) {
         let renderer = chartView.renderer
-        let finalFactor = 1.0 + (Float(recognizer.scale) - 1.0) * pinchSensitivity
-        let newScale = clamp(pinchBaseScale * finalFactor, minScale, maxScale)
+        let scaleFactor = Float(recognizer.scale)
+        let newScale = clamp(pinchBaseScale * scaleFactor, minScale, maxScale)
         renderer.chartScale = newScale
 
         let midScreen = midpointOfTouches(recognizer, in: chartView)
@@ -243,7 +222,6 @@ extension MetalChartGestureCoordinator {
         idleManager.resetIdleTimer()
 
         if recognizer.state == .ended {
-            // Stop only zoom deceleration and zoom animation so double-tap can override them.
             if isZoomDecelerating {
                 stopZoomDeceleration()
             }
@@ -276,7 +254,6 @@ extension MetalChartGestureCoordinator {
 
         switch recognizer.state {
         case .began:
-            // Stop only zoom deceleration and zoom animation; keep pan deceleration alive.
             if isZoomDecelerating {
                 stopZoomDeceleration()
             }
@@ -306,7 +283,6 @@ extension MetalChartGestureCoordinator {
     @objc func handleTwoFingerPanToZoom(_ recognizer: UIPanGestureRecognizer) {
         guard let chartView = recognizer.view as? MetalChartUIView else { return }
 
-        // If the user has fewer/more than 2 touches, ignore (this is specifically for 2-finger trackpad-like zoom).
         if recognizer.numberOfTouches != 2 {
             return
         }
@@ -316,7 +292,6 @@ extension MetalChartGestureCoordinator {
 
         switch recognizer.state {
         case .began:
-            // Stop only zoom deceleration and zoom animation; keep pan deceleration alive.
             if isZoomDecelerating {
                 stopZoomDeceleration()
             }
@@ -410,7 +385,6 @@ extension MetalChartGestureCoordinator {
         decelerationDisplayLink = nil
     }
 
-    // Now the deceleration tick, which clamps + kills velocity if out of range
     @objc private func handleDecelerationTick() {
         guard let chartView = chartViewForDeceleration else { stopDeceleration(); return }
         let renderer = chartView.renderer
@@ -531,8 +505,7 @@ extension MetalChartGestureCoordinator {
         let elapsed = now - zoomAnimationStartTime
         let progress = CGFloat(min(1.0, elapsed / zoomAnimationDuration))
 
-        let currentScale = initialScaleForZoomAnimation
-            + Float(progress) * (targetScaleForZoomAnimation - initialScaleForZoomAnimation)
+        let currentScale = initialScaleForZoomAnimation + Float(progress) * (targetScaleForZoomAnimation - initialScaleForZoomAnimation)
 
         let oldScale = renderer.chartScale
         renderer.chartScale = currentScale
