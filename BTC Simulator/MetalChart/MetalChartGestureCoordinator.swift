@@ -16,6 +16,11 @@ class MetalChartGestureCoordinator: NSObject {
 
     private let idleManager: IdleManager
 
+    // If you want direct references to the pan and pinch recognizers, store them here
+    // (helpful for e.g. resetting translations). Otherwise, you can manage them externally.
+    // public var singleFingerPanRecognizer: UIPanGestureRecognizer?
+    // public var twoFingerPinchRecognizer: UIPinchGestureRecognizer?
+
     // MARK: - Single-Finger Pan / Inertia
     private var baseOffsetX: Float = 0
     private var baseOffsetY: Float = 0
@@ -104,10 +109,17 @@ extension MetalChartGestureCoordinator: UIGestureRecognizerDelegate {
         recognizer.delegate = self
     }
 
-    /// Decide which gestures can run simultaneously. If you want to avoid
-    /// conflicts, you can fine-tune logic here.
+    /// Decide which gestures can run simultaneously.
+    /// Return true to let pinch + pan both be recognized, but we'll selectively ignore
+    /// events if the touch count isn't right for each gesture.
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
                            shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+
+        // NEW / UPDATED: If a new gesture begins while deceleration is active, stop it.
+        if isDecelerating || isZoomDecelerating {
+            stopAllAnimations()
+        }
+        
         return true
     }
 }
@@ -118,15 +130,12 @@ extension MetalChartGestureCoordinator {
     // MARK: Single-Finger Pan (domain-based)
     /// In handleSingleFingerPan, store velocities and no clamp calls there
     @objc func handleSingleFingerPan(_ recognizer: UIPanGestureRecognizer) {
-        guard let chartView = recognizer.view as? MetalChartUIView else { return }
+        guard let chartView = recognizer.view as? MetalChartUIView, recognizer.numberOfTouches == 1 else { return }
         let renderer = chartView.renderer
 
         switch recognizer.state {
         case .began:
-            // Stop all ongoing animations to prevent interference
             stopAllAnimations()
-            
-            // Save offsets + initial finger position
             baseOffsetX = renderer.offsetX
             baseOffsetY = renderer.offsetY
             panStartScreenPt = recognizer.location(in: chartView)
@@ -136,18 +145,15 @@ extension MetalChartGestureCoordinator {
             let dxPx = Float(currentPt.x - panStartScreenPt.x)
             let dyPx = Float(currentPt.y - panStartScreenPt.y)
 
-            // Convert pixel dx/dy to domain offsets
             let domainW = renderer.domainMaxX - renderer.domainMinX
             let visW = domainW / renderer.chartScale
             let domainPerPxX = visW / Float(chartView.bounds.width)
-
             let domainH = renderer.domainMaxY - renderer.domainMinY
             let visH = domainH / renderer.chartScale
             let domainPerPxY = visH / Float(chartView.bounds.height)
 
             renderer.offsetX = baseOffsetX - (dxPx * domainPerPxX)
             renderer.offsetY = baseOffsetY + (dyPx * domainPerPxY)
-
             renderer.updateOrthographic()
 
         case .ended, .cancelled:
@@ -155,64 +161,52 @@ extension MetalChartGestureCoordinator {
             let domainW = renderer.domainMaxX - renderer.domainMinX
             let visW = domainW / renderer.chartScale
             let domainPerPxX = visW / Float(chartView.bounds.width)
-
             let domainH = renderer.domainMaxY - renderer.domainMinY
             let visH = domainH / renderer.chartScale
             let domainPerPxY = visH / Float(chartView.bounds.height)
 
             decelerationVelocityX = -Float(velocityPoints.x) * domainPerPxX
             decelerationVelocityY = Float(velocityPoints.y) * domainPerPxY
-
-            startDeceleration()
+            startDeceleration(for: chartView)
 
         default:
             break
         }
     }
 
-    // MARK: Two-Finger Pinch+Pan (Apple Maps style)
+    // MARK: Two-Finger Pinch+Pan
     @objc func handlePinch(_ recognizer: UIPinchGestureRecognizer) {
-        guard let chartView = recognizer.view as? MetalChartUIView else { return }
+        guard let chartView = recognizer.view as? MetalChartUIView, recognizer.numberOfTouches >= 2 else { return }
         let renderer = chartView.renderer
-        idleManager.resetIdleTimer()
 
         switch recognizer.state {
         case .began:
-            // Stop all ongoing animations for a clean start
             stopAllAnimations()
-            
-            let currentTime = CACurrentMediaTime()
-            let timeDiff = currentTime - lastPinchTime
-            let blendFactor = min(1.0, timeDiff / pinchReentryThreshold)
-            let blendAlpha = Float(blendFactor)
-
             let midScreen = midpointOfTouches(recognizer, in: chartView)
             let dom = renderer.screenToDomain(midScreen, viewSize: chartView.bounds.size)
-
-            pinchBaseMidDomainX = (Float(dom.x) * blendAlpha) + (lastPinchMidX * (1.0 - blendAlpha))
-            pinchBaseMidDomainY = (Float(dom.y) * blendAlpha) + (lastPinchMidY * (1.0 - blendAlpha))
-
+            pinchBaseMidDomainX = Float(dom.x)
+            pinchBaseMidDomainY = Float(dom.y)
             pinchBaseScale = renderer.chartScale
-            recognizer.scale = 1.0
+            recognizer.scale = 1.0 // Reset scale for incremental updates
 
         case .changed:
             applyPinchZoom(recognizer, chartView: chartView)
 
         case .ended, .cancelled:
             applyPinchZoom(recognizer, chartView: chartView)
-
-            let finalMidScreen = midpointOfTouches(recognizer, in: chartView)
-            finalPinchMidScreenX = Float(finalMidScreen.x)
-            finalPinchMidScreenY = Float(finalMidScreen.y)
-            finalPinchDomainX = pinchBaseMidDomainX
-            finalPinchDomainY = pinchBaseMidDomainY
-
+            // Optionally reset pan translation for seamless transition (see Seamless Transitions)
             let velocity = Float(recognizer.velocity)
             if abs(velocity) > 0.1 {
+                let finalMidScreen = midpointOfTouches(recognizer, in: chartView)
+                finalPinchMidScreenX = Float(finalMidScreen.x)
+                finalPinchMidScreenY = Float(finalMidScreen.y)
+                let finalDomain = renderer.screenToDomain(finalMidScreen, viewSize: chartView.bounds.size)
+                finalPinchDomainX = Float(finalDomain.x)
+                finalPinchDomainY = Float(finalDomain.y)
                 startZoomDeceleration(withVelocity: velocity, chartView: chartView)
             }
-            lastPinchMidX = pinchBaseMidDomainX
-            lastPinchMidY = pinchBaseMidDomainY
+            lastPinchMidX = finalPinchDomainX
+            lastPinchMidY = finalPinchDomainY
             lastPinchTime = CACurrentMediaTime()
 
         default:
@@ -222,24 +216,19 @@ extension MetalChartGestureCoordinator {
 
     private func applyPinchZoom(_ recognizer: UIPinchGestureRecognizer, chartView: MetalChartUIView) {
         let renderer = chartView.renderer
-        let rawPinch = Float(recognizer.scale) - 1.0
-        let scaledPinch = rawPinch * pinchSensitivity
-        let finalFactor = 1.0 + scaledPinch
-
-        let proposedScale = pinchBaseScale * finalFactor
-        let newScale = clamp(proposedScale, minScale, maxScale)
+        let finalFactor = 1.0 + (Float(recognizer.scale) - 1.0) * pinchSensitivity
+        let newScale = clamp(pinchBaseScale * finalFactor, minScale, maxScale)
         renderer.chartScale = newScale
 
         let midScreen = midpointOfTouches(recognizer, in: chartView)
         let fullW = renderer.domainMaxX - renderer.domainMinX
-        let fullH = renderer.domainMaxY - renderer.domainMinY
         let visW_new = fullW / newScale
-        let visH_new = fullH / newScale
-
         let fracX = Float(midScreen.x) / Float(chartView.bounds.width)
-        let fracY = Float(midScreen.y) / Float(chartView.bounds.height)
-
         renderer.offsetX = pinchBaseMidDomainX - fracX * visW_new
+
+        let fullH = renderer.domainMaxY - renderer.domainMinY
+        let visH_new = fullH / newScale
+        let fracY = Float(midScreen.y) / Float(chartView.bounds.height)
         renderer.offsetY = pinchBaseMidDomainY - fracY * visH_new
 
         clampOffsets(renderer: renderer, view: chartView)
@@ -316,10 +305,13 @@ extension MetalChartGestureCoordinator {
     // MARK: Two-Finger Pan (Trackpad Zoom)
     @objc func handleTwoFingerPanToZoom(_ recognizer: UIPanGestureRecognizer) {
         guard let chartView = recognizer.view as? MetalChartUIView else { return }
+
+        // If the user has fewer/more than 2 touches, ignore (this is specifically for 2-finger trackpad-like zoom).
+        if recognizer.numberOfTouches != 2 {
+            return
+        }
+
         let renderer = chartView.renderer
-
-        guard recognizer.numberOfTouches == 2 else { return }
-
         idleManager.resetIdleTimer()
 
         switch recognizer.state {
@@ -387,31 +379,11 @@ extension MetalChartGestureCoordinator {
     private func clampOffsets(renderer: MetalChartRenderer, view: UIView) {
         let fullW = renderer.domainMaxX - renderer.domainMinX
         let visW = fullW / renderer.chartScale
-
-        let oldOffsetX = renderer.offsetX
-        if renderer.offsetX < 0 {
-            renderer.offsetX = 0
-        }
-        let maxOffX = renderer.domainMaxX - visW
-        if maxOffX > 0, renderer.offsetX > maxOffX {
-            renderer.offsetX = maxOffX
-        }
+        renderer.offsetX = clamp(renderer.offsetX, 0, max(0, renderer.domainMaxX - visW))
 
         let fullH = renderer.domainMaxY - renderer.domainMinY
         let visH = fullH / renderer.chartScale
-
-        let oldOffsetY = renderer.offsetY
-        if renderer.offsetY < 0 {
-            renderer.offsetY = 0
-        }
-        let maxOffY = renderer.domainMaxY - visH
-        if maxOffY > 0, renderer.offsetY > maxOffY {
-            renderer.offsetY = maxOffY
-        }
-
-        // DEBUG: show if offsets got clamped
-        if oldOffsetX != renderer.offsetX || oldOffsetY != renderer.offsetY {
-        }
+        renderer.offsetY = clamp(renderer.offsetY, 0, max(0, renderer.domainMaxY - visH))
     }
 
     private func stopAllAnimations() {
@@ -424,10 +396,10 @@ extension MetalChartGestureCoordinator {
 // MARK: - Inertia Deceleration
 extension MetalChartGestureCoordinator {
 
-    private func startDeceleration() {
+    private func startDeceleration(for chartView: MetalChartUIView) {
         guard !isDecelerating else { return }
         isDecelerating = true
-
+        chartViewForDeceleration = chartView
         decelerationDisplayLink = CADisplayLink(target: self, selector: #selector(handleDecelerationTick))
         decelerationDisplayLink?.add(to: .current, forMode: .common)
     }
@@ -440,78 +412,31 @@ extension MetalChartGestureCoordinator {
 
     // Now the deceleration tick, which clamps + kills velocity if out of range
     @objc private func handleDecelerationTick() {
-        guard let chartView = chartViewForDeceleration else {
-            stopDeceleration()
-            return
-        }
+        guard let chartView = chartViewForDeceleration else { stopDeceleration(); return }
         let renderer = chartView.renderer
-        
-        // 1) figure out next offsets
+
         let wantedX = renderer.offsetX + decelerationVelocityX
         let wantedY = renderer.offsetY + decelerationVelocityY
-        
-        // 2) decay velocity
         decelerationVelocityX *= decelerationRate
         decelerationVelocityY *= decelerationRate
-        
-        // 3) compute min/max offset
-        let domainW = renderer.domainMaxX - renderer.domainMinX
-        let visW = domainW / renderer.chartScale
+
+        let visW = (renderer.domainMaxX - renderer.domainMinX) / renderer.chartScale
         let minX: Float = 0
         let maxX = max(0, renderer.domainMaxX - visW)
-
-        let domainH = renderer.domainMaxY - renderer.domainMinY
-        let visH = domainH / renderer.chartScale
+        let visH = (renderer.domainMaxY - renderer.domainMinY) / renderer.chartScale
         let minY: Float = 0
         let maxY = max(0, renderer.domainMaxY - visH)
 
-        // 4) clamp + kill velocity if we clamp
-        if wantedX < minX {
-            renderer.offsetX = minX
-            decelerationVelocityX = 0
-        } else if wantedX > maxX {
-            renderer.offsetX = maxX
-            decelerationVelocityX = 0
-        } else {
-            renderer.offsetX = wantedX
-        }
+        var clamped = false
+        renderer.offsetX = clamp(wantedX, minX, maxX)
+        if renderer.offsetX != wantedX { decelerationVelocityX = 0; clamped = true }
+        renderer.offsetY = clamp(wantedY, minY, maxY)
+        if renderer.offsetY != wantedY { decelerationVelocityY = 0; clamped = true }
 
-        if wantedY < minY {
-            renderer.offsetY = minY
-            decelerationVelocityY = 0
-        } else if wantedY > maxY {
-            renderer.offsetY = maxY
-            decelerationVelocityY = 0
-        } else {
-            renderer.offsetY = wantedY
-        }
-
-        // 5) apply
         renderer.updateOrthographic()
-        
-        // 6) stop if velocity is very small
-        let speed = sqrt(decelerationVelocityX * decelerationVelocityX +
-                         decelerationVelocityY * decelerationVelocityY)
-        if speed < 0.001 {
-            stopDeceleration()
-        }
-    }
 
-    private func clampToDomainX(_ x: Float, renderer: MetalChartRenderer, view: UIView) -> Float {
-        // For example, you can do something like this:
-        let domainWidth = renderer.domainMaxX - renderer.domainMinX
-        let visibleWidth = domainWidth / renderer.chartScale
-        let minX: Float = 0
-        let maxX = max(0, renderer.domainMaxX - visibleWidth)
-        return max(minX, min(maxX, x))
-    }
-
-    private func clampToDomainY(_ y: Float, renderer: MetalChartRenderer, view: UIView) -> Float {
-        let domainHeight = renderer.domainMaxY - renderer.domainMinY
-        let visibleHeight = domainHeight / renderer.chartScale
-        let minY: Float = 0
-        let maxY = max(0, renderer.domainMaxY - visibleHeight)
-        return max(minY, min(maxY, y))
+        let speed = sqrt(decelerationVelocityX * decelerationVelocityX + decelerationVelocityY * decelerationVelocityY)
+        if speed < 0.001 || clamped { stopDeceleration() }
     }
 }
 
