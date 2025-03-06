@@ -136,6 +136,7 @@
 		E1E31C4D2D433DB800ED22E6 /* BlockBootstrapSimulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1E31C4C2D433DB600ED22E6 /* BlockBootstrapSimulator.swift */; };
 		E1E31C4F2D4349E000ED22E6 /* DataLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1E31C4E2D4349DE00ED22E6 /* DataLoader.swift */; };
 		E1E31C512D438DD900ED22E6 /* GarchCalibrator.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1E31C502D438DD700ED22E6 /* GarchCalibrator.swift */; };
+		E1E740862D7956D1004749CD /* ThickLineShaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = E1E740852D7956D1004749CD /* ThickLineShaders.metal */; };
 		E1F1CB602D4EF179003DB24F /* CalibrationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F1CB5F2D4EF177003DB24F /* CalibrationManager.swift */; };
 		E1F1CB622D4F081D003DB24F /* HalvingHistoricalManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F1CB612D4F081B003DB24F /* HalvingHistoricalManager.swift */; };
 		E1F1CB642D4F2F0E003DB24F /* HistoricalDataCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F1CB632D4F2F0C003DB24F /* HistoricalDataCache.swift */; };
@@ -288,6 +289,7 @@
 		E1E31C4C2D433DB600ED22E6 /* BlockBootstrapSimulator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockBootstrapSimulator.swift; sourceTree = "<group>"; };
 		E1E31C4E2D4349DE00ED22E6 /* DataLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataLoader.swift; sourceTree = "<group>"; };
 		E1E31C502D438DD700ED22E6 /* GarchCalibrator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GarchCalibrator.swift; sourceTree = "<group>"; };
+		E1E740852D7956D1004749CD /* ThickLineShaders.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = ThickLineShaders.metal; sourceTree = "<group>"; };
 		E1F1CB5F2D4EF177003DB24F /* CalibrationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalibrationManager.swift; sourceTree = "<group>"; };
 		E1F1CB612D4F081B003DB24F /* HalvingHistoricalManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HalvingHistoricalManager.swift; sourceTree = "<group>"; };
 		E1F1CB632D4F2F0C003DB24F /* HistoricalDataCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoricalDataCache.swift; sourceTree = "<group>"; };
@@ -462,6 +464,7 @@
 				E13093522D709BB000DA6418 /* SDFGenerator.metal */,
 				E13093622D71799200DA6418 /* TextRendererManager.swift */,
 				E13093582D709C1300DA6418 /* TextSDFShaders.metal */,
+				E1E740852D7956D1004749CD /* ThickLineShaders.metal */,
 				E130934E2D709B5E00DA6418 /* TTFParser.swift */,
 			);
 			path = MetalChart;
@@ -656,6 +659,7 @@
 				E17B2F802D2800D400ECE087 /* OrientationObserver.swift in Sources */,
 				E130935B2D709E6400DA6418 /* Pinned Axes Renderer.swift in Sources */,
 				E13093532D709BB000DA6418 /* SDFGenerator.metal in Sources */,
+				E1E740862D7956D1004749CD /* ThickLineShaders.metal in Sources */,
 				E19D113C2D42F81C00E3A55E /* UtilityExtensions.swift in Sources */,
 				E12687492D7650E100CCB818 /* PinnedAxesRenderer+Extensions.swift in Sources */,
 				E13093632D71799400DA6418 /* TextRendererManager.swift in Sources */,
