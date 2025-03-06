@@ -76,6 +76,9 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     /// Renderer for pinned axes (declared elsewhere in your project)
     var pinnedAxesRenderer: PinnedAxesRenderer?
     
+    var bestFitVertexBuffer: MTLBuffer?
+    var bestFitTriangleCount: Int = 0
+    
     // Add a flag so we can print once in draw(in:).
     private var hasLoggedOnce = false
     
@@ -184,24 +187,27 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             print("No chartDataCache or simSettings => skipping.")
             return
         }
-
-        // Gather data
-        var allXVals: [Double] = []
-        var allYVals: [Double] = []
+        
+        var thinLineVertices: [Float] = []    // for normal runs
+        var thinLineSizes: [Int] = []
+        
+        var thickLineVertices: [Float] = []   // for best fit run
+        // var thickLineSizes: [Int] = []        // number of *triangle* vertices
 
         let simulations = cache.allRuns ?? []
+        let bestFitId = cache.bestFitRun?.first?.id
+        
+        // 1) Gather all X and Y to find domain
+        var allXVals: [Double] = []
+        var allYVals: [Double] = []
         for run in simulations {
             for pt in run.points {
                 let xVal = convertPeriodToYears(pt.week, simSettings)
                 allXVals.append(xVal)
-
-                // clamp Y>0
                 let rawY = max(1e-9, NSDecimalNumber(decimal: pt.value).doubleValue)
                 allYVals.append(rawY)
             }
         }
-
-        // Safety checks
         guard let minX = allXVals.min(),
               let maxX = allXVals.max(),
               let rawMinY = allYVals.min(),
@@ -209,78 +215,157 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             print("No data => skipping line build.")
             return
         }
-
-        // X domain
+        
+        // 2) Set domain and log scale
         domainMinX = Float(max(0.0, minX))
         domainMaxX = Float(maxX)
-
-        // Expand top by 10% so we get a little space above
         let extendedTop = rawMaxY * 1.2
-
-        // Generate “nice” ticks from rawMinY..(extendedTop)
         let candidateTicks = generateNiceTicks(
             minVal: rawMinY,
             maxVal: extendedTop,
             desiredCount: 15
         )
-
-        // If empty, bail
         guard !candidateTicks.isEmpty else {
             print("generateNiceTicks gave nothing.")
             return
         }
-
-        // The last tick is a nice round number above rawMaxY
         let finalTick = candidateTicks.last!
-        // domain in log space: log10(minY)..log10(finalTick)
         domainMinY = Float(log10(rawMinY))
         domainMaxY = Float(log10(finalTick))
-
-        // Build the big vertex array
-        var vertexData: [Float] = []
-        var lineCounts: [Int] = []
-
-        let simulationsArray = simulations
-        let bestFitId = cache.bestFitRun?.first?.id
-        for (runIndex, sim) in simulationsArray.enumerated() {
+        
+        // 3) Build geometry
+        for (runIndex, sim) in simulations.enumerated() {
             let isBestFit = (sim.id == bestFitId)
             let chosenColor: Color = isBestFit ? .orange :
                 customPalette[runIndex % customPalette.count]
             let chosenOpacity: Float = isBestFit ? 1.0 : 0.2
-
+            
             let (r, g, b, a) = colorToFloats(chosenColor, opacity: Double(chosenOpacity))
             
-            var vertexCount = 0
-            for pt in sim.points {
+            // Convert points into [SIMD2<Float>], log-scale y
+            let simPoints: [SIMD2<Float>] = sim.points.map { pt in
                 let rawX = Float(convertPeriodToYears(pt.week, simSettings))
                 let rawY = max(1e-9, NSDecimalNumber(decimal: pt.value).doubleValue)
                 let logY = Float(log10(rawY))
-
-                // position in domain space (x, log10(y))
-                vertexData.append(rawX)
-                vertexData.append(logY)
-                vertexData.append(0)
-                vertexData.append(1)
-
-                // colour
-                vertexData.append(r)
-                vertexData.append(g)
-                vertexData.append(b)
-                vertexData.append(a)
-
-                vertexCount += 1
+                return SIMD2<Float>(rawX, logY)
             }
-            lineCounts.append(vertexCount)
+            
+            if !isBestFit {
+                // ------------------------------
+                // Normal lines -> lineStrip
+                // ------------------------------
+                let startThinCount = thinLineVertices.count
+                for v in simPoints {
+                    // position
+                    thinLineVertices.append(v.x)
+                    thinLineVertices.append(v.y)
+                    thinLineVertices.append(0)
+                    thinLineVertices.append(1)
+                    
+                    // colour
+                    thinLineVertices.append(r)
+                    thinLineVertices.append(g)
+                    thinLineVertices.append(b)
+                    thinLineVertices.append(a)
+                }
+                let addedCount = (thinLineVertices.count - startThinCount) / 8
+                thinLineSizes.append(addedCount)
+                
+            } else {
+                // ------------------------------
+                // Best fit line -> thick polygons
+                // ------------------------------
+                
+                // We'll store pairs (p1,p2), (p2,p3) etc.
+                // For each segment, generate 4 vertices => two triangles forming a rectangle.
+                let thicknessInPixels: Float = 2.0 // tweak as you like
+                
+                // We’ll accumulate the polygons in thickLineVertices
+                for i in 0..<(simPoints.count - 1) {
+                    let p1 = simPoints[i]
+                    let p2 = simPoints[i+1]
+                    
+                    // Convert these domain coords to screen coords so we can extrude outwards
+                    // We reuse "domainToScreen(...)" which you'll add below
+                    let s1 = domainToScreen(domainPoint: p1)
+                    let s2 = domainToScreen(domainPoint: p2)
+                    
+                    // direction of the line in screen space
+                    let dx = s2.x - s1.x
+                    let dy = s2.y - s1.y
+                    
+                    // normal in screen space (perpendicular)
+                    let length = sqrtf(dx*dx + dy*dy + 1e-9)
+                    var nx = -dy / length
+                    var ny =  dx / length
+                    
+                    // half the thickness => offset by half on each side
+                    nx *= (thicknessInPixels * 0.5)
+                    ny *= (thicknessInPixels * 0.5)
+                    
+                    // build 2 corners around p1
+                    let leftP1  = SIMD2<Float>(s1.x + nx, s1.y + ny)
+                    let rightP1 = SIMD2<Float>(s1.x - nx, s1.y - ny)
+                    
+                    // build 2 corners around p2
+                    let leftP2  = SIMD2<Float>(s2.x + nx, s2.y + ny)
+                    let rightP2 = SIMD2<Float>(s2.x - nx, s2.y - ny)
+                    
+                    // Now transform them back to domain space so they work
+                    // with the same orthographic pipeline
+                    let dLeftP1  = screenToDomainPoint(screenPoint: leftP1)
+                    let dRightP1 = screenToDomainPoint(screenPoint: rightP1)
+                    let dLeftP2  = screenToDomainPoint(screenPoint: leftP2)
+                    let dRightP2 = screenToDomainPoint(screenPoint: rightP2)
+                    
+                    // We add these 2 triangles (dLeftP1, dLeftP2, dRightP1) and (dRightP1, dLeftP2, dRightP2)
+                    // But simpler is to add them as a quad in “triangle strip” order:
+                    let quadPoints = [
+                        dLeftP1,   // 0
+                        dLeftP2,   // 1
+                        dRightP1,  // 2
+                        dRightP2   // 3
+                    ]
+                    
+                    // Each point => 8 floats (pos + colour)
+                    // Triangle strip with 4 corners => we’ll just keep appending
+                    for qp in quadPoints {
+                        thickLineVertices.append(qp.x)
+                        thickLineVertices.append(qp.y)
+                        thickLineVertices.append(0)
+                        thickLineVertices.append(1)
+                        
+                        thickLineVertices.append(r)
+                        thickLineVertices.append(g)
+                        thickLineVertices.append(b)
+                        thickLineVertices.append(a)
+                    }
+                }
+            }
         }
 
-        lineSizes = lineCounts
-        let byteCount = vertexData.count * MemoryLayout<Float>.size
-        vertexBuffer = device.makeBuffer(
-            bytes: vertexData,
-            length: byteCount,
-            options: .storageModeShared
-        )
-        print("Created line buffer with \(vertexData.count) floats. domainMaxY=\(domainMaxY)")
+        // Make GPU buffers
+        let device = self.device!
+        
+        // 4) Thin lines buffer
+        let thinByteCount = thinLineVertices.count * MemoryLayout<Float>.size
+        let thinBuffer = device.makeBuffer(bytes: thinLineVertices,
+                                           length: thinByteCount,
+                                           options: .storageModeShared)
+        
+        // 5) Thick lines buffer
+        let thickByteCount = thickLineVertices.count * MemoryLayout<Float>.size
+        let thickBuffer = device.makeBuffer(bytes: thickLineVertices,
+                                            length: thickByteCount,
+                                            options: .storageModeShared)
+        
+        // Store them somewhere accessible for drawing
+        self.vertexBuffer = thinBuffer
+        self.lineSizes = thinLineSizes
+        
+        // For the thick lines, store a separate buffer & sizes
+        self.bestFitVertexBuffer = thickBuffer
+        self.bestFitTriangleCount = thickLineVertices.count / 8   // each vertex is 8 floats
     }
     
     // MARK: - Auto-Fit to Screen
@@ -494,8 +579,6 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         
         // 2) Set scissor so we keep only the “main chart area,”
         //    i.e. X >= pinnedLeft, Y <= (viewHeight - pinnedBottom).
-        //    In top-left Metal coords: we start at (pinnedLeftPixels, y=0)
-        //    and go down (viewHeightPixels - pinnedBottomPixels).
         let scissorX = pinnedLeftPixels
         let scissorY = 0
         let scissorW = max(0, viewWidthPixels - pinnedLeftPixels)
@@ -508,11 +591,11 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             height: scissorH
         ))
         
-        // 3) Draw chart lines (they get clipped outside scissor)
+        // 3) Draw normal (thin) chart lines
         encoder.setRenderPipelineState(pipelineState)
         encoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
         encoder.setVertexBuffer(uniformBuffer, offset: 0, index: 1)
-
+        
         var startIndex = 0
         for count in lineSizes {
             encoder.drawPrimitives(
@@ -523,9 +606,19 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             startIndex += count
         }
         
+        // 3b) Draw thick best-fit line, if any
+        if let bfBuffer = bestFitVertexBuffer, bestFitTriangleCount > 0 {
+            encoder.setRenderPipelineState(pipelineState)
+            encoder.setVertexBuffer(bfBuffer, offset: 0, index: 0)
+            encoder.setVertexBuffer(uniformBuffer, offset: 0, index: 1)
+            
+            // We’re using .triangleStrip to render thick geometry
+            encoder.drawPrimitives(type: .triangleStrip,
+                                   vertexStart: 0,
+                                   vertexCount: bestFitTriangleCount)
+        }
+        
         // 4) Reset scissor => full screen for pinned axes
-        //    so the pinned y-axis (left) and pinned x-axis (bottom)
-        //    plus their ticks & labels remain fully visible
         encoder.setScissorRect(MTLScissorRect(
             x: 0,
             y: 0,
@@ -579,6 +672,35 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         
         return SIMD2<Float>(domainX, domainY)
     }
+    
+    /// Convert domain space (x, logY) to *screen* coords using your pinnedLeft logic
+    func domainToScreen(domainPoint: SIMD2<Float>) -> SIMD2<Float> {
+        // The “updateOrthographic()” sets up an orthographic matrix, but we can
+        // do a simpler approach: we figure out fraction across the domain, then convert to screen coords.
+        
+        let chartWidth = Float(viewportSize.width) - Float(pinnedLeft)
+        let domainW = (domainMaxX - domainMinX)
+        let fracX = (domainPoint.x - domainMinX) / domainW
+        let screenX = Float(pinnedLeft) + fracX * chartWidth
+        
+        let domainH = (domainMaxY - domainMinY)
+        let fracY = (domainPoint.y - domainMinY) / domainH
+        let screenY = (1.0 - fracY) * Float(viewportSize.height)
+        
+        return SIMD2<Float>(x: screenX, y: screenY)
+    }
+
+    /// Convert screen space (x,y) back to domain
+    func screenToDomainPoint(screenPoint: SIMD2<Float>) -> SIMD2<Float> {
+        let chartWidth = Float(viewportSize.width) - Float(pinnedLeft)
+        let fracX = (screenPoint.x - Float(pinnedLeft)) / chartWidth
+        let domainX = domainMinX + fracX * (domainMaxX - domainMinX)
+
+        let fracY = 1.0 - (screenPoint.y / Float(viewportSize.height))
+        let domainY = domainMinY + fracY * (domainMaxY - domainMinY)
+
+        return SIMD2<Float>(x: domainX, y: domainY)
+    }
 }
 
 // MARK: - matrix_float4x4 convenience
@@ -626,3 +748,4 @@ fileprivate func generateNiceTicks(
     }
     return result
 }
+    
