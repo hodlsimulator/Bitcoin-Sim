@@ -71,7 +71,7 @@ extension PinnedAxesRenderer {
                 x: sx,
                 y: textY,
                 color: textColor,
-                scale: 0.35,
+                scale: 0.33,
                 screenWidth: Float(viewportSize.width),
                 screenHeight: Float(viewportSize.height),
                 letterSpacing: 4.0
@@ -154,7 +154,7 @@ extension PinnedAxesRenderer {
                 x: textX,
                 y: textY,
                 color: textColor,
-                scale: 0.35,
+                scale: 0.33,
                 screenWidth: Float(viewportSize.width),
                 screenHeight: Float(viewportSize.height),
                 letterSpacing: 4.0

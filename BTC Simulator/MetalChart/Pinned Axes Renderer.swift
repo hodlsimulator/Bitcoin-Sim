@@ -57,18 +57,18 @@ class PinnedAxesRenderer {
     
     var domainMaxLogY: Float = 0
     
-    // --- Text buffers ---
+    // Tick text
     private var xTickTextBuffers: [MTLBuffer] = []
     private var xTickTextVertexCounts: [Int] = []
     private var yTickTextBuffers: [MTLBuffer] = []
     private var yTickTextVertexCounts: [Int] = []
     
-    // Axis labels
+    // Axis labels (we'll transform them later)
     private var xAxisLabelBuffer: MTLBuffer?
     private var xAxisLabelVertexCount = 0
     private var yAxisLabelBuffer: MTLBuffer?
     private var yAxisLabelVertexCount = 0
-
+    
     // MARK: - Init
     
     init(device: MTLDevice,
@@ -128,13 +128,11 @@ class PinnedAxesRenderer {
         chartTransform: matrix_float4x4
     ) {
         let pinnedScreenX = pinnedAxisX
+        // We'll place the X-axis near the bottom
+        let pinnedScreenY = Float(viewportSize.height) - 40
+        let axisThickness: Float = 0.1
         
-        // We'll place the X-axis near the bottom of the screen
-        let pinnedScreenY: Float = Float(viewportSize.height) - 40
-        
-        let axisThickness: Float = 1
-        
-        // 1) X axis
+        // 1) X axis quad
         let xQuadVerts = buildXAxisQuad(
             minDataX: minX,
             maxDataX: maxX,
@@ -151,7 +149,7 @@ class PinnedAxesRenderer {
             options: .storageModeShared
         )
         
-        // 2) Y axis
+        // 2) Y axis quad
         let yQuadVerts = buildYAxisQuad(
             minDataY: minY,
             maxDataY: maxY,
@@ -168,7 +166,7 @@ class PinnedAxesRenderer {
             options: .storageModeShared
         )
         
-        // Dynamic calculation of ticks
+        // Dynamic tick counts
         let screenDomainWidth = dataXtoScreenX(dataX: maxX, transform: chartTransform)
                               - dataXtoScreenX(dataX: minX, transform: chartTransform)
         let approxDesiredCountX = Int((screenDomainWidth / 80.0).rounded())
@@ -179,7 +177,7 @@ class PinnedAxesRenderer {
         let approxDesiredCountY = Int((abs(screenDomainHeight) / 80.0).rounded())
         let desiredCountY = max(2, min(50, approxDesiredCountY))
         
-        // 3) Ticks
+        // Generate ticks
         let tickXValues = generateNiceTicks(
             minVal: Double(minX),
             maxVal: Double(maxX),
@@ -191,11 +189,22 @@ class PinnedAxesRenderer {
             desiredCount: desiredCountY
         )
         
-        // 4) Grid lines
-        let gridXValues = tickXValues
-        let gridYValues = tickYValues
+        // Grid lines
+        buildXGridLines(
+            tickXValues,
+            minY: 0,
+            maxY: pinnedScreenY,
+            pinnedScreenX: pinnedScreenX,
+            chartTransform: chartTransform
+        )
+        buildYGridLines(
+            tickYValues,
+            minX: pinnedScreenX,
+            maxX: Float(viewportSize.width),
+            chartTransform: chartTransform
+        )
         
-        // Build X ticks
+        // Build tick lines + text
         let (xTickVerts, xTickTexts) = buildXTicks(
             tickXValues,
             pinnedScreenY: pinnedScreenY,
@@ -204,80 +213,60 @@ class PinnedAxesRenderer {
             maxX: maxX
         )
         xTickVertexCount = xTickVerts.count / 8
-        if !xTickVerts.isEmpty {
-            xTickBuffer = device.makeBuffer(
-                bytes: xTickVerts,
-                length: xTickVerts.count * MemoryLayout<Float>.size,
-                options: .storageModeShared
-            )
-        } else {
-            xTickBuffer = nil
-        }
+        xTickBuffer = xTickVerts.isEmpty
+            ? nil
+            : device.makeBuffer(bytes: xTickVerts,
+                                length: xTickVerts.count * MemoryLayout<Float>.size,
+                                options: .storageModeShared)
         xTickTextBuffers = xTickTexts.map { $0.0 }
         xTickTextVertexCounts = xTickTexts.map { $0.1 }
         
-        let maxDataValue = Double(maxY)
-
-        // Build Y ticks
         let (yTickVerts, yTickTexts) = buildYTicks(
             tickYValues,
             pinnedScreenX: pinnedScreenX,
             chartTransform: chartTransform,
-            maxDataValue: maxDataValue
+            maxDataValue: Double(maxY)
         )
-        if !yTickVerts.isEmpty {
-            yTickBuffer = device.makeBuffer(
-                bytes: yTickVerts,
-                length: yTickVerts.count * MemoryLayout<Float>.size,
-                options: .storageModeShared
-            )
-        } else {
-            yTickBuffer = nil
-        }
         yTickVertexCount = yTickVerts.count / 8
+        yTickBuffer = yTickVerts.isEmpty
+            ? nil
+            : device.makeBuffer(bytes: yTickVerts,
+                                length: yTickVerts.count * MemoryLayout<Float>.size,
+                                options: .storageModeShared)
         yTickTextBuffers = yTickTexts.map { $0.0 }
         yTickTextVertexCounts = yTickTexts.map { $0.1 }
         
-        // Build grid lines
-        buildXGridLines(
-            gridXValues,
-            minY: 0,
-            maxY: pinnedScreenY, // or full height if you like
-            pinnedScreenX: pinnedScreenX,
-            chartTransform: chartTransform
-        )
-        buildYGridLines(
-            gridYValues,
-            minX: pinnedScreenX,
-            maxX: Float(viewportSize.width),
-            chartTransform: chartTransform
-        )
+        // Build text for axis labels at (0,0).
+        // We'll transform them in drawAxes so there's no hardcoded coordinate.
+        let labelColor = SIMD4<Float>(1, 1, 1, 0.6) // partly transparent
+        let scale: Float = 0.35
         
-        // 5) Axis labels
+        // "Period"
         let (maybeXBuf, xCount) = textRenderer.buildTextVertices(
             string: "Period",
-            x: pinnedScreenX + 100,
-            y: pinnedScreenY + 15,
-            color: axisColor,
-            scale: 0.35,
+            x: 0,
+            y: 0,
+            color: labelColor,
+            scale: scale,
             screenWidth: Float(viewportSize.width),
             screenHeight: Float(viewportSize.height),
-            letterSpacing: 5.0
+            letterSpacing: 4.0
         )
         if let xBuf = maybeXBuf {
             xAxisLabelBuffer = xBuf
             xAxisLabelVertexCount = xCount
         }
-
+        
+        // "USD"
         let (maybeYBuf, yCount) = textRenderer.buildTextVertices(
             string: "USD",
-            x: pinnedScreenX - 40,
-            y: Float(viewportSize.height) * 0.5,
-            color: axisColor,
-            scale: 0.35,
+            x: 0,
+            y: 0,
+            color: labelColor,
+            scale: scale,
             screenWidth: Float(viewportSize.width),
             screenHeight: Float(viewportSize.height),
-            letterSpacing: 7.0
+            letterSpacing: 5.0 // changed spacing
         )
         if let yBuf = maybeYBuf {
             yAxisLabelBuffer = yBuf
@@ -296,7 +285,6 @@ class PinnedAxesRenderer {
         let mag = pow(10.0, floor(log10(rawStep)))
         let leading = rawStep / mag
         
-        // for a simple approach, use {1,2,5,10}
         let niceLeading: Double
         if leading < 2.0 {
             niceLeading = 2.0
@@ -333,98 +321,140 @@ class PinnedAxesRenderer {
         }
         renderEncoder.setVertexBuffer(vpBuf, offset: 0, index: 1)
         
-        // Use axis pipeline for axis lines + grids + ticks
+        // Use axis pipeline
         renderEncoder.setRenderPipelineState(axisPipeline)
         
-        // Draw X grid
+        // Draw grids
         if let buf = xGridBuffer, xGridVertexCount > 0 {
             renderEncoder.setVertexBuffer(buf, offset: 0, index: 0)
             renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: xGridVertexCount)
         }
-        
-        // Draw Y grid
         if let buf = yGridBuffer, yGridVertexCount > 0 {
             renderEncoder.setVertexBuffer(buf, offset: 0, index: 0)
             renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: yGridVertexCount)
         }
         
-        // Draw X ticks
+        // Draw tick lines
         if let buf = xTickBuffer, xTickVertexCount > 0 {
             renderEncoder.setVertexBuffer(buf, offset: 0, index: 0)
             renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: xTickVertexCount)
         }
-        
-        // Draw Y ticks
         if let buf = yTickBuffer, yTickVertexCount > 0 {
             renderEncoder.setVertexBuffer(buf, offset: 0, index: 0)
             renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: yTickVertexCount)
         }
         
-        // Draw X axis quad
+        // Draw the axes
         if let buf = xAxisQuadBuffer, xAxisQuadVertexCount > 0 {
             renderEncoder.setVertexBuffer(buf, offset: 0, index: 0)
             renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: xAxisQuadVertexCount)
         }
-        
-        // Draw Y axis quad
         if let buf = yAxisQuadBuffer, yAxisQuadVertexCount > 0 {
             renderEncoder.setVertexBuffer(buf, offset: 0, index: 0)
             renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: yAxisQuadVertexCount)
         }
         
-        // Draw tick label text
+        // Switch to text pipeline
         if let textPipeline = textRenderer.pipelineState {
             renderEncoder.setRenderPipelineState(textPipeline)
             
+            // Standard orthographic projection
             let col0 = SIMD4<Float>(2.0 / Float(viewportSize.width), 0, 0, 0)
             let col1 = SIMD4<Float>(0, -2.0 / Float(viewportSize.height), 0, 0)
             let col2 = SIMD4<Float>(0, 0, 1, 0)
             let col3 = SIMD4<Float>(-1, 1, 0, 1)
+            var baseProj = matrix_float4x4(col0, col1, col2, col3)
             
-            var proj = matrix_float4x4(col0, col1, col2, col3)
-            
-            guard let pBuf = device.makeBuffer(bytes: &proj,
-                                               length: MemoryLayout<matrix_float4x4>.size,
-                                               options: .storageModeShared) else {
+            guard let baseProjBuf = device.makeBuffer(bytes: &baseProj,
+                                                      length: MemoryLayout<matrix_float4x4>.size,
+                                                      options: .storageModeShared) else {
                 print("Failed to create projection buffer for text.")
                 return
             }
-            renderEncoder.setVertexBuffer(pBuf, offset: 0, index: 1)
+            renderEncoder.setVertexBuffer(baseProjBuf, offset: 0, index: 1)
             
-            // Font atlas
+            // Draw X tick text
             renderEncoder.setFragmentTexture(textRenderer.atlas.texture, index: 0)
-            
-            // X tick text
             for (buf, vCount) in zip(xTickTextBuffers, xTickTextVertexCounts) {
                 renderEncoder.setVertexBuffer(buf, offset: 0, index: 0)
                 renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: vCount)
             }
-            
-            // Y tick text
+            // Draw Y tick text
             for (buf, vCount) in zip(yTickTextBuffers, yTickTextVertexCounts) {
                 renderEncoder.setVertexBuffer(buf, offset: 0, index: 0)
                 renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: vCount)
             }
             
-            // X axis label
+            // --- Axis labels ---
+            // We'll apply different transforms for each label.
+            // The pinnedScreenY is near the bottom, so to go "above" it, we subtract.
+
+            // 1) "Period" above X-axis (centered horizontally)
             if let xBuf = xAxisLabelBuffer, xAxisLabelVertexCount > 0 {
-                renderEncoder.setVertexBuffer(xBuf, offset: 0, index: 0)
-                renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: xAxisLabelVertexCount)
+                let pinnedScreenY = Float(viewportSize.height) - 40
+                let labelX = Float(viewportSize.width) * 0.5
+                let labelY = pinnedScreenY - 10  // 10 px above the axis
+                
+                let translatePeriod = matrix_float4x4.make2DTranslation(x: labelX, y: labelY)
+                var periodTransform = baseProj * translatePeriod
+                if let periodBuf = device.makeBuffer(bytes: &periodTransform,
+                                                     length: MemoryLayout<matrix_float4x4>.size,
+                                                     options: .storageModeShared) {
+                    renderEncoder.setVertexBuffer(periodBuf, offset: 0, index: 1)
+                    renderEncoder.setVertexBuffer(xBuf, offset: 0, index: 0)
+                    renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: xAxisLabelVertexCount)
+                }
             }
             
-            // Y axis label
+            // 2) "USD" further from Y-axis, rotated 90°
             if let yBuf = yAxisLabelBuffer, yAxisLabelVertexCount > 0 {
-                renderEncoder.setVertexBuffer(yBuf, offset: 0, index: 0)
-                renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: yAxisLabelVertexCount)
+                let angle = Float.pi * 0.5
+                let rotate = matrix_float4x4.make2DRotation(angle)
+                // pinnedAxisX is the left edge. We'll add +30 so it's further away.
+                // y is 10% down from the top. Tweak if needed.
+                let translateUSD = matrix_float4x4.make2DTranslation(
+                    x: pinnedAxisX + 30,
+                    y: Float(viewportSize.height) * 0.1
+                )
+                var usdTransform = baseProj * translateUSD * rotate
+                if let usdBuf = device.makeBuffer(bytes: &usdTransform,
+                                                  length: MemoryLayout<matrix_float4x4>.size,
+                                                  options: .storageModeShared) {
+                    renderEncoder.setVertexBuffer(usdBuf, offset: 0, index: 1)
+                    renderEncoder.setVertexBuffer(yBuf, offset: 0, index: 0)
+                    renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: yAxisLabelVertexCount)
+                }
             }
         }
     }
 }
 
-// Optional extension to allow building a matrix from four SIMD4 columns
+// MARK: - Helpers for 2D matrix ops
 extension matrix_float4x4 {
     init(_ col0: SIMD4<Float>, _ col1: SIMD4<Float>, _ col2: SIMD4<Float>, _ col3: SIMD4<Float>) {
         self.init()
         self.columns = (col0, col1, col2, col3)
+    }
+    
+    // Make a 2D translation matrix
+    static func make2DTranslation(x: Float, y: Float) -> matrix_float4x4 {
+        matrix_float4x4(
+            SIMD4<Float>(1, 0, 0, 0),
+            SIMD4<Float>(0, 1, 0, 0),
+            SIMD4<Float>(0, 0, 1, 0),
+            SIMD4<Float>(x, y, 0, 1)
+        )
+    }
+    
+    // Make a simple 2D rotation (in radians) around the origin
+    static func make2DRotation(_ radians: Float) -> matrix_float4x4 {
+        let c = cos(radians)
+        let s = sin(radians)
+        return matrix_float4x4(
+            SIMD4<Float>( c,  -s,  0, 0),
+            SIMD4<Float>( s,   c,  0, 0),
+            SIMD4<Float>( 0,   0,  1, 0),
+            SIMD4<Float>( 0,   0,  0, 1)
+        )
     }
 }
