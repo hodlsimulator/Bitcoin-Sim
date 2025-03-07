@@ -16,9 +16,7 @@ struct InteractivePortfolioChartView: View {
     @EnvironmentObject var chartDataCache: ChartDataCache
     @EnvironmentObject var simSettings: SimulationSettings
     @EnvironmentObject var idleManager: IdleManager
-
-    // *** add coordinator here, too:
-    @EnvironmentObject var coordinator: SimulationCoordinator   // ***
+    @EnvironmentObject var coordinator: SimulationCoordinator
     
     @State private var metalChart = MetalChartRenderer()
     @State private var isMetalChartReady = false
@@ -32,8 +30,6 @@ struct InteractivePortfolioChartView: View {
                     MetalChartContainerView(metalChart: metalChart)
                         .environmentObject(idleManager)
                         .onChange(of: geo.size) { _, newSize in
-                            // If the view size changes (e.g. rotation),
-                            // update the renderer’s viewport.
                             metalChart.viewportSize = newSize
                             metalChart.updateViewport(to: newSize)
                         }
@@ -58,7 +54,7 @@ struct InteractivePortfolioChartView: View {
                         isPortfolioChart: true
                     )
 
-                    // *** Tie simulationCoordinator updates => rebuild line buffers
+                    // Rebuild GPU buffers whenever coordinator’s data changes
                     coordinator.onChartDataUpdated = {
                         DispatchQueue.main.async {
                             self.metalChart.buildLineBuffers()
@@ -70,7 +66,10 @@ struct InteractivePortfolioChartView: View {
                 }
             }
         }
-        // Optional: put a title in the nav bar
-        .navigationBarTitle("Portfolio Chart", displayMode: .inline)
+        .navigationBarTitle("Portfolio", displayMode: .inline)
+        // iOS 16+ approach to colour the inline nav bar
+        .toolbarBackground(Color.black, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
     }
 }
+
