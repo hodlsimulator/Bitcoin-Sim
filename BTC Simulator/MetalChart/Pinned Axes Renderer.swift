@@ -175,11 +175,6 @@ class PinnedAxesRenderer {
         let approxDesiredCountX = Int((screenDomainWidth / 80.0).rounded())
         let desiredCountX = max(2, min(50, approxDesiredCountX))
 
-        let screenDomainHeight = dataYtoScreenY(dataY: minY, transform: chartTransform)
-                               - dataYtoScreenY(dataY: maxY, transform: chartTransform)
-        let approxDesiredCountY = Int((abs(screenDomainHeight) / 50.0).rounded())
-        let desiredCountY = max(2, min(50, approxDesiredCountY))
-
         // X-axis ticks (unchanged)
         let tickXValues = generateNiceTicks(
             minVal: Double(minX),
@@ -277,8 +272,6 @@ class PinnedAxesRenderer {
     }
     
     //  NEW HELPER FUNCTION
-    //  Always returns major ticks at integer powers of 10,
-    //  and when zoomed in (logRange < 2), adds minor ticks for 2..9.
     func generateLogTicks(
         minYLog: Double,
         maxYLog: Double
@@ -291,26 +284,63 @@ class PinnedAxesRenderer {
         
         var allTicks: [Double] = []
         
-        // Major ticks (10^0, 10^1, 10^2, etc.)
         for power in Int(startPower)...Int(endPower) {
-            allTicks.append(Double(power))  // e.g. 0,1,2 => 10^0,10^1,10^2 in real space
+            // Always add the major tick (integer power)
+            allTicks.append(Double(power))
             
-            // When zoomed in so the log range is small, add minor ticks 2..9
-            if logRange < 2, power < Int(endPower) {
-                for sub in 2..<10 {
-                    // e.g. sub=2 => log10(2) ~ 0.301 => minor tick at power+0.301
-                    let subLog = log10(Double(sub))
-                    let minorTick = Double(power) + subLog
-                    if minorTick >= minYLog && minorTick <= maxYLog {
-                        allTicks.append(minorTick)
+            // 1) If logRange < 6, add one “half” tick (power + 0.5)
+            if logRange < 6 {
+                let halfTick = Double(power) + 0.5
+                if halfTick >= minYLog, halfTick <= maxYLog {
+                    allTicks.append(halfTick)
+                }
+            }
+            
+            // 2) If logRange < 3, add quarter ticks (power + 0.25, 0.75)
+            if logRange < 3 {
+                for frac in [0.25, 0.75] {
+                    let val = Double(power) + frac
+                    if val >= minYLog, val <= maxYLog {
+                        allTicks.append(val)
+                    }
+                }
+            }
+            
+            // 3) If logRange < 2, add eighth ticks
+            if logRange < 2 {
+                for frac in [0.125, 0.375, 0.625, 0.875] {
+                    let val = Double(power) + frac
+                    if val >= minYLog, val <= maxYLog {
+                        allTicks.append(val)
                     }
                 }
             }
         }
         
-        // Filter duplicates, keep them in ascending order
+        // Numerically de-dupe, then remove any ticks that produce the same label
         let uniqueSorted = Array(Set(allTicks)).sorted()
-        return uniqueSorted
+        let final = deduplicateByLabel(uniqueSorted)
+        return final
+    }
+
+    // Removes consecutive ticks that produce the *same formatted label*.
+    private func deduplicateByLabel(_ ticks: [Double]) -> [Double] {
+        var result: [Double] = []
+        var lastLabel: String? = nil
+        
+        for t in ticks {
+            let realVal = pow(10.0, t)  // convert log->real
+            // Use your existing extension or function:
+            // e.g. realVal.formattedGroupedSuffixNoDecimals()
+            let label = realVal.formattedGroupedSuffixNoDecimals()
+            
+            if label != lastLabel {
+                result.append(t)
+                lastLabel = label
+            }
+        }
+        
+        return result
     }
     
     func generateNiceTicks(
