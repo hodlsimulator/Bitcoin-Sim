@@ -31,7 +31,7 @@ class PinnedAxesRenderer {
     
     // Colours
     var axisColor = SIMD4<Float>(1, 1, 1, 1)
-    var tickColor = SIMD4<Float>(0.7, 0.7, 0.7, 1.0)
+    var tickColor = SIMD4<Float>(0.7, 0.7, 0.7, 0.3)
     var gridColor = SIMD4<Float>(0.4, 0.4, 0.4, 0.6) // alpha=0.6 for grid
 
     // --- Axis buffers ---
@@ -68,6 +68,15 @@ class PinnedAxesRenderer {
     private var xAxisLabelVertexCount = 0
     private var yAxisLabelBuffer: MTLBuffer?
     private var yAxisLabelVertexCount = 0
+    
+    // The same dash length & gap we want
+    let dottedDashLen: Float = 2
+    let dottedGapLen:  Float = 2
+    // Same thickness for both
+    let dottedThickness: Float = 1
+
+    // Use the same color as vertical grid lines
+    let dottedColor = SIMD4<Float>(0.4, 0.4, 0.4, 0.6)
     
     // MARK: - Init
     
@@ -135,7 +144,7 @@ class PinnedAxesRenderer {
         let pinnedScreenY = Float(viewportSize.height) - 40
         let axisThickness: Float = 0.1
 
-        // X-axis quad (unchanged)
+        // X-axis quad
         let xQuadVerts = buildXAxisQuad(
             minDataX: minX,
             maxDataX: maxX,
@@ -152,7 +161,7 @@ class PinnedAxesRenderer {
             options: .storageModeShared
         )
 
-        // Y-axis quad (unchanged)
+        // Y-axis quad
         let yQuadVerts = buildYAxisQuad(
             minDataY: minY,
             maxDataY: maxY,
@@ -169,26 +178,32 @@ class PinnedAxesRenderer {
             options: .storageModeShared
         )
 
-        // Decide the approximate # of X and Y ticks from the screen size (unchanged logic)
+        // Determine tick count
         let screenDomainWidth = dataXtoScreenX(dataX: maxX, transform: chartTransform)
                               - dataXtoScreenX(dataX: minX, transform: chartTransform)
         let approxDesiredCountX = Int((screenDomainWidth / 80.0).rounded())
         let desiredCountX = max(2, min(50, approxDesiredCountX))
 
-        // X-axis ticks (unchanged)
-        let tickXValues = generateNiceTicks(
+        // X-axis ticks
+        var tickXValues = generateNiceTicks(
             minVal: Double(minX),
             maxVal: Double(maxX),
             desiredCount: desiredCountX
         )
 
-        // Y-axis ticks => ALWAYS powers of 10 + sub-ticks if zoomed in
+        // Force x=0 tick explicitly if it's not already there and within the range
+        if minX <= 0, maxX >= 0, !tickXValues.contains(0) {
+            tickXValues.append(0)
+            tickXValues.sort()
+        }
+
+        // Y-axis ticks
         let tickYValues = generateLogTicks(
             minYLog: Double(minY),
             maxYLog: Double(maxY)
         )
 
-        // Build Y tick vertices & text
+        // Build Y ticks & text
         let (yTickVerts, yTickTexts) = buildYTicks(
             tickYValues,
             pinnedScreenX: pinnedScreenX,
@@ -238,8 +253,8 @@ class PinnedAxesRenderer {
         yTickTextBuffers = yTickTexts.map { $0.0 }
         yTickTextVertexCounts = yTickTexts.map { $0.1 }
 
-        // Axis labels (unchanged)
-        let labelColor = SIMD4<Float>(1, 1, 1, 0.6)
+        // Axis labels
+        let labelColor = SIMD4<Float>(1, 1, 1, 0.3)
         let scale: Float = 0.35
         let (maybeXBuf, xCount) = textRenderer.buildTextVertices(
             string: "Period",
@@ -420,7 +435,10 @@ class PinnedAxesRenderer {
         }
         if let buf = yAxisQuadBuffer, yAxisQuadVertexCount > 0 {
             renderEncoder.setVertexBuffer(buf, offset: 0, index: 0)
-            renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: yAxisQuadVertexCount)
+            // change from triangleStrip to plain triangles:
+            renderEncoder.drawPrimitives(type: .triangle,
+                                         vertexStart: 0,
+                                         vertexCount: yAxisQuadVertexCount)
         }
         
         // Switch to text pipeline
@@ -461,7 +479,7 @@ class PinnedAxesRenderer {
             // 1) "Period" above X-axis (centered horizontally)
             if let xBuf = xAxisLabelBuffer, xAxisLabelVertexCount > 0 {
                 let pinnedScreenY = Float(viewportSize.height) - 40
-                let labelX = Float(viewportSize.width) * 0.5
+                let labelX = Float(viewportSize.width) - 60   // Move near the right edge
                 let labelY = pinnedScreenY - 30  // 30 px above the axis
                 
                 let translatePeriod = matrix_float4x4.make2DTranslation(x: labelX, y: labelY)

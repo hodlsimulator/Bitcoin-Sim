@@ -27,12 +27,12 @@ extension PinnedAxesRenderer {
         
         let pinned = pinnedAxisX
         let tickLen: Float = 6
+        let totalCycle = dottedDashLen + dottedGapLen  // e.g. 2+2=4
         let halfT: Float = 0.5
-        let range = Double(maxX - minX)
-        
-        // General text config once per call
         let labelScale: Float = 0.33
         let letterSpacing: Float = 4.0
+
+        let range = Double(maxX - minX)
 
         for val in xTicks {
             let sx = dataXtoScreenX(dataX: Float(val), transform: chartTransform)
@@ -40,18 +40,25 @@ extension PinnedAxesRenderer {
             // Skip ticks left of pinned axis
             if sx < pinned { continue }
             
-            // Draw the small vertical tick
-            let y0 = pinnedScreenY
-            let y1 = pinnedScreenY + tickLen
-            verts.append(contentsOf: makeQuadList(
-                x0: sx - halfT,
-                y0: y0,
-                x1: sx + halfT,
-                y1: y1,
-                color: tickColor
-            ))
+            // --- Build a dotted vertical line from pinnedScreenY..(pinnedScreenY+6) ---
+            var currentY = pinnedScreenY
+            let endY = pinnedScreenY + tickLen
+            while currentY < endY {
+                let dashEndY = min(currentY + dottedDashLen, endY)
+                
+                // Just a small rectangle (vertical)
+                verts.append(contentsOf: makeQuadList(
+                    x0: sx - halfT,
+                    y0: currentY,
+                    x1: sx + halfT,
+                    y1: dashEndY,
+                    color: tickColor  // uses alpha=0.3 in your code
+                ))
+                
+                currentY += totalCycle
+            }
             
-            // Decide label text
+            // Build the label text
             var label = ""
             if range > 2.0 {
                 label = "\(Int(val))y"
@@ -61,18 +68,13 @@ extension PinnedAxesRenderer {
                 label = "\(Int(val * 52.0))w"
             }
             
-            // Measure width (for “left of centre”)
+            // Place label left of the tick
             let labelWidth = textRenderer.measureStringWidth(
-                label,
-                scale: labelScale,
-                letterSpacing: letterSpacing
+                label, scale: labelScale, letterSpacing: letterSpacing
             )
-            // Pen X so label is left of tick
             let penX = sx - labelWidth - 10
-            
             // Place label below the axis line
-            let penY = pinnedScreenY + tickLen // top of text at tick tip
-            // If you want a bit more space, add e.g. "+ 2"
+            let penY = pinnedScreenY + tickLen
 
             let textColor = SIMD4<Float>(1, 1, 1, 1)
             let (tBuf, vCount) = textRenderer.buildTextVertices(
@@ -111,7 +113,7 @@ extension PinnedAxesRenderer {
         let pinnedScreenY = Float(viewportSize.height) - 40
         let labelScale: Float = 0.33
         let letterSpacing: Float = 4.0
-        let verticalOffset: Float = 0.0 // Adjust if labels are misaligned vertically (e.g., 2.0 to shift down)
+        let verticalOffset: Float = 0.0 // Adjust if labels are misaligned
 
         for logVal in yTicks {
             let sy = dataYtoScreenY(dataY: Float(logVal), transform: chartTransform)
@@ -120,7 +122,8 @@ extension PinnedAxesRenderer {
             if sy < 0 || sy > Float(viewportSize.height) { continue }
             if sy > pinnedScreenY { continue }
 
-            // Draw tick from (x0..x1)
+            // Draw tick from (x0..x1) - dotted or solid? This function just draws a short tick,
+            // so keep it solid if you prefer. We'll do it solid for the "minor ticks".
             let x1 = pinnedScreenX
             let x0 = pinnedScreenX - tickLen
             verts.append(contentsOf: makeQuadList(
@@ -146,14 +149,7 @@ extension PinnedAxesRenderer {
                 scale: labelScale
             )
 
-            // Option 1: Standard - Label to the left of tick
             let penX = x0 - textWidth - 5
-            
-            // Option 2: Horizontally centered over tick (uncomment if desired)
-            // let tickMidX = (x0 + x1) / 2
-            // let penX = tickMidX - (textWidth / 2)
-
-            // Vertically center around sy with optional offset
             let penY = sy - (textHeight * 0.5) + verticalOffset
 
             let textColor = SIMD4<Float>(1, 1, 1, 1)
@@ -179,6 +175,7 @@ extension PinnedAxesRenderer {
 // MARK: - Grid Lines
 
 extension PinnedAxesRenderer {
+    /// VERTICAL grid lines => now dotted
     func buildXGridLines(
         _ xTicks: [Double],
         minY: Float,
@@ -187,39 +184,39 @@ extension PinnedAxesRenderer {
         chartTransform: matrix_float4x4
     ) {
         var verts: [Float] = []
-        let thickness: Float = 1
-        let halfT = thickness * 0.5
         
+        let totalCycle = dottedDashLen + dottedGapLen
+        let halfT = dottedThickness * 0.5
+
         for val in xTicks {
             let sx = dataXtoScreenX(dataX: Float(val), transform: chartTransform)
-            if sx < pinnedScreenX { continue }
-            if sx > Float(viewportSize.width) { continue }
+            if sx < pinnedScreenX || sx > Float(viewportSize.width) { continue }
             
-            verts.append(
-                contentsOf: makeQuadList(
+            var currentY = minY
+            while currentY < maxY {
+                let dashEnd = min(currentY + dottedDashLen, maxY)
+                
+                // Build a short vertical rectangle
+                verts.append(contentsOf: makeQuadList(
                     x0: sx - halfT,
-                    y0: minY,
+                    y0: currentY,
                     x1: sx + halfT,
-                    y1: maxY,
-                    color: gridColor
-                )
-            )
+                    y1: dashEnd,
+                    color: dottedColor
+                ))
+                currentY += totalCycle
+            }
         }
         
         xGridVertexCount = verts.count / 8
-        
-        if !verts.isEmpty {
-            xGridBuffer = device.makeBuffer(
-                bytes: verts,
-                length: verts.count * MemoryLayout<Float>.size,
-                options: .storageModeShared
-            )
-        } else {
-            xGridBuffer = nil
-        }
+        xGridBuffer = verts.isEmpty
+            ? nil
+            : device.makeBuffer(bytes: verts,
+                                length: verts.count * MemoryLayout<Float>.size,
+                                options: .storageModeShared)
     }
     
-    /// Horizontal lines from pinnedLeft..(viewport width)
+    /// HORIZONTAL lines => remain solid
     func buildYGridLines(
         _ yTicks: [Double],
         minX: Float,
@@ -230,23 +227,18 @@ extension PinnedAxesRenderer {
         let thickness: Float = 1
         let halfT = thickness * 0.5
         
-        // The pinned X-axis is 40 points from bottom => pinnedScreenY = height - 40
         let pinnedScreenY = Float(viewportSize.height) - 40
         
         for logVal in yTicks {
             let sy = dataYtoScreenY(dataY: Float(logVal), transform: chartTransform)
             
             // Skip if the line is off-screen
-            if sy < 0 || sy > Float(viewportSize.height) {
-                continue
-            }
+            if sy < 0 || sy > Float(viewportSize.height) { continue }
             
-            // **Also skip if it's below the pinned X-axis**:
-            if sy > pinnedScreenY {
-                continue
-            }
+            // Also skip if it's below the pinned X-axis
+            if sy > pinnedScreenY { continue }
             
-            // Build horizontal grid line
+            // Build a *solid* horizontal line
             verts.append(contentsOf: makeQuadList(
                 x0: minX,
                 y0: sy - halfT,
@@ -300,7 +292,6 @@ extension PinnedAxesRenderer {
     }
 
     /// Converts data Y (log scale or otherwise) to screen Y
-    /// WITHOUT forcibly clamping to `[pinnedTop..pinnedBottom]`.
     func dataYtoScreenY(dataY: Float, transform: matrix_float4x4) -> Float {
         // Map domain->NDC, then NDC->screen
         let clip = transform * SIMD4<Float>(0, dataY, 0, 1)
@@ -309,7 +300,7 @@ extension PinnedAxesRenderer {
         return rawScreenY
     }
     
-    /// X axis triangle strip
+    /// X axis remains solid
     func buildXAxisQuad(
         minDataX: Float,
         maxDataX: Float,
@@ -328,7 +319,6 @@ extension PinnedAxesRenderer {
         let y0 = pinnedScreenY - halfT
         let y1 = pinnedScreenY + halfT
         
-        // Force the left side of the axis to pinnedScreenX
         var verts: [Float] = []
         verts.append(pinnedScreenX); verts.append(y0); verts.append(0); verts.append(1)
         verts.append(color.x); verts.append(color.y); verts.append(color.z); verts.append(color.w)
@@ -345,47 +335,54 @@ extension PinnedAxesRenderer {
         return verts
     }
     
-    // Y axis triangle strip:
-    // pinned at x = pinnedScreenX, from screen Y=0 up to Y=viewport height (or however you like).
+    /// Y axis => now dotted
     func buildYAxisQuad(
         minDataY: Float,
         maxDataY: Float,
         transform: matrix_float4x4,
         pinnedScreenX: Float,
-        pinnedScreenY: Float, // <-- Pass in so we can clamp
-        thickness: Float,
-        color: SIMD4<Float>
+        pinnedScreenY: Float,
+        thickness: Float,   // We'll ignore this param for now,
+        color: SIMD4<Float> // and ignore the colour param, too
     ) -> [Float] {
-        // Convert data space -> screen coords
         let topY = dataYtoScreenY(dataY: maxDataY, transform: transform)
         let botY = dataYtoScreenY(dataY: minDataY, transform: transform)
         
-        let halfT = thickness * 0.5
-        let x0 = pinnedScreenX - halfT
-        let x1 = pinnedScreenX + halfT
-        
-        // In screen coords, smaller Y is visually "up"
         let scrTop = min(topY, botY)
         let scrBot = max(topY, botY)
         
-        // Clamp the bottom so it won’t go below the x-axis line:
         let clampedBottom = min(scrBot, pinnedScreenY)
+        let clampedTop    = min(scrTop, pinnedScreenY)
         
-        // If the top is also below pinnedScreenY, it’s fine.
-        // But if somehow scrTop is bigger than pinnedScreenY, clamp that too:
-        let clampedTop = min(scrTop, pinnedScreenY)
+        if clampedTop >= clampedBottom { return [] }
+
+        // Same pattern as your vertical grid lines
+        let totalCycle = dottedDashLen + dottedGapLen
+        let halfT = dottedThickness * 0.5
+        let x0 = pinnedScreenX - halfT
+        let x1 = pinnedScreenX + halfT
         
-        // If they end up reversed, no axis to draw:
-        if clampedTop >= clampedBottom {
-            return []
+        var vertices: [Float] = []
+        var currentY = clampedTop
+        
+        while currentY < clampedBottom {
+            let dashEnd = min(currentY + dottedDashLen, clampedBottom)
+            
+            // Build two triangles (small rectangle)
+            vertices += [
+                // Triangle 1
+                x0, currentY, 0, 1, dottedColor.x, dottedColor.y, dottedColor.z, dottedColor.w,
+                x0, dashEnd,  0, 1, dottedColor.x, dottedColor.y, dottedColor.z, dottedColor.w,
+                x1, currentY, 0, 1, dottedColor.x, dottedColor.y, dottedColor.z, dottedColor.w,
+                
+                // Triangle 2
+                x1, currentY, 0, 1, dottedColor.x, dottedColor.y, dottedColor.z, dottedColor.w,
+                x0, dashEnd,  0, 1, dottedColor.x, dottedColor.y, dottedColor.z, dottedColor.w,
+                x1, dashEnd,  0, 1, dottedColor.x, dottedColor.y, dottedColor.z, dottedColor.w
+            ]
+            currentY += totalCycle
         }
         
-        // Build a triangle strip from clampedTop..clampedBottom
-        return [
-            x0, clampedTop, 0, 1,  color.x, color.y, color.z, color.w,
-            x1, clampedTop, 0, 1,  color.x, color.y, color.z, color.w,
-            x0, clampedBottom, 0, 1, color.x, color.y, color.z, color.w,
-            x1, clampedBottom, 0, 1, color.x, color.y, color.z, color.w
-        ]
+        return vertices
     }
 }
