@@ -120,6 +120,10 @@ class PinnedAxesRenderer {
     
     // MARK: - Update each frame
     
+    /// UPDATED updateAxes FUNCTION
+    /// - We remove the old minYLog/maxYLog "finer intervals" logic
+    /// - We always call generateLogTicks(...) to keep powers of 10
+    ///   plus optional minor ticks when zoomed in.
     func updateAxes(
         minX: Float,
         maxX: Float,
@@ -165,7 +169,7 @@ class PinnedAxesRenderer {
             options: .storageModeShared
         )
 
-        // Dynamic tick counts
+        // Decide the approximate # of X and Y ticks from the screen size (unchanged logic)
         let screenDomainWidth = dataXtoScreenX(dataX: maxX, transform: chartTransform)
                               - dataXtoScreenX(dataX: minX, transform: chartTransform)
         let approxDesiredCountX = Int((screenDomainWidth / 80.0).rounded())
@@ -173,46 +177,31 @@ class PinnedAxesRenderer {
 
         let screenDomainHeight = dataYtoScreenY(dataY: minY, transform: chartTransform)
                                - dataYtoScreenY(dataY: maxY, transform: chartTransform)
-        let approxDesiredCountY = Int((abs(screenDomainHeight) / 80.0).rounded())
+        let approxDesiredCountY = Int((abs(screenDomainHeight) / 50.0).rounded())
         let desiredCountY = max(2, min(50, approxDesiredCountY))
 
-        // Generate x-axis ticks (unchanged)
+        // X-axis ticks (unchanged)
         let tickXValues = generateNiceTicks(
             minVal: Double(minX),
             maxVal: Double(maxX),
             desiredCount: desiredCountX
         )
 
-        // Generate y-axis ticks with all powers of 10 when feasible
-        let minYLog = Double(minY)
-        let maxYLog = Double(maxY)
-        let start = floor(minYLog)
-        let end = ceil(maxYLog)
-        let numPowers = Int(end - start) + 1
-        let screenHeight = Float(viewportSize.height)
-        let pixelsPerTick = numPowers > 1 ? screenHeight / Float(numPowers - 1) : screenHeight
+        // Y-axis ticks => ALWAYS powers of 10 + sub-ticks if zoomed in
+        let tickYValues = generateLogTicks(
+            minYLog: Double(minY),
+            maxYLog: Double(maxY)
+        )
 
-        // Define tickYValues with a type annotation and assign it in both branches
-        let tickYValues: [Double]
-        if pixelsPerTick >= 30 { // Ensure at least 30 pixels between ticks
-            tickYValues = stride(from: start, through: end, by: 1).map { $0 }
-        } else {
-            tickYValues = generateNiceTicks(
-                minVal: minYLog,
-                maxVal: maxYLog,
-                desiredCount: desiredCountY
-            )
-        }
-
-        // Call buildYTicks once and unpack the tuple
+        // Build Y tick vertices & text
         let (yTickVerts, yTickTexts) = buildYTicks(
             tickYValues,
             pinnedScreenX: pinnedScreenX,
             chartTransform: chartTransform,
-            maxDataValue: maxYLog
+            maxDataValue: Double(maxY)
         )
 
-        // Grid lines
+        // Build grid lines
         buildXGridLines(
             tickXValues,
             minY: 0,
@@ -227,7 +216,7 @@ class PinnedAxesRenderer {
             chartTransform: chartTransform
         )
 
-        // X-axis ticks (unchanged)
+        // Build X tick vertices & text
         let (xTickVerts, xTickTexts) = buildXTicks(
             tickXValues,
             pinnedScreenY: pinnedScreenY,
@@ -285,6 +274,43 @@ class PinnedAxesRenderer {
             yAxisLabelBuffer = yBuf
             yAxisLabelVertexCount = yCount
         }
+    }
+    
+    //  NEW HELPER FUNCTION
+    //  Always returns major ticks at integer powers of 10,
+    //  and when zoomed in (logRange < 2), adds minor ticks for 2..9.
+    func generateLogTicks(
+        minYLog: Double,
+        maxYLog: Double
+    ) -> [Double] {
+        guard minYLog < maxYLog else { return [] }
+        let logRange = maxYLog - minYLog
+        
+        let startPower = floor(minYLog)
+        let endPower   = ceil(maxYLog)
+        
+        var allTicks: [Double] = []
+        
+        // Major ticks (10^0, 10^1, 10^2, etc.)
+        for power in Int(startPower)...Int(endPower) {
+            allTicks.append(Double(power))  // e.g. 0,1,2 => 10^0,10^1,10^2 in real space
+            
+            // When zoomed in so the log range is small, add minor ticks 2..9
+            if logRange < 2, power < Int(endPower) {
+                for sub in 2..<10 {
+                    // e.g. sub=2 => log10(2) ~ 0.301 => minor tick at power+0.301
+                    let subLog = log10(Double(sub))
+                    let minorTick = Double(power) + subLog
+                    if minorTick >= minYLog && minorTick <= maxYLog {
+                        allTicks.append(minorTick)
+                    }
+                }
+            }
+        }
+        
+        // Filter duplicates, keep them in ascending order
+        let uniqueSorted = Array(Set(allTicks)).sorted()
+        return uniqueSorted
     }
     
     func generateNiceTicks(

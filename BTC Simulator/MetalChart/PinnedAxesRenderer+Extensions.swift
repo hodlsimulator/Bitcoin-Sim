@@ -84,36 +84,31 @@ extension PinnedAxesRenderer {
         return (verts, textBuffers)
     }
     
-    /// Modify this to accept a maxDataValue so we can shift yTicks if needed
+    // UPDATED buildYTicks FUNCTION
+    // - Always uses round integers for the label (no decimals).
+    // - Real value = 10^(logVal). Then we do Int(round(...)) for the label.
     func buildYTicks(
         _ yTicks: [Double],
         pinnedScreenX: Float,
         chartTransform: matrix_float4x4,
         maxDataValue: Double
     ) -> ([Float], [(MTLBuffer, Int)]) {
-        var adjTicks = yTicks
-        if adjTicks.count >= 2 {
-            let topTick = adjTicks.last!
-            let dataMaxLog = maxDataValue // Corrected: no log10 needed
-            if dataMaxLog >= topTick {
-                let shiftUp = dataMaxLog - topTick + 0.000_001
-                for i in 0..<adjTicks.count {
-                    adjTicks[i] += shiftUp
-                }
-            }
-        }
-        // Rest of the function remains unchanged
         var verts: [Float] = []
         var textBuffers: [(MTLBuffer, Int)] = []
+        
         let tickLen: Float = 6
         let halfT: Float = 0.5
         let pinnedScreenY = Float(viewportSize.height) - 40
-        for logVal in adjTicks {
+
+        for logVal in yTicks {
             let sy = dataYtoScreenY(dataY: Float(logVal), transform: chartTransform)
             if sy < 0 || sy > Float(viewportSize.height) { continue }
             if sy > pinnedScreenY { continue }
+
             let x1 = pinnedScreenX
             let x0 = pinnedScreenX - tickLen
+            
+            // Draw the short horizontal tick line
             verts.append(contentsOf: makeQuadList(
                 x0: x0,
                 y0: sy - halfT,
@@ -121,11 +116,17 @@ extension PinnedAxesRenderer {
                 y1: sy + halfT,
                 color: tickColor
             ))
+
+            // Convert log value -> real space -> suffix label
             let realVal = pow(10.0, logVal)
             let formatted = realVal.formattedGroupedSuffixNoDecimals()
+            // e.g. 10,000 => "10K", 100,000 => "100K", 1,000,000 => "1M"
+
+            // Build text label
             let textColor = SIMD4<Float>(1,1,1,1)
             let textX = pinnedScreenX - tickLen - 30
             let textY = sy - 5
+            
             let (tBuf, vCount) = textRenderer.buildTextVertices(
                 string: formatted,
                 x: textX,
