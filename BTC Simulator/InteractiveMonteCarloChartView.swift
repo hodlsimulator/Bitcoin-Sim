@@ -41,7 +41,9 @@ struct InteractiveMonteCarloChartView: View {
                 }
             }
             .onAppear {
-                // We wait until onAppear so 'geo.size' is valid
+                // Reset the IdleManager timer so it starts counting right when we enter this view
+                idleManager.resetIdleTimer()
+                
                 DispatchQueue.main.async {
                     // 1) Provide the actual size to the renderer
                     metalChart.viewportSize = geo.size
@@ -53,7 +55,7 @@ struct InteractiveMonteCarloChartView: View {
                         simSettings: simSettings
                     )
 
-                    // 3) Mark it ready; triggers the if isMetalChartReady block
+                    // 3) Mark it ready; triggers the 'if isMetalChartReady' block
                     isMetalChartReady = true
                 }
             }
