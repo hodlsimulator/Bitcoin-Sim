@@ -15,19 +15,17 @@ struct InteractiveMonteCarloChartView: View {
     @EnvironmentObject var chartDataCache: ChartDataCache
     @EnvironmentObject var simSettings: SimulationSettings
     @EnvironmentObject var idleManager: IdleManager
-
-    // *** Add the coordinator so we can hook onChartDataUpdated:
-    @EnvironmentObject var coordinator: SimulationCoordinator   // ***
+    
+    // *** Hook up chart data updates
+    @EnvironmentObject var coordinator: SimulationCoordinator
     
     @State private var metalChart = MetalChartRenderer()
     @State private var isMetalChartReady = false
-    
-    // Tracks whether the drop-down menu is visible
-    @State private var showMenu = false
+    @State private var showMenu = false  // Tracks whether the drop-down menu is visible
 
     var body: some View {
         GeometryReader { geo in
-            ZStack(alignment: .topTrailing) {
+            ZStack(alignment: .top) {  // <-- Use .top, not .topTrailing
                 // The chart background
                 Color.black.ignoresSafeArea()
 
@@ -45,29 +43,34 @@ struct InteractiveMonteCarloChartView: View {
                         .foregroundColor(.white)
                 }
 
-                // Our custom drop-down menu that appears under the chevron
+                // Our custom drop-down menu
                 if showMenu {
-                    VStack(alignment: .leading, spacing: 10) {
+                    VStack(spacing: 10) {
                         NavigationLink(
                             destination: InteractivePortfolioChartView()
                                 .environmentObject(chartDataCache)
                                 .environmentObject(simSettings)
                                 .environmentObject(idleManager)
-                                .environmentObject(coordinator) // *** pass coordinator as well
+                                .environmentObject(coordinator)
                         ) {
-                            Text("Switch to Portfolio Chart")
+                            // HStack with spacers to centre
+                            HStack {
+                                Spacer()
+                                Text("Portfolio")
+                                Spacer()
+                            }
                         }
-                        // Hide the drop-down once tapped
+                        // Hide the dropdown once tapped
                         .simultaneousGesture(TapGesture().onEnded {
                             showMenu = false
                         })
                     }
+                    .frame(maxWidth: .infinity)                // Fill the full width
                     .padding()
                     .background(Color(UIColor.systemBackground))
                     .cornerRadius(8)
                     .shadow(radius: 4)
-                    .padding(.trailing, 16)
-                    .padding(.top, 0)
+                    .padding(.horizontal, 16)                 // Equal horizontal padding
                     .transition(.move(edge: .top))
                 }
             }
@@ -114,3 +117,4 @@ struct InteractiveMonteCarloChartView: View {
         }
     }
 }
+    
