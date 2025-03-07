@@ -91,47 +91,27 @@ extension PinnedAxesRenderer {
         chartTransform: matrix_float4x4,
         maxDataValue: Double
     ) -> ([Float], [(MTLBuffer, Int)]) {
-        
-        // 1) Make a mutable copy of yTicks
         var adjTicks = yTicks
-        
-        // 2) Shift them if the topmost data exceeds the top tick
         if adjTicks.count >= 2 {
             let topTick = adjTicks.last!
-            // let secondTop = adjTicks[adjTicks.count - 2] // not used anymore, so it's removed
-            
-            // Convert your real max data value into log10 space:
-            let dataMaxLog = log10(maxDataValue)
-            
-            // If your data extends beyond or right at the topTick, push everything up
+            let dataMaxLog = maxDataValue // Corrected: no log10 needed
             if dataMaxLog >= topTick {
-                let shiftUp = dataMaxLog - topTick + 0.000_001  // tiny buffer
+                let shiftUp = dataMaxLog - topTick + 0.000_001
                 for i in 0..<adjTicks.count {
                     adjTicks[i] += shiftUp
                 }
             }
         }
-        
+        // Rest of the function remains unchanged
         var verts: [Float] = []
         var textBuffers: [(MTLBuffer, Int)] = []
         let tickLen: Float = 6
         let halfT: Float = 0.5
-        
-        // We'll hide ticks below the pinned X-axis (which is 40 pts from bottom)
-        // so anything that ends up with sy > pinnedScreenY is skipped.
         let pinnedScreenY = Float(viewportSize.height) - 40
-        
-        // Build lines and labels using our adjusted ticks
         for logVal in adjTicks {
             let sy = dataYtoScreenY(dataY: Float(logVal), transform: chartTransform)
-            
-            // Skip if off-screen
             if sy < 0 || sy > Float(viewportSize.height) { continue }
-            
-            // NEW: Skip if below the pinned X-axis
             if sy > pinnedScreenY { continue }
-            
-            // short tick line in grey
             let x1 = pinnedScreenX
             let x0 = pinnedScreenX - tickLen
             verts.append(contentsOf: makeQuadList(
@@ -141,12 +121,9 @@ extension PinnedAxesRenderer {
                 y1: sy + halfT,
                 color: tickColor
             ))
-
-            // label (convert logVal back to 10^logVal)
             let realVal = pow(10.0, logVal)
             let formatted = realVal.formattedGroupedSuffixNoDecimals()
             let textColor = SIMD4<Float>(1,1,1,1)
-
             let textX = pinnedScreenX - tickLen - 30
             let textY = sy - 5
             let (tBuf, vCount) = textRenderer.buildTextVertices(
@@ -163,7 +140,6 @@ extension PinnedAxesRenderer {
                 textBuffers.append((buf, vCount))
             }
         }
-
         return (verts, textBuffers)
     }
 }

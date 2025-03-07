@@ -128,11 +128,10 @@ class PinnedAxesRenderer {
         chartTransform: matrix_float4x4
     ) {
         let pinnedScreenX = pinnedAxisX
-        // We'll place the X-axis near the bottom
         let pinnedScreenY = Float(viewportSize.height) - 40
         let axisThickness: Float = 0.1
-        
-        // 1) X axis quad
+
+        // X-axis quad (unchanged)
         let xQuadVerts = buildXAxisQuad(
             minDataX: minX,
             maxDataX: maxX,
@@ -148,8 +147,8 @@ class PinnedAxesRenderer {
             length: xQuadVerts.count * MemoryLayout<Float>.size,
             options: .storageModeShared
         )
-        
-        // 2) Y axis quad
+
+        // Y-axis quad (unchanged)
         let yQuadVerts = buildYAxisQuad(
             minDataY: minY,
             maxDataY: maxY,
@@ -165,30 +164,54 @@ class PinnedAxesRenderer {
             length: yQuadVerts.count * MemoryLayout<Float>.size,
             options: .storageModeShared
         )
-        
+
         // Dynamic tick counts
         let screenDomainWidth = dataXtoScreenX(dataX: maxX, transform: chartTransform)
                               - dataXtoScreenX(dataX: minX, transform: chartTransform)
         let approxDesiredCountX = Int((screenDomainWidth / 80.0).rounded())
         let desiredCountX = max(2, min(50, approxDesiredCountX))
-        
+
         let screenDomainHeight = dataYtoScreenY(dataY: minY, transform: chartTransform)
                                - dataYtoScreenY(dataY: maxY, transform: chartTransform)
         let approxDesiredCountY = Int((abs(screenDomainHeight) / 80.0).rounded())
         let desiredCountY = max(2, min(50, approxDesiredCountY))
-        
-        // Generate ticks
+
+        // Generate x-axis ticks (unchanged)
         let tickXValues = generateNiceTicks(
             minVal: Double(minX),
             maxVal: Double(maxX),
             desiredCount: desiredCountX
         )
-        let tickYValues = generateNiceTicks(
-            minVal: Double(minY),
-            maxVal: Double(maxY),
-            desiredCount: desiredCountY
+
+        // Generate y-axis ticks with all powers of 10 when feasible
+        let minYLog = Double(minY)
+        let maxYLog = Double(maxY)
+        let start = floor(minYLog)
+        let end = ceil(maxYLog)
+        let numPowers = Int(end - start) + 1
+        let screenHeight = Float(viewportSize.height)
+        let pixelsPerTick = numPowers > 1 ? screenHeight / Float(numPowers - 1) : screenHeight
+
+        // Define tickYValues with a type annotation and assign it in both branches
+        let tickYValues: [Double]
+        if pixelsPerTick >= 30 { // Ensure at least 30 pixels between ticks
+            tickYValues = stride(from: start, through: end, by: 1).map { $0 }
+        } else {
+            tickYValues = generateNiceTicks(
+                minVal: minYLog,
+                maxVal: maxYLog,
+                desiredCount: desiredCountY
+            )
+        }
+
+        // Call buildYTicks once and unpack the tuple
+        let (yTickVerts, yTickTexts) = buildYTicks(
+            tickYValues,
+            pinnedScreenX: pinnedScreenX,
+            chartTransform: chartTransform,
+            maxDataValue: maxYLog
         )
-        
+
         // Grid lines
         buildXGridLines(
             tickXValues,
@@ -203,8 +226,8 @@ class PinnedAxesRenderer {
             maxX: Float(viewportSize.width),
             chartTransform: chartTransform
         )
-        
-        // Build tick lines + text
+
+        // X-axis ticks (unchanged)
         let (xTickVerts, xTickTexts) = buildXTicks(
             tickXValues,
             pinnedScreenY: pinnedScreenY,
@@ -220,13 +243,8 @@ class PinnedAxesRenderer {
                                 options: .storageModeShared)
         xTickTextBuffers = xTickTexts.map { $0.0 }
         xTickTextVertexCounts = xTickTexts.map { $0.1 }
-        
-        let (yTickVerts, yTickTexts) = buildYTicks(
-            tickYValues,
-            pinnedScreenX: pinnedScreenX,
-            chartTransform: chartTransform,
-            maxDataValue: Double(maxY)
-        )
+
+        // Y-axis ticks
         yTickVertexCount = yTickVerts.count / 8
         yTickBuffer = yTickVerts.isEmpty
             ? nil
@@ -235,13 +253,10 @@ class PinnedAxesRenderer {
                                 options: .storageModeShared)
         yTickTextBuffers = yTickTexts.map { $0.0 }
         yTickTextVertexCounts = yTickTexts.map { $0.1 }
-        
-        // Build text for axis labels at (0,0).
-        // We'll transform them in drawAxes so there's no hardcoded coordinate.
-        let labelColor = SIMD4<Float>(1, 1, 1, 0.6) // partly transparent
+
+        // Axis labels (unchanged)
+        let labelColor = SIMD4<Float>(1, 1, 1, 0.6)
         let scale: Float = 0.35
-        
-        // "Period"
         let (maybeXBuf, xCount) = textRenderer.buildTextVertices(
             string: "Period",
             x: 0,
@@ -256,8 +271,6 @@ class PinnedAxesRenderer {
             xAxisLabelBuffer = xBuf
             xAxisLabelVertexCount = xCount
         }
-        
-        // "USD"
         let (maybeYBuf, yCount) = textRenderer.buildTextVertices(
             string: "USD",
             x: 0,
@@ -266,7 +279,7 @@ class PinnedAxesRenderer {
             scale: scale,
             screenWidth: Float(viewportSize.width),
             screenHeight: Float(viewportSize.height),
-            letterSpacing: 5.0 // changed spacing
+            letterSpacing: 5.0
         )
         if let yBuf = maybeYBuf {
             yAxisLabelBuffer = yBuf
