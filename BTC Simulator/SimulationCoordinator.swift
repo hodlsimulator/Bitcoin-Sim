@@ -15,7 +15,6 @@ enum PercentileChoice {
 class SimulationCoordinator: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var isChartBuilding: Bool = false
-    // @Published var isSimulationRun: Bool = false
     @Published var isCancelled: Bool = false
     
     @Published var monteCarloResults: [SimulationData] = []
@@ -29,8 +28,10 @@ class SimulationCoordinator: ObservableObject {
     
     @Published var allSimData: [[SimulationData]] = []
     
-    // Step-by-step median BTC prices (week or month)
+    // Step-by-step median BTC prices (weekly or monthly)
     @Published var stepMedianBTCs: [Decimal] = []
+    // Step-by-step median *portfolio* values (so we can do best-fit for portfolio separately)
+    @Published var stepMedianPortfolio: [Decimal] = []
     
     @Published var useMonthly: Bool = false
 
@@ -41,18 +42,23 @@ class SimulationCoordinator: ObservableObject {
         
     @Published var simChartSelection: SimChartSelection
 
-    // We'll store the fitted GarchModel here if we calibrate it.
     private var fittedGarchModel: GarchModel? = nil
 
-    // Historical returns storage
     private var historicalBTCWeeklyReturns: [Double] = []
     private var sp500WeeklyReturns: [Double] = []
     private var historicalBTCMonthlyReturns: [Double] = []
     private var sp500MonthlyReturns: [Double] = []
     
+    // Extended returns for bootstrap or GARCH
+    private var extendedWeeklyReturns: [Double] = []
+    private var extendedMonthlyReturns: [Double] = []
+    
     private var monthlySimSettings: MonthlySimulationSettings
     
     private var idleManager: IdleManager
+
+    // ADDED: let the coordinator notify our SwiftUI view (or metal chart) that new data is ready
+    var onChartDataUpdated: (() -> Void)?  // ADDED
 
     init(
         chartDataCache: ChartDataCache,
@@ -74,20 +80,12 @@ class SimulationCoordinator: ObservableObject {
         print("Coordinator ID in runSimulation =>", ObjectIdentifier(self))
         print("DEBUG: runSimulation() - current simChartSelection.selectedChart = \(simChartSelection.selectedChart)")
 
-        // A convenience flag:
         let isMonthly = self.useMonthly
 
         // 1) Apply factor tweaks + set random seed lock
-        //    If monthly => apply monthly factor logic & lock monthly seed
-        //    If weekly => apply weekly factor logic & lock weekly seed
         if isMonthly {
-            // If you have a monthly "applyDictionaryFactors" method, call it here
-            // monthlySimSettings.applyDictionaryFactorsToSimMonthly()  // if it exists
-
-            // Lock or unlock seed:
+            // monthlySimSettings.applyDictionaryFactorsToSimMonthly()   // if you have such a method
             monthlySimSettings.lockedRandomSeedMonthly = lockRandomSeed
-
-            // Print or log monthly settings to confirm
             print("""
             DEBUG (Monthly Mode):
               userPeriodsMonthly = \(monthlySimSettings.userPeriodsMonthly)
@@ -96,15 +94,13 @@ class SimulationCoordinator: ObservableObject {
               averageCostBasisMonthly = \(monthlySimSettings.averageCostBasisMonthly)
               currencyPreferenceMonthly = \(monthlySimSettings.currencyPreferenceMonthly)
             """)
-
         } else {
-            // Weekly path
             simSettings.applyDictionaryFactorsToSim()
             simSettings.lockedRandomSeed = lockRandomSeed
             simSettings.printAllSettings()
         }
 
-        // 2) Load historical returns (monthly if isMonthly, else weekly)
+        // 2) Load historical returns
         if isMonthly {
             let btcMonthlyDict = loadBTCMonthlyReturnsAsDict()
             let spMonthlyDict  = loadSP500MonthlyReturnsAsDict()
@@ -114,7 +110,7 @@ class SimulationCoordinator: ObservableObject {
             sp500MonthlyReturns         = alignedMonthly.map { $0.2 }
             extendedMonthlyReturns      = historicalBTCMonthlyReturns
 
-            // Clear out weekly arrays
+            // Clear weekly
             historicalBTCWeeklyReturns = []
             sp500WeeklyReturns = []
             extendedWeeklyReturns = []
@@ -130,7 +126,7 @@ class SimulationCoordinator: ObservableObject {
             sp500WeeklyReturns         = alignedWeekly.map { $0.2 }
             extendedWeeklyReturns      = historicalBTCWeeklyReturns
 
-            // Clear out monthly arrays
+            // Clear monthly
             historicalBTCMonthlyReturns = []
             sp500MonthlyReturns = []
             extendedMonthlyReturns = []
@@ -139,13 +135,13 @@ class SimulationCoordinator: ObservableObject {
             print("extendedWeeklyReturns = \(extendedWeeklyReturns.count)")
         }
 
-        // 3) Decide if GARCH is on (check monthlySimSettings or simSettings)
+        // 3) Decide if GARCH is on
         let isGarchOn = isMonthly
             ? monthlySimSettings.useGarchVolatilityMonthly
             : simSettings.useGarchVolatility
-
+        
         if isGarchOn {
-            calibrateGarchIfNeeded()  // This checks if periodUnit == .months or .weeks internally
+            calibrateGarchIfNeeded()
         } else {
             fittedGarchModel = nil
         }
@@ -257,23 +253,19 @@ class SimulationCoordinator: ObservableObject {
                 fittedGarchModel: self.fittedGarchModel
             )
 
-            // 10) Check for cancel or empty
-            if self.isCancelled {
-                DispatchQueue.main.async { self.isLoading = false }
-                return
-            }
-            if allIterations.isEmpty {
+            if self.isCancelled || allIterations.isEmpty {
                 DispatchQueue.main.async { self.isLoading = false }
                 return
             }
 
-            // 11) Switch back to main thread to finalize results & build charts
+            // Switch back to main to finalise
             DispatchQueue.main.async {
                 self.isLoading = false
                 self.isChartBuilding = true
+                // stepMedianBTCs is from the aggregator in runMonteCarloSimulationsWithProgress
                 self.stepMedianBTCs = stepMedianPrices
 
-                // Sort runs, pick 10th/median/90th, find best fit, etc.
+                // Sort runs by final BTC price and pick the usual 10th, median, 90th
                 let finalRuns = allIterations.enumerated().map { (idx, run) -> (Int, Decimal, [SimulationData]) in
                     let finalBTC = run.last?.btcPriceUSD ?? Decimal.zero
                     return (idx, finalBTC, run)
@@ -291,17 +283,33 @@ class SimulationCoordinator: ObservableObject {
                 self.medianResults              = sortedRuns[medianIndex].2
                 self.ninetiethPercentileResults = sortedRuns[ninetiethIndex].2
 
-                // Find representative “best fit” run
-                let bestFitRunIndex = self.findRepresentativeRunIndex(
-                    allRuns: allIterations,
-                    stepMedianBTC: stepMedianPrices
+                // Build the step-median *portfolio* so we can do best-fit on the portfolio as well
+                self.stepMedianPortfolio = self.computeStepMedianPortfolio(
+                    allIterations: allIterations,
+                    isMonthly: isMonthly
                 )
-                let bestFitRun = allIterations[bestFitRunIndex]
-                self.monteCarloResults = bestFitRun
 
-                print("coordinator.monteCarloResults after run =>")
-                print("// DEBUG: median final BTC => iteration #\(sortedRuns[medianIndex].0), final BTC => \(sortedRuns[medianIndex].1)")
-                print("// DEBUG: bestFitRun => iteration #\(bestFitRunIndex) chosen by distance. final BTC => \(bestFitRun.last?.btcPriceUSD ?? 0)")
+                //  —> Best-fit for BTC chart (old approach, using stepMedianBTCs):
+                let bestFitRunIndexBTC = self.findRepresentativeRunIndexByBTC(
+                    allRuns: allIterations,
+                    stepMedianBTC: self.stepMedianBTCs
+                )
+                let bestFitRunBTC = allIterations[bestFitRunIndexBTC]
+
+                //  —> Best-fit for the *portfolio* chart:
+                let bestFitRunIndexPortfolio = self.findRepresentativeRunIndexByPortfolio(
+                    allRuns: allIterations,
+                    stepMedianPortfolio: self.stepMedianPortfolio,
+                    isMonthly: isMonthly
+                )
+                let bestFitRunPortfolio = allIterations[bestFitRunIndexPortfolio]
+
+                // For convenience, we’ll store the BTC best-fit in self.monteCarloResults:
+                self.monteCarloResults = bestFitRunBTC
+
+                print("DEBUG: median final BTC => iteration #\(sortedRuns[medianIndex].0), final BTC => \(sortedRuns[medianIndex].1)")
+                print("DEBUG: bestFitRun BTC => iteration #\(bestFitRunIndexBTC) (distance from median BTC line).")
+                print("DEBUG: bestFitRun Portfolio => iteration #\(bestFitRunIndexPortfolio) (distance from median PORTFOLIO line).")
 
                 self.selectedPercentile = .median
                 self.allSimData = allIterations
@@ -309,26 +317,25 @@ class SimulationCoordinator: ObservableObject {
                 // Convert all runs => faint lines for chart
                 let allSimsAsWeekPoints       = self.convertAllSimsToWeekPoints()
                 let allSimsAsPortfolioPoints  = self.convertAllSimsToPortfolioWeekPoints()
-                
-                let bestFitSim = allSimsAsWeekPoints[bestFitRunIndex]
-                let bestFitSimID = bestFitSim.id
-                let bestFitBTCPoints = bestFitRun.map { row in
+
+                // Build the best-fit *BTC* run as WeekPoints
+                let bestFitSimIDBTC = UUID()
+                let bestFitBTCPoints = bestFitRunBTC.map { row in
                     WeekPoint(week: row.week, value: row.btcPriceUSD)
                 }
-                let bestFitPortfolioPoints = bestFitRun.map { row in
-                    // If monthly => check monthly currency preference
-                    // else weekly => check weekly currency preference
+                let bestFitBTC = SimulationRun(id: bestFitSimIDBTC, points: bestFitBTCPoints)
+
+                // Build the best-fit *Portfolio* run as WeekPoints
+                let bestFitSimIDPort = UUID()
+                let bestFitPortfolioPoints = bestFitRunPortfolio.map { row in
+                    // Decide if we use EUR or USD for portfolio
                     let isEUR = isMonthly
                         ? (self.monthlySimSettings.currencyPreferenceMonthly == .eur)
                         : (self.simSettings.currencyPreference == .eur)
-                    
-                    return isEUR ? row.portfolioValueEUR : row.portfolioValueUSD
-                }.enumerated().map { (idx, val) in
-                    WeekPoint(week: bestFitRun[idx].week, value: val)
+                    return WeekPoint(week: row.week,
+                                     value: isEUR ? row.portfolioValueEUR : row.portfolioValueUSD)
                 }
-
-                let bestFitBTC = SimulationRun(id: bestFitSimID, points: bestFitBTCPoints)
-                let bestFitPortfolio = SimulationRun(id: bestFitSimID, points: bestFitPortfolioPoints)
+                let bestFitPortfolio = SimulationRun(id: bestFitSimIDPort, points: bestFitPortfolioPoints)
 
                 // Clear old charts
                 self.chartDataCache.chartSnapshot = nil
@@ -337,13 +344,16 @@ class SimulationCoordinator: ObservableObject {
                 self.chartDataCache.chartSnapshotPortfolioLandscape = nil
 
                 // Save new runs in chartDataCache
-                self.chartDataCache.allRuns               = allSimsAsWeekPoints
-                self.chartDataCache.portfolioRuns         = allSimsAsPortfolioPoints
-                self.chartDataCache.bestFitRun            = [bestFitBTC]
-                self.chartDataCache.bestFitPortfolioRun   = [bestFitPortfolio]
-                self.chartDataCache.storedInputsHash      = newHash
+                self.chartDataCache.allRuns             = allSimsAsWeekPoints
+                self.chartDataCache.portfolioRuns       = allSimsAsPortfolioPoints
+                self.chartDataCache.bestFitRun          = [bestFitBTC]         // best-fit for BTC
+                self.chartDataCache.bestFitPortfolioRun = [bestFitPortfolio]   // best-fit for Portfolio
+                self.chartDataCache.storedInputsHash    = newHash
 
-                // Optionally build charts if generateGraphs == true
+                // ADDED: let our view/renderer know new data is ready for line buffers
+                self.onChartDataUpdated?()  // ADDED
+
+                // Optionally build chart snapshots
                 let oldSelection = self.simChartSelection.selectedChart
                 if !generateGraphs {
                     self.isChartBuilding = false
@@ -351,7 +361,7 @@ class SimulationCoordinator: ObservableObject {
                     return
                 }
                 
-                // Chart building snippet, same as before...
+                // Build the BTC chart first
                 DispatchQueue.main.async {
                     if self.isCancelled {
                         self.isChartBuilding = false
@@ -360,40 +370,32 @@ class SimulationCoordinator: ObservableObject {
                     
                     self.simChartSelection.selectedChart = .btcPrice
                     let btcChartView = MonteCarloResultsView()
+                        .environmentObject(self)
                         .environmentObject(self.chartDataCache)
                         .environmentObject(self.simSettings)
                         .environmentObject(self.simChartSelection)
                         .environmentObject(self.idleManager)
-
                     
-                    DispatchQueue.main.async {
-                        if self.isCancelled {
-                            self.isChartBuilding = false
-                            return
-                        }
-                        let btcSnapshot = btcChartView.snapshot()
-                        self.chartDataCache.chartSnapshot = btcSnapshot
+                    // Snapshot
+                    let btcSnapshot = btcChartView.snapshot()
+                    self.chartDataCache.chartSnapshot = btcSnapshot
 
-                        self.simChartSelection.selectedChart = .cumulativePortfolio
-                        let portfolioChartView = MonteCarloResultsView()
-                            .environmentObject(self.chartDataCache)
-                            .environmentObject(self.simSettings)
-                            .environmentObject(self.simChartSelection)
-                            .environmentObject(self.idleManager)
-                        
-                        DispatchQueue.main.async {
-                            if self.isCancelled {
-                                self.isChartBuilding = false
-                                return
-                            }
-                            let portfolioSnapshot = portfolioChartView.snapshot()
-                            self.chartDataCache.chartSnapshotPortfolio = portfolioSnapshot
+                    // Then build the Portfolio chart
+                    self.simChartSelection.selectedChart = .cumulativePortfolio
+                    let portfolioChartView = MonteCarloResultsView()
+                        .environmentObject(self) 
+                        .environmentObject(self.chartDataCache)
+                        .environmentObject(self.simSettings)
+                        .environmentObject(self.simChartSelection)
+                        .environmentObject(self.idleManager)
+                    
+                    let portfolioSnapshot = portfolioChartView.snapshot()
+                    self.chartDataCache.chartSnapshotPortfolio = portfolioSnapshot
 
-                            self.simChartSelection.selectedChart = oldSelection
-                            self.isChartBuilding = false
-                            print("DEBUG: runSimulation finished successfully.")
-                        }
-                    }
+                    // Restore original chart selection
+                    self.simChartSelection.selectedChart = oldSelection
+                    self.isChartBuilding = false
+                    print("DEBUG: runSimulation finished successfully.")
                 }
 
                 // Extra background processing if needed
@@ -405,7 +407,6 @@ class SimulationCoordinator: ObservableObject {
     }
     
     // MARK: - GARCH ADAM CALIBRATION
-    /// Use a more sophisticated Adam-based calibrator on whichever data we loaded (weekly or monthly).
     private func calibrateGarchIfNeeded() {
         let adamCalibrator = GarchAdamCalibrator()
         
@@ -414,11 +415,10 @@ class SimulationCoordinator: ObservableObject {
                 let model = adamCalibrator.calibrate(
                     returns: historicalBTCMonthlyReturns,
                     iterations: 3000,
-                    baseLR: 1e-3 // tweak as needed
+                    baseLR: 1e-3
                 )
                 fittedGarchModel = model
-                print("GARCH (Adam) Calibrated (Monthly): (ω, α, β) =",
-                      model.omega, model.alpha, model.beta)
+                print("GARCH (Adam) Calibrated (Monthly): (ω, α, β) =", model.omega, model.alpha, model.beta)
             } else {
                 print("No monthly data for GARCH calibration.")
             }
@@ -430,8 +430,7 @@ class SimulationCoordinator: ObservableObject {
                     baseLR: 1e-3
                 )
                 fittedGarchModel = model
-                print("GARCH (Adam) Calibrated (Weekly): (ω, α, β) =",
-                      model.omega, model.alpha, model.beta)
+                print("GARCH (Adam) Calibrated (Weekly): (ω, α, β) =", model.omega, model.alpha, model.beta)
             } else {
                 print("No weekly data for GARCH calibration.")
             }
@@ -473,11 +472,43 @@ class SimulationCoordinator: ObservableObject {
     private func processAllResults(_ allResults: [[SimulationData]]) {
         // Additional data processing here if needed
     }
+
+    // Compute step-wise median *portfolio* across all runs
+    private func computeStepMedianPortfolio(allIterations: [[SimulationData]], isMonthly: Bool) -> [Decimal] {
+        guard !allIterations.isEmpty else { return [] }
+
+        // Determine how many time steps exist in each run
+        let maxSteps = allIterations[0].count
+
+        var medians = [Decimal](repeating: 0, count: maxSteps)
+
+        for i in 0..<maxSteps {
+            var stepValues = [Decimal]()
+            for run in allIterations {
+                let row = run[i]
+                let isEUR = isMonthly
+                    ? (monthlySimSettings.currencyPreferenceMonthly == .eur)
+                    : (simSettings.currencyPreference == .eur)
+                let portfolioVal = isEUR ? row.portfolioValueEUR : row.portfolioValueUSD
+                stepValues.append(portfolioVal)
+            }
+            stepValues.sort()
+            let midIndex = stepValues.count / 2
+            if stepValues.count % 2 == 0 {
+                let val1 = stepValues[midIndex - 1]
+                let val2 = stepValues[midIndex]
+                medians[i] = (val1 + val2) / Decimal(2)
+            } else {
+                medians[i] = stepValues[midIndex]
+            }
+        }
+        return medians
+    }
 }
 
 // MARK: - "Representative Run" logic
 extension SimulationCoordinator {
-    fileprivate func findRepresentativeRunIndex(
+    fileprivate func findRepresentativeRunIndexByBTC(
         allRuns: [[SimulationData]],
         stepMedianBTC: [Decimal]
     ) -> Int {
@@ -485,7 +516,7 @@ extension SimulationCoordinator {
         var bestIndex = 0
         
         for (i, run) in allRuns.enumerated() {
-            let dist = computeDistance(run: run, stepMedianBTC: stepMedianBTC, verbose: false)
+            let dist = computeDistanceFromBTCMedian(run: run, stepMedianBTC: stepMedianBTC)
             if dist < minDistance {
                 minDistance = dist
                 bestIndex = i
@@ -494,10 +525,31 @@ extension SimulationCoordinator {
         return bestIndex
     }
     
-    fileprivate func computeDistance(
+    fileprivate func findRepresentativeRunIndexByPortfolio(
+        allRuns: [[SimulationData]],
+        stepMedianPortfolio: [Decimal],
+        isMonthly: Bool
+    ) -> Int {
+        var minDistance = Double.greatestFiniteMagnitude
+        var bestIndex = 0
+        
+        for (i, run) in allRuns.enumerated() {
+            let dist = computeDistanceFromPortfolioMedian(
+                run: run,
+                stepMedianPortfolio: stepMedianPortfolio,
+                isMonthly: isMonthly
+            )
+            if dist < minDistance {
+                minDistance = dist
+                bestIndex = i
+            }
+        }
+        return bestIndex
+    }
+    
+    fileprivate func computeDistanceFromBTCMedian(
         run: [SimulationData],
-        stepMedianBTC: [Decimal],
-        verbose: Bool
+        stepMedianBTC: [Decimal]
     ) -> Double {
         var totalDist = 0.0
         let count = min(run.count, stepMedianBTC.count)
@@ -506,6 +558,28 @@ extension SimulationCoordinator {
             let runBTC = NSDecimalNumber(decimal: run[step].btcPriceUSD).doubleValue
             let medianBTC = NSDecimalNumber(decimal: stepMedianBTC[step]).doubleValue
             totalDist += abs(runBTC - medianBTC)
+        }
+        return totalDist
+    }
+    
+    fileprivate func computeDistanceFromPortfolioMedian(
+        run: [SimulationData],
+        stepMedianPortfolio: [Decimal],
+        isMonthly: Bool
+    ) -> Double {
+        var totalDist = 0.0
+        let count = min(run.count, stepMedianPortfolio.count)
+        
+        let isEUR = isMonthly
+            ? (monthlySimSettings.currencyPreferenceMonthly == .eur)
+            : (simSettings.currencyPreference == .eur)
+        
+        for step in 0..<count {
+            let runVal = isEUR
+                ? NSDecimalNumber(decimal: run[step].portfolioValueEUR).doubleValue
+                : NSDecimalNumber(decimal: run[step].portfolioValueUSD).doubleValue
+            let medianVal = NSDecimalNumber(decimal: stepMedianPortfolio[step]).doubleValue
+            totalDist += abs(runVal - medianVal)
         }
         return totalDist
     }

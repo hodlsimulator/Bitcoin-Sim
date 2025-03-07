@@ -387,12 +387,13 @@ struct ContentView: View {
     // MARK: - Parameter Screen
     private var parametersScreen: some View {
         ParameterEntryView(
-            inputManager: inputManager,
-            simSettings: simSettings,
-            coordinator: coordinator,
-            isKeyboardVisible: $isKeyboardVisible,
-            showPinnedColumns: $showPinnedColumns
-        )
+                inputManager: inputManager,
+                simSettings: simSettings,
+                coordinator: coordinator,
+                monthlySimSettings: monthlySimSettings,
+                isKeyboardVisible: $isKeyboardVisible,
+                showPinnedColumns: $showPinnedColumns
+            )
         // .environmentObject(idleManager)
     }
 

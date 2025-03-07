@@ -38,6 +38,7 @@
 		E14344D82D52DE5500225A49 /* FactorCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14344D72D52DE5300225A49 /* FactorCatalog.swift */; };
 		E14344DA2D53553D00225A49 /* SimulationSettings+FactorSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14344D92D53553800225A49 /* SimulationSettings+FactorSync.swift */; };
 		E14344DE2D545CA600225A49 /* ApplyDictionaryFactorsToSim.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14344DD2D545C9D00225A49 /* ApplyDictionaryFactorsToSim.swift */; };
+		E143A2672D7B29F100112682 /* InteractivePortfolioChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E143A2662D7B29EE00112682 /* InteractivePortfolioChartView.swift */; };
 		E14AED6E2D684D040068B2A5 /* ColumnsCollectionViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14AED6D2D684D020068B2A5 /* ColumnsCollectionViewController.swift */; };
 		E14AED702D684DA40068B2A5 /* ColumnsCollectionCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14AED6F2D684DA20068B2A5 /* ColumnsCollectionCell.swift */; };
 		E14AED722D6857840068B2A5 /* TwoColumnChunker.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14AED712D6857820068B2A5 /* TwoColumnChunker.swift */; };
@@ -191,6 +192,7 @@
 		E14344D72D52DE5300225A49 /* FactorCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FactorCatalog.swift; sourceTree = "<group>"; };
 		E14344D92D53553800225A49 /* SimulationSettings+FactorSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SimulationSettings+FactorSync.swift"; sourceTree = "<group>"; };
 		E14344DD2D545C9D00225A49 /* ApplyDictionaryFactorsToSim.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplyDictionaryFactorsToSim.swift; sourceTree = "<group>"; };
+		E143A2662D7B29EE00112682 /* InteractivePortfolioChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InteractivePortfolioChartView.swift; sourceTree = "<group>"; };
 		E14AED6D2D684D020068B2A5 /* ColumnsCollectionViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColumnsCollectionViewController.swift; sourceTree = "<group>"; };
 		E14AED6F2D684DA20068B2A5 /* ColumnsCollectionCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColumnsCollectionCell.swift; sourceTree = "<group>"; };
 		E14AED712D6857820068B2A5 /* TwoColumnChunker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TwoColumnChunker.swift; sourceTree = "<group>"; };
@@ -378,6 +380,7 @@
 				E1883F3F2D1E0DC8007AA90B /* InputManager.swift */,
 				E1A1E52A2D2E3967008F7658 /* InteractiveBitcoinSymbol3DSpinner.swift */,
 				E130933F2D70360200DA6418 /* InteractiveMonteCarloChartView.swift */,
+				E143A2662D7B29EE00112682 /* InteractivePortfolioChartView.swift */,
 				E17B2F272D27505100ECE087 /* LandscapePlaceholderView.swift */,
 				E1942C902D628F2400F5B9A1 /* LoadingOverlayView.swift */,
 				E112E3752D58B73800167E92 /* MailView.swift */,
@@ -646,6 +649,7 @@
 				E1C543B82D224D23005E416D /* MonteCarloResultsView.swift in Sources */,
 				E14AED802D6960730068B2A5 /* SnapTwoColumnsFlowLayout.swift in Sources */,
 				E1942C9B2D63FD7500F5B9A1 /* PinnedColumnCell.swift in Sources */,
+				E143A2672D7B29F100112682 /* InteractivePortfolioChartView.swift in Sources */,
 				E130934D2D70779500DA6418 /* MetalChartRenderer.swift in Sources */,
 				E13093612D70A35300DA6418 /* AxisShaders.metal in Sources */,
 				E1C543BA2D2283A2005E416D /* YearlyPercentileData.swift in Sources */,

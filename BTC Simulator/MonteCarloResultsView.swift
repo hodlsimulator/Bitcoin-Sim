@@ -157,6 +157,7 @@ struct MonteCarloResultsView: View {
     @EnvironmentObject var chartDataCache: ChartDataCache
     @EnvironmentObject var simSettings: SimulationSettings
     @EnvironmentObject var idleManager: IdleManager
+    @EnvironmentObject var coordinator: SimulationCoordinator
     
     @State private var showMetalChart = true  // Toggle for Metal chart
     
@@ -168,6 +169,7 @@ struct MonteCarloResultsView: View {
                     .environmentObject(chartDataCache)
                     .environmentObject(simSettings)
                     .environmentObject(idleManager)
+                    .environmentObject(coordinator)
             } else {
                 // Fallback to a SwiftUI-based chart if needed
             }

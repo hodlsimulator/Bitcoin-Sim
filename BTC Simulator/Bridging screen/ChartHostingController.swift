@@ -8,17 +8,55 @@
 import SwiftUI
 import UIKit
 
-class ChartHostingController<Root: View>: UIHostingController<AnyView> {
+/// A generic UIHostingController subclass that can wrap any SwiftUI view.
+/// It takes a "content: Content" (some View), then injects environment objects
+/// like SimulationCoordinator, etc., before calling super.init.
+class ChartHostingController<Content: View>: UIHostingController<AnyView> {
 
-    init(rootView: Root) {
-        super.init(rootView: AnyView(rootView))
+    // Keep references to any environment objects you need:
+    let coordinator: SimulationCoordinator
+    let chartDataCache: ChartDataCache
+    let simSettings: SimulationSettings
+    let idleManager: IdleManager
+
+    /// The designated initialiser.
+    /// - Parameters:
+    ///   - coordinator: A SimulationCoordinator to inject
+    ///   - chartDataCache: A ChartDataCache to inject
+    ///   - simSettings: The user’s SimulationSettings
+    ///   - idleManager: The IdleManager for screen dim
+    ///   - content: **some** SwiftUI View (e.g. InteractiveMonteCarloChartView)
+    init(
+        coordinator: SimulationCoordinator,
+        chartDataCache: ChartDataCache,
+        simSettings: SimulationSettings,
+        idleManager: IdleManager,
+        content: Content
+    ) {
+        self.coordinator    = coordinator
+        self.chartDataCache = chartDataCache
+        self.simSettings    = simSettings
+        self.idleManager    = idleManager
+
+        // 1) Wrap the SwiftUI Content in environment objects, then wrap in AnyView
+        let finalView = AnyView(
+            content
+                .environmentObject(coordinator)
+                .environmentObject(chartDataCache)
+                .environmentObject(simSettings)
+                .environmentObject(idleManager)
+        )
+
+        // 2) Pass that final SwiftUI view to super
+        super.init(rootView: finalView)
     }
-    
-    /// Required by UIHostingController for storyboard/XIB use
+
+    /// Required for storyboard / XIB
     @objc required dynamic init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
 
+    // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
         

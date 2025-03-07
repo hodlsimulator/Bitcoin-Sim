@@ -4,6 +4,7 @@
 //
 //  Created by . . on 27/02/2025.
 //  Orthographic-based version with pinned axes, auto-fit, and pan/zoom support.
+//  Modified to optionally render either BTC or Portfolio data (no snapshots, no orientation observer).
 //
 
 import Foundation
@@ -34,12 +35,6 @@ struct ThickLineVertexIn {
     var nextPos: SIMD2<Float> // domain coords of next
     var side: Float           // +1 or -1
     var color: SIMD4<Float>   // RGBA
-}
-
-struct ThickLineMatrixUniforms {
-    var transformMatrix: matrix_float4x4
-    var viewportSize: SIMD2<Float>
-    var thicknessPixels: Float
 }
 
 class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
@@ -73,8 +68,6 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     var uniformBuffer: MTLBuffer?  // for TransformUniform (orthographic)
     var thickLineUniformBuffer: MTLBuffer? // for ThickLineUniforms
     
-    var thickLineMatrixUniformBuffer: MTLBuffer?
-    
     var textRendererManager: TextRendererManager?
     
     /// Normal lines
@@ -96,15 +89,22 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     
     private var effectiveDomainMaxY: Float = 1.0
     private var effectiveDomainMinY: Float = 0.0
+    
+    // We'll add this to remember if it's portfolio or BTC
+    private var isPortfolioChart: Bool = false
 
     // MARK: - Setup
     
-    func setupMetal(in size: CGSize,
-                    chartDataCache: ChartDataCache,
-                    simSettings: SimulationSettings)
-    {
+    /// Call this once. Provide `isPortfolioChart = true` if you want the portfolio data.
+    func setupMetal(
+        in size: CGSize,
+        chartDataCache: ChartDataCache,
+        simSettings: SimulationSettings,
+        isPortfolioChart: Bool = false
+    ) {
         self.chartDataCache = chartDataCache
         self.simSettings = simSettings
+        self.isPortfolioChart = isPortfolioChart
         
         guard let device = MTLCreateSystemDefaultDevice() else {
             print("Metal not supported.")
@@ -161,7 +161,6 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         let thickDesc = MTLRenderPipelineDescriptor()
         thickDesc.vertexFunction = thickLineVertexFunc
         thickDesc.fragmentFunction = thickLineFragmentFunc
-        // We only need a bare descriptor, since we’re not using the same vertex layout (we’ll supply custom).
         thickDesc.colorAttachments[0].pixelFormat = .bgra8Unorm
         thickDesc.rasterSampleCount = 4
         thickDesc.colorAttachments[0].isBlendingEnabled = true
@@ -208,7 +207,9 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     
     // MARK: - Build Data
     
-    /// Build normal lines + best-fit line geometry
+    /// Build line geometry. If `isPortfolioChart` is true,
+    /// we read from `chartDataCache?.portfolioRuns` and `chartDataCache?.bestFitPortfolioRun`;
+    /// otherwise, we read from `chartDataCache?.allRuns` and `chartDataCache?.bestFitRun`.
     func buildLineBuffers() {
         guard let cache = chartDataCache,
               let simSettings = simSettings else {
@@ -216,33 +217,54 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             return
         }
         
-        // Gather all points for domain
-        let simulations = cache.allRuns ?? []
-        let bestFitId = cache.bestFitRun?.first?.id
+        // Decide which data set to read
+        let (simulations, bestFitRun) = {
+            if isPortfolioChart {
+                let sims = cache.portfolioRuns ?? []
+                let bfID = cache.bestFitPortfolioRun?.first?.id
+                return (sims, bfID)
+            } else {
+                let sims = cache.allRuns ?? []
+                let bfID = cache.bestFitRun?.first?.id
+                return (sims, bfID)
+            }
+        }()
         
+        if simulations.isEmpty {
+            print("No simulations => skipping.")
+            return
+        }
+        
+        // Flatten to get X and Y min/max
         var allX: [Double] = []
         var allY: [Double] = []
+        
         for run in simulations {
             for pt in run.points {
+                // Convert the X axis from weeks/months to years
                 let xVal = convertPeriodToYears(pt.week, simSettings)
                 allX.append(xVal)
+                
+                // Our Y is the run value (log scale => must be > 0)
                 let rawY = max(1e-9, NSDecimalNumber(decimal: pt.value).doubleValue)
                 allY.append(rawY)
             }
         }
+        
         guard let minX = allX.min(),
               let maxX = allX.max(),
               let rawMinY = allY.min(),
-              let rawMaxY = allY.max() else {
+              let rawMaxY = allY.max()
+        else {
             print("No data => skipping.")
             return
         }
         
-        // Domain range
+        // Domain range for X
         domainMinX = Float(max(0.0, minX))
         domainMaxX = Float(maxX)
         
-        // For Y, log scale
+        // For Y, use log scale
         let extendedTop = rawMaxY * 1.2
         let candidateTicks = generateNiceTicks(
             minVal: rawMinY,
@@ -258,37 +280,34 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         domainMinY = Float(log10(rawMinY))
         domainMaxY = Float(log10(finalTick))
         
-        // Build normal lines with the existing orthographic pipeline
+        // Build normal lines vs best-fit thick lines
         var thinLineVerts: [Float] = []
         var thinLineSizes: [Int] = []
         
-        // Build thick line data for best fit using the new pipeline,
-        // storing domain coords + side=±1 for each segment:
         var thickLineVerts: [ThickLineVertexIn] = []
         
         for (runIndex, sim) in simulations.enumerated() {
-            let isBestFit = (sim.id == bestFitId)
-            let chosenColor: Color = isBestFit ? .orange :
-                customPalette[runIndex % customPalette.count]
-            let chosenOpacity: Float = isBestFit ? 1.0 : 0.2
+            let isBestFitRun = (sim.id == bestFitRun)
+            let chosenColor: Color = isBestFitRun ? .orange
+            : customPalette[runIndex % customPalette.count]
+            // Lighter alpha for non-best-fit
+            let chosenOpacity: Float = isBestFitRun ? 1.0 : 0.2
             
             // Convert color to RGBA
             let (r, g, b, a) = colorToFloats(chosenColor, opacity: Double(chosenOpacity))
             let colVec = SIMD4<Float>(r, g, b, a)
             
-            // Create array of domain points (in log space for y)
+            // Build domain coords (x in years, y in log10)
             let runPoints: [SIMD2<Float>] = sim.points.map { pt in
                 let rx = Float(convertPeriodToYears(pt.week, simSettings))
                 let rawY = max(1e-9, NSDecimalNumber(decimal: pt.value).doubleValue)
                 let ry = Float(log10(rawY))
                 return SIMD2<Float>(rx, ry)
             }
-            if runPoints.count < 2 {
-                continue
-            }
+            guard runPoints.count >= 2 else { continue }
             
-            if !isBestFit {
-                // Use old pipeline => lineStrip of (pos.x, pos.y, 0,1, color)
+            if !isBestFitRun {
+                // Normal lines => old pipeline => lineStrip
                 let startIndex = thinLineVerts.count
                 for p in runPoints {
                     thinLineVerts.append(p.x)
@@ -305,44 +324,53 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
                 thinLineSizes.append(addedCount)
                 
             } else {
-                // Use thickLine pipeline => for each segment (p[i], p[i+1]),
-                // emit 2 vertices: side=+1, side=-1
+                // Best-fit => thick line pipeline => for each segment we push 2 vertices
                 for i in 0..<(runPoints.count - 1) {
                     let p1 = runPoints[i]
-                    let p2 = runPoints[i+1]
+                    let p2 = runPoints[i + 1]
                     
-                    // “Side = +1” vertex
                     thickLineVerts.append(
-                        ThickLineVertexIn(pos: p1, nextPos: p2,
-                                          side: +1,
-                                          color: colVec)
+                        ThickLineVertexIn(pos: p1, nextPos: p2, side: +1, color: colVec)
                     )
-                    // “Side = -1” vertex
                     thickLineVerts.append(
-                        ThickLineVertexIn(pos: p1, nextPos: p2,
-                                          side: -1,
-                                          color: colVec)
+                        ThickLineVertexIn(pos: p1, nextPos: p2, side: -1, color: colVec)
                     )
                 }
             }
         }
         
         // Create GPU buffers
-        let device = self.device!
+        guard let device = self.device else { return }
         
         // Normal lines
         let thinByteCount = thinLineVerts.count * MemoryLayout<Float>.size
-        self.vertexBuffer = device.makeBuffer(bytes: thinLineVerts,
-                                              length: thinByteCount,
-                                              options: .storageModeShared)
-        self.lineSizes = thinLineSizes
+        if thinByteCount > 0 {
+            self.vertexBuffer = device.makeBuffer(
+                bytes: thinLineVerts,
+                length: thinByteCount,
+                options: .storageModeShared
+            )
+            self.lineSizes = thinLineSizes
+        } else {
+            // No normal lines
+            self.vertexBuffer = nil
+            self.lineSizes = []
+        }
         
-        // Best-fit thick lines
+        // Thick best-fit lines
         let thickByteCount = thickLineVerts.count * MemoryLayout<ThickLineVertexIn>.size
-        self.bestFitVertexBuffer = device.makeBuffer(bytes: thickLineVerts,
-                                                     length: thickByteCount,
-                                                     options: .storageModeShared)
-        self.bestFitVertexCount = thickLineVerts.count // 1 vertex = 1 ThickLineVertexIn
+        if thickByteCount > 0 {
+            self.bestFitVertexBuffer = device.makeBuffer(
+                bytes: thickLineVerts,
+                length: thickByteCount,
+                options: .storageModeShared
+            )
+            self.bestFitVertexCount = thickLineVerts.count
+        } else {
+            // No best-fit lines
+            self.bestFitVertexBuffer = nil
+            self.bestFitVertexCount = 0
+        }
     }
     
     // MARK: - Auto-Fit
@@ -362,8 +390,6 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     // MARK: - Orthographic
     
     func updateOrthographic() {
-        // chartScale = max(1.0, chartScale)
-        
         let viewWidth = Float(viewportSize.width)
         let pinnedLeftFloat = Float(pinnedLeft)
         let fracLeft = pinnedLeftFloat / viewWidth
@@ -504,7 +530,8 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         
         // 2) draw normal lines with orthographic pipeline
         encoder.setRenderPipelineState(pipelineState)
-        if let vb = vertexBuffer, let ub = uniformBuffer {
+        if let vb = vertexBuffer,
+           let ub = uniformBuffer {
             encoder.setVertexBuffer(vb, offset: 0, index: 0)
             encoder.setVertexBuffer(ub, offset: 0, index: 1)
             
@@ -517,7 +544,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             }
         }
         
-        // 2b) draw thick best-fit lines using orthographic matrix
+        // 2b) draw thick best-fit lines using the thickLine pipeline
         if let thickPSO = thickLinePipelineState,
            let thickBuf = bestFitVertexBuffer,
            bestFitVertexCount > 0
@@ -526,16 +553,12 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             if let ptr = thickLineUniformBuffer?.contents().bindMemory(
                 to: ThickLineUniforms.self, capacity: 1
             ) {
-                // The same orthographic matrix your normal lines are using
                 ptr.pointee.transformMatrix = projectionMatrix
-                
-                // Pass the viewport in pixels
                 ptr.pointee.viewportSize = SIMD2<Float>(
                     Float(view.drawableSize.width),
                     Float(view.drawableSize.height)
                 )
-                
-                // Let thickness shrink with zoom, but clamp to 1px minimum
+                // Let thickness shrink with zoom, but clamp to a minimal width
                 let baseThickness: Float = 9.0
                 ptr.pointee.thicknessPixels = max(baseThickness / chartScale, 5.0)
             }
@@ -544,6 +567,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             encoder.setVertexBuffer(thickBuf, offset: 0, index: 0)
             encoder.setVertexBuffer(thickLineUniformBuffer, offset: 0, index: 1)
             
+            // triangleStrip => for each segment we have 2 vertices => forms a thick line
             encoder.drawPrimitives(type: .triangleStrip,
                                    vertexStart: 0,
                                    vertexCount: bestFitVertexCount)
@@ -599,7 +623,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
         }
     }
     
-    /// Converts a screen coordinate to domain coordinate, accounting for pinnedLeft
+    /// Convert a screen coordinate to domain coordinate, accounting for pinnedLeft
     func screenToDomain(_ screenPoint: CGPoint, viewSize: CGSize) -> SIMD2<Float> {
         let pinnedLeftFloat = Float(pinnedLeft)
         let chartWidth = Float(viewSize.width) - pinnedLeftFloat

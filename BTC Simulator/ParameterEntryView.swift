@@ -2,7 +2,7 @@
 //  ParameterEntryView.swift
 //  BTCMonteCarlo
 //
-//  Created by . . on 26/12/2024.
+//  Created by ... on 26/12/2024.
 //
 
 import SwiftUI
@@ -15,30 +15,28 @@ struct ParameterEntryView: View {
 
     @FocusState private var activeField: ActiveField?
 
-    // MARK: - Real values stored in your manager
+    // MARK: - Observed Objects
+    // Declare them in the same order you pass them in your .call(...) so Swift's init matches:
     @ObservedObject var inputManager: PersistentInputManager
     @ObservedObject var simSettings: SimulationSettings
     @ObservedObject var coordinator: SimulationCoordinator
-    @EnvironmentObject var monthlySimSettings: MonthlySimulationSettings
-    // @EnvironmentObject var idleManager: IdleManager // Added to ensure it's available in the environment
-
-    // Binding to let the parent know whether the keyboard is visible.
+    @ObservedObject var monthlySimSettings: MonthlySimulationSettings
+    
+    // MARK: - Bindings
     @Binding var isKeyboardVisible: Bool
-
-    // Binding that triggers navigation to pinned columns when set to true.
     @Binding var showPinnedColumns: Bool
 
-    // Local copies
-    @State private var localIterations: String = "50"
-    @State private var localAnnualCAGR: String = "30"
+    // MARK: - Local copies
+    @State private var localIterations: String       = "50"
+    @State private var localAnnualCAGR: String       = "30"
     @State private var localAnnualVolatility: String = "80"
-    @State private var localStandardDev: String = "150"
+    @State private var localStandardDev: String      = "150"
 
-    // Ephemeral fields
-    @State private var ephemeralIterations: String = ""
-    @State private var ephemeralAnnualCAGR: String = ""
+    // Ephemeral fields (for textfields)
+    @State private var ephemeralIterations: String       = ""
+    @State private var ephemeralAnnualCAGR: String       = ""
     @State private var ephemeralAnnualVolatility: String = ""
-    @State private var ephemeralStandardDev: String = ""
+    @State private var ephemeralStandardDev: String      = ""
 
     // If advanced settings are locked
     @AppStorage("advancedSettingsUnlocked") private var advancedSettingsUnlocked: Bool = false
@@ -46,6 +44,7 @@ struct ParameterEntryView: View {
     // Loading state to delay access to idleManager
     @State private var isLoaded = false
 
+    // MARK: - Body
     var body: some View {
         Group {
             if isLoaded {
@@ -65,6 +64,7 @@ struct ParameterEntryView: View {
                         isKeyboardVisible = (newActive != nil)
                     }
                     .onAppear {
+                        // Load initial field values from the inputManager
                         localIterations       = inputManager.iterations
                         localAnnualCAGR       = inputManager.annualCAGR
                         localAnnualVolatility = inputManager.annualVolatility
@@ -82,10 +82,10 @@ struct ParameterEntryView: View {
                             showPinnedColumns = true
                         } label: {
                             Image(systemName: "chevron.right")
-                                .font(.title2)            // slightly larger than .headline
+                                .font(.title2)
                                 .foregroundColor(.white)
-                                .padding()                // keep padding for a larger tap area
-                                .contentShape(Rectangle())// ensures the entire padded area is tappable
+                                .padding()
+                                .contentShape(Rectangle())
                         }
                         .padding(.top, 8)
                         .padding(.trailing, 16)
@@ -388,11 +388,13 @@ struct ParameterEntryView: View {
 
     // MARK: - Helper to commit fields
     private func commitAllFields() {
+        // If ephemeral fields are non-empty, move them to local
         localIterations       = ephemeralIterations.isEmpty       ? localIterations       : ephemeralIterations
         localAnnualCAGR       = ephemeralAnnualCAGR.isEmpty       ? localAnnualCAGR       : ephemeralAnnualCAGR
         localAnnualVolatility = ephemeralAnnualVolatility.isEmpty ? localAnnualVolatility : ephemeralAnnualVolatility
         localStandardDev      = ephemeralStandardDev.isEmpty      ? localStandardDev      : ephemeralStandardDev
 
+        // Then store in inputManager
         inputManager.iterations        = localIterations
         inputManager.annualCAGR        = localAnnualCAGR
         inputManager.annualVolatility  = localAnnualVolatility

@@ -309,7 +309,9 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
 
     @objc private func handleChartButton() {
         guard let container = representableContainer,
-              let nav       = navigationController else {
+              let nav = navigationController,
+              let manager = self.idleManager  // <- unwrap 'idleManager' into a local 'manager'
+        else {
             return
         }
 
@@ -325,11 +327,15 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
             .environmentObject(container.simSettings)
             .environmentObject(container.simChartSelection)
             .environmentObject(container.chartDataCache)
-            .environmentObject(idleManager!)
+            .environmentObject(manager)
 
         // Create your ChartHostingController with the manager
         let chartHostingController = ChartHostingController(
-            rootView: chartView
+            coordinator: container.coordinator,
+            chartDataCache: container.chartDataCache,
+            simSettings: container.simSettings,
+            idleManager: manager,
+            content: chartView
             // idleManager: manager
         )
 
