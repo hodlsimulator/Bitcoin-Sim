@@ -79,12 +79,11 @@ class SimulationCoordinator: ObservableObject {
     func runSimulation(generateGraphs: Bool, lockRandomSeed: Bool) {
         print("Coordinator ID in runSimulation =>", ObjectIdentifier(self))
         print("DEBUG: runSimulation() - current simChartSelection.selectedChart = \(simChartSelection.selectedChart)")
-
+        
         let isMonthly = self.useMonthly
 
         // 1) Apply factor tweaks + set random seed lock
         if isMonthly {
-            // monthlySimSettings.applyDictionaryFactorsToSimMonthly()   // if you have such a method
             monthlySimSettings.lockedRandomSeedMonthly = lockRandomSeed
             print("""
             DEBUG (Monthly Mode):
@@ -318,17 +317,23 @@ class SimulationCoordinator: ObservableObject {
                 let allSimsAsWeekPoints       = self.convertAllSimsToWeekPoints()
                 let allSimsAsPortfolioPoints  = self.convertAllSimsToPortfolioWeekPoints()
 
-                // Build the best-fit *BTC* run as WeekPoints
-                let bestFitSimIDBTC = UUID()
+                // *** REUSE the same ID from faint lines array for best-fit
+                // so the Metal code sees run.id == bestFitID and draws it in thick.
+
+                // For BTC best-fit:
+                let bestFitFaintLineBTC = allSimsAsWeekPoints[bestFitRunIndexBTC]
+                let bestFitSimIDBTC = bestFitFaintLineBTC.id  // Reuse ID from faint line
+
                 let bestFitBTCPoints = bestFitRunBTC.map { row in
                     WeekPoint(week: row.week, value: row.btcPriceUSD)
                 }
                 let bestFitBTC = SimulationRun(id: bestFitSimIDBTC, points: bestFitBTCPoints)
 
-                // Build the best-fit *Portfolio* run as WeekPoints
-                let bestFitSimIDPort = UUID()
+                // For portfolio best-fit:
+                let bestFitFaintLinePortfolio = allSimsAsPortfolioPoints[bestFitRunIndexPortfolio]
+                let bestFitSimIDPort = bestFitFaintLinePortfolio.id // Reuse ID
+
                 let bestFitPortfolioPoints = bestFitRunPortfolio.map { row in
-                    // Decide if we use EUR or USD for portfolio
                     let isEUR = isMonthly
                         ? (self.monthlySimSettings.currencyPreferenceMonthly == .eur)
                         : (self.simSettings.currencyPreference == .eur)
@@ -350,10 +355,10 @@ class SimulationCoordinator: ObservableObject {
                 self.chartDataCache.bestFitPortfolioRun = [bestFitPortfolio]   // best-fit for Portfolio
                 self.chartDataCache.storedInputsHash    = newHash
 
-                // ADDED: let our view/renderer know new data is ready for line buffers
-                self.onChartDataUpdated?()  // ADDED
+                // Let our view/renderer know new data is ready for line buffers
+                self.onChartDataUpdated?()
 
-                // Optionally build chart snapshots
+                // Optionally build chart snapshots if generateGraphs == true
                 let oldSelection = self.simChartSelection.selectedChart
                 if !generateGraphs {
                     self.isChartBuilding = false
@@ -370,6 +375,7 @@ class SimulationCoordinator: ObservableObject {
                     
                     self.simChartSelection.selectedChart = .btcPrice
                     let btcChartView = MonteCarloResultsView()
+                        // *** Add environmentObject(self) for coordinator
                         .environmentObject(self)
                         .environmentObject(self.chartDataCache)
                         .environmentObject(self.simSettings)
@@ -383,7 +389,7 @@ class SimulationCoordinator: ObservableObject {
                     // Then build the Portfolio chart
                     self.simChartSelection.selectedChart = .cumulativePortfolio
                     let portfolioChartView = MonteCarloResultsView()
-                        .environmentObject(self) 
+                        .environmentObject(self)  // coordinator
                         .environmentObject(self.chartDataCache)
                         .environmentObject(self.simSettings)
                         .environmentObject(self.simChartSelection)
