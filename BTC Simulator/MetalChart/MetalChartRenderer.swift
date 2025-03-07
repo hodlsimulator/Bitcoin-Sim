@@ -362,7 +362,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
     // MARK: - Orthographic
     
     func updateOrthographic() {
-        chartScale = max(1.0, chartScale)
+        // chartScale = max(1.0, chartScale)
         
         let viewWidth = Float(viewportSize.width)
         let pinnedLeftFloat = Float(pinnedLeft)

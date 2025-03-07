@@ -63,8 +63,8 @@ class MetalChartGestureCoordinator: NSObject {
     private let doubleTapSlideSensitivity: CGFloat = 0.01
 
     // MARK: - Basic Limits
-    private let minScale: Float = 0.5
-    private let maxScale: Float = 100.0
+    private let minScale: Float = 1.0
+    private let maxScale: Float = 10.0
 
     // MARK: - Trackpad pinch-to-zoom
     private var baseScaleForTwoFingerPan: Float = 1.0
