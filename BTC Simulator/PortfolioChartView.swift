@@ -7,7 +7,7 @@
 
 import SwiftUI
 import Charts
-
+/*
 /// This chart is nearly identical to the BTC one, but uses `portfolioValue` data.
 /// It includes dynamic X and Y logic, clamps invalid values, and shows a best‐fit line
 /// which gets darker and thicker as the iteration count grows.
@@ -171,3 +171,4 @@ private func dynamicXStride(for totalYears: Double) -> Double {
         return 25.0
     }
 }
+*/

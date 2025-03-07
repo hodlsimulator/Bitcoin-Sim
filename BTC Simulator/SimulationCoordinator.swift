@@ -57,8 +57,8 @@ class SimulationCoordinator: ObservableObject {
     
     private var idleManager: IdleManager
 
-    // ADDED: let the coordinator notify our SwiftUI view (or metal chart) that new data is ready
-    var onChartDataUpdated: (() -> Void)?  // ADDED
+    // Let the coordinator notify our SwiftUI view (or metal chart) that new data is ready
+    var onChartDataUpdated: (() -> Void)?
 
     init(
         chartDataCache: ChartDataCache,
@@ -99,7 +99,7 @@ class SimulationCoordinator: ObservableObject {
             simSettings.printAllSettings()
         }
 
-        // 2) Load historical returns
+        // 2) Load historical returns (weekly or monthly)
         if isMonthly {
             let btcMonthlyDict = loadBTCMonthlyReturnsAsDict()
             let spMonthlyDict  = loadSP500MonthlyReturnsAsDict()
@@ -109,7 +109,7 @@ class SimulationCoordinator: ObservableObject {
             sp500MonthlyReturns         = alignedMonthly.map { $0.2 }
             extendedMonthlyReturns      = historicalBTCMonthlyReturns
 
-            // Clear weekly
+            // Clear weekly arrays
             historicalBTCWeeklyReturns = []
             sp500WeeklyReturns = []
             extendedWeeklyReturns = []
@@ -125,7 +125,7 @@ class SimulationCoordinator: ObservableObject {
             sp500WeeklyReturns         = alignedWeekly.map { $0.2 }
             extendedWeeklyReturns      = historicalBTCWeeklyReturns
 
-            // Clear monthly
+            // Clear monthly arrays
             historicalBTCMonthlyReturns = []
             sp500MonthlyReturns = []
             extendedMonthlyReturns = []
@@ -252,19 +252,20 @@ class SimulationCoordinator: ObservableObject {
                 fittedGarchModel: self.fittedGarchModel
             )
 
+            // If empty or cancelled, bail out
             if self.isCancelled || allIterations.isEmpty {
                 DispatchQueue.main.async { self.isLoading = false }
                 return
             }
 
-            // Switch back to main to finalise
+            // 10) Switch back to main thread to finalize results
             DispatchQueue.main.async {
                 self.isLoading = false
                 self.isChartBuilding = true
-                // stepMedianBTCs is from the aggregator in runMonteCarloSimulationsWithProgress
+                // stepMedianBTCs is from aggregator
                 self.stepMedianBTCs = stepMedianPrices
 
-                // Sort runs by final BTC price and pick the usual 10th, median, 90th
+                // Sort runs by final BTC price => pick 10th / median / 90th
                 let finalRuns = allIterations.enumerated().map { (idx, run) -> (Int, Decimal, [SimulationData]) in
                     let finalBTC = run.last?.btcPriceUSD ?? Decimal.zero
                     return (idx, finalBTC, run)
@@ -282,33 +283,25 @@ class SimulationCoordinator: ObservableObject {
                 self.medianResults              = sortedRuns[medianIndex].2
                 self.ninetiethPercentileResults = sortedRuns[ninetiethIndex].2
 
-                // Build the step-median *portfolio* so we can do best-fit on the portfolio as well
+                // We still compute stepMedianPortfolio for reference, but we won't pick the best-fit run for it
                 self.stepMedianPortfolio = self.computeStepMedianPortfolio(
                     allIterations: allIterations,
                     isMonthly: isMonthly
                 )
 
-                //  —> Best-fit for BTC chart (old approach, using stepMedianBTCs):
+                // *** A) We find the best-fit run for BTC only
                 let bestFitRunIndexBTC = self.findRepresentativeRunIndexByBTC(
                     allRuns: allIterations,
                     stepMedianBTC: self.stepMedianBTCs
                 )
-                let bestFitRunBTC = allIterations[bestFitRunIndexBTC]
+                let bestFitRun = allIterations[bestFitRunIndexBTC]
 
-                //  —> Best-fit for the *portfolio* chart:
-                let bestFitRunIndexPortfolio = self.findRepresentativeRunIndexByPortfolio(
-                    allRuns: allIterations,
-                    stepMedianPortfolio: self.stepMedianPortfolio,
-                    isMonthly: isMonthly
-                )
-                let bestFitRunPortfolio = allIterations[bestFitRunIndexPortfolio]
+                // *** B) We'll use THAT same run for the portfolio best-fit line
+                // (no separate aggregator for portfolio)
 
-                // For convenience, we’ll store the BTC best-fit in self.monteCarloResults:
-                self.monteCarloResults = bestFitRunBTC
-
-                print("DEBUG: median final BTC => iteration #\(sortedRuns[medianIndex].0), final BTC => \(sortedRuns[medianIndex].1)")
-                print("DEBUG: bestFitRun BTC => iteration #\(bestFitRunIndexBTC) (distance from median BTC line).")
-                print("DEBUG: bestFitRun Portfolio => iteration #\(bestFitRunIndexPortfolio) (distance from median PORTFOLIO line).")
+                // For convenience, store the BTC best-fit in self.monteCarloResults
+                self.monteCarloResults = bestFitRun
+                print("DEBUG: bestFitRun BTC => iteration #\(bestFitRunIndexBTC). Using same iteration for portfolio best-fit.")
 
                 self.selectedPercentile = .median
                 self.allSimData = allIterations
@@ -317,48 +310,45 @@ class SimulationCoordinator: ObservableObject {
                 let allSimsAsWeekPoints       = self.convertAllSimsToWeekPoints()
                 let allSimsAsPortfolioPoints  = self.convertAllSimsToPortfolioWeekPoints()
 
-                // *** REUSE the same ID from faint lines array for best-fit
-                // so the Metal code sees run.id == bestFitID and draws it in thick.
-
-                // For BTC best-fit:
+                // *** Reuse the faint-line ID for the BTC best-fit
                 let bestFitFaintLineBTC = allSimsAsWeekPoints[bestFitRunIndexBTC]
-                let bestFitSimIDBTC = bestFitFaintLineBTC.id  // Reuse ID from faint line
-
-                let bestFitBTCPoints = bestFitRunBTC.map { row in
+                let bestFitSimIDBTC = bestFitFaintLineBTC.id
+                let bestFitBTCPoints = bestFitRun.map { row in
                     WeekPoint(week: row.week, value: row.btcPriceUSD)
                 }
                 let bestFitBTC = SimulationRun(id: bestFitSimIDBTC, points: bestFitBTCPoints)
 
-                // For portfolio best-fit:
-                let bestFitFaintLinePortfolio = allSimsAsPortfolioPoints[bestFitRunIndexPortfolio]
-                let bestFitSimIDPort = bestFitFaintLinePortfolio.id // Reuse ID
-
-                let bestFitPortfolioPoints = bestFitRunPortfolio.map { row in
+                // *** For portfolio, also use bestFitRunIndexBTC
+                let bestFitFaintLinePortfolio = allSimsAsPortfolioPoints[bestFitRunIndexBTC]
+                let bestFitSimIDPort = bestFitFaintLinePortfolio.id
+                let bestFitPortfolioPoints = bestFitRun.map { row in
                     let isEUR = isMonthly
                         ? (self.monthlySimSettings.currencyPreferenceMonthly == .eur)
                         : (self.simSettings.currencyPreference == .eur)
-                    return WeekPoint(week: row.week,
-                                     value: isEUR ? row.portfolioValueEUR : row.portfolioValueUSD)
+                    return WeekPoint(
+                        week: row.week,
+                        value: isEUR ? row.portfolioValueEUR : row.portfolioValueUSD
+                    )
                 }
                 let bestFitPortfolio = SimulationRun(id: bestFitSimIDPort, points: bestFitPortfolioPoints)
 
-                // Clear old charts
+                // 11) Clear old charts
                 self.chartDataCache.chartSnapshot = nil
                 self.chartDataCache.chartSnapshotLandscape = nil
                 self.chartDataCache.chartSnapshotPortfolio = nil
                 self.chartDataCache.chartSnapshotPortfolioLandscape = nil
 
-                // Save new runs in chartDataCache
+                // 12) Save new runs in chartDataCache
                 self.chartDataCache.allRuns             = allSimsAsWeekPoints
                 self.chartDataCache.portfolioRuns       = allSimsAsPortfolioPoints
-                self.chartDataCache.bestFitRun          = [bestFitBTC]         // best-fit for BTC
-                self.chartDataCache.bestFitPortfolioRun = [bestFitPortfolio]   // best-fit for Portfolio
+                self.chartDataCache.bestFitRun          = [bestFitBTC]         // same iteration as BTC
+                self.chartDataCache.bestFitPortfolioRun = [bestFitPortfolio]   // also same iteration
                 self.chartDataCache.storedInputsHash    = newHash
 
-                // Let our view/renderer know new data is ready for line buffers
+                // 13) Let the chart know we updated data
                 self.onChartDataUpdated?()
 
-                // Optionally build chart snapshots if generateGraphs == true
+                // 14) Optionally build chart snapshots
                 let oldSelection = self.simChartSelection.selectedChart
                 if !generateGraphs {
                     self.isChartBuilding = false
@@ -366,30 +356,28 @@ class SimulationCoordinator: ObservableObject {
                     return
                 }
                 
-                // Build the BTC chart first
                 DispatchQueue.main.async {
                     if self.isCancelled {
                         self.isChartBuilding = false
                         return
                     }
                     
+                    // Build BTC chart
                     self.simChartSelection.selectedChart = .btcPrice
                     let btcChartView = MonteCarloResultsView()
-                        // *** Add environmentObject(self) for coordinator
                         .environmentObject(self)
                         .environmentObject(self.chartDataCache)
                         .environmentObject(self.simSettings)
                         .environmentObject(self.simChartSelection)
                         .environmentObject(self.idleManager)
                     
-                    // Snapshot
                     let btcSnapshot = btcChartView.snapshot()
                     self.chartDataCache.chartSnapshot = btcSnapshot
 
-                    // Then build the Portfolio chart
+                    // Then build portfolio chart
                     self.simChartSelection.selectedChart = .cumulativePortfolio
                     let portfolioChartView = MonteCarloResultsView()
-                        .environmentObject(self)  // coordinator
+                        .environmentObject(self)
                         .environmentObject(self.chartDataCache)
                         .environmentObject(self.simSettings)
                         .environmentObject(self.simChartSelection)
@@ -404,7 +392,7 @@ class SimulationCoordinator: ObservableObject {
                     print("DEBUG: runSimulation finished successfully.")
                 }
 
-                // Extra background processing if needed
+                // Extra background if needed
                 DispatchQueue.global(qos: .background).async {
                     self.processAllResults(allIterations)
                 }
@@ -479,13 +467,11 @@ class SimulationCoordinator: ObservableObject {
         // Additional data processing here if needed
     }
 
-    // Compute step-wise median *portfolio* across all runs
+    // MARK: - Compute step-wise median *portfolio*
     private func computeStepMedianPortfolio(allIterations: [[SimulationData]], isMonthly: Bool) -> [Decimal] {
         guard !allIterations.isEmpty else { return [] }
 
-        // Determine how many time steps exist in each run
         let maxSteps = allIterations[0].count
-
         var medians = [Decimal](repeating: 0, count: maxSteps)
 
         for i in 0..<maxSteps {
