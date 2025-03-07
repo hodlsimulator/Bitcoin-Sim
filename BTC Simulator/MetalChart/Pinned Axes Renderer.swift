@@ -76,7 +76,7 @@ class PinnedAxesRenderer {
     let dottedThickness: Float = 1
 
     // Use the same color as vertical grid lines
-    let dottedColor = SIMD4<Float>(0.4, 0.4, 0.4, 0.6)
+    let dottedColor = SIMD4<Float>(0.4, 0.4, 0.4, 0.5)
     
     // MARK: - Init
     
