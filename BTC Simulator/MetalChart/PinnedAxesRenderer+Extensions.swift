@@ -21,7 +21,7 @@ extension PinnedAxesRenderer {
         minX: Float,
         maxX: Float
     ) -> ([Float], [(MTLBuffer, Int)]) {
-        
+
         var verts: [Float] = []
         var textBuffers: [(MTLBuffer, Int)] = []
         
@@ -30,15 +30,17 @@ extension PinnedAxesRenderer {
         let halfT: Float = 0.5
         let range = Double(maxX - minX)
         
+        // General text config once per call
+        let labelScale: Float = 0.33
+        let letterSpacing: Float = 4.0
+
         for val in xTicks {
             let sx = dataXtoScreenX(dataX: Float(val), transform: chartTransform)
             
-            // Skip ticks that are left of the pinned axis
-            if sx < pinned {
-                continue
-            }
+            // Skip ticks left of pinned axis
+            if sx < pinned { continue }
             
-            // Build short tick line in grey
+            // Draw the small vertical tick
             let y0 = pinnedScreenY
             let y1 = pinnedScreenY + tickLen
             verts.append(contentsOf: makeQuadList(
@@ -49,32 +51,39 @@ extension PinnedAxesRenderer {
                 color: tickColor
             ))
             
-            // Decide label format
+            // Decide label text
             var label = ""
             if range > 2.0 {
                 label = "\(Int(val))y"
             } else if range > 0.5 {
-                let months = Int(val * 12.0)
-                label = "\(months)m"
+                label = "\(Int(val * 12.0))m"
             } else {
-                let weeks = Int(val * 52.0)
-                label = "\(weeks)w"
+                label = "\(Int(val * 52.0))w"
             }
             
-            // White text for label
-            let textColor = SIMD4<Float>(1,1,1,1)
+            // Measure width (for “left of centre”)
+            let labelWidth = textRenderer.measureStringWidth(
+                label,
+                scale: labelScale,
+                letterSpacing: letterSpacing
+            )
+            // Pen X so label is left of tick
+            let penX = sx - labelWidth - 10
             
-            // Place text below the axis
-            let textY = pinnedScreenY + tickLen + 20
+            // Place label below the axis line
+            let penY = pinnedScreenY + tickLen // top of text at tick tip
+            // If you want a bit more space, add e.g. "+ 2"
+
+            let textColor = SIMD4<Float>(1, 1, 1, 1)
             let (tBuf, vCount) = textRenderer.buildTextVertices(
                 string: label,
-                x: sx,
-                y: textY,
+                x: penX,
+                y: penY,
                 color: textColor,
-                scale: 0.33,
+                scale: labelScale,
                 screenWidth: Float(viewportSize.width),
                 screenHeight: Float(viewportSize.height),
-                letterSpacing: 4.0
+                letterSpacing: letterSpacing
             )
             if let buf = tBuf {
                 textBuffers.append((buf, vCount))
@@ -93,22 +102,27 @@ extension PinnedAxesRenderer {
         chartTransform: matrix_float4x4,
         maxDataValue: Double
     ) -> ([Float], [(MTLBuffer, Int)]) {
+        
         var verts: [Float] = []
         var textBuffers: [(MTLBuffer, Int)] = []
         
         let tickLen: Float = 6
         let halfT: Float = 0.5
         let pinnedScreenY = Float(viewportSize.height) - 40
+        let labelScale: Float = 0.33
+        let letterSpacing: Float = 4.0
+        let verticalOffset: Float = 0.0 // Adjust if labels are misaligned vertically (e.g., 2.0 to shift down)
 
         for logVal in yTicks {
             let sy = dataYtoScreenY(dataY: Float(logVal), transform: chartTransform)
+            
+            // Skip if off-screen or below the pinned axis line
             if sy < 0 || sy > Float(viewportSize.height) { continue }
             if sy > pinnedScreenY { continue }
 
+            // Draw tick from (x0..x1)
             let x1 = pinnedScreenX
             let x0 = pinnedScreenX - tickLen
-            
-            // Draw the short horizontal tick line
             verts.append(contentsOf: makeQuadList(
                 x0: x0,
                 y0: sy - halfT,
@@ -117,30 +131,47 @@ extension PinnedAxesRenderer {
                 color: tickColor
             ))
 
-            // Convert log value -> real space -> suffix label
+            // Format label
             let realVal = pow(10.0, logVal)
             let formatted = realVal.formattedGroupedSuffixNoDecimals()
-            // e.g. 10,000 => "10K", 100,000 => "100K", 1,000,000 => "1M"
 
-            // Build text label
-            let textColor = SIMD4<Float>(1,1,1,1)
-            let textX = pinnedScreenX - tickLen - 30
-            let textY = sy - 5
+            // Measure label dimensions
+            let textWidth = textRenderer.measureStringWidth(
+                formatted,
+                scale: labelScale,
+                letterSpacing: letterSpacing
+            )
+            let textHeight = textRenderer.measureStringHeight(
+                formatted,
+                scale: labelScale
+            )
+
+            // Option 1: Standard - Label to the left of tick
+            let penX = x0 - textWidth - 5
             
+            // Option 2: Horizontally centered over tick (uncomment if desired)
+            // let tickMidX = (x0 + x1) / 2
+            // let penX = tickMidX - (textWidth / 2)
+
+            // Vertically center around sy with optional offset
+            let penY = sy - (textHeight * 0.5) + verticalOffset
+
+            let textColor = SIMD4<Float>(1, 1, 1, 1)
             let (tBuf, vCount) = textRenderer.buildTextVertices(
                 string: formatted,
-                x: textX,
-                y: textY,
+                x: penX,
+                y: penY,
                 color: textColor,
-                scale: 0.33,
+                scale: labelScale,
                 screenWidth: Float(viewportSize.width),
                 screenHeight: Float(viewportSize.height),
-                letterSpacing: 4.0
+                letterSpacing: letterSpacing
             )
             if let buf = tBuf {
                 textBuffers.append((buf, vCount))
             }
         }
+        
         return (verts, textBuffers)
     }
 }

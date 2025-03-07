@@ -462,7 +462,7 @@ class PinnedAxesRenderer {
             if let xBuf = xAxisLabelBuffer, xAxisLabelVertexCount > 0 {
                 let pinnedScreenY = Float(viewportSize.height) - 40
                 let labelX = Float(viewportSize.width) * 0.5
-                let labelY = pinnedScreenY - 10  // 10 px above the axis
+                let labelY = pinnedScreenY - 30  // 30 px above the axis
                 
                 let translatePeriod = matrix_float4x4.make2DTranslation(x: labelX, y: labelY)
                 var periodTransform = baseProj * translatePeriod
@@ -479,10 +479,10 @@ class PinnedAxesRenderer {
             if let yBuf = yAxisLabelBuffer, yAxisLabelVertexCount > 0 {
                 let angle = Float.pi * 0.5
                 let rotate = matrix_float4x4.make2DRotation(angle)
-                // pinnedAxisX is the left edge. We'll add +30 so it's further away.
+                // pinnedAxisX is the left edge. We'll add +10 so it's further away.
                 // y is 10% down from the top. Tweak if needed.
                 let translateUSD = matrix_float4x4.make2DTranslation(
-                    x: pinnedAxisX + 30,
+                    x: pinnedAxisX + 10,
                     y: Float(viewportSize.height) * 0.1
                 )
                 var usdTransform = baseProj * translateUSD * rotate

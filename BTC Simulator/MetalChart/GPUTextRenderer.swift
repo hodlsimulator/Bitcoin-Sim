@@ -85,7 +85,7 @@ public class GPUTextRenderer {
             guard let gm = atlas.glyphs[ch] else { continue }
 
             let x0 = penX + gm.xOffset * scale
-            let y0 = penY + (gm.yOffset - gm.height) * scale
+            let y0 = penY + gm.yOffset * scale
             let x1 = x0 + gm.width * scale
             let y1 = y0 + gm.height * scale
 
@@ -231,5 +231,33 @@ public extension GPUTextRenderer {
             screenWidth: screenWidth,
             screenHeight: screenHeight
         )
+    }
+}
+
+extension GPUTextRenderer {
+    /// Measures total width of a single-line string in pixels (GPU side).
+    func measureStringWidth(_ string: String,
+                            scale: Float = 1.0,
+                            letterSpacing: Float = 0.0) -> Float {
+        var width: Float = 0
+        for ch in string {
+            guard let gm = atlas.glyphs[ch] else { continue }
+            width += (gm.xAdvance * scale) + letterSpacing
+        }
+        return width
+    }
+
+    /// Measures the maximum character height for a single-line string in pixels.
+    func measureStringHeight(_ string: String,
+                             scale: Float = 1.0) -> Float {
+        var maxH: Float = 0
+        for ch in string {
+            guard let gm = atlas.glyphs[ch] else { continue }
+            let h = gm.height * scale
+            if h > maxH {
+                maxH = h
+            }
+        }
+        return maxH
     }
 }
