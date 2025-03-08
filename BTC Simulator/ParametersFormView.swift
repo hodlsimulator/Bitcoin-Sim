@@ -23,8 +23,13 @@ struct ParametersFormView: View {
             let isLandscape = geo.size.width > geo.size.height
             
             ZStack {
+                // Subtler gradient with a faint hint of gray
                 LinearGradient(
-                    gradient: Gradient(colors: [Color.black, Color(white: 0.15), Color.black]),
+                    gradient: Gradient(colors: [
+                        Color.black,
+                        Color(white: 0.12),
+                        Color.black
+                    ]),
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
@@ -34,8 +39,10 @@ struct ParametersFormView: View {
                     Spacer().frame(height: isLandscape ? 40 : 80)
                     
                     ZStack {
+                        // Add a semi-transparent fill
                         RoundedRectangle(cornerRadius: 12)
-                            .fill(Color(white: 0.12).opacity(isLandscape ? 0.9 : 1.0))
+                            .fill(Color(white: 0.15).opacity(isLandscape ? 0.95 : 1.0))
+                            .shadow(color: .black.opacity(0.4), radius: 10, x: 0, y: 5)
                         
                         Form {
                             Section(header: Text("SIMULATION PARAMETERS").foregroundColor(.white)) {
@@ -48,7 +55,9 @@ struct ParametersFormView: View {
                                             TextField("50", text: $inputManager.iterations)
                                                 .keyboardType(.numberPad)
                                                 .focused($activeField, equals: .iterations)
-                                                .background(Color.black)
+                                                .padding(6)
+                                                .background(Color(white: 0.25))
+                                                .cornerRadius(6)
                                                 .foregroundColor(.white)
                                         }
                                         VStack(alignment: .leading, spacing: 4) {
@@ -60,7 +69,9 @@ struct ParametersFormView: View {
                                                     print("User typed new CAGR value: \(newVal)")
                                                 }
                                                 .focused($activeField, equals: .annualCAGR)
-                                                .background(Color.black)
+                                                .padding(6)
+                                                .background(Color(white: 0.25))
+                                                .cornerRadius(6)
                                                 .foregroundColor(.white)
                                         }
                                         VStack(alignment: .leading, spacing: 4) {
@@ -69,7 +80,9 @@ struct ParametersFormView: View {
                                             TextField("80", text: $inputManager.annualVolatility)
                                                 .keyboardType(.decimalPad)
                                                 .focused($activeField, equals: .annualVolatility)
-                                                .background(Color.black)
+                                                .padding(6)
+                                                .background(Color(white: 0.25))
+                                                .cornerRadius(6)
                                                 .foregroundColor(.white)
                                         }
                                     }
@@ -81,7 +94,9 @@ struct ParametersFormView: View {
                                         TextField("50", text: $inputManager.iterations)
                                             .keyboardType(.numberPad)
                                             .focused($activeField, equals: .iterations)
-                                            .background(Color.black)
+                                            .padding(6)
+                                            .background(Color(white: 0.25))
+                                            .cornerRadius(6)
                                             .foregroundColor(.white)
                                     }
                                     HStack {
@@ -93,7 +108,9 @@ struct ParametersFormView: View {
                                                 print("User typed new CAGR value: \(newVal)")
                                             }
                                             .focused($activeField, equals: .annualCAGR)
-                                            .background(Color.black)
+                                            .padding(6)
+                                            .background(Color(white: 0.25))
+                                            .cornerRadius(6)
                                             .foregroundColor(.white)
                                     }
                                     HStack {
@@ -102,7 +119,9 @@ struct ParametersFormView: View {
                                         TextField("80", text: $inputManager.annualVolatility)
                                             .keyboardType(.decimalPad)
                                             .focused($activeField, equals: .annualVolatility)
-                                            .background(Color.black)
+                                            .padding(6)
+                                            .background(Color(white: 0.25))
+                                            .cornerRadius(6)
                                             .foregroundColor(.white)
                                     }
                                 }
@@ -117,7 +136,7 @@ struct ParametersFormView: View {
                                     Text("Run Simulation")
                                         .foregroundColor(.white)
                                 }
-                                .listRowBackground(Color.blue)
+                                .listRowBackground(Color.orange)
                                 
                                 Button("Reset Saved Data") {
                                     UserDefaults.standard.removeObject(forKey: "lastViewedWeek")
@@ -126,14 +145,14 @@ struct ParametersFormView: View {
                                     lastViewedPage = 0
                                 }
                                 .foregroundColor(.red)
-                                .listRowBackground(Color(white: 0.15))
+                                .listRowBackground(Color(white: 0.2))
                             }
                             .listRowBackground(Color.clear)
                         }
                         .scrollContentBackground(.hidden)
                         .listStyle(GroupedListStyle())
                     }
-                    .padding(.horizontal, isLandscape ? 60 : 0)
+                    .padding(.horizontal, isLandscape ? 60 : 20)
                     
                     Spacer()
                 }

@@ -31,7 +31,7 @@ struct ParameterEntryView: View {
     @State private var localAnnualVolatility: String = "80"
     @State private var localStandardDev: String      = "150"
 
-    // Ephemeral fields (for textfields)
+    // Ephemeral fields
     @State private var ephemeralIterations: String       = ""
     @State private var ephemeralAnnualCAGR: String       = ""
     @State private var ephemeralAnnualVolatility: String = ""
@@ -40,7 +40,7 @@ struct ParameterEntryView: View {
     // If advanced settings are locked
     @AppStorage("advancedSettingsUnlocked") private var advancedSettingsUnlocked: Bool = false
 
-    // Loading state to delay access to idleManager
+    // Delay for idleManager
     @State private var isLoaded = false
 
     var body: some View {
@@ -49,7 +49,7 @@ struct ParameterEntryView: View {
                 ZStack(alignment: .topTrailing) {
                     GeometryReader { geo in
                         let isLandscape = geo.size.width > geo.size.height
-
+                        
                         if !isLandscape {
                             originalPortraitLayout
                         } else {
@@ -60,7 +60,6 @@ struct ParameterEntryView: View {
                         isKeyboardVisible = (newActive != nil)
                     }
                     .onAppear {
-                        // Load initial field values from the inputManager
                         localIterations       = inputManager.iterations
                         localAnnualCAGR       = inputManager.annualCAGR
                         localAnnualVolatility = inputManager.annualVolatility
@@ -71,8 +70,8 @@ struct ParameterEntryView: View {
                         ephemeralAnnualVolatility = localAnnualVolatility
                         ephemeralStandardDev      = localStandardDev
                     }
-
-                    // Chevron if we have at least 1 result
+                    
+                    // Slide button if results exist
                     if !coordinator.monteCarloResults.isEmpty {
                         Button {
                             showPinnedColumns = true
@@ -96,16 +95,19 @@ struct ParameterEntryView: View {
         }
     }
 
-    // MARK: - Portrait layout
+    // MARK: - Portrait
     private var originalPortraitLayout: some View {
         ZStack {
             LinearGradient(
-                gradient: Gradient(colors: [Color.black, Color(white: 0.15), Color.black]),
+                gradient: Gradient(colors: [
+                    Color.black,
+                    Color(white: 0.15),
+                    Color.black
+                ]),
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
-            .contentShape(Rectangle())
             .onTapGesture {
                 activeField = nil
             }
@@ -116,7 +118,6 @@ struct ParameterEntryView: View {
                 Text("Bitcoin Sim")
                     .font(.custom("AvenirNext-Heavy", size: 40))
                     .foregroundColor(.white)
-                    // .shadow(color: Color.white.opacity(0.6), radius: 6, x: 0, y: 0)
 
                 Text("Set your simulation parameters")
                     .font(.callout)
@@ -144,10 +145,10 @@ struct ParameterEntryView: View {
                     }
                 }
                 .padding(20)
-                .frame(maxWidth: .infinity)
                 .background(
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(Color(white: 0.1).opacity(0.8))
+                        .fill(Color(white: 0.1).opacity(0.85))
+                        .shadow(color: .black.opacity(0.4), radius: 6, x: 0, y: 3)
                 )
                 .padding(.horizontal, 30)
 
@@ -155,9 +156,7 @@ struct ParameterEntryView: View {
                     Text(" ")
                         .font(.callout)
                         .foregroundColor(.clear)
-                        .padding(.horizontal, 32)
                         .padding(.vertical, 14)
-                        .background(Color.clear)
                         .cornerRadius(8)
                         .padding(.top, 6)
                     Spacer()
@@ -188,16 +187,19 @@ struct ParameterEntryView: View {
         }
     }
 
-    // MARK: - Landscape layout
+    // MARK: - Landscape
     private var landscapeLayout: some View {
         ZStack {
             LinearGradient(
-                gradient: Gradient(colors: [Color.black, Color(white: 0.15), Color.black]),
+                gradient: Gradient(colors: [
+                    Color.black,
+                    Color(white: 0.15),
+                    Color.black
+                ]),
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
-            .contentShape(Rectangle())
             .onTapGesture {
                 activeField = nil
             }
@@ -208,7 +210,6 @@ struct ParameterEntryView: View {
                 Text("Bitcoin Sim")
                     .font(.custom("AvenirNext-Heavy", size: 40))
                     .foregroundColor(.white)
-                    // .shadow(color: Color.white.opacity(0.6), radius: 6, x: 0, y: 0)
 
                 Spacer().frame(height: 30)
 
@@ -242,7 +243,6 @@ struct ParameterEntryView: View {
                             Text(" ")
                                 .font(.callout)
                                 .foregroundColor(.clear)
-                                .padding(.horizontal, 32)
                                 .padding(.vertical, 14)
                                 .cornerRadius(8)
                                 .padding(.top, 6)
@@ -270,10 +270,10 @@ struct ParameterEntryView: View {
                         }
                     }
                     .padding(20)
-                    .frame(maxWidth: .infinity)
                     .background(
                         RoundedRectangle(cornerRadius: 12)
-                            .fill(Color(white: 0.1).opacity(0.8))
+                            .fill(Color(white: 0.1).opacity(0.85))
+                            .shadow(color: .black.opacity(0.4), radius: 6, x: 0, y: 3)
                     )
                     .padding(.horizontal, 15)
                 }
@@ -284,16 +284,16 @@ struct ParameterEntryView: View {
         }
     }
 
-    // MARK: - Shared text fields
+    // MARK: - Fields
     private var iterationField: some View {
         VStack(spacing: 4) {
             Text("Iterations")
                 .foregroundColor(.white)
             TextField("50", text: $ephemeralIterations)
                 .keyboardType(.numberPad)
-                .padding(8)
+                .padding(6)
                 .frame(width: 80)
-                .background(Color(white: 0.2))
+                .background(Color(white: 0.25))
                 .cornerRadius(6)
                 .foregroundColor(.white)
                 .focused($activeField, equals: .iterations)
@@ -313,9 +313,9 @@ struct ParameterEntryView: View {
                 .foregroundColor(.white)
             TextField("30", text: $ephemeralAnnualCAGR)
                 .keyboardType(.decimalPad)
-                .padding(8)
+                .padding(6)
                 .frame(width: 80)
-                .background(Color(white: 0.2))
+                .background(Color(white: 0.25))
                 .cornerRadius(6)
                 .foregroundColor(.white)
                 .focused($activeField, equals: .annualCAGR)
@@ -335,9 +335,9 @@ struct ParameterEntryView: View {
                 .foregroundColor(.white)
             TextField("80", text: $ephemeralAnnualVolatility)
                 .keyboardType(.decimalPad)
-                .padding(8)
+                .padding(6)
                 .frame(width: 80)
-                .background(Color(white: 0.2))
+                .background(Color(white: 0.25))
                 .cornerRadius(6)
                 .foregroundColor(.white)
                 .focused($activeField, equals: .annualVolatility)
@@ -357,9 +357,9 @@ struct ParameterEntryView: View {
                 .foregroundColor(.white)
             TextField("150", text: $ephemeralStandardDev)
                 .keyboardType(.decimalPad)
-                .padding(8)
+                .padding(6)
                 .frame(width: 80)
-                .background(Color(white: 0.2))
+                .background(Color(white: 0.25))
                 .cornerRadius(6)
                 .foregroundColor(.white)
                 .focused($activeField, equals: .standardDeviation)
@@ -373,7 +373,7 @@ struct ParameterEntryView: View {
         }
     }
 
-    // MARK: - Helper to commit fields
+    // MARK: - Commit fields
     private func commitAllFields() {
         localIterations       = ephemeralIterations.isEmpty       ? localIterations       : ephemeralIterations
         localAnnualCAGR       = ephemeralAnnualCAGR.isEmpty       ? localAnnualCAGR       : ephemeralAnnualCAGR
@@ -386,7 +386,7 @@ struct ParameterEntryView: View {
         inputManager.standardDeviation = localStandardDev
     }
 
-    // MARK: - Binding for "Lock Seed"
+    // MARK: - Lock seed binding
     private var lockedRandomSeedBinding: Binding<Bool> {
         Binding(
             get: {
