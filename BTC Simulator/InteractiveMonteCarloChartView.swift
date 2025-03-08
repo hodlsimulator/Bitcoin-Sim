@@ -102,8 +102,9 @@ struct InteractiveMonteCarloChartView: View {
                 }
             }
             .navigationBarTitle("Bitcoin Price", displayMode: .inline)
-            .toolbarBackground(Color.black, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
+            .navigationBarBackButtonDisplayMode(NavigationBarItem.TitleDisplayMode.minimal)
+            .toolbarBackground(Color.black, for: ToolbarBackgroundPlacement.navigationBar)
+            .toolbarBackground(ToolbarBackgroundVisibility.visible, for: ToolbarBackgroundPlacement.navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     // The chevron button
