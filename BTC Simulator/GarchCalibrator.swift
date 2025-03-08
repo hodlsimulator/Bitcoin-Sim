@@ -7,21 +7,12 @@
 
 import Foundation
 
-/// A gradient-based GARCH(1,1) calibrator that uses Adam for better step-size adaptation.
+enum TimeFrame {
+    case weekly
+    case monthly
+}
+
 class GarchAdamCalibrator {
-    
-    /// Calibrate (omega, alpha, beta) by maximising log-likelihood via Adam.
-    /// - Parameters:
-    ///   - returns: An array of historical returns
-    ///   - initialOmega: Initial guess for ω
-    ///   - initialAlpha: Initial guess for α
-    ///   - initialBeta:  Initial guess for β
-    ///   - iterations: How many Adam steps to run
-    ///   - baseLR: The base learning rate
-    ///   - beta1: Adam’s exponential decay rate for the first moment
-    ///   - beta2: Adam’s exponential decay rate for the second moment
-    ///   - epsilon: Adam’s small constant to avoid division by zero
-    /// - Returns: A GarchModel with calibrated parameters
     func calibrate(
         returns: [Double],
         initialOmega: Double = 1e-4,
@@ -31,10 +22,10 @@ class GarchAdamCalibrator {
         baseLR: Double = 1e-3,
         beta1: Double = 0.9,
         beta2: Double = 0.999,
-        epsilon: Double = 1e-8
+        epsilon: Double = 1e-8,
+        timeFrame: TimeFrame = .weekly  // <--- NEW
     ) -> GarchModel {
         
-        // If no returns, just return defaults:
         guard !returns.isEmpty else {
             return GarchModel(
                 omega: initialOmega,
@@ -44,23 +35,24 @@ class GarchAdamCalibrator {
             )
         }
         
-        // Current parameters:
+        // Possibly do a quick scale if monthly (OPTIONAL):
+        // let scaledReturns = timeFrame == .monthly ? returns.map { $0 * 0.5 } : returns
+        // … then calibrate on scaledReturns ...
+        // This helps reduce blow-ups from giant monthly jumps.
+
         var omega = initialOmega
         var alpha = initialAlpha
         var beta  = initialBeta
         
-        // Adam moment estimates (m = first moment, v = second moment):
         var mOmega = 0.0, vOmega = 0.0
         var mAlpha = 0.0, vAlpha = 0.0
         var mBeta  = 0.0, vBeta  = 0.0
         
-        // For bias correction:
         var t = 0
         
         for _ in 0..<iterations {
-            t += 1  // Adam iteration count
+            t += 1
             
-            // 1) Compute numeric gradient of log-likelihood
             let (gradOmega, gradAlpha, gradBeta) = numericalGradient(
                 returns: returns,
                 omega: omega,
@@ -68,7 +60,6 @@ class GarchAdamCalibrator {
                 beta: beta
             )
             
-            // 2) Update moments
             mOmega = beta1 * mOmega + (1 - beta1) * gradOmega
             vOmega = beta2 * vOmega + (1 - beta2) * gradOmega * gradOmega
             
@@ -78,29 +69,28 @@ class GarchAdamCalibrator {
             mBeta  = beta1 * mBeta  + (1 - beta1) * gradBeta
             vBeta  = beta2 * vBeta  + (1 - beta2) * gradBeta * gradBeta
             
-            // 3) Bias correction
             let mOmegaHat = mOmega / (1 - pow(beta1, Double(t)))
             let vOmegaHat = vOmega / (1 - pow(beta2, Double(t)))
-            
             let mAlphaHat = mAlpha / (1 - pow(beta1, Double(t)))
             let vAlphaHat = vAlpha / (1 - pow(beta2, Double(t)))
-            
             let mBetaHat  = mBeta  / (1 - pow(beta1, Double(t)))
             let vBetaHat  = vBeta  / (1 - pow(beta2, Double(t)))
             
-            // 4) Adam update (we add because we want to ascend the log-likelihood)
             omega += baseLR * mOmegaHat / (sqrt(vOmegaHat) + epsilon)
             alpha += baseLR * mAlphaHat / (sqrt(vAlphaHat) + epsilon)
             beta  += baseLR * mBetaHat  / (sqrt(vBetaHat)  + epsilon)
             
-            // 5) Basic constraints: positivity + stationarity
+            // Basic positivity constraints
             if omega < 1e-12 { omega = 1e-12 }
             if alpha < 0 { alpha = 0 }
             if beta  < 0 { beta  = 0 }
-            if alpha + beta >= 0.999 {
+            
+            // Tweak: stricter limit for monthly vs weekly
+            let upperLimit = (timeFrame == .monthly) ? 0.9 : 0.999
+            if alpha + beta >= upperLimit {
                 let sum = alpha + beta
-                alpha *= 0.999 / sum
-                beta  *= 0.999 / sum
+                alpha *= upperLimit / sum
+                beta  *= upperLimit / sum
             }
         }
         
@@ -108,7 +98,6 @@ class GarchAdamCalibrator {
         print("Adam-based GARCH calibration done. Final log-likelihood: \(finalLogL)")
         print("Final (ω, α, β) = (\(omega), \(alpha), \(beta))")
         
-        // Return final parameters as a GarchModel
         return GarchModel(
             omega: omega,
             alpha: alpha,
@@ -117,9 +106,6 @@ class GarchAdamCalibrator {
         )
     }
     
-    // MARK: - Numerical Gradient
-    
-    /// Approximates partial derivatives of log-likelihood wrt (omega, alpha, beta).
     private func numericalGradient(
         returns: [Double],
         omega: Double,
@@ -128,31 +114,23 @@ class GarchAdamCalibrator {
         epsilon: Double = 1e-6
     ) -> (Double, Double, Double) {
         
-        // "Center" log-likelihood
         let base = computeGarchLogLikelihood(returns: returns, omega: omega, alpha: alpha, beta: beta)
         
-        // d/dOmega
-        let upOmega = computeGarchLogLikelihood(returns: returns, omega: omega + epsilon, alpha: alpha, beta: beta)
+        let upOmega   = computeGarchLogLikelihood(returns: returns, omega: omega + epsilon, alpha: alpha, beta: beta)
         let downOmega = computeGarchLogLikelihood(returns: returns, omega: omega - epsilon, alpha: alpha, beta: beta)
-        let dOmega = (upOmega - downOmega) / (2 * epsilon)
+        let dOmega    = (upOmega - downOmega) / (2 * epsilon)
         
-        // d/dAlpha
-        let upAlpha = computeGarchLogLikelihood(returns: returns, omega: omega, alpha: alpha + epsilon, beta: beta)
+        let upAlpha   = computeGarchLogLikelihood(returns: returns, omega: omega, alpha: alpha + epsilon, beta: beta)
         let downAlpha = computeGarchLogLikelihood(returns: returns, omega: omega, alpha: alpha - epsilon, beta: beta)
-        let dAlpha = (upAlpha - downAlpha) / (2 * epsilon)
+        let dAlpha    = (upAlpha - downAlpha) / (2 * epsilon)
         
-        // d/dBeta
-        let upBeta = computeGarchLogLikelihood(returns: returns, omega: omega, alpha: alpha, beta: beta + epsilon)
+        let upBeta   = computeGarchLogLikelihood(returns: returns, omega: omega, alpha: alpha, beta: beta + epsilon)
         let downBeta = computeGarchLogLikelihood(returns: returns, omega: omega, alpha: alpha, beta: beta - epsilon)
-        let dBeta = (upBeta - downBeta) / (2 * epsilon)
+        let dBeta    = (upBeta - downBeta) / (2 * epsilon)
         
-        // If the difference is extremely small, numerical issues might occur, but this is fine for demonstration.
         return (dOmega, dAlpha, dBeta)
     }
     
-    // MARK: - GARCH Log-Likelihood
-    
-    /// Computes the log-likelihood of a GARCH(1,1) model (mean=0 assumption).
     private func computeGarchLogLikelihood(
         returns: [Double],
         omega: Double,
@@ -160,20 +138,17 @@ class GarchAdamCalibrator {
         beta: Double
     ) -> Double {
         
-        // Start variance estimate as sample variance of first few points
         let initialVariance = max(1e-10, sampleVariance(Array(returns.prefix(5))))
         
         var variance = initialVariance
         var logL = 0.0
-        let c = -0.5 * log(2.0 * Double.pi) // repeated constant
+        let c = -0.5 * log(2.0 * Double.pi)
         
         for r in returns {
-            // log-likelihood increment
             logL += c
             logL += -0.5 * log(variance)
             logL += -(r * r) / (2.0 * variance)
             
-            // GARCH update
             variance = omega + alpha * (r * r) + beta * variance
             if variance < 1e-15 { variance = 1e-15 }
         }
@@ -181,7 +156,6 @@ class GarchAdamCalibrator {
         return logL
     }
     
-    /// Standard sample variance function
     private func sampleVariance(_ arr: [Double]) -> Double {
         guard arr.count > 1 else { return 1e-8 }
         let mean = arr.reduce(0.0, +) / Double(arr.count)
