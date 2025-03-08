@@ -194,35 +194,6 @@ extension SettingsView {
         simSettings.factors[factorName] = f
     }
 
-    // MARK: - Restore Defaults
-    /*
-    var restoreDefaultsSection: some View {
-        Section {
-            Button(action: {
-                print("simSettings.periodUnit = \(simSettings.periodUnit)")
-                if simSettings.periodUnit == .weeks {
-                    print("Restoring weekly defaults")
-                    simSettings.restoreDefaults()
-                    simSettings.saveToUserDefaults()
-                } else {
-                    print("Restoring monthly defaults")
-                    monthlySimSettings.restoreDefaultsMonthly()
-                    monthlySimSettings.saveToUserDefaultsMonthly()
-                }
-            }) {
-                HStack {    
-                    Text("Restore Defaults")
-                        .foregroundColor(.red)
-                    Spacer()
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-        }
-        .listRowBackground(Color(white: 0.15))
-    }
-    */
-
     // MARK: - About
     var aboutSection: some View {
         Section {

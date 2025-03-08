@@ -121,7 +121,6 @@ struct AdvancedSettingsSection: View {
                         Toggle("Use Historical Sampling", isOn: historicalSamplingBinding)
                             .tint(.orange)
                             .foregroundColor(.white)
-                            // Remove onChange 
                         
                         Toggle("Use Extended Historical Sampling", isOn: extendedHistoricalSamplingBinding)
                             .tint(.orange)
@@ -248,6 +247,16 @@ struct AdvancedSettingsSection: View {
                 }
                 .disabled(!advancedSettingsUnlocked)
                 .opacity(advancedSettingsUnlocked ? 1.0 : 0.5)
+                
+                // The extra button at the bottom to unlock, if still locked.
+                if !advancedSettingsUnlocked {
+                    Button("Unlock Advanced Settings for £0.99") {
+                        showUnlockAlert = true
+                    }
+                    .foregroundColor(.orange)
+                    .buttonStyle(.plain)
+                    .padding(.top, 8)
+                }
             }
         }
         .listRowBackground(Color(white: 0.15))
