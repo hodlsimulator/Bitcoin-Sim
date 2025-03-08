@@ -11,7 +11,6 @@ import MetalKit
 import simd
 
 /// A SwiftUI view that renders the Portfolio chart using Metal.
-/// No orientation observer or snapshot logic needed.
 struct InteractivePortfolioChartView: View {
     @EnvironmentObject var chartDataCache: ChartDataCache
     @EnvironmentObject var simSettings: SimulationSettings
@@ -42,8 +41,9 @@ struct InteractivePortfolioChartView: View {
                 // Dropdown menu for switching back to Bitcoin view
                 if showMenu {
                     VStack(spacing: 10) {
+                        // Pass `navBarBlack: true` when navigating to BTC chart
                         NavigationLink(
-                            destination: InteractiveMonteCarloChartView()
+                            destination: InteractiveMonteCarloChartView(navBarBlack: true)
                                 .environmentObject(chartDataCache)
                                 .environmentObject(simSettings)
                                 .environmentObject(idleManager)
@@ -70,14 +70,13 @@ struct InteractivePortfolioChartView: View {
                 }
             }
             .onAppear {
-                // Reset the IdleManager timer
                 idleManager.resetIdleTimer()
                 
                 DispatchQueue.main.async {
                     // 1) Provide the actual size to the renderer
                     metalChart.viewportSize = geo.size
 
-                    // 2) Call setupMetal ONCE, indicating "portfolio" data
+                    // 2) Setup for "portfolio" data
                     metalChart.setupMetal(
                         in: geo.size,
                         chartDataCache: chartDataCache,
@@ -85,7 +84,6 @@ struct InteractivePortfolioChartView: View {
                         isPortfolioChart: true
                     )
 
-                    // Rebuild GPU buffers whenever coordinator’s data changes
                     coordinator.onChartDataUpdated = {
                         DispatchQueue.main.async {
                             self.metalChart.buildLineBuffers()
