@@ -23,7 +23,6 @@ struct ParametersFormView: View {
             let isLandscape = geo.size.width > geo.size.height
             
             ZStack {
-                // SAME gradient angle for both orientations
                 LinearGradient(
                     gradient: Gradient(colors: [Color.black, Color(white: 0.15), Color.black]),
                     startPoint: .topLeading,
@@ -31,31 +30,26 @@ struct ParametersFormView: View {
                 )
                 .ignoresSafeArea()
                 
-                // A vertical layout controlling top spacing, etc.
                 VStack(spacing: 0) {
-                    // Adjust top spacing based on orientation
                     Spacer().frame(height: isLandscape ? 40 : 80)
                     
-                    // Wrap the Form in a ZStack for a "dark box" effect in landscape
                     ZStack {
-                        // Fill behind the form with a dark rectangle
                         RoundedRectangle(cornerRadius: 12)
                             .fill(Color(white: 0.12).opacity(isLandscape ? 0.9 : 1.0))
                         
                         Form {
                             Section(header: Text("SIMULATION PARAMETERS").foregroundColor(.white)) {
-                                // In landscape, place all fields side-by-side
-                                // In portrait, keep your original stacked layout
                                 if isLandscape {
-                                    // LANDSCAPE: single row
+                                    // LANDSCAPE
                                     HStack(alignment: .top, spacing: 24) {
                                         VStack(alignment: .leading, spacing: 4) {
                                             Text("Iterations")
                                                 .foregroundColor(.white)
                                             TextField("50", text: $inputManager.iterations)
                                                 .keyboardType(.numberPad)
-                                                .foregroundColor(.white)
                                                 .focused($activeField, equals: .iterations)
+                                                .background(Color.black)
+                                                .foregroundColor(.white)
                                         }
                                         VStack(alignment: .leading, spacing: 4) {
                                             Text("Annual CAGR (%)")
@@ -65,27 +59,30 @@ struct ParametersFormView: View {
                                                 .onChange(of: inputManager.annualCAGR, initial: false) { _, newVal in
                                                     print("User typed new CAGR value: \(newVal)")
                                                 }
-                                                .foregroundColor(.white)
                                                 .focused($activeField, equals: .annualCAGR)
+                                                .background(Color.black)
+                                                .foregroundColor(.white)
                                         }
                                         VStack(alignment: .leading, spacing: 4) {
                                             Text("Annual Volatility (%)")
                                                 .foregroundColor(.white)
                                             TextField("80", text: $inputManager.annualVolatility)
                                                 .keyboardType(.decimalPad)
-                                                .foregroundColor(.white)
                                                 .focused($activeField, equals: .annualVolatility)
+                                                .background(Color.black)
+                                                .foregroundColor(.white)
                                         }
                                     }
                                 } else {
-                                    // PORTRAIT: original layout
+                                    // PORTRAIT
                                     HStack {
                                         Text("Iterations")
                                             .foregroundColor(.white)
                                         TextField("50", text: $inputManager.iterations)
                                             .keyboardType(.numberPad)
-                                            .foregroundColor(.white)
                                             .focused($activeField, equals: .iterations)
+                                            .background(Color.black)
+                                            .foregroundColor(.white)
                                     }
                                     HStack {
                                         Text("Annual CAGR (%)")
@@ -95,20 +92,21 @@ struct ParametersFormView: View {
                                             .onChange(of: inputManager.annualCAGR, initial: false) { _, newVal in
                                                 print("User typed new CAGR value: \(newVal)")
                                             }
-                                            .foregroundColor(.white)
                                             .focused($activeField, equals: .annualCAGR)
+                                            .background(Color.black)
+                                            .foregroundColor(.white)
                                     }
                                     HStack {
                                         Text("Annual Volatility (%)")
                                             .foregroundColor(.white)
                                         TextField("80", text: $inputManager.annualVolatility)
                                             .keyboardType(.decimalPad)
-                                            .foregroundColor(.white)
                                             .focused($activeField, equals: .annualVolatility)
+                                            .background(Color.black)
+                                            .foregroundColor(.white)
                                     }
                                 }
                             }
-                            // Make sure form sections are transparent
                             .listRowBackground(Color.clear)
                             
                             Section {
@@ -130,14 +128,11 @@ struct ParametersFormView: View {
                                 .foregroundColor(.red)
                                 .listRowBackground(Color(white: 0.15))
                             }
-                            // Also transparent background
                             .listRowBackground(Color.clear)
                         }
                         .scrollContentBackground(.hidden)
-                        // Force the form's background to be clear too
                         .listStyle(GroupedListStyle())
                     }
-                    // Add horizontal padding in landscape to “tighten” the box
                     .padding(.horizontal, isLandscape ? 60 : 0)
                     
                     Spacer()

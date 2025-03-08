@@ -16,7 +16,6 @@ struct ParameterEntryView: View {
     @FocusState private var activeField: ActiveField?
 
     // MARK: - Observed Objects
-    // Declare them in the same order you pass them in your .call(...) so Swift's init matches:
     @ObservedObject var inputManager: PersistentInputManager
     @ObservedObject var simSettings: SimulationSettings
     @ObservedObject var coordinator: SimulationCoordinator
@@ -44,13 +43,10 @@ struct ParameterEntryView: View {
     // Loading state to delay access to idleManager
     @State private var isLoaded = false
 
-    // MARK: - Body
     var body: some View {
         Group {
             if isLoaded {
-                // Full content of ParameterEntryView
                 ZStack(alignment: .topTrailing) {
-                    // 1) The main content
                     GeometryReader { geo in
                         let isLandscape = geo.size.width > geo.size.height
 
@@ -76,7 +72,7 @@ struct ParameterEntryView: View {
                         ephemeralStandardDev      = localStandardDev
                     }
 
-                    // 2) The forward chevron if there's at least 1 simulation result
+                    // Chevron if we have at least 1 result
                     if !coordinator.monteCarloResults.isEmpty {
                         Button {
                             showPinnedColumns = true
@@ -92,15 +88,15 @@ struct ParameterEntryView: View {
                     }
                 }
             } else {
-                ProgressView() // Placeholder until the view is fully loaded
+                ProgressView()
             }
         }
         .onAppear {
-            isLoaded = true // Set to true once the view appears
+            isLoaded = true
         }
     }
 
-    // MARK: - The unmodified portrait layout
+    // MARK: - Portrait layout
     private var originalPortraitLayout: some View {
         ZStack {
             LinearGradient(
@@ -117,28 +113,24 @@ struct ParameterEntryView: View {
             VStack(spacing: 30) {
                 Spacer().frame(height: 60)
 
-                Text("HODL Simulator")
-                    .font(.custom("AvenirNext-Heavy", size: 36))
+                Text("Bitcoin Sim")
+                    .font(.custom("AvenirNext-Heavy", size: 40))
                     .foregroundColor(.white)
-                    .shadow(color: Color.white.opacity(0.6), radius: 6, x: 0, y: 0)
+                    // .shadow(color: Color.white.opacity(0.6), radius: 6, x: 0, y: 0)
 
                 Text("Set your simulation parameters")
                     .font(.callout)
                     .foregroundColor(.gray)
 
-                // Input fields + toggles
                 VStack(spacing: 20) {
-                    // Row 1 (Iterations & CAGR)
                     HStack(spacing: 24) {
                         iterationField
                         cagrField
                     }
-                    // Row 2 (Vol & StdDev)
                     HStack(spacing: 24) {
                         volField
                         stdDevField
                     }
-                    // Row 3 (Toggles)
                     HStack(spacing: 32) {
                         Toggle("Charts", isOn: $inputManager.generateGraphs)
                             .toggleStyle(CheckboxToggleStyle())
@@ -159,9 +151,8 @@ struct ParameterEntryView: View {
                 )
                 .padding(.horizontal, 30)
 
-                // The Run Simulation Button
                 if coordinator.isLoading || coordinator.isChartBuilding {
-                    Text(" ") // placeholder
+                    Text(" ")
                         .font(.callout)
                         .foregroundColor(.clear)
                         .padding(.horizontal, 32)
@@ -214,10 +205,10 @@ struct ParameterEntryView: View {
             VStack(spacing: 0) {
                 Spacer().frame(height: 30)
 
-                Text("HODL Simulator")
-                    .font(.custom("AvenirNext-Heavy", size: 36))
+                Text("Bitcoin Sim")
+                    .font(.custom("AvenirNext-Heavy", size: 40))
                     .foregroundColor(.white)
-                    .shadow(color: Color.white.opacity(0.6), radius: 6, x: 0, y: 0)
+                    // .shadow(color: Color.white.opacity(0.6), radius: 6, x: 0, y: 0)
 
                 Spacer().frame(height: 30)
 
@@ -227,14 +218,12 @@ struct ParameterEntryView: View {
                         .foregroundColor(.gray)
 
                     VStack(spacing: 24) {
-                        // Single row for all 4 fields
                         HStack(spacing: 24) {
                             iterationField
                             cagrField
                             volField
                             stdDevField
                         }
-                        // Toggles
                         if !(coordinator.isLoading || coordinator.isChartBuilding) {
                             HStack(spacing: 32) {
                                 Toggle("Charts", isOn: $inputManager.generateGraphs)
@@ -249,7 +238,6 @@ struct ParameterEntryView: View {
                             }
                         }
 
-                        // The button
                         if coordinator.isLoading || coordinator.isChartBuilding {
                             Text(" ")
                                 .font(.callout)
@@ -297,7 +285,6 @@ struct ParameterEntryView: View {
     }
 
     // MARK: - Shared text fields
-
     private var iterationField: some View {
         VStack(spacing: 4) {
             Text("Iterations")
@@ -306,9 +293,9 @@ struct ParameterEntryView: View {
                 .keyboardType(.numberPad)
                 .padding(8)
                 .frame(width: 80)
-                .background(Color.white)
+                .background(Color(white: 0.2))
                 .cornerRadius(6)
-                .foregroundColor(.black)
+                .foregroundColor(.white)
                 .focused($activeField, equals: .iterations)
                 .onTapGesture {
                     ephemeralIterations = localIterations
@@ -328,9 +315,9 @@ struct ParameterEntryView: View {
                 .keyboardType(.decimalPad)
                 .padding(8)
                 .frame(width: 80)
-                .background(Color.white)
+                .background(Color(white: 0.2))
                 .cornerRadius(6)
-                .foregroundColor(.black)
+                .foregroundColor(.white)
                 .focused($activeField, equals: .annualCAGR)
                 .onTapGesture {
                     ephemeralAnnualCAGR = localAnnualCAGR
@@ -350,9 +337,9 @@ struct ParameterEntryView: View {
                 .keyboardType(.decimalPad)
                 .padding(8)
                 .frame(width: 80)
-                .background(Color.white)
+                .background(Color(white: 0.2))
                 .cornerRadius(6)
-                .foregroundColor(.black)
+                .foregroundColor(.white)
                 .focused($activeField, equals: .annualVolatility)
                 .onTapGesture {
                     ephemeralAnnualVolatility = localAnnualVolatility
@@ -372,9 +359,9 @@ struct ParameterEntryView: View {
                 .keyboardType(.decimalPad)
                 .padding(8)
                 .frame(width: 80)
-                .background(Color.white)
+                .background(Color(white: 0.2))
                 .cornerRadius(6)
-                .foregroundColor(.black)
+                .foregroundColor(.white)
                 .focused($activeField, equals: .standardDeviation)
                 .onTapGesture {
                     ephemeralStandardDev = localStandardDev
@@ -388,13 +375,11 @@ struct ParameterEntryView: View {
 
     // MARK: - Helper to commit fields
     private func commitAllFields() {
-        // If ephemeral fields are non-empty, move them to local
         localIterations       = ephemeralIterations.isEmpty       ? localIterations       : ephemeralIterations
         localAnnualCAGR       = ephemeralAnnualCAGR.isEmpty       ? localAnnualCAGR       : ephemeralAnnualCAGR
         localAnnualVolatility = ephemeralAnnualVolatility.isEmpty ? localAnnualVolatility : ephemeralAnnualVolatility
         localStandardDev      = ephemeralStandardDev.isEmpty      ? localStandardDev      : ephemeralStandardDev
 
-        // Then store in inputManager
         inputManager.iterations        = localIterations
         inputManager.annualCAGR        = localAnnualCAGR
         inputManager.annualVolatility  = localAnnualVolatility
