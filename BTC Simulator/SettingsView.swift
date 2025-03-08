@@ -215,7 +215,7 @@ struct SettingsView: View {
         .sheet(isPresented: $showMailView) {
             if MFMailComposeViewController.canSendMail() {
                 MailView(
-                    recipients: ["hodlsimulator@gmail.com"],
+                    recipients: ["BitcoinSimApp@gmail.com"],
                     subject: "App Feedback",
                     messageBody: ""
                 )
