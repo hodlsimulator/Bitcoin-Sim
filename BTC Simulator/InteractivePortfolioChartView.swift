@@ -20,10 +20,11 @@ struct InteractivePortfolioChartView: View {
     
     @State private var metalChart = MetalChartRenderer()
     @State private var isMetalChartReady = false
-    
+    @State private var showMenu = false  // Tracks whether the drop-down menu is visible
+
     var body: some View {
         GeometryReader { geo in
-            ZStack {
+            ZStack(alignment: .top) {
                 Color.black.ignoresSafeArea()
                 
                 if isMetalChartReady {
@@ -36,6 +37,36 @@ struct InteractivePortfolioChartView: View {
                 } else {
                     Text("Loading portfolio chart...")
                         .foregroundColor(.white)
+                }
+
+                // Dropdown menu for switching back to Bitcoin view
+                if showMenu {
+                    VStack(spacing: 10) {
+                        NavigationLink(
+                            destination: InteractiveMonteCarloChartView()
+                                .environmentObject(chartDataCache)
+                                .environmentObject(simSettings)
+                                .environmentObject(idleManager)
+                                .environmentObject(coordinator)
+                        ) {
+                            HStack {
+                                Spacer()
+                                Text("Bitcoin Price")
+                                Spacer()
+                            }
+                        }
+                        // Hide the dropdown once tapped
+                        .simultaneousGesture(TapGesture().onEnded {
+                            showMenu = false
+                        })
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color(UIColor.systemBackground))
+                    .cornerRadius(8)
+                    .shadow(radius: 4)
+                    .padding(.horizontal, 16)
+                    .transition(.move(edge: .top))
                 }
             }
             .onAppear {
@@ -67,9 +98,18 @@ struct InteractivePortfolioChartView: View {
             }
         }
         .navigationBarTitle("Portfolio", displayMode: .inline)
-        // iOS 16+ approach to colour the inline nav bar
         .toolbarBackground(Color.black, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    withAnimation {
+                        showMenu.toggle()
+                    }
+                } label: {
+                    Image(systemName: showMenu ? "chevron.up" : "chevron.down")
+                }
+            }
+        }
     }
 }
-

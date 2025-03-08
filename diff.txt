@@ -1,513 +1,297 @@
-diff --git a/BTC Simulator/BTC_SimulatorApp.swift b/BTC Simulator/BTC_SimulatorApp.swift
-index b17cf44..b1263f1 100644
---- a/BTC Simulator/BTC_SimulatorApp.swift	
-+++ b/BTC Simulator/BTC_SimulatorApp.swift	
-@@ -30,6 +30,9 @@ struct BTCMonteCarloApp: App {
- 
-     // Declare a variable to store the font atlas and the text renderer
-     @StateObject private var textRendererManager = TextRendererManager()
-+    
-+    // Initialize the IdleManager for tracking idle state
-+    @StateObject private var idleManager = IdleManager()
- 
-     init() {
-         let navBarAppearance = UINavigationBarAppearance()
-@@ -131,10 +134,22 @@ struct BTCMonteCarloApp: App {
-                             .environmentObject(simChartSelection)
-                             .environmentObject(coordinator)
-                             .environmentObject(textRendererManager)
-+                            .onAppear {
-+                                idleManager.resetIdleTimer() // Start idle timer when the view appears
-+                            }
-+                            .onChange(of: scenePhase) { phase in
-+                                switch phase {
-+                                case .active:
-+                                    idleManager.resetIdleTimer() // Reset idle timer when app becomes active
-+                                case .inactive, .background:
-+                                    idleManager.resumeProcessing() // Handle background state
-+                                default:
-+                                    break
-+                                }
-+                            }
-                     }
-                     .tint(.white)
-                     .preferredColorScheme(.dark)
--
-                 } else {
-                     NavigationStack {
-                         OnboardingView(didFinishOnboarding: $didFinishOnboarding)
-diff --git a/BTC Simulator/ContentView.swift b/BTC Simulator/ContentView.swift
-index 73f3969..7533652 100644
---- a/BTC Simulator/ContentView.swift	
-+++ b/BTC Simulator/ContentView.swift	
-@@ -287,6 +287,9 @@ struct ContentView: View {
+diff --git a/BTC Simulator/InteractiveMonteCarloChartView.swift b/BTC Simulator/InteractiveMonteCarloChartView.swift
+index 780e044..f94edcd 100644
+--- a/BTC Simulator/InteractiveMonteCarloChartView.swift	
++++ b/BTC Simulator/InteractiveMonteCarloChartView.swift	
+@@ -15,26 +15,25 @@ struct InteractiveMonteCarloChartView: View {
+     @EnvironmentObject var chartDataCache: ChartDataCache
+     @EnvironmentObject var simSettings: SimulationSettings
+     @EnvironmentObject var idleManager: IdleManager
+-    
+-    // *** Hook up chart data updates
      @EnvironmentObject var coordinator: SimulationCoordinator
-     @EnvironmentObject var simChartSelection: SimChartSelection
-     @EnvironmentObject var textRendererManager: TextRendererManager // Add this line for text rendering
-+    
-+    // IdleManager to manage idle state
-+    @StateObject private var idleManager = IdleManager()
+-    
++
++    @Environment(\.presentationMode) private var presentationMode
++
+     @State private var metalChart = MetalChartRenderer()
+     @State private var isMetalChartReady = false
+-    @State private var showMenu = false  // Tracks whether the drop-down menu is visible
++
++    // Tracks whether the drop-down menu is visible
++    @State private var showMenu = false
  
      var body: some View {
-         NavigationStack {
-@@ -357,17 +360,18 @@ struct ContentView: View {
-                 for: .default
-             )
-             removeNavBarHairline()
-+            
-+            // Start tracking idle time when content view appears
-+            idleManager.resetIdleTimer()
-         }
--        // Using the new two-parameter onChange closure (available in iOS 17)
--        .onChange(of: coordinator.isLoading, initial: true) { oldValue, newValue in
--            if newValue {
--                lastViewedColumnIndex = 2
--                lastViewedRow = 0
--                print("DEBUG: Forcing lastViewedColumnIndex to default (2) and lastViewedRow to default (0) on new simulation start.")
--            }
-+        .onChange(of: coordinator.isLoading) { newVal in
-+            print("DEBUG: coordinator.isLoading changed to \(newVal)")
-+        }
-+        .onChange(of: coordinator.isChartBuilding) { newVal in
-+            print("DEBUG: coordinator.isChartBuilding changed to \(newVal)")
-         }
--        .onChange(of: coordinator.isChartBuilding) { _ in
--            checkNavigationState()
-+        .onTapGesture {
-+            idleManager.resetIdleTimer() // Reset idle timer on user interaction
-         }
-     }
+         GeometryReader { geo in
+-            ZStack(alignment: .top) {  // <-- Use .top, not .topTrailing
+-                // The chart background
++            ZStack(alignment: .top) {
+                 Color.black.ignoresSafeArea()
  
-@@ -380,12 +384,6 @@ struct ContentView: View {
-             isKeyboardVisible: $isKeyboardVisible,
-             showPinnedColumns: $showPinnedColumns
-         )
--        .onChange(of: coordinator.isLoading) { newVal in
--            print("DEBUG: coordinator.isLoading changed to \(newVal)")
--        }
--        .onChange(of: coordinator.isChartBuilding) { newVal in
--            print("DEBUG: coordinator.isChartBuilding changed to \(newVal)")
--        }
-     }
+                 if isMetalChartReady {
+                     MetalChartContainerView(metalChart: metalChart)
+                         .environmentObject(idleManager)
+                         .onChange(of: geo.size) { _, newSize in
+-                            // If the view size changes (e.g. rotation),
+-                            // update the renderer’s viewport.
+                             metalChart.viewportSize = newSize
+                             metalChart.updateViewport(to: newSize)
+                         }
+@@ -43,7 +42,7 @@ struct InteractiveMonteCarloChartView: View {
+                         .foregroundColor(.white)
+                 }
  
-     // MARK: - Bottom Icons
-diff --git a/BTC Simulator/MetalChart/IdleManager.swift b/BTC Simulator/MetalChart/IdleManager.swift
-new file mode 100644
-index 0000000..9f17153
---- /dev/null
-+++ b/BTC Simulator/MetalChart/IdleManager.swift	
-@@ -0,0 +1,59 @@
-+//
-+//  IdleManager.swift
-+//  BTCMonteCarlo
-+//
-+//  Created by . . on 28/02/2025.
-+//
-+
-+import Foundation
-+
-+class IdleManager: ObservableObject {
-+    private var idleTimer: Timer?
-+    private var lastActivityTime: Date = Date()
-+    private let idleTimeLimit: TimeInterval = 30.0 // 30 seconds for idle timeout
-+    
-+    // Call this method to reset the idle timer whenever there's user interaction (e.g., tapping, scrolling)
-+    @objc func resetIdleTimer() {
-+        lastActivityTime = Date()
-+        
-+        // Invalidate any existing timer to reset the idle state
-+        idleTimer?.invalidate()
-+        
-+        // Create a new timer to trigger idle timeout after the specified idleTimeLimit
-+        idleTimer = Timer.scheduledTimer(timeInterval: idleTimeLimit,
-+                                         target: self,
-+                                         selector: #selector(idleTimeout),
-+                                         userInfo: nil,
-+                                         repeats: false)
-+    }
-+    
-+    // This method is triggered when idle time exceeds the limit (e.g., after 30 seconds of inactivity)
-+    @objc private func idleTimeout() {
-+        // Pause ongoing tasks to save resources when the app is idle
-+        handleIdleState()
-+    }
-+    
-+    // Handles actions for when the app is idle, such as pausing tasks and releasing resources
-+    private func handleIdleState() {
-+        pauseProcessing()
-+        releaseResources()
-+    }
-+    
-+    // Pauses ongoing processing, rendering, or calculations to save resources
-+    private func pauseProcessing() {
-+        print("Pausing live processing due to inactivity.")
-+        // Add code here to pause Metal rendering or any ongoing data processing
-+    }
-+    
-+    // Releases resources that are not needed during the idle state to conserve power and memory
-+    private func releaseResources() {
-+        print("Releasing resources to save power and memory.")
-+        // Add code here to release GPU resources, reset buffers, or pause data updates
-+    }
-+    
-+    // Call this method when the app becomes active again (e.g., after user interaction)
-+    func resumeProcessing() {
-+        print("Resuming live processing.")
-+        // Add code here to restart rendering or resume data processing
-+    }
-+}
-diff --git a/BTC Simulator/MetalChart/MetalChartContainerView.swift b/BTC Simulator/MetalChart/MetalChartContainerView.swift
-index 21445b7..3ca1a7c 100644
---- a/BTC Simulator/MetalChart/MetalChartContainerView.swift	
-+++ b/BTC Simulator/MetalChart/MetalChartContainerView.swift	
-@@ -13,6 +13,9 @@ import MetalKit
- struct MetalChartContainerView: UIViewRepresentable {
-     let metalChart: MetalChartRenderer
-     
-+    // Declare IdleManager to manage idle state
-+    @StateObject private var idleManager = IdleManager()
-+    
-     func makeUIView(context: Context) -> MetalChartUIView {
-         // Ensure textRendererManager is available from metalChart
-         guard let textRendererManager = metalChart.textRendererManager else {
-@@ -73,6 +76,10 @@ struct MetalChartContainerView: UIViewRepresentable {
-         metalView.addGestureRecognizer(doubleTapGR)
-         metalView.addGestureRecognizer(doubleTapSlideGR)
-         
-+        // Reset the idle timer whenever there is any gesture interaction
-+        metalView.addGestureRecognizer(UITapGestureRecognizer(target: coordinator, action: #selector(coordinator.resetIdleTimer)))
-+        metalView.addGestureRecognizer(UIPanGestureRecognizer(target: coordinator, action: #selector(coordinator.resetIdleTimer)))
-+        
-         return metalView
-     }
-     
-@@ -81,6 +88,7 @@ struct MetalChartContainerView: UIViewRepresentable {
-     }
-     
-     func makeCoordinator() -> MetalChartGestureCoordinator {
--        MetalChartGestureCoordinator()
-+        // Pass IdleManager to the Coordinator
-+        MetalChartGestureCoordinator(idleManager: idleManager)
-     }
- }
-diff --git a/BTC Simulator/MetalChart/MetalChartGestureCoordinator.swift b/BTC Simulator/MetalChart/MetalChartGestureCoordinator.swift
-index a7c4706..326d938 100644
---- a/BTC Simulator/MetalChart/MetalChartGestureCoordinator.swift	
-+++ b/BTC Simulator/MetalChart/MetalChartGestureCoordinator.swift	
-@@ -10,24 +10,29 @@ import UIKit
- 
- /// Multi-touch gestures: single-finger pan, two-finger pan, pinch, double-tap zoom.
- class MetalChartGestureCoordinator: NSObject {
--    
-+    private let idleManager: IdleManager // Use 'let' since it won’t change after initialization
-+
-+    // Initializer to accept idleManager from MetalChartContainerView
-+    init(idleManager: IdleManager) {
-+        self.idleManager = idleManager
-+        super.init()
-+    }
-+
-+    // Method for gesture recognizers to reset the idle timer
-+    @objc func resetIdleTimer() {
-+        idleManager.resetIdleTimer()
-+    }
-+
-+    // Existing properties (unchanged)
-     private var baseScale: Float = 1.0
-     private var baseTranslation = SIMD2<Float>(0, 0)
--    
-     private var baseScaleForTwoFingerPan: Float = 1.0
--    
-     private var initialPinchAnchorData: SIMD2<Float>?
--    
--    // For the new double-tap-slide gesture
-     private var baseScaleX: Float = 1.0
-     private var baseScaleY: Float = 1.0
-     private var doubleTapSlideStartPoint: CGPoint = .zero
--    private let doubleTapSlideSensitivity: CGFloat = 0.01 // tweak to taste
--    
--    // Zoom factor for double-tap
-+    private let doubleTapSlideSensitivity: CGFloat = 0.01
-     private let doubleTapZoomFactor: Float = 1.5
--    
--    // Zoom factor for two-finger pan
-     private let twoFingerZoomFactor: Float = 0.005
- }
- 
-@@ -40,6 +45,9 @@ extension MetalChartGestureCoordinator {
-         guard let chartView = recognizer.view as? MetalChartUIView else { return }
-         let renderer = chartView.renderer
-         
-+        // Reset the idle timer whenever there's gesture interaction
-+        idleManager.resetIdleTimer()
-+        
-         switch recognizer.state {
-         case .began:
-             // Store the initial scale
-@@ -54,44 +62,25 @@ extension MetalChartGestureCoordinator {
-             let currentPoint = recognizer.location(in: chartView)
-             
-             // We'll do an example: vertical movement => scale Y, horizontal => scale X
--            // You can decide the formula
-             let dy = currentPoint.y - doubleTapSlideStartPoint.y
-             let dx = currentPoint.x - doubleTapSlideStartPoint.x
-             
--            // For instance, let newScaleY = baseScaleY * (1 + -dy * 0.01)
--            // negative dy for upward means bigger scale
-             let factorY = 1.0 + (-dy * doubleTapSlideSensitivity)
-             let newScaleY = max(0.0001, baseScaleY * Float(factorY))
-             
-             let factorX = 1.0 + (dx * doubleTapSlideSensitivity)
-             let newScaleX = max(0.0001, baseScaleX * Float(factorX))
-             
--            // Decide if you want to scale only Y or only X or both:
--            // Example: scale only Y:
--            // renderer.scaleY = newScaleY
--            //
--            // Example: scale only X:
--            // renderer.scaleX = newScaleX
--            //
--            // Example: scale both (like a uniform-ish approach):
--            // but that defeats the purpose of "slide up/down for Y-axis" vs "slide left/right for X-axis"
--            
--            // Let's show a quick approach:
--            //   If absolute vertical movement > horizontal, treat it as a Y-scale gesture
--            //   else treat as X-scale
-+            // Decide if you want to scale only Y or only X or both
-             if abs(dy) > abs(dx) {
--                // predominantly vertical => scale Y
-                 renderer.scaleY = newScaleY
-             } else {
--                // predominantly horizontal => scale X
-                 renderer.scaleX = newScaleX
+-                // Our custom drop-down menu
++                // Dropdown menu (centred)
+                 if showMenu {
+                     VStack(spacing: 10) {
+                         NavigationLink(
+@@ -53,68 +52,84 @@ struct InteractiveMonteCarloChartView: View {
+                                 .environmentObject(idleManager)
+                                 .environmentObject(coordinator)
+                         ) {
+-                            // HStack with spacers to centre
+                             HStack {
+                                 Spacer()
+                                 Text("Portfolio")
+                                 Spacer()
+                             }
+                         }
+-                        // Hide the dropdown once tapped
++                        // Hide dropdown on tap
+                         .simultaneousGesture(TapGesture().onEnded {
+                             showMenu = false
+                         })
+                     }
+-                    .frame(maxWidth: .infinity)                // Fill the full width
++                    .frame(maxWidth: .infinity)
+                     .padding()
+                     .background(Color(UIColor.systemBackground))
+                     .cornerRadius(8)
+                     .shadow(radius: 4)
+-                    .padding(.horizontal, 16)                 // Equal horizontal padding
++                    .padding(.horizontal, 16)
+                     .transition(.move(edge: .top))
+                 }
              }
-             
-             renderer.updateTransform()
-             
-         case .ended, .cancelled:
--            // Optionally clamp the edges if you want
--            // e.g. if you want to keep chart from going offscreen horizontally
-             renderer.anchorEdges()
-             
-         default:
-@@ -120,13 +109,15 @@ extension MetalChartGestureCoordinator {
-         let renderer = chartView.renderer
-         let translationPoint = recognizer.translation(in: chartView)
-         
-+        // Reset the idle timer whenever there's gesture interaction
-+        idleManager.resetIdleTimer()
-+        
-         switch recognizer.state {
-         case .began:
-             baseScale = renderer.scale
-             baseTranslation = renderer.translation
-             
-         case .changed:
--            // Just do normal panning (no clamp in changed for Option A)
-             renderer.scale = baseScale
-             renderer.translation = baseTranslation
-             
-@@ -138,10 +129,7 @@ extension MetalChartGestureCoordinator {
-             renderer.updateTransform()
-             
-         case .ended, .cancelled:
--            // Now clamp once
-             renderer.anchorEdges()
--            
--            // Update base
-             baseScale = renderer.scale
-             baseTranslation = renderer.translation
-             
-@@ -157,6 +145,9 @@ extension MetalChartGestureCoordinator {
-         
-         guard recognizer.numberOfTouches == 2 else { return }
-         
-+        // Reset the idle timer whenever there's gesture interaction
-+        idleManager.resetIdleTimer()
-+        
-         switch recognizer.state {
-         case .began:
-             baseScaleForTwoFingerPan = renderer.scale
-@@ -183,7 +174,6 @@ extension MetalChartGestureCoordinator {
-             renderer.updateTransform()
-             
-         case .ended, .cancelled:
--            // Single clamp at end
-             renderer.anchorEdges()
-             
-         default:
-@@ -196,12 +186,14 @@ extension MetalChartGestureCoordinator {
-         guard let chartView = recognizer.view as? MetalChartUIView else { return }
-         let renderer = chartView.renderer
-         
-+        // Reset the idle timer whenever there's gesture interaction
-+        idleManager.resetIdleTimer()
-+        
-         switch recognizer.state {
-         case .began:
-             baseScale = renderer.scale
-             baseTranslation = renderer.translation
-             
--            // Midpoint
-             let location: CGPoint
-             if recognizer.numberOfTouches >= 2 {
-                 let t1 = recognizer.location(ofTouch: 0, in: chartView)
-@@ -222,7 +214,6 @@ extension MetalChartGestureCoordinator {
-             let pinchScale = Float(recognizer.scale)
-             let newScale   = baseScale * pinchScale
-             
--            // Anchor logic
-             let anchorOldScreen = anchorScreenCoord(
-                 renderer: renderer,
-                 dataCoord: anchorData,
-@@ -250,9 +241,7 @@ extension MetalChartGestureCoordinator {
-             renderer.updateTransform()
-             
-         case .ended, .cancelled:
--            // Once you release pinch, clamp
-             renderer.anchorEdges()
--            
-             baseScale = renderer.scale
-             baseTranslation = renderer.translation
-             initialPinchAnchorData = nil
-@@ -273,13 +262,11 @@ extension MetalChartGestureCoordinator {
-         let oldScale = renderer.scale
-         let oldTrans = renderer.translation
-         
--        // Temporarily override
-         renderer.scale = scale
-         renderer.translation = translation
-         
-         let screenPt = renderer.convertDataToPoint(dataCoord, viewSize: chartView.bounds.size)
-         
--        // Restore
-         renderer.scale = oldScale
-         renderer.translation = oldTrans
-         
-@@ -291,6 +278,9 @@ extension MetalChartGestureCoordinator {
-         guard let chartView = recognizer.view as? MetalChartUIView else { return }
-         let renderer = chartView.renderer
-         
-+        // Reset the idle timer whenever there's gesture interaction
-+        idleManager.resetIdleTimer()
-+        
-         if recognizer.state == .ended {
-             baseScale = renderer.scale
-             baseTranslation = renderer.translation
-@@ -307,7 +297,6 @@ extension MetalChartGestureCoordinator {
-             renderer.scale = newScale
-             renderer.updateTransform()
-             
--            // Finally clamp
-             renderer.anchorEdges()
-             
-             baseScale = newScale
-diff --git a/BTC Simulator/MetalChart/MetalChartRenderer.swift b/BTC Simulator/MetalChart/MetalChartRenderer.swift
-index 850922f..ab6838b 100644
---- a/BTC Simulator/MetalChart/MetalChartRenderer.swift	
-+++ b/BTC Simulator/MetalChart/MetalChartRenderer.swift	
-@@ -57,6 +57,9 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
-     
-     // MARK: - Setup
-     
-+    // IdleManager to manage idle state
-+    private var idleManager = IdleManager()
-+    
-     func setupMetal(
-         in size: CGSize,
-         chartDataCache: ChartDataCache,
-@@ -308,6 +311,9 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
-             return
+             .onAppear {
+                 // Reset idle timer
+                 idleManager.resetIdleTimer()
+-                
++
+                 DispatchQueue.main.async {
+-                    // 1) Provide the actual size to the renderer
++                    // 1) Provide the size to the Metal renderer
+                     metalChart.viewportSize = geo.size
+ 
+-                    // 2) Set up the Metal chart (BTC price)
++                    // 2) Set up the chart for BTC Price
+                     metalChart.setupMetal(
+                         in: geo.size,
+                         chartDataCache: chartDataCache,
+                         simSettings: simSettings,
+-                        isPortfolioChart: false // This is the BTC chart
++                        isPortfolioChart: false
+                     )
+ 
+-                    // *** Tie simulationCoordinator updates => rebuild line buffers
++                    // Rebuild line buffers when coordinator data changes
+                     coordinator.onChartDataUpdated = {
+                         DispatchQueue.main.async {
+                             self.metalChart.buildLineBuffers()
+                         }
+                     }
+-                    
+-                    // 3) Mark it ready
++
++                    // 3) Mark ready
+                     isMetalChartReady = true
+                 }
+             }
+-            .navigationBarTitle("Bitcoin Price", displayMode: .inline)
+-            .toolbar {
+-                ToolbarItem(placement: .navigationBarTrailing) {
+-                    // The chevron button
+-                    Button {
+-                        withAnimation {
+-                            showMenu.toggle()
+-                        }
+-                    } label: {
+-                        Image(systemName: showMenu ? "chevron.up" : "chevron.down")
++        }
++        // Make the nav bar inline and black
++        .navigationBarTitle("Bitcoin Price", displayMode: .inline)
++        .toolbarBackground(Color.black, for: .navigationBar)
++        .toolbarBackground(.visible, for: .navigationBar)
++
++        // Hide default back button text if you also want no text from the prior screen
++        .navigationBarBackButtonHidden(true)
++
++        // Provide our own toolbar with a custom back arrow (if needed) and the chevron dropdown
++        .toolbar {
++            // If you need to remove text from the back button here too:
++            ToolbarItem(placement: .navigationBarLeading) {
++                Button {
++                    presentationMode.wrappedValue.dismiss()
++                } label: {
++                    Image(systemName: "chevron.left")
++                }
++            }
++
++            // Chevron for the drop-down
++            ToolbarItem(placement: .navigationBarTrailing) {
++                Button {
++                    withAnimation {
++                        showMenu.toggle()
+                     }
++                } label: {
++                    Image(systemName: showMenu ? "chevron.up" : "chevron.down")
+                 }
+             }
          }
-         
-+        // Reset the idle timer when rendering occurs
-+        idleManager.resetIdleTimer()
-+        
-         // 1) Ensure the viewport size is up-to-date
-         let deviceScale = view.drawableSize.width / view.bounds.size.width
-         let scissorX = Int(pinnedAxisOffset * deviceScale)
-diff --git a/BTC Simulator/MetalChart/MetalChartUIView.swift b/BTC Simulator/MetalChart/MetalChartUIView.swift
-index de2abb1..a56f7ec 100644
---- a/BTC Simulator/MetalChart/MetalChartUIView.swift	
-+++ b/BTC Simulator/MetalChart/MetalChartUIView.swift	
-@@ -13,6 +13,9 @@ class MetalChartUIView: UIView {
-     let renderer: MetalChartRenderer
-     let mtkView: MTKView
-     
-+    // IdleManager to track idle time and reset the timer
-+    private var idleManager = IdleManager()
-+    
-     init(frame: CGRect, renderer: MetalChartRenderer, textRendererManager: TextRendererManager) {
-         self.renderer = renderer
-         
-@@ -27,6 +30,9 @@ class MetalChartUIView: UIView {
-         mtkView.sampleCount = 4
-         mtkView.preferredFramesPerSecond = 60
-         
-+        // Add gesture recognizers to reset idle timer on user interaction
-+        addGestureRecognizers()
-+        
-         addSubview(mtkView)
      }
-     
-@@ -38,4 +44,21 @@ class MetalChartUIView: UIView {
-         super.layoutSubviews()
-         mtkView.frame = self.bounds
-     }
-+    
-+    // Add gesture recognizers to reset idle timer on interaction
-+    private func addGestureRecognizers() {
-+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleUserInteraction))
-+        self.addGestureRecognizer(tapGesture)
-+        
-+        let panGesture = UIPanGestureRecognizer(target: self, action: #selector(handleUserInteraction))
-+        self.addGestureRecognizer(panGesture)
-+        
-+        let pinchGesture = UIPinchGestureRecognizer(target: self, action: #selector(handleUserInteraction))
-+        self.addGestureRecognizer(pinchGesture)
-+    }
-+    
-+    // Method to reset the idle timer on user interaction
-+    @objc private func handleUserInteraction() {
-+        idleManager.resetIdleTimer() // Reset idle timer whenever there is user interaction
-+    }
  }
-diff --git a/BTCMonteCarlo.xcodeproj/project.pbxproj b/BTCMonteCarlo.xcodeproj/project.pbxproj
-index ff94a61..e0a436d 100644
---- a/BTCMonteCarlo.xcodeproj/project.pbxproj
-+++ b/BTCMonteCarlo.xcodeproj/project.pbxproj
-@@ -33,6 +33,7 @@
- 		E130935F2D70A0E000DA6418 /* RuntimeGPUTextRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = E130935E2D70A0DE00DA6418 /* RuntimeGPUTextRenderer.swift */; };
- 		E13093612D70A35300DA6418 /* AxisShaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = E13093602D70A35300DA6418 /* AxisShaders.metal */; };
- 		E13093632D71799400DA6418 /* TextRendererManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E13093622D71799200DA6418 /* TextRendererManager.swift */; };
-+		E13093672D71CB1700DA6418 /* IdleManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E13093662D71CB1500DA6418 /* IdleManager.swift */; };
- 		E14344D62D52D85600225A49 /* FactorState.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14344D52D52D85400225A49 /* FactorState.swift */; };
- 		E14344D82D52DE5500225A49 /* FactorCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14344D72D52DE5300225A49 /* FactorCatalog.swift */; };
- 		E14344DA2D53553D00225A49 /* SimulationSettings+FactorSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14344D92D53553800225A49 /* SimulationSettings+FactorSync.swift */; };
-@@ -184,6 +185,7 @@
- 		E130935E2D70A0DE00DA6418 /* RuntimeGPUTextRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuntimeGPUTextRenderer.swift; sourceTree = "<group>"; };
- 		E13093602D70A35300DA6418 /* AxisShaders.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = AxisShaders.metal; sourceTree = "<group>"; };
- 		E13093622D71799200DA6418 /* TextRendererManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextRendererManager.swift; sourceTree = "<group>"; };
-+		E13093662D71CB1500DA6418 /* IdleManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdleManager.swift; sourceTree = "<group>"; };
- 		E14344D52D52D85400225A49 /* FactorState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FactorState.swift; sourceTree = "<group>"; };
- 		E14344D72D52DE5300225A49 /* FactorCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FactorCatalog.swift; sourceTree = "<group>"; };
- 		E14344D92D53553800225A49 /* SimulationSettings+FactorSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SimulationSettings+FactorSync.swift"; sourceTree = "<group>"; };
-@@ -450,6 +452,7 @@
- 				E130935C2D70A0A600DA6418 /* FontAtlasGenerator.swift */,
- 				E13093542D709BC800DA6418 /* GPUFontAtlas.swift */,
- 				E13093562D709BF200DA6418 /* GPUTextRenderer.swift */,
-+				E13093662D71CB1500DA6418 /* IdleManager.swift */,
- 				E13093452D7076B700DA6418 /* MetalChartContainerView.swift */,
- 				E130934A2D70773B00DA6418 /* MetalChartGestureCoordinator.swift */,
- 				E130934C2D70779300DA6418 /* MetalChartRenderer.swift */,
-@@ -709,6 +712,7 @@
- 				E13093312D6D8AFC00DA6418 /* PortraitLayoutCoordinator.swift in Sources */,
- 				E1E31C4F2D4349E000ED22E6 /* DataLoader.swift in Sources */,
- 				E1B7B0A72D4753CF00B60EC6 /* ShiftFactors.swift in Sources */,
-+				E13093672D71CB1700DA6418 /* IdleManager.swift in Sources */,
- 				E14D240B2D3A698A007CC11A /* SimulationSettingsInit.swift in Sources */,
- 				E1E31C512D438DD900ED22E6 /* GarchCalibrator.swift in Sources */,
- 				E1942CA32D64334D00F5B9A1 /* PinnedColumnBridgeViewController.swift in Sources */,
+-    
+\ No newline at end of file
++                
+\ No newline at end of file
+diff --git a/BTC Simulator/InteractivePortfolioChartView.swift b/BTC Simulator/InteractivePortfolioChartView.swift
+index 2ae0094..1ceb64c 100644
+--- a/BTC Simulator/InteractivePortfolioChartView.swift	
++++ b/BTC Simulator/InteractivePortfolioChartView.swift	
+@@ -11,21 +11,26 @@ import MetalKit
+ import simd
+ 
+ /// A SwiftUI view that renders the Portfolio chart using Metal.
+-/// No orientation observer or snapshot logic needed.
+ struct InteractivePortfolioChartView: View {
+     @EnvironmentObject var chartDataCache: ChartDataCache
+     @EnvironmentObject var simSettings: SimulationSettings
+     @EnvironmentObject var idleManager: IdleManager
+     @EnvironmentObject var coordinator: SimulationCoordinator
+-    
++
++    // Allows us to dismiss ourselves (custom back button).
++    @Environment(\.presentationMode) private var presentationMode
++
+     @State private var metalChart = MetalChartRenderer()
+     @State private var isMetalChartReady = false
+-    
++
++    // Tracks whether the dropdown menu is visible
++    @State private var showMenu = false
++
+     var body: some View {
+         GeometryReader { geo in
+-            ZStack {
++            ZStack(alignment: .top) {
+                 Color.black.ignoresSafeArea()
+-                
++
+                 if isMetalChartReady {
+                     MetalChartContainerView(metalChart: metalChart)
+                         .environmentObject(idleManager)
+@@ -37,16 +42,46 @@ struct InteractivePortfolioChartView: View {
+                     Text("Loading portfolio chart...")
+                         .foregroundColor(.white)
+                 }
++
++                // Dropdown menu (centred)
++                if showMenu {
++                    VStack(spacing: 10) {
++                        NavigationLink(
++                            destination: InteractiveMonteCarloChartView()
++                                .environmentObject(chartDataCache)
++                                .environmentObject(simSettings)
++                                .environmentObject(idleManager)
++                                .environmentObject(coordinator)
++                        ) {
++                            HStack {
++                                Spacer()
++                                Text("Bitcoin Price")
++                                Spacer()
++                            }
++                        }
++                        // Hide dropdown on tap
++                        .simultaneousGesture(TapGesture().onEnded {
++                            showMenu = false
++                        })
++                    }
++                    .frame(maxWidth: .infinity)
++                    .padding()
++                    .background(Color(UIColor.systemBackground))
++                    .cornerRadius(8)
++                    .shadow(radius: 4)
++                    .padding(.horizontal, 16)
++                    .transition(.move(edge: .top))
++                }
+             }
+             .onAppear {
+                 // Reset the IdleManager timer
+                 idleManager.resetIdleTimer()
+-                
++
+                 DispatchQueue.main.async {
+-                    // 1) Provide the actual size to the renderer
++                    // 1) Provide the size to the Metal renderer
+                     metalChart.viewportSize = geo.size
+ 
+-                    // 2) Call setupMetal ONCE, indicating "portfolio" data
++                    // 2) Setup the Metal chart for "portfolio" data
+                     metalChart.setupMetal(
+                         in: geo.size,
+                         chartDataCache: chartDataCache,
+@@ -54,22 +89,47 @@ struct InteractivePortfolioChartView: View {
+                         isPortfolioChart: true
+                     )
+ 
+-                    // Rebuild GPU buffers whenever coordinator’s data changes
++                    // Rebuild GPU buffers whenever the coordinator’s data changes
+                     coordinator.onChartDataUpdated = {
+                         DispatchQueue.main.async {
+                             self.metalChart.buildLineBuffers()
+                         }
+                     }
+ 
+-                    // 3) Mark it ready
++                    // 3) Mark the chart as ready
+                     isMetalChartReady = true
+                 }
+             }
+         }
++        // Make the nav bar inline and black
+         .navigationBarTitle("Portfolio", displayMode: .inline)
+-        // iOS 16+ approach to colour the inline nav bar
+         .toolbarBackground(Color.black, for: .navigationBar)
+         .toolbarBackground(.visible, for: .navigationBar)
++
++        // Hide the default back button text
++        .navigationBarBackButtonHidden(true)
++
++        // Provide our own toolbar with both a custom back arrow and the chevron dropdown
++        .toolbar {
++            // Custom back arrow (removes "Bitcoin Price" text from the back button)
++            ToolbarItem(placement: .navigationBarLeading) {
++                Button {
++                    presentationMode.wrappedValue.dismiss()
++                } label: {
++                    Image(systemName: "chevron.left")
++                }
++            }
++
++            // Chevron dropdown toggler
++            ToolbarItem(placement: .navigationBarTrailing) {
++                Button {
++                    withAnimation {
++                        showMenu.toggle()
++                    }
++                } label: {
++                    Image(systemName: showMenu ? "chevron.up" : "chevron.down")
++                }
++            }
++        }
+     }
+ }
+-
 diff --git a/BTCMonteCarlo.xcodeproj/project.xcworkspace/xcuserdata/conor.xcuserdatad/UserInterfaceState.xcuserstate b/BTCMonteCarlo.xcodeproj/project.xcworkspace/xcuserdata/conor.xcuserdatad/UserInterfaceState.xcuserstate
-index 375c945..419d1d0 100644
+index df36695..87ed0ef 100644
 Binary files a/BTCMonteCarlo.xcodeproj/project.xcworkspace/xcuserdata/conor.xcuserdatad/UserInterfaceState.xcuserstate and b/BTCMonteCarlo.xcodeproj/project.xcworkspace/xcuserdata/conor.xcuserdatad/UserInterfaceState.xcuserstate differ
