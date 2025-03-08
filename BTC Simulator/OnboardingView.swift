@@ -57,6 +57,7 @@ struct OnboardingView: View {
     @State var userBTCPrice: String = ""
     
     // Step 6
+    // Default to 100 for weekly. We'll switch it to 500 if monthly is chosen.
     @State var contributionPerStep: Double = 100.0
     @State var feePercentage: Double = 0.6
     
@@ -102,8 +103,6 @@ struct OnboardingView: View {
         return 58000
     }
     
-    // We'll consider deviceOrientation just in case we want it for logic,
-    // but iOS handles rotation for us (no manual rotationEffect).
     var isLandscape: Bool {
         if deviceOrientation.isValidInterfaceOrientation {
             return deviceOrientation.isLandscape
@@ -113,11 +112,8 @@ struct OnboardingView: View {
     }
     
     var body: some View {
-        // The offset used to shift content up a bit for the first 8 steps
         let offsetForContent: CGFloat = (currentStep == 8) ? 0 : -30
         
-        // Decide how far from the bottom the Next/Finish button is in portrait
-        // (or used if in portrait?). The user’s code also uses it in portrait logic.
         let bottomPaddingForStep: CGFloat = {
             if currentStep != 8 {
                 return bottomPaddingNext
@@ -129,7 +125,6 @@ struct OnboardingView: View {
         }()
         
         ZStack {
-            // Background gradient
             LinearGradient(
                 gradient: Gradient(colors: [Color.black, Color(white: 0.15), Color.black]),
                 startPoint: .topLeading,
@@ -140,7 +135,6 @@ struct OnboardingView: View {
                 hideKeyboard()
             }
             
-            // Main step content
             VStack(spacing: 20) {
                 Text(titleForStep(currentStep))
                     .font(.title)
@@ -153,7 +147,6 @@ struct OnboardingView: View {
                         .padding(.top, -2)
                 }
                 
-                // Show the current step subview
                 switch currentStep {
                 case 0:
                     step0_PeriodFrequency()
@@ -177,12 +170,9 @@ struct OnboardingView: View {
                 
                 Spacer().frame(height: 20)
             }
-            // Shift entire step content up a bit if not final step
             .offset(y: offsetForContent)
             .frame(maxWidth: .infinity)
         }
-        // Overlays for *portrait* only, as your original code
-        // We do NOT rotate them ourselves; iOS auto-rotates them.
         .overlay(
             portraitLogoOverlay,
             alignment: .top
@@ -195,26 +185,23 @@ struct OnboardingView: View {
             portraitNextOverlay(bottomPaddingForStep),
             alignment: .bottom
         )
-        
-        // Overlays for *landscape* only
         .overlay(
             landscapeOverlay
         )
-        
-        // If user picks weeks->months or vice versa
+        // If user picks weeks->months or vice versa, change default periods & contributions.
         .onChange(of: chosenPeriodUnit, initial: false) { _, newVal in
             if newVal == .months {
                 totalPeriods = 240
+                contributionPerStep = 500 // monthly default
             } else {
                 totalPeriods = 1040
+                contributionPerStep = 100 // weekly default
             }
         }
-        // Listen for orientation changes, but do NOT forcibly rotate anything
         .onReceive(NotificationCenter.default.publisher(for: UIDevice.orientationDidChangeNotification)) { _ in
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                 let newOrientation = UIDevice.current.orientation
                 guard newOrientation.isValidInterfaceOrientation else { return }
-                // We just store it, no manual rotation
                 deviceOrientation = newOrientation
             }
         }
@@ -231,19 +218,15 @@ struct OnboardingView: View {
 extension OnboardingView {
     @ViewBuilder
     var portraitLogoOverlay: some View {
-        // Show only if not in landscape
         if !isLandscape {
             OfficialBitcoinLogo()
                 .frame(width: 80, height: 80)
-                // If you want to move the logo left, or up/down, tweak these paddings:
-                // Right now it's top-centred, .padding(.top, 67).
                 .padding(.top, 67)
         }
     }
     
     @ViewBuilder
     var portraitBackButtonOverlay: some View {
-        // Show only in portrait if currentStep > 0
         if !isLandscape, currentStep > 0 {
             Button {
                 withAnimation(.easeOut(duration: 0.05)) {
@@ -255,7 +238,6 @@ extension OnboardingView {
                     .foregroundColor(.white)
                     .padding(10)
             }
-            // If you want to move it further left or up, adjust .padding here:
             .padding(.top, 50)
             .padding(.leading, 20)
         }
@@ -263,7 +245,6 @@ extension OnboardingView {
     
     @ViewBuilder
     func portraitNextOverlay(_ bottomPaddingForStep: CGFloat) -> some View {
-        // Show only in portrait
         if !isLandscape {
             Button(currentStep == 8 ? "Finish" : "Next") {
                 withAnimation(.easeOut(duration: 0.15)) {
@@ -276,11 +257,7 @@ extension OnboardingView {
             .background(Color.orange)
             .cornerRadius(6)
             .shadow(color: .black.opacity(0.3), radius: 4, x: 2, y: 2)
-            // If you want the Next button to come *down* a bit, reduce the
-            // bottom padding or add a negative offset. For example:
-            .padding(.bottom, bottomPaddingForStep - 0)
-            // ^ For example, you could change "- 0" to "- 20" or remove it
-            // altogether to place the button lower in portrait.
+            .padding(.bottom, bottomPaddingForStep)
         }
     }
 }
@@ -289,10 +266,8 @@ extension OnboardingView {
 extension OnboardingView {
     @ViewBuilder
     var landscapeOverlay: some View {
-        // Show only if in landscape
         if isLandscape {
             ZStack {
-                // If not on step0, show a back button top-left
                 if currentStep > 0 {
                     Button {
                         withAnimation(.easeOut(duration: 0.05)) {
@@ -309,15 +284,11 @@ extension OnboardingView {
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 }
                 
-                // The logo on the left in landscape. If you want it further left,
-                // increase .padding(.leading). If you want it further up or down,
-                // add .padding(.top) or .offset.
                 OfficialBitcoinLogo()
                     .frame(width: 80, height: 80)
                     .padding(.leading, 50)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
                 
-                // Next/Finish on the right in landscape
                 Button(currentStep == 8 ? "Finish" : "Next") {
                     withAnimation(.easeOut(duration: 0.15)) {
                         onNextTapped()
@@ -365,11 +336,11 @@ extension OnboardingView {
 
             monthlySimSettings.saveToUserDefaultsMonthly()
             simSettings.periodUnit = .months
-            simSettings.userPeriods = totalPeriods  // Add this
+            simSettings.userPeriods = totalPeriods
             coordinator.useMonthly = true
         } else {
             monthlySimSettings.periodUnitMonthly = .weeks
-            monthlySimSettings.userPeriodsMonthly = 1040  // Reset to avoid stale data
+            monthlySimSettings.userPeriodsMonthly = 1040
 
             weeklySimSettings.periodUnit         = .weeks
             weeklySimSettings.userPeriods        = totalPeriods
@@ -385,14 +356,13 @@ extension OnboardingView {
             coordinator.useMonthly = false
         }
 
-        // Force UserDefaults sync
         UserDefaults.standard.set(chosenPeriodUnit.rawValue, forKey: "savedPeriodUnit")
         UserDefaults.standard.set(totalPeriods, forKey: "savedUserPeriods")
         UserDefaults.standard.set(finalBTCPrice, forKey: "savedInitialBTCPriceUSD")
         UserDefaults.standard.set(startingBalanceDouble, forKey: "savedStartingBalance")
         UserDefaults.standard.set(averageCostBasis, forKey: "savedAverageCostBasis")
         UserDefaults.standard.set(feePercentage, forKey: "savedFeePercentage")
-        UserDefaults.standard.synchronize()  // Ensure immediate write
+        UserDefaults.standard.synchronize()
     }
     
     func fetchBTCPriceFromAPI() async {
@@ -461,3 +431,4 @@ extension View {
         )
     }
 }
+    

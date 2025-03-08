@@ -108,8 +108,6 @@ public func generateFontAtlas(
     let atlasWidth  = Int(cellWidth  * CGFloat(cols))
     let atlasHeight = Int(cellHeight * CGFloat(rows))
     
-    print("Building atlas \(atlasWidth)x\(atlasHeight), baseSize=\(baseSize), scaleFactor=\(scaleFactor)")
-    
     // Create a 1-channel (grayscale) context, top-left origin
     let colorSpace = CGColorSpaceCreateDeviceGray()
     guard let context = CGContext(
@@ -226,7 +224,6 @@ public func generateFontAtlas(
             let docsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
             let outURL = docsDir.appendingPathComponent("atlas.png")
             try data.write(to: outURL)
-            print("Atlas PNG saved to \(outURL.path)")
         } catch {
             print("Failed to save atlas.png: \(error)")
         }
@@ -241,7 +238,6 @@ public func generateFontAtlas(
     
     do {
         let atlasTexture = try loader.newTexture(cgImage: cgImage, options: textureOptions)
-        print("Metal texture size: \(atlasTexture.width)x\(atlasTexture.height)")
         return RuntimeFontAtlas(texture: atlasTexture, glyphs: glyphMap)
     } catch {
         print("Error creating MTLTexture: \(error)")

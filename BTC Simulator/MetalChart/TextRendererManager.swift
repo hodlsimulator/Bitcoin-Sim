@@ -14,7 +14,6 @@ class TextRendererManager: ObservableObject {
 
     // Generate font atlas and initialize the renderer
     func generateFontAtlasAndRenderer(device: MTLDevice) {
-        print("Generating font atlas and initializing text renderer...")
         
         // Just get the user's preferred SF style (for size).
         // We'll pass its pointSize into the new generateFontAtlas.
@@ -38,7 +37,6 @@ class TextRendererManager: ObservableObject {
                 atlas: atlas,
                 library: device.makeDefaultLibrary()!
             )
-            print("Font atlas generated and text renderer initialized successfully.")
         } else {
             print("Failed to generate font atlas.")
         }
