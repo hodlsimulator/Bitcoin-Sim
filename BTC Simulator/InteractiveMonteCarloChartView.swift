@@ -2,28 +2,27 @@
 //  InteractiveMonteCarloChartView.swift
 //  BTCMonteCarlo
 //
+//  Created by . . on 27/02/2025.
+//
 
 import SwiftUI
 import UIKit
 import MetalKit
 import simd
 
+/// This SwiftUI View hosts a UIKit-based Metal chart + gestures for Bitcoin.
 struct InteractiveMonteCarloChartView: View {
     @EnvironmentObject var chartDataCache: ChartDataCache
     @EnvironmentObject var simSettings: SimulationSettings
     @EnvironmentObject var idleManager: IdleManager
     @EnvironmentObject var coordinator: SimulationCoordinator
     
-    // Give it a default so calls that don't specify navBarBlack won't break
-    let navBarBlack: Bool
-    
-    init(navBarBlack: Bool = false) {
-        self.navBarBlack = navBarBlack
-    }
-    
+    /// Closure that the parent will pass in, used to navigate to the Portfolio chart.
+    let onSwitchToPortfolio: () -> Void
+
     @State private var metalChart = MetalChartRenderer()
     @State private var isMetalChartReady = false
-    @State private var showMenu = false  // Tracks drop-down visibility
+    @State private var showMenu = false  // Tracks whether the drop-down menu is visible
 
     var body: some View {
         GeometryReader { geo in
@@ -42,24 +41,20 @@ struct InteractiveMonteCarloChartView: View {
                         .foregroundColor(.white)
                 }
 
+                // Our custom drop-down menu
                 if showMenu {
                     VStack(spacing: 10) {
-                        NavigationLink(
-                            destination: InteractivePortfolioChartView()
-                                .environmentObject(chartDataCache)
-                                .environmentObject(simSettings)
-                                .environmentObject(idleManager)
-                                .environmentObject(coordinator)
-                        ) {
+                        Button {
+                            print("Portfolio button tapped")
+                            onSwitchToPortfolio()
+                            showMenu = false
+                        } label: {
                             HStack {
                                 Spacer()
                                 Text("Portfolio")
                                 Spacer()
                             }
                         }
-                        .simultaneousGesture(TapGesture().onEnded {
-                            showMenu = false
-                        })
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
@@ -71,11 +66,14 @@ struct InteractiveMonteCarloChartView: View {
                 }
             }
             .onAppear {
+                // Reset idle timer
                 idleManager.resetIdleTimer()
                 
                 DispatchQueue.main.async {
+                    // Provide size to the renderer
                     metalChart.viewportSize = geo.size
 
+                    // Set up the BTC chart
                     metalChart.setupMetal(
                         in: geo.size,
                         chartDataCache: chartDataCache,
@@ -83,6 +81,7 @@ struct InteractiveMonteCarloChartView: View {
                         isPortfolioChart: false
                     )
 
+                    // Build GPU buffers whenever data updates
                     coordinator.onChartDataUpdated = {
                         DispatchQueue.main.async {
                             self.metalChart.buildLineBuffers()
@@ -93,8 +92,6 @@ struct InteractiveMonteCarloChartView: View {
                 }
             }
             .navigationBarTitle("Bitcoin Price", displayMode: .inline)
-            .toolbarBackground(navBarBlack ? Color.black : Color(UIColor.systemBackground), for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
@@ -109,4 +106,3 @@ struct InteractiveMonteCarloChartView: View {
         }
     }
 }
-        

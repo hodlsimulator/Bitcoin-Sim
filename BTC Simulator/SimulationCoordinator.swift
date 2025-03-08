@@ -364,24 +364,34 @@ class SimulationCoordinator: ObservableObject {
                     
                     // Build BTC chart
                     self.simChartSelection.selectedChart = .btcPrice
-                    let btcChartView = MonteCarloResultsView()
-                        .environmentObject(self)
-                        .environmentObject(self.chartDataCache)
-                        .environmentObject(self.simSettings)
-                        .environmentObject(self.simChartSelection)
-                        .environmentObject(self.idleManager)
+                    // In SimulationCoordinator.swift, when creating MonteCarloResultsView, provide the closure:
+                    let btcChartView = MonteCarloResultsView(onSwitchToPortfolio: {
+                        // If you have a navigateTo(.portfolio) or other code, call it here.
+                        // Otherwise, leave it empty if you don’t need to handle portfolio navigation at this moment.
+                    })
+                    .environmentObject(self)
+                    .environmentObject(self.chartDataCache)
+                    .environmentObject(self.simSettings)
+                    .environmentObject(self.simChartSelection)
+                    .environmentObject(self.idleManager)
                     
                     let btcSnapshot = btcChartView.snapshot()
                     self.chartDataCache.chartSnapshot = btcSnapshot
 
                     // Then build portfolio chart
                     self.simChartSelection.selectedChart = .cumulativePortfolio
-                    let portfolioChartView = MonteCarloResultsView()
-                        .environmentObject(self)
-                        .environmentObject(self.chartDataCache)
-                        .environmentObject(self.simSettings)
-                        .environmentObject(self.simChartSelection)
-                        .environmentObject(self.idleManager)
+                    // In SimulationCoordinator.swift, when creating the portfolioChartView,
+                    // provide the required onSwitchToPortfolio closure. For instance:
+                    let portfolioChartView = MonteCarloResultsView(onSwitchToPortfolio: {
+                        // If you need to switch to the Portfolio from here,
+                        // call your parent’s navigateTo(.portfolio) or other logic.
+                        // Otherwise, leave it empty if there's no actual navigation to do here.
+                    })
+                    .environmentObject(self)
+                    .environmentObject(self.chartDataCache)
+                    .environmentObject(self.simSettings)
+                    .environmentObject(self.simChartSelection)
+                    .environmentObject(self.idleManager)
                     
                     let portfolioSnapshot = portfolioChartView.snapshot()
                     self.chartDataCache.chartSnapshotPortfolio = portfolioSnapshot

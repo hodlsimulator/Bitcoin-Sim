@@ -1,10 +1,3 @@
-//
-//  InteractivePortfolioChartView.swift
-//  BTCMonteCarlo
-//
-//  Created by . . on 07/03/2025.
-//
-
 import SwiftUI
 import UIKit
 import MetalKit
@@ -17,6 +10,9 @@ struct InteractivePortfolioChartView: View {
     @EnvironmentObject var idleManager: IdleManager
     @EnvironmentObject var coordinator: SimulationCoordinator
     
+    /// Closure that the parent will pass in, used to navigate back to Bitcoin chart.
+    let onSwitchToBitcoin: () -> Void
+
     @State private var metalChart = MetalChartRenderer()
     @State private var isMetalChartReady = false
     @State private var showMenu = false  // Tracks whether the drop-down menu is visible
@@ -38,27 +34,19 @@ struct InteractivePortfolioChartView: View {
                         .foregroundColor(.white)
                 }
 
-                // Dropdown menu for switching back to Bitcoin view
+                // Dropdown menu for switching back to Bitcoin
                 if showMenu {
                     VStack(spacing: 10) {
-                        // Pass `navBarBlack: true` when navigating to BTC chart
-                        NavigationLink(
-                            destination: InteractiveMonteCarloChartView(navBarBlack: true)
-                                .environmentObject(chartDataCache)
-                                .environmentObject(simSettings)
-                                .environmentObject(idleManager)
-                                .environmentObject(coordinator)
-                        ) {
+                        Button {
+                            onSwitchToBitcoin()
+                            showMenu = false
+                        } label: {
                             HStack {
                                 Spacer()
                                 Text("Bitcoin Price")
                                 Spacer()
                             }
                         }
-                        // Hide the dropdown once tapped
-                        .simultaneousGesture(TapGesture().onEnded {
-                            showMenu = false
-                        })
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
@@ -70,13 +58,14 @@ struct InteractivePortfolioChartView: View {
                 }
             }
             .onAppear {
+                // Reset idle timer
                 idleManager.resetIdleTimer()
                 
                 DispatchQueue.main.async {
-                    // 1) Provide the actual size to the renderer
+                    // Provide size to the renderer
                     metalChart.viewportSize = geo.size
 
-                    // 2) Setup for "portfolio" data
+                    // Set up the Portfolio chart
                     metalChart.setupMetal(
                         in: geo.size,
                         chartDataCache: chartDataCache,
@@ -84,28 +73,29 @@ struct InteractivePortfolioChartView: View {
                         isPortfolioChart: true
                     )
 
+                    // Build GPU buffers whenever data updates
                     coordinator.onChartDataUpdated = {
                         DispatchQueue.main.async {
                             self.metalChart.buildLineBuffers()
                         }
                     }
 
-                    // 3) Mark it ready
                     isMetalChartReady = true
                 }
             }
-        }
-        .navigationBarTitle("Portfolio", displayMode: .inline)
-        .toolbarBackground(Color.black, for: .navigationBar)
-        .toolbarBackground(.visible, for: .navigationBar)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    withAnimation {
-                        showMenu.toggle()
+            .navigationBarTitle("Portfolio", displayMode: .inline)
+            // If you need a dark nav bar:
+            .toolbarBackground(Color.black, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        withAnimation {
+                            showMenu.toggle()
+                        }
+                    } label: {
+                        Image(systemName: showMenu ? "chevron.up" : "chevron.down")
                     }
-                } label: {
-                    Image(systemName: showMenu ? "chevron.up" : "chevron.down")
                 }
             }
         }

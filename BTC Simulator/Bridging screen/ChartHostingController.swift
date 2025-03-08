@@ -89,3 +89,28 @@ class ChartHostingController<Content: View>: UIHostingController<AnyView> {
         navigationController?.interactivePopGestureRecognizer?.isEnabled = true
     }
 }
+
+extension ChartHostingController {
+    /// Push a new Portfolio chart when someone calls onSwitchToPortfolio
+    func pushPortfolioChart() {
+        // 1) Create the SwiftUI portfolio view
+        let portfolioView = InteractivePortfolioChartView(
+            onSwitchToBitcoin: {
+                // e.g. pop back
+                self.navigationController?.popViewController(animated: true)
+            }
+        )
+        
+        // 2) Wrap it in a ChartHostingController so it has environment objects
+        let portfolioHC = ChartHostingController<AnyView>(
+            coordinator: self.coordinator,
+            chartDataCache: self.chartDataCache,
+            simSettings: self.simSettings,
+            idleManager: self.idleManager,
+            content: AnyView(portfolioView)
+        )
+        
+        // 3) Push it onto the current UINavigationController
+        self.navigationController?.pushViewController(portfolioHC, animated: true)
+    }
+}

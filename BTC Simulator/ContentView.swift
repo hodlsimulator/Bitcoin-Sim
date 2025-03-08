@@ -11,6 +11,11 @@ import UniformTypeIdentifiers
 import PocketSVG
 import UIKit
 
+enum ChartScreen: Hashable {
+    case bitcoin
+    case portfolio
+}
+
 // MARK: - PersistentInputManager
 class PersistentInputManager: ObservableObject {
     @Published var generateGraphs: Bool {
@@ -230,7 +235,7 @@ class ChartDataCache: ObservableObject {
 // MARK: - ContentView
 struct ContentView: View {
 
-    // Some local states for text, etc.
+    // Existing local states (unchanged):
     @State private var oldIterationsValue: String = ""
     @State private var oldAnnualCAGRValue: String = ""
     @State private var oldAnnualVolatilityValue: String = ""
@@ -281,7 +286,7 @@ struct ContentView: View {
 
     @State private var lastViewedColumnIndex: Int = {
         let stored = UserDefaults.standard.object(forKey: "LastViewedColumnIndex") as? Int
-        return stored ?? 2  // If no stored value, default to 2
+        return stored ?? 2
     }()
 
     // MARK: - Environment Objects
@@ -291,110 +296,142 @@ struct ContentView: View {
     @EnvironmentObject var chartDataCache: ChartDataCache
     @EnvironmentObject var coordinator: SimulationCoordinator
     @EnvironmentObject var simChartSelection: SimChartSelection
-    @EnvironmentObject var textRendererManager: TextRendererManager // Add this line for text rendering
+    @EnvironmentObject var textRendererManager: TextRendererManager
     @EnvironmentObject var idleManager: IdleManager
     
-    // IdleManager to manage idle state
-    // @StateObject private var idleManager = IdleManager()
+    @State private var navPath: [ChartScreen] = []
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                // -----------------
-                // 1) Main parameter screen
-                // -----------------
+            NavigationStack(path: $navPath) {
+                ZStack {
+                    // Your existing content (the “parameters” or “results” screen)
                     parametersScreen
 
-                // 2) Bottom icons bar (only if not loading/keyboard)
-                if !coordinator.isLoading && !coordinator.isChartBuilding && !isKeyboardVisible {
-                    bottomIcons
-                }
+                    // Bottom icons bar (only if not loading/keyboard)
+                    if !coordinator.isLoading && !coordinator.isChartBuilding && !isKeyboardVisible {
+                        bottomIcons
+                    }
 
-                // 3) Loading overlay if coordinator is busy
-                if coordinator.isLoading || coordinator.isChartBuilding {
-                    LoadingOverlayView()
-                        .environmentObject(coordinator)
+                    // Loading overlay if coordinator is busy
+                    if coordinator.isLoading || coordinator.isChartBuilding {
+                        LoadingOverlayView()
+                            .environmentObject(coordinator)
+                            .environmentObject(simSettings)
+                    }
+                }
+                .navigationBarHidden(true) // Keep full screen look
+
+                // Existing .navigationDestination for pinned columns, settings, about, etc.
+                .navigationDestination(isPresented: $showPinnedColumns) {
+                    PinnedColumnBridgeRepresentable(
+                        isPresented: $showPinnedColumns,
+                        lastViewedRow: $lastViewedRow,
+                        lastViewedColumnIndex: $lastViewedColumnIndex,
+                        coordinator: coordinator,
+                        inputManager: inputManager,
+                        monthlySimSettings: monthlySimSettings,
+                        simSettings: simSettings,
+                        simChartSelection: simChartSelection,
+                        chartDataCache: chartDataCache
+                    )
+                    .environmentObject(idleManager)
+                    .fullBleedStyle()
+                    .onAppear {
+                        removeNavBarHairline()
+                    }
+                }
+                .navigationDestination(isPresented: $showSettings) {
+                    SettingsView()
                         .environmentObject(simSettings)
+                        .environmentObject(monthlySimSettings)
+                        .environmentObject(coordinator)
+                        .onAppear {
+                            removeNavBarHairline()
+                        }
+                }
+                .navigationDestination(isPresented: $showAbout) {
+                    AboutView()
+                        .onAppear {
+                            removeNavBarHairline()
+                        }
                 }
 
-                // (Removed the debug button for TestHarnessView)
-            }
-            .navigationBarHidden(true)
+                // Destination for the two chart screens
+                .navigationDestination(for: ChartScreen.self) { screen in
+                    switch screen {
+                    case .bitcoin:
+                        InteractiveMonteCarloChartView(
+                            // Navigate to portfolio on button tap
+                            onSwitchToPortfolio: {
+                                navigateTo(.portfolio)
+                            }
+                        )
+                        .onAppear {
+                            removeNavBarHairline()
+                        }
 
-            // Existing navigation destinations
-            .navigationDestination(isPresented: $showPinnedColumns) {
-                PinnedColumnBridgeRepresentable(
-                    isPresented: $showPinnedColumns,
-                    lastViewedRow: $lastViewedRow,
-                    lastViewedColumnIndex: $lastViewedColumnIndex,
-                    coordinator: coordinator,
-                    inputManager: inputManager,
-                    monthlySimSettings: monthlySimSettings,
-                    simSettings: simSettings,
-                    simChartSelection: simChartSelection,
-                    chartDataCache: chartDataCache
+                    case .portfolio:
+                        InteractivePortfolioChartView(
+                            // Navigate back to bitcoin on button tap
+                            onSwitchToBitcoin: {
+                                navigateTo(.bitcoin)
+                            }
+                        )
+                        .onAppear {
+                            removeNavBarHairline()
+                        }
+                    }
+                }
+            }
+            .onAppear {
+                removeNavBarHairline()
+
+                // Generate font atlas
+                textRendererManager.generateFontAtlasAndRenderer(
+                    device: MTLCreateSystemDefaultDevice()!
                 )
-                .environmentObject(idleManager)
-                .fullBleedStyle()
-                .onAppear {
-                    removeNavBarHairline()
+
+                // Shift the back button title off-screen globally
+                UIBarButtonItem.appearance().setBackButtonTitlePositionAdjustment(
+                    UIOffset(horizontal: -1000, vertical: 0),
+                    for: .default
+                )
+            }
+            .onChange(of: coordinator.isLoading) { oldValue, newValue in
+                if newValue {
+                    lastViewedColumnIndex = 2
+                    lastViewedRow = 0
+                    print("DEBUG: Forcing lastViewedColumnIndex to default (2) and lastViewedRow to default (0) on new simulation start.")
                 }
             }
-            .navigationDestination(isPresented: $showSettings) {
-                SettingsView()
-                    .environmentObject(simSettings)
-                    .environmentObject(monthlySimSettings)
-                    .environmentObject(coordinator)
-                    .onAppear {
-                        removeNavBarHairline()
-                    }
+            .onChange(of: coordinator.isChartBuilding) { oldValue, newValue in
+                checkNavigationState()
             }
-            .navigationDestination(isPresented: $showAbout) {
-                AboutView()
-                    .onAppear {
-                        removeNavBarHairline()
-                    }
+            .onTapGesture {
+                // e.g. idleManager.resetIdleTimer()
             }
+        }
 
-            // (Removed the navigation destination for showTestHarness)
-        }
-        .onAppear {
-            // Generate font atlas when content view appears
-            textRendererManager.generateFontAtlasAndRenderer(device: MTLCreateSystemDefaultDevice()!)
-
-            // Shift back button title off-screen globally
-            UIBarButtonItem.appearance().setBackButtonTitlePositionAdjustment(
-                UIOffset(horizontal: -1000, vertical: 0),
-                for: .default
-            )
-            removeNavBarHairline()
-        }
-        .onChange(of: coordinator.isLoading) { oldValue, newValue in
-            if newValue {
-                lastViewedColumnIndex = 2
-                lastViewedRow = 0
-                print("DEBUG: Forcing lastViewedColumnIndex to default (2) and lastViewedRow to default (0) on new simulation start.")
-            }
-        }
-        .onChange(of: coordinator.isChartBuilding) { oldValue, newValue in
-            checkNavigationState()
-        }
-        .onTapGesture {
-            // idleManager.resetIdleTimer() if you want
+    // Helper to push or pop the chart screens (no duplicates)
+    private func navigateTo(_ screen: ChartScreen) {
+        // e.g. if you use an Array<ChartScreen> for navPath:
+        if let idx = navPath.firstIndex(of: screen) {
+            navPath.removeSubrange(idx+1 ..< navPath.count)
+        } else {
+            navPath.append(screen)
         }
     }
 
     // MARK: - Parameter Screen
     private var parametersScreen: some View {
         ParameterEntryView(
-                inputManager: inputManager,
-                simSettings: simSettings,
-                coordinator: coordinator,
-                monthlySimSettings: monthlySimSettings,
-                isKeyboardVisible: $isKeyboardVisible,
-                showPinnedColumns: $showPinnedColumns
-            )
-        // .environmentObject(idleManager)
+            inputManager: inputManager,
+            simSettings: simSettings,
+            coordinator: coordinator,
+            monthlySimSettings: monthlySimSettings,
+            isKeyboardVisible: $isKeyboardVisible,
+            showPinnedColumns: $showPinnedColumns
+        )
     }
 
     // MARK: - Bottom Icons

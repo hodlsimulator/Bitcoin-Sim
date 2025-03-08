@@ -9,6 +9,11 @@ import SwiftUI
 import Metal
 import UIKit
 
+enum ChartType {
+    case btcPrice
+    case cumulativePortfolio
+}
+
 class SimChartSelection: ObservableObject {
     @Published var selectedChart: ChartType = .btcPrice
 }

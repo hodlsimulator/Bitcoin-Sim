@@ -6,172 +6,38 @@
 //
 
 import SwiftUI
-import Charts
-import Combine
-import Foundation
-import UIKit
 
-// MARK: - SquishedLandscapePlaceholderView
-struct SquishedLandscapePlaceholderView: View {
-    let image: UIImage
-    
-    var body: some View {
-        GeometryReader { geo in
-            let scaleX: CGFloat = 1.25
-            let scaleY: CGFloat = 1.10
-            
-            let newWidth = geo.size.width * scaleX
-            let newHeight = geo.size.height * scaleY
-            let xOffset = (geo.size.width - newWidth) / 2
-            
-            Image(uiImage: image)
-                .resizable()
-                .frame(width: newWidth, height: newHeight, alignment: .top)
-                .offset(x: xOffset, y: 0)
-        }
-        .ignoresSafeArea()
-    }
-}
-
-// MARK: - SnapshotView
-struct SnapshotView: View {
-    let snapshot: UIImage
-    
-    var body: some View {
-        Image(uiImage: snapshot)
-            .resizable()
-            .scaledToFill()
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .clipped()
-            .padding(.bottom, 90)
-            .ignoresSafeArea(edges: .top)
-    }
-}
-
-// MARK: - squishPortraitImage(...)
-func squishPortraitImage(_ portraitImage: UIImage) -> UIImage {
-    let targetSize = CGSize(width: 800, height: 400)
-    let scaleFactorX: CGFloat = 1.25
-    let scaleFactorY: CGFloat = 1.05
-    
-    let scaledWidth = targetSize.width * scaleFactorX
-    let scaledHeight = targetSize.height * scaleFactorY
-    let xOffset = (targetSize.width - scaledWidth) / 2
-    let yOffset: CGFloat = 0
-    
-    let renderer = UIGraphicsImageRenderer(size: targetSize)
-    return renderer.image { _ in
-        portraitImage.draw(
-            in: CGRect(
-                x: xOffset,
-                y: yOffset,
-                width: scaledWidth,
-                height: scaledHeight
-            )
-        )
-    }
-}
-
-// MARK: - ChartType
-enum ChartType {
-    case btcPrice
-    case cumulativePortfolio
-}
-
-// MARK: - MonteCarloChartView
-struct MonteCarloChartView: View {
-    @EnvironmentObject var orientationObserver: OrientationObserver
-    @EnvironmentObject var chartDataCache: ChartDataCache
-    @EnvironmentObject var simSettings: SimulationSettings
-    
-    var verticalScale: CGFloat {
-        orientationObserver.isLandscape ? 1.0 : 0.92
-    }
-    
-    var body: some View {
-        let simulations = chartDataCache.allRuns ?? []
-        let bestFit = chartDataCache.bestFitRun?.first
-        
-        let normalSimulations = simulations.filter { $0.id != bestFit?.id }
-        let allPoints = simulations.flatMap { $0.points }
-        let decimalValues = allPoints.map { $0.value }
-        
-        let minVal = decimalValues.min().map { NSDecimalNumber(decimal: $0).doubleValue } ?? 1.0
-        let maxVal = decimalValues.max().map { NSDecimalNumber(decimal: $0).doubleValue } ?? 2.0
-        
-        // Build log-scale domain
-        var bottomExp = floor(log10(minVal))
-        if minVal <= pow(10, bottomExp), bottomExp > 0 {
-            bottomExp -= 1
-        }
-        let domainMin = max(pow(10.0, bottomExp), 1.0)
-        
-        var topExp = floor(log10(maxVal))
-        if maxVal >= pow(10.0, topExp) {
-            topExp += 1
-        }
-        let domainMax = pow(10.0, topExp)
-        
-        let intBottom = Int(bottomExp)
-        let intTop    = Int(topExp)
-        let yTickValues = (intBottom...intTop).map { pow(10.0, Double($0)) }
-        
-        let totalPeriods = Double(simSettings.userPeriods)
-        let totalYears = (simSettings.periodUnit == .weeks)
-            ? totalPeriods / 52.0
-            : totalPeriods / 12.0
-        
-        func dynamicXStride(_ yrs: Double) -> Double {
-            switch yrs {
-            case ..<1.01:  return 0.25
-            case ..<2.01:  return 0.5
-            case ..<5.01:  return 1.0
-            case ..<10.01: return 2.0
-            case ..<25.01: return 5.0
-            case ..<50.01: return 10.0
-            default:       return 25.0
-            }
-        }
-        let xStride = dynamicXStride(totalYears)
-        
-        let iterationCount = normalSimulations.count + 1
-        let xAxisStrideValues = Array(stride(from: 0.0, through: totalYears, by: xStride))
-        
-        return GeometryReader { geo in
-            ZStack {
-                Color.black.ignoresSafeArea()
-                
-                VStack(spacing: 0) {
-                    // Chart code commented out
-                }
-                .padding(.top, orientationObserver.isLandscape ? 20 : 0)
-                .scaleEffect(x: 1.0, y: verticalScale, anchor: .bottom)
-            }
-        }
-    }
-}
-
-// MARK: - MonteCarloResultsView
+// In MonteCarloResultsView, add a property for the closure and use it:
 struct MonteCarloResultsView: View {
+    // Closure passed down from the parent that tells us how to switch to Portfolio.
+    let onSwitchToPortfolio: () -> Void
+
     @EnvironmentObject var simChartSelection: SimChartSelection
     @EnvironmentObject var chartDataCache: ChartDataCache
     @EnvironmentObject var simSettings: SimulationSettings
     @EnvironmentObject var idleManager: IdleManager
     @EnvironmentObject var coordinator: SimulationCoordinator
     
-    @State private var showMetalChart = true  // Toggle for Metal chart
-    
+    @State private var showMetalChart = true
+
     var body: some View {
         ZStack {
             if showMetalChart {
-                InteractiveMonteCarloChartView()
-                    .environmentObject(simSettings)
-                    .environmentObject(chartDataCache)
-                    .environmentObject(simSettings)
-                    .environmentObject(idleManager)
-                    .environmentObject(coordinator)
+                InteractiveMonteCarloChartView(
+                    onSwitchToPortfolio: {
+                        // Call the closure we got from the parent
+                        onSwitchToPortfolio()
+                    }
+                )
+                .environmentObject(simSettings)
+                .environmentObject(chartDataCache)
+                .environmentObject(simChartSelection)
+                .environmentObject(idleManager)
+                .environmentObject(coordinator)
             } else {
-                // Fallback to a SwiftUI-based chart if needed
+                Text("Fallback Chart")
+                    .foregroundColor(.white)
+                    .background(Color.black.ignoresSafeArea())
             }
         }
     }
@@ -204,37 +70,5 @@ func formatPowerOfTenLabel(_ exponent: Int) -> String {
     case 21: return "1Se"
     default:
         return "10^\(exponent)"
-    }
-}
-
-// MARK: - ForceReflowView
-struct ForceReflowView<Content: View>: View {
-    let content: Content
-    
-    init(@ViewBuilder content: () -> Content) {
-        self.content = content()
-    }
-    
-    @State private var orientationID = UUID()
-    
-    var body: some View {
-        content
-            .id(orientationID)
-            .onReceive(
-                NotificationCenter.default.publisher(
-                    for: UIDevice.orientationDidChangeNotification
-                )
-            ) { _ in
-                orientationID = UUID()
-            }
-    }
-}
-
-// MARK: - Helpers for drawing lines
-func convertWeeksToYears(_ week: Int, simSettings: SimulationSettings) -> Double {
-    if simSettings.periodUnit == .weeks {
-        return Double(week) / 52.0
-    } else {
-        return Double(week) / 12.0
     }
 }

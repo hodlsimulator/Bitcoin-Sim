@@ -310,35 +310,41 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
     @objc private func handleChartButton() {
         guard let container = representableContainer,
               let nav = navigationController,
-              let manager = self.idleManager  // <- unwrap 'idleManager' into a local 'manager'
+              let manager = self.idleManager
         else {
             return
         }
 
-        // If pinnedColumnBridgeViewController.idleManager is nil, we can't proceed
-        // guard let manager = self.idleManager else {
-        //    print("No idleManager to pass!")
-        //    return
-        // }
+        // 1) Build the closure first, storing a placeholder weak reference to chartHostingController
+        var portfolioClosure: (() -> Void)!
 
-        // Build the SwiftUI chart
-        let chartView = MonteCarloResultsView()
-            .environmentObject(container.coordinator)
-            .environmentObject(container.simSettings)
-            .environmentObject(container.simChartSelection)
-            .environmentObject(container.chartDataCache)
-            .environmentObject(manager)
+        // 2) Create the SwiftUI view, referencing that closure (we'll assign it below)
+        let chartView = MonteCarloResultsView(onSwitchToPortfolio: {
+            // This will run after we assign the hosting controller to the weak variable
+            portfolioClosure()
+        })
+        .environmentObject(container.coordinator)
+        .environmentObject(container.simSettings)
+        .environmentObject(container.simChartSelection)
+        .environmentObject(container.chartDataCache)
+        .environmentObject(manager)
 
-        // Create your ChartHostingController with the manager
+        // 3) Initialize the ChartHostingController with 'chartView'
         let chartHostingController = ChartHostingController(
             coordinator: container.coordinator,
             chartDataCache: container.chartDataCache,
             simSettings: container.simSettings,
             idleManager: manager,
             content: chartView
-            // idleManager: manager
         )
 
+        // 4) Now that we have chartHostingController, define the real closure
+        portfolioClosure = { [weak chartHostingController] in
+            print("Portfolio button tapped from bridging screen. Pushing portfolio chart.")
+            chartHostingController?.pushPortfolioChart()
+        }
+
+        // 5) Push the hosting controller
         nav.pushViewController(chartHostingController, animated: true)
     }
 
