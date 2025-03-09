@@ -65,7 +65,6 @@ class MonthlySimulationSettings: ObservableObject {
     
     @Published var rawFactorIntensityMonthly: Double {
         didSet {
-            print("[rawFactorIntensityMonthly] Changed to \(rawFactorIntensityMonthly)")
             UserDefaults.standard.set(rawFactorIntensityMonthly, forKey: "rawFactorIntensityMonthly")
             if !ignoreSyncMonthly { syncFactorsMonthly() }
         }
@@ -113,7 +112,6 @@ class MonthlySimulationSettings: ObservableObject {
     }
     @Published var currencyPreferenceMonthly: PreferredCurrency = .eur {
         didSet {
-            print("[currencyPreferenceMonthly] Changed to \(currencyPreferenceMonthly)")
             if isInitializedMonthly {
                 UserDefaults.standard.set(currencyPreferenceMonthly.rawValue, forKey: "currencyPreferenceMonthly")
             }
@@ -156,7 +154,6 @@ class MonthlySimulationSettings: ObservableObject {
     // MARK: - Advanced Toggles (Monthly)
     @Published var useLognormalGrowthMonthly: Bool = true {
         didSet {
-            print("[useLognormalGrowthMonthly] Changed to \(useLognormalGrowthMonthly)")
             if isInitializedMonthly {
                 UserDefaults.standard.set(useLognormalGrowthMonthly, forKey: "useLognormalGrowthMonthly")
                 if !useLognormalGrowthMonthly { useAnnualStepMonthly = true }
@@ -165,55 +162,46 @@ class MonthlySimulationSettings: ObservableObject {
     }
     @Published var useAnnualStepMonthly: Bool = false {
         didSet {
-            print("[useAnnualStepMonthly] Changed to \(useAnnualStepMonthly)")
             if isInitializedMonthly { UserDefaults.standard.set(useAnnualStepMonthly, forKey: "useAnnualStepMonthly") }
         }
     }
     @Published var lockedRandomSeedMonthly: Bool = false {
         didSet {
-            print("[lockedRandomSeedMonthly] Changed to \(lockedRandomSeedMonthly)")
             if isInitializedMonthly { UserDefaults.standard.set(lockedRandomSeedMonthly, forKey: "lockedRandomSeedMonthly") }
         }
     }
     @Published var seedValueMonthly: UInt64 = 0 {
         didSet {
-            print("[seedValueMonthly] Changed to \(seedValueMonthly)")
             if isInitializedMonthly { UserDefaults.standard.set(seedValueMonthly, forKey: "seedValueMonthly") }
         }
     }
     @Published var useRandomSeedMonthly: Bool = true {
         didSet {
-            print("[useRandomSeedMonthly] Changed to \(useRandomSeedMonthly)")
             if isInitializedMonthly { UserDefaults.standard.set(useRandomSeedMonthly, forKey: "useRandomSeedMonthly") }
         }
     }
     @Published var useHistoricalSamplingMonthly: Bool = true {
         didSet {
-            print("[useHistoricalSamplingMonthly] Changed to \(useHistoricalSamplingMonthly)")
             if isInitializedMonthly { UserDefaults.standard.set(useHistoricalSamplingMonthly, forKey: "useHistoricalSamplingMonthly") }
         }
     }
     @Published var useExtendedHistoricalSamplingMonthly: Bool = true {
         didSet {
-            print("[useExtendedHistoricalSamplingMonthly] Changed to \(useExtendedHistoricalSamplingMonthly)")
             if isInitializedMonthly { UserDefaults.standard.set(useExtendedHistoricalSamplingMonthly, forKey: "useExtendedHistoricalSamplingMonthly") }
         }
     }
     @Published var useVolShocksMonthly: Bool = true {
         didSet {
-            print("[useVolShocksMonthly] Changed to \(useVolShocksMonthly)")
             if isInitializedMonthly { UserDefaults.standard.set(useVolShocksMonthly, forKey: "useVolShocksMonthly") }
         }
     }
     @Published var useGarchVolatilityMonthly: Bool = true {
         didSet {
-            print("[useGarchVolatilityMonthly] Changed to \(useGarchVolatilityMonthly)")
             if isInitializedMonthly { UserDefaults.standard.set(useGarchVolatilityMonthly, forKey: "useGarchVolatilityMonthly") }
         }
     }
     @Published var useAutoCorrelationMonthly: Bool = true {
         didSet {
-            print("[useAutoCorrelationMonthly] Changed to \(useAutoCorrelationMonthly)")
             if isInitializedMonthly {
                 UserDefaults.standard.set(useAutoCorrelationMonthly, forKey: "useAutoCorrelationMonthly")
                 if !useAutoCorrelationMonthly { useMeanReversionMonthly = false }
@@ -222,19 +210,16 @@ class MonthlySimulationSettings: ObservableObject {
     }
     @Published var autoCorrelationStrengthMonthly: Double = 0.05 {
         didSet {
-            print("[autoCorrelationStrengthMonthly] Changed to \(autoCorrelationStrengthMonthly)")
             if isInitializedMonthly { UserDefaults.standard.set(autoCorrelationStrengthMonthly, forKey: "autoCorrelationStrengthMonthly") }
         }
     }
     @Published var meanReversionTargetMonthly: Double = 0.03 {
         didSet {
-            print("[meanReversionTargetMonthly] Changed to \(meanReversionTargetMonthly)")
             if isInitializedMonthly { UserDefaults.standard.set(meanReversionTargetMonthly, forKey: "meanReversionTargetMonthly") }
         }
     }
     @Published var useMeanReversionMonthly: Bool = true {
         didSet {
-            print("[useMeanReversionMonthly] Changed to \(useMeanReversionMonthly)")
             if isInitializedMonthly { UserDefaults.standard.set(useMeanReversionMonthly, forKey: "useMeanReversionMonthly") }
         }
     }
@@ -243,13 +228,11 @@ class MonthlySimulationSettings: ObservableObject {
     }
     @Published var lockHistoricalSamplingMonthly: Bool = false {
         didSet {
-            print("[lockHistoricalSamplingMonthly] Changed to \(lockHistoricalSamplingMonthly)")
             if isInitializedMonthly { UserDefaults.standard.set(lockHistoricalSamplingMonthly, forKey: "lockHistoricalSamplingMonthly") }
         }
     }
     @Published var useRegimeSwitchingMonthly: Bool = true {
         didSet {
-            print("[useRegimeSwitchingMonthly] Changed to \(useRegimeSwitchingMonthly)")
             if isInitializedMonthly { UserDefaults.standard.set(useRegimeSwitchingMonthly, forKey: "useRegimeSwitchingMonthly") }
         }
     }
@@ -263,7 +246,6 @@ class MonthlySimulationSettings: ObservableObject {
     
     // MARK: - Init
     init(loadDefaults: Bool = true) {
-        print("[MonthlySimulationSettings.init] loadDefaults = \(loadDefaults)")
         if let savedIntensity = UserDefaults.standard.object(forKey: "rawFactorIntensityMonthly") as? Double {
             rawFactorIntensityMonthly = savedIntensity
         } else {
@@ -285,11 +267,9 @@ class MonthlySimulationSettings: ObservableObject {
         }
         
         isInitializedMonthly = true
-        print("[MonthlySimulationSettings init] Initialized with periodUnitMonthly: \(periodUnitMonthly)")
     }
     
     func lockFactorAtMinMonthly(_ factorName: String) {
-        print("[Monthly] Locking \(factorName) at min")
         guard var factor = factorsMonthly[factorName] else { return }
         factor.currentValue = factor.minValue
         let base = globalBaselineMonthly(for: factor)
@@ -303,7 +283,6 @@ class MonthlySimulationSettings: ObservableObject {
     }
 
     func lockFactorAtMaxMonthly(_ factorName: String) {
-        print("[Monthly] Locking \(factorName) at max")
         guard var factor = factorsMonthly[factorName] else { return }
         factor.currentValue = factor.maxValue
         let base = globalBaselineMonthly(for: factor)
@@ -317,7 +296,6 @@ class MonthlySimulationSettings: ObservableObject {
     }
 
     func unlockFactorAndSetMinMonthly(_ factorName: String) {
-        print("[Monthly] Unlock \(factorName) at min")
         guard var factor = factorsMonthly[factorName] else { return }
         factor.currentValue = factor.minValue
         let base = globalBaselineMonthly(for: factor)
@@ -331,7 +309,6 @@ class MonthlySimulationSettings: ObservableObject {
     }
 
     func unlockFactorAndSetMaxMonthly(_ factorName: String) {
-        print("[Monthly] Unlock \(factorName) at max")
         guard var factor = factorsMonthly[factorName] else { return }
         factor.currentValue = factor.maxValue
         let base = globalBaselineMonthly(for: factor)
@@ -348,7 +325,6 @@ class MonthlySimulationSettings: ObservableObject {
     func loadFromUserDefaultsMonthly() {
         let defaults = UserDefaults.standard
         isInitializedMonthly = false
-        print("[loadFromUserDefaultsMonthly] Loading monthly settings")
         
         // Advanced toggles
         useLognormalGrowthMonthly = defaults.bool(forKey: "useLognormalGrowthMonthly")
@@ -432,7 +408,6 @@ class MonthlySimulationSettings: ObservableObject {
         } else {
             periodUnitMonthly = .months
         }
-        print("[loadFromUserDefaultsMonthly] periodUnitMonthly loaded as \(periodUnitMonthly)")
         
         // Factor states
         if let savedFactorData = defaults.data(forKey: "factorStatesMonthly"),
@@ -456,12 +431,10 @@ class MonthlySimulationSettings: ObservableObject {
         }
         
         isInitializedMonthly = true
-        print("[loadFromUserDefaultsMonthly] Completed loading monthly settings")
     }
     
     func saveToUserDefaultsMonthly() {
         let defaults = UserDefaults.standard
-        print("Saving periodUnitMonthly as \(periodUnitMonthly.rawValue)")
         defaults.set(useLognormalGrowthMonthly, forKey: "useLognormalGrowthMonthly")
         defaults.set(lockedRandomSeedMonthly, forKey: "lockedRandomSeedMonthly")
         defaults.set(seedValueMonthly, forKey: "seedValueMonthly")
@@ -508,7 +481,6 @@ class MonthlySimulationSettings: ObservableObject {
     
     // MARK: - Reset Tilt Bar (Monthly)
     func resetTiltBarMonthly() {
-        print("[resetTiltBarMonthly] Resetting tilt bar for monthly settings")
         UserDefaults.standard.removeObject(forKey: tiltBarValueKeyMonthly)
         tiltBarValueMonthly = 0.0
         defaultTiltMonthly = 0.0
@@ -540,7 +512,6 @@ class MonthlySimulationSettings: ObservableObject {
     
     // MARK: - Sync Factors (Monthly)
     func syncFactorsMonthly() {
-        print("[syncFactorsMonthly] Syncing monthly factors with rawFactorIntensityMonthly: \(rawFactorIntensityMonthly)")
         for (name, var factor) in factorsMonthly {
             guard factor.isEnabled, !factor.isLocked else { continue }
             let baseline = globalBaselineMonthly(for: factor)
@@ -550,7 +521,6 @@ class MonthlySimulationSettings: ObservableObject {
             if clamped != newValue {
                 let oldOffset = factor.internalOffset
                 factor.internalOffset = (clamped - baseline) / range
-                print("[syncFactorsMonthly] \(name): Clamped from \(newValue) to \(clamped); offset adjusted from \(oldOffset) to \(factor.internalOffset)")
             }
             factor.currentValue = clamped
             factorsMonthly[name] = factor
@@ -573,7 +543,6 @@ class MonthlySimulationSettings: ObservableObject {
     func recalcGlobalSliderFromFactorsMonthly() {
         let activeFactors = factorsMonthly.values.filter { $0.isEnabled && !$0.isLocked }
         guard !activeFactors.isEmpty else {
-            print("[recalcGlobalSliderFromFactorsMonthly] No active factors; resetting rawFactorIntensityMonthly to 0.5")
             ignoreSyncMonthly = true
             rawFactorIntensityMonthly = 0.5
             extendedGlobalValueMonthly = 0.0
@@ -584,7 +553,6 @@ class MonthlySimulationSettings: ObservableObject {
         let avgOffset = sumOffsets / Double(activeFactors.count)
         var newIntensity = 0.5 + avgOffset
         newIntensity = max(0.0, min(1.0, newIntensity))
-        print("[recalcGlobalSliderFromFactorsMonthly] New rawFactorIntensityMonthly calculated: \(newIntensity)")
         ignoreSyncMonthly = true
         rawFactorIntensityMonthly = newIntensity
         ignoreSyncMonthly = false
@@ -592,9 +560,7 @@ class MonthlySimulationSettings: ObservableObject {
     
     // MARK: - User Dragging Factor Slider (Monthly)
     func userDidDragFactorSliderMonthly(_ factorName: String, to newValue: Double) {
-        print("[userDidDragFactorSliderMonthly] Dragging factor \(factorName) to new value: \(newValue)")
         guard var factor = factorsMonthly[factorName] else {
-            print("[userDidDragFactorSliderMonthly] Factor \(factorName) not found")
             return
         }
         
@@ -606,12 +572,10 @@ class MonthlySimulationSettings: ObservableObject {
         let bearishKeysMonthly = self.bearishKeysMonthly
         
         if chartExtremeBearishMonthly && newValue > factor.minValue {
-            print("[userDidDragFactorSliderMonthly] Cancelling forced bearish state for \(factorName)")
             chartExtremeBearishMonthly = false
             recalcTiltBarValueMonthly(bullishKeys: bullishKeysMonthly, bearishKeys: bearishKeysMonthly)
         }
         if chartExtremeBullishMonthly && newValue < factor.maxValue {
-            print("[userDidDragFactorSliderMonthly] Cancelling forced bullish state for \(factorName)")
             chartExtremeBullishMonthly = false
             recalcTiltBarValueMonthly(bullishKeys: bullishKeysMonthly, bearishKeys: bearishKeysMonthly)
         }
@@ -629,7 +593,6 @@ class MonthlySimulationSettings: ObservableObject {
         let activeCount = factorsMonthly.values.filter { $0.isEnabled && !$0.isLocked }.count
         if activeCount > 0 {
             let shift = deltaOffset / Double(activeCount)
-            print("[userDidDragFactorSliderMonthly] Adjusting global slider by shift: \(shift)")
             ignoreSyncMonthly = true
             rawFactorIntensityMonthly += shift
             rawFactorIntensityMonthly = min(max(rawFactorIntensityMonthly, 0), 1)
@@ -645,7 +608,6 @@ class MonthlySimulationSettings: ObservableObject {
     
     // MARK: - Global Slider Changed (Monthly)
     func globalSliderChangedMonthly(to newGlobalValue: Double) {
-        print("[globalSliderChangedMonthly] Monthly global slider moved to \(newGlobalValue)")
         rawFactorIntensityMonthly = newGlobalValue
         // Optionally, call applyDictionaryFactorsToSimMonthly() if needed
         saveToUserDefaultsMonthly()
@@ -657,14 +619,12 @@ class MonthlySimulationSettings: ObservableObject {
             let slope = 0.7
             tiltBarValueMonthly = min(-1.0 + (rawFactorIntensityMonthly * slope), 0.0)
             overrodeTiltManuallyMonthly = true
-            print("[recalcTiltBarValueMonthly] Extreme bearish: tiltBarValueMonthly = \(tiltBarValueMonthly)")
             return
         }
         if chartExtremeBullishMonthly {
             let slope = 0.7
             tiltBarValueMonthly = max(1.0 - ((1.0 - rawFactorIntensityMonthly) * slope), 0.0)
             overrodeTiltManuallyMonthly = true
-            print("[recalcTiltBarValueMonthly] Extreme bullish: tiltBarValueMonthly = \(tiltBarValueMonthly)")
             return
         }
         
@@ -718,7 +678,6 @@ class MonthlySimulationSettings: ObservableObject {
             tiltBarValueMonthly = 0.0
             overrodeTiltManuallyMonthly = true
         }
-        print("[recalcTiltBarValueMonthly] New tiltBarValueMonthly = \(tiltBarValueMonthly)")
     }
     
     // MARK: - Weights & S-Curves (Monthly)
@@ -780,7 +739,6 @@ class MonthlySimulationSettings: ObservableObject {
     
     // MARK: - Additional Factor Handling (Monthly)
     func applyDictionaryFactorForMonthly(_ factorName: String) {
-        print("[applyDictionaryFactorForMonthly] Applying dictionary factor logic for \(factorName)")
         // Add any monthly-specific adjustments here.
     }
     
