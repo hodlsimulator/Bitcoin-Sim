@@ -9,36 +9,36 @@ import SwiftUI
 import MessageUI
 
 struct SettingsView: View {
+    // MARK: - Environment Objects
     @EnvironmentObject var simSettings: SimulationSettings
     @EnvironmentObject var monthlySimSettings: MonthlySimulationSettings
     @EnvironmentObject var coordinator: SimulationCoordinator
     
+    // **Add the IAPManager as an EnvironmentObject** so AdvancedSettingsSection can see it
+    @EnvironmentObject var iapManager: IAPManager
+
+    // MARK: - Onboarding Flag
     @AppStorage("hasOnboarded") var didFinishOnboarding = false
+
+    // MARK: - State
     @State private var showAdvancedSettings = false
     
-    // MARK: - Tilt & Slider
     @State var oldFactorIntensity: Double = 0.5
     @State var storedDefaultTilt: Double? = nil
     
-    // Confirmation & selection
     @State var showResetCriteriaConfirmation = false
     @State var activeFactor: String? = nil
     
-    // Toggling animations & extremes
     @State var hasAppeared = false
     @State var isExtremeToggle = false
     @State var extremeToggleApplied = false
     
-    // Manual override of tilt
     @State var dragTiltOverride: Double? = nil
-    
-    // For toggling
     @State var disableFactorSync = false
     @State var isManualOverride: Bool = false
-    
     @State private var isRestoringDefaults = false
     
-    // Factor keys
+    // These are factor keys used in your tilt bar logic
     let bullishKeys: [String] = [
         "Halving", "InstitutionalDemand", "CountryAdoption", "RegulatoryClarity",
         "EtfApproval", "TechBreakthrough", "ScarcityEvents", "GlobalMacroHedge",
@@ -49,11 +49,9 @@ struct SettingsView: View {
         "StablecoinMeltdown", "BlackSwan", "BearMarket", "MaturingMarket",
         "Recession"
     ]
-    
-    // Used to compute net tilt changes
     @State private var oldNetValue: Double = 0.0
     
-    // New state for Feedback section
+    // Feedback
     @State private var showMailView: Bool = false
     @State private var showFeedbackConsent: Bool = false
 
@@ -62,7 +60,6 @@ struct SettingsView: View {
     }
     
     var body: some View {
-        // Build your main form as before
         let mainForm = Form {
             
             // 1) The tilt bar
@@ -77,7 +74,7 @@ struct SettingsView: View {
                 monthlySimSettings: monthlySimSettings
             )
             
-            // 4) Restore defaults (now calls monthlySimSettings too)
+            // 4) Restore Defaults
             Section {
                 Button(action: {
                     print("simSettings.periodUnit = \(simSettings.periodUnit)")
@@ -85,12 +82,12 @@ struct SettingsView: View {
                         print("Restoring weekly defaults")
                         simSettings.restoreDefaults()
                         simSettings.saveToUserDefaults()
-                        simSettings.loadFromUserDefaults()  // Force re‑loading into memory
+                        simSettings.loadFromUserDefaults()  // Force re‑load
                     } else if simSettings.periodUnit == .months {
                         print("Restoring monthly defaults")
                         monthlySimSettings.restoreDefaultsMonthly(whenIn: simSettings.periodUnit)
                         monthlySimSettings.saveToUserDefaultsMonthly()
-                        monthlySimSettings.loadFromUserDefaultsMonthly()  // Likewise for monthly
+                        monthlySimSettings.loadFromUserDefaultsMonthly()
                     }
                 }) {
                     HStack {
@@ -111,7 +108,7 @@ struct SettingsView: View {
                     activeFactor = factorName
                 },
                 onFactorChange: {
-                    // Recompute the tilt bar whenever a bullish factor changes
+                    // Recompute tilt bar
                     if simSettings.periodUnit == .months {
                         monthlySimSettings.recalcTiltBarValueMonthly(
                             bullishKeys: bullishKeys,
@@ -125,7 +122,6 @@ struct SettingsView: View {
                     }
                 }
             )
-            .environmentObject(simSettings)
             
             // 6) Bearish factors
             BearishFactorsSection(
@@ -134,7 +130,7 @@ struct SettingsView: View {
                     activeFactor = factorName
                 },
                 onFactorChange: {
-                    // Recompute the tilt bar whenever a bearish factor changes
+                    // Recompute tilt bar
                     if simSettings.periodUnit == .months {
                         monthlySimSettings.recalcTiltBarValueMonthly(
                             bullishKeys: bullishKeys,
@@ -148,11 +144,11 @@ struct SettingsView: View {
                     }
                 }
             )
-            .environmentObject(simSettings)
             
             // 7) Advanced settings
+            // Make sure it inherits iapManager from above (no need for .environmentObject(iapManager) again,
+            // because this SettingsView already has it in its environment)
             AdvancedSettingsSection(showAdvancedSettings: $showAdvancedSettings)
-                .environmentObject(simSettings)
             
             // 8) About + reset
             aboutSection
@@ -166,7 +162,6 @@ struct SettingsView: View {
                     Text("Send Feedback")
                         .foregroundColor(.white)
                 }
-                // Removed "Change Data Collection Consent" entirely
             }
             .listRowBackground(Color(white: 0.15))
         }
@@ -180,29 +175,24 @@ struct SettingsView: View {
             tooltipOverlay(allItems)
         }
         
-        // Now place the main form + watchers in a ZStack so watchers are rendered
         return ZStack {
-            
-            // The main form is your principal content
             mainForm
             
-            // The watchers are invisible but in the SwiftUI hierarchy, so .onChange will fire
+            // Invisible watchers, so your .onChange logic fires
             UnifiedValueWatchersA(simSettings: simSettings)
             UnifiedValueWatchersB(simSettings: simSettings)
             UnifiedValueWatchersC(simSettings: simSettings)
-            // For monthly watchers:
+            // For monthly watchers
             // MonthlyValueWatchers(simSettings: simSettings, monthlySimSettings: monthlySimSettings)
         }
         .onAppear {
             hasAppeared = true
             
-            // If tiltBarValue is near zero, set displayed tilt to 0
             if abs(simSettings.tiltBarValue) < 0.0000001 {
                 simSettings.tiltBarValue = displayedTilt
             }
             oldNetValue = 0.0
         }
-        // Provide explicit "Animation.easeInOut(...)" animations.
         .animation(
             hasAppeared ? Animation.easeInOut(duration: 0.3) : nil,
             value: simSettings.getFactorIntensity()
@@ -211,7 +201,7 @@ struct SettingsView: View {
             hasAppeared ? Animation.easeInOut(duration: 0.3) : nil,
             value: displayedTilt
         )
-        // Present the mail view sheet.
+        // Present mail composer
         .sheet(isPresented: $showMailView) {
             if MFMailComposeViewController.canSendMail() {
                 MailView(
@@ -220,22 +210,18 @@ struct SettingsView: View {
                     messageBody: ""
                 )
             } else {
-                // Fallback if mail services are not available.
                 Text("Mail services are not available.")
                     .foregroundColor(.white)
                     .background(Color.black)
             }
         }
-        // No data-collection alert because the button is removed
     }
 
     // MARK: - Tilt Computation
     var displayedTilt: Double {
         if monthlySimSettings.periodUnitMonthly == .months {
-            // Show monthly tilt
             return monthlySimSettings.tiltBarValueMonthly
         } else {
-            // Otherwise, weekly tilt
             return simSettings.tiltBarValue
         }
     }
@@ -245,7 +231,6 @@ struct SettingsView: View {
     private func tooltipOverlay(_ allItems: [TooltipItem]) -> some View {
         GeometryReader { proxy in
             if let item = allItems.last {
-                // Smaller bubble to fit closer
                 let bubbleWidth: CGFloat = 240
                 let bubbleHeight: CGFloat = 140
                 let offset: CGFloat = 4
@@ -254,23 +239,18 @@ struct SettingsView: View {
                 let anchorX = anchorPoint.x
                 let anchorY = anchorPoint.y
                 
-                // Decide arrow direction
                 let spaceBelow = proxy.size.height - anchorY
                 let arrowDirection: ArrowDirection = (spaceBelow > bubbleHeight + 40) ? .up : .down
                 
-                // Horizontal position
                 let proposedX = anchorX - (bubbleWidth / 2)
                 let clampedX = max(10, min(proposedX, proxy.size.width - bubbleWidth - 10))
                 
-                // Vertical position (loosen clamp so it can get closer to the anchor)
                 let proposedY = (arrowDirection == .up)
                     ? (anchorY + offset)
                     : (anchorY - offset - bubbleHeight)
-                // e.g. allow partial off-screen by using -50 instead of 10, if you like
                 let clampedY = max(0, min(proposedY, proxy.size.height - bubbleHeight))
                 
                 ZStack {
-                    // Dark overlay blocking scroll behind
                     Color.black.opacity(0.3)
                         .ignoresSafeArea()
                         .onTapGesture {
@@ -279,7 +259,6 @@ struct SettingsView: View {
                             }
                         }
                     
-                    // Tooltip Bubble
                     TooltipBubble(text: item.description, arrowDirection: arrowDirection)
                         .fixedSize(horizontal: false, vertical: true)
                         .frame(width: bubbleWidth)

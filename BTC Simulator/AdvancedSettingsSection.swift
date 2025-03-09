@@ -6,21 +6,86 @@
 //
 
 import SwiftUI
+import StoreKit
+
+enum StoreError: Error {
+    case unverifiedTransaction
+}
+
+class IAPManager: ObservableObject {
+    @Published var product: Product?
+
+    /// Fetch the product from the App Store using its product ID.
+    func fetchProduct() async {
+        do {
+            // Replace with your actual product ID from App Store Connect
+            let productIDs = ["com.conornolan.bitcoinsim.advancedsettings"]
+            let storeProducts = try await Product.products(for: productIDs)
+            
+            guard let firstProduct = storeProducts.first else {
+                print("No matching in-app product found.")
+                return
+            }
+            self.product = firstProduct
+        } catch {
+            print("Error fetching products: \(error)")
+        }
+    }
+
+    /// Purchase flow using async/await (StoreKit 2).
+    func purchaseAdvancedSettings() async throws -> Bool {
+        guard let product = product else {
+            print("No product available to purchase.")
+            return false
+        }
+        let result = try await product.purchase()
+
+        switch result {
+        case .success(let verificationResult):
+            let transaction = try checkVerification(verificationResult)
+            await transaction.finish()
+            return true
+
+        case .userCancelled:
+            print("User cancelled the purchase.")
+            return false
+
+        case .pending:
+            print("Purchase is pending external action.")
+            return false
+
+        @unknown default:
+            print("Unknown purchase result: \(result).")
+            return false
+        }
+    }
+
+    /// Helper to verify the transaction
+    private func checkVerification<T>(_ result: VerificationResult<T>) throws -> T {
+        switch result {
+        case .verified(let safe):
+            return safe
+        case .unverified:
+            throw StoreError.unverifiedTransaction
+        }
+    }
+}
 
 struct AdvancedSettingsSection: View {
-    // Instead of a single "simSettings," we pull in both weekly and monthly, plus the coordinator
     @EnvironmentObject var weeklySimSettings: SimulationSettings
     @EnvironmentObject var monthlySimSettings: MonthlySimulationSettings
     @EnvironmentObject var coordinator: SimulationCoordinator
+    
+    // Inject the IAP manager as an environment object:
+    @EnvironmentObject var iapManager: IAPManager
 
     @Binding var showAdvancedSettings: Bool
 
     @AppStorage("advancedSettingsUnlocked") var advancedSettingsUnlocked: Bool = false
     @State private var showUnlockAlert = false
-
+    
     var body: some View {
         Section {
-            // Header row with two separate buttons.
             HStack {
                 Button(action: {
                     withAnimation {
@@ -38,7 +103,6 @@ struct AdvancedSettingsSection: View {
                 }
                 .buttonStyle(.plain)
                 
-                // Lock icon only shows if the feature is locked.
                 if !advancedSettingsUnlocked {
                     Button(action: {
                         showUnlockAlert = true
@@ -52,15 +116,21 @@ struct AdvancedSettingsSection: View {
             .alert(isPresented: $showUnlockAlert) {
                 Alert(
                     title: Text("Unlock Advanced Settings"),
-                    message: Text("Do you want to unlock advanced settings for £0.99?"),
+                    message: Text("Do you want to unlock advanced settings for $2.99?"),
                     primaryButton: .default(Text("Unlock"), action: {
-                        purchaseAdvancedSettings()
+                        Task {
+                            do {
+                                let success = try await iapManager.purchaseAdvancedSettings()
+                                advancedSettingsUnlocked = success
+                            } catch {
+                                print("Purchase error: \(error)")
+                            }
+                        }
                     }),
                     secondaryButton: .cancel()
                 )
             }
             
-            // Collapsible advanced settings content.
             if showAdvancedSettings {
                 Group {
                     // RANDOM SEED Section
@@ -69,14 +139,11 @@ struct AdvancedSettingsSection: View {
                             .tint(.orange)
                             .foregroundColor(.white)
                         
-                        // Show "Current Seed" line, with monthly vs weekly logic
                         if lockedRandomSeedBinding.wrappedValue {
-                            // If locked
                             Text("Current Seed (Locked): \(currentSeedValue)")
                                 .font(.footnote)
                                 .foregroundColor(.white)
                         } else {
-                            // If unlocked
                             if lastUsedSeedValue == 0 {
                                 Text("Current Seed: (no run yet)")
                                     .font(.footnote)
@@ -148,7 +215,6 @@ struct AdvancedSettingsSection: View {
                             .tint(autoCorrelationBinding.wrappedValue ? .orange : .gray)
                             .foregroundColor(.white)
                         
-                        // Autocorrelation Strength
                         HStack {
                             Button {
                                 autoCorrelationStrengthBinding.wrappedValue = 0.05
@@ -172,7 +238,6 @@ struct AdvancedSettingsSection: View {
                         .disabled(!autoCorrelationBinding.wrappedValue)
                         .opacity(autoCorrelationBinding.wrappedValue ? 1.0 : 0.4)
                         
-                        // Mean Reversion Target
                         HStack {
                             Button {
                                 meanReversionTargetBinding.wrappedValue = 0.03
@@ -248,9 +313,8 @@ struct AdvancedSettingsSection: View {
                 .disabled(!advancedSettingsUnlocked)
                 .opacity(advancedSettingsUnlocked ? 1.0 : 0.5)
                 
-                // The extra button at the bottom to unlock, if still locked.
                 if !advancedSettingsUnlocked {
-                    Button("Unlock Advanced Settings for £0.99") {
+                    Button("Unlock Advanced Settings for $2.99") {
                         showUnlockAlert = true
                     }
                     .foregroundColor(.orange)
@@ -260,19 +324,16 @@ struct AdvancedSettingsSection: View {
             }
         }
         .listRowBackground(Color(white: 0.15))
-    }
-
-    // Example in-app purchase placeholder
-    func purchaseAdvancedSettings() {
-        // Replace with your StoreKit in-app purchase logic.
-        advancedSettingsUnlocked = true
+        // Fetch product whenever this view appears
+        .task {
+            await iapManager.fetchProduct()
+        }
     }
 }
 
 // MARK: - Computed BINDINGS for Weekly vs Monthly
 extension AdvancedSettingsSection {
 
-    // Helper to check if we’re in monthly mode
     private var isMonthly: Bool {
         coordinator.useMonthly
     }
@@ -286,13 +347,11 @@ extension AdvancedSettingsSection {
                 : weeklySimSettings.lockedRandomSeed
             },
             set: { newVal in
-                // 1) If user tries to toggle while locked, ignore
                 guard advancedSettingsUnlocked else {
                     print("User tried to toggle lockedRandomSeed but advanced settings are not unlocked.")
                     return
                 }
                 
-                // 2) Otherwise proceed
                 if isMonthly {
                     monthlySimSettings.lockedRandomSeedMonthly = newVal
                     if newVal {
@@ -337,7 +396,6 @@ extension AdvancedSettingsSection {
             set: { newVal in
                 if isMonthly {
                     monthlySimSettings.useLognormalGrowthMonthly = newVal
-                    // If you disable lognormal, enable annual step
                     monthlySimSettings.useAnnualStepMonthly = !newVal
                 } else {
                     weeklySimSettings.useLognormalGrowth = newVal

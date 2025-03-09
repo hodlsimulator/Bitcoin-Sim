@@ -35,11 +35,14 @@ struct BTCMonteCarloApp: App {
 
     // Declare a variable to store the font atlas and the text renderer
     @StateObject private var textRendererManager = TextRendererManager()
-    
+
     // Initialize the IdleManager for tracking idle state
     @StateObject private var idleManager = IdleManager()
+    
+    // ADDED: Our IAP Manager
+    @StateObject private var iapManager: IAPManager
 
-    init() {    
+    init() {
         let navBarAppearance = UINavigationBarAppearance()
         navBarAppearance.configureWithOpaqueBackground()
         navBarAppearance.backgroundColor = UIColor(white: 0.12, alpha: 1.0)
@@ -95,8 +98,7 @@ struct BTCMonteCarloApp: App {
         let localMonthlySimSettings = MonthlySimulationSettings(loadDefaults: true)
         let localChartDataCache     = ChartDataCache()
         let localSimChartSelection  = SimChartSelection()
-
-        let localCoordinator = SimulationCoordinator(
+        let localCoordinator        = SimulationCoordinator(
             chartDataCache: localChartDataCache,
             simSettings: localWeeklySimSettings,
             monthlySimSettings: localMonthlySimSettings,
@@ -104,6 +106,9 @@ struct BTCMonteCarloApp: App {
             simChartSelection: localSimChartSelection,
             idleManager: IdleManager()
         )
+        
+        // ADDED: Create an IAPManager instance to inject into the environment
+        let localIAPManager = IAPManager()
 
         // Assign values to the properties
         _inputManager       = StateObject(wrappedValue: localInputManager)
@@ -112,6 +117,9 @@ struct BTCMonteCarloApp: App {
         _chartDataCache     = StateObject(wrappedValue: localChartDataCache)
         _simChartSelection  = StateObject(wrappedValue: localSimChartSelection)
         _coordinator        = StateObject(wrappedValue: localCoordinator)
+        
+        // ADDED: Wrap the localIAPManager
+        _iapManager        = StateObject(wrappedValue: localIAPManager)
     }
 
     var body: some Scene {
@@ -135,13 +143,15 @@ struct BTCMonteCarloApp: App {
                     NavigationStack {
                         ContentView()
                             .environmentObject(idleManager)
-                            .environmentObject(inputManager)        // <–– Added
+                            .environmentObject(inputManager)
                             .environmentObject(weeklySimSettings)
                             .environmentObject(monthlySimSettings)
                             .environmentObject(chartDataCache)
                             .environmentObject(simChartSelection)
                             .environmentObject(coordinator)
                             .environmentObject(textRendererManager)
+                            // ADDED: Pass IAP Manager here
+                            .environmentObject(iapManager)
                     }
                     .tint(.white)
                     .preferredColorScheme(.dark)
@@ -155,6 +165,8 @@ struct BTCMonteCarloApp: App {
                             .environmentObject(simChartSelection)
                             .environmentObject(coordinator)
                             .environmentObject(textRendererManager)
+                            // ADDED (optional): If you need it in onboarding
+                            .environmentObject(iapManager)
                     }
                     .preferredColorScheme(.dark)
                 }
