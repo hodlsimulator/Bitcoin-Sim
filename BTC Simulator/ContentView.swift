@@ -562,16 +562,16 @@ extension View {
     @ViewBuilder
     func fullBleedStyle() -> some View {
         if #available(iOS 16.0, *) {
-            // iOS 16 style – e.g. hide the nav bar using .toolbarBackground
             self
                 .toolbarBackground(.hidden, for: .navigationBar)
-                .ignoresSafeArea(.all, edges: .top)
+                // Ignore entire screen, not just the top
+                .ignoresSafeArea(.all)
         } else {
-            // Older iOS fallback – use .navigationBarHidden instead
+            // Older iOS fallback – hide the nav bar, also ignore entire screen
             self
                 .navigationBarHidden(true)
                 .navigationBarBackButtonHidden(true)
-                .ignoresSafeArea(.all, edges: .top)
+                .ignoresSafeArea(.all)
         }
     }
 }
