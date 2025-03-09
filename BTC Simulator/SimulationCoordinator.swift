@@ -44,6 +44,7 @@ class SimulationCoordinator: ObservableObject {
 
     private var fittedGarchModel: GarchModel? = nil
 
+    // We keep historical returns in arrays for either weekly or monthly:
     private var historicalBTCWeeklyReturns: [Double] = []
     private var sp500WeeklyReturns: [Double] = []
     private var historicalBTCMonthlyReturns: [Double] = []
@@ -54,7 +55,6 @@ class SimulationCoordinator: ObservableObject {
     private var extendedMonthlyReturns: [Double] = []
     
     private var monthlySimSettings: MonthlySimulationSettings
-    
     private var idleManager: IdleManager
 
     // Let the coordinator notify our SwiftUI view (or metal chart) that new data is ready
@@ -109,7 +109,7 @@ class SimulationCoordinator: ObservableObject {
             sp500MonthlyReturns         = alignedMonthly.map { $0.2 }
             extendedMonthlyReturns      = historicalBTCMonthlyReturns
 
-            // Clear weekly arrays
+            // Clear weekly arrays since we're in monthly mode:
             historicalBTCWeeklyReturns = []
             sp500WeeklyReturns = []
             extendedWeeklyReturns = []
@@ -125,7 +125,7 @@ class SimulationCoordinator: ObservableObject {
             sp500WeeklyReturns         = alignedWeekly.map { $0.2 }
             extendedWeeklyReturns      = historicalBTCWeeklyReturns
 
-            // Clear monthly arrays
+            // Clear monthly arrays since we're in weekly mode:
             historicalBTCMonthlyReturns = []
             sp500MonthlyReturns = []
             extendedMonthlyReturns = []
@@ -296,11 +296,8 @@ class SimulationCoordinator: ObservableObject {
                 )
                 let bestFitRun = allIterations[bestFitRunIndexBTC]
 
-                // *** B) We'll use THAT same run for the portfolio best-fit line
-                // (no separate aggregator for portfolio)
-
-                // For convenience, store the BTC best-fit in self.monteCarloResults
-                self.monteCarloResults = bestFitRun
+                // *** B) We'll use THAT same run for the portfolio best-fit line (no separate aggregator for portfolio)
+                self.monteCarloResults = bestFitRun  // convenience storage
                 print("DEBUG: bestFitRun BTC => iteration #\(bestFitRunIndexBTC). Using same iteration for portfolio best-fit.")
 
                 self.selectedPercentile = .median
@@ -341,8 +338,8 @@ class SimulationCoordinator: ObservableObject {
                 // 12) Save new runs in chartDataCache
                 self.chartDataCache.allRuns             = allSimsAsWeekPoints
                 self.chartDataCache.portfolioRuns       = allSimsAsPortfolioPoints
-                self.chartDataCache.bestFitRun          = [bestFitBTC]         // same iteration as BTC
-                self.chartDataCache.bestFitPortfolioRun = [bestFitPortfolio]   // also same iteration
+                self.chartDataCache.bestFitRun          = [bestFitBTC]       // same iteration as BTC
+                self.chartDataCache.bestFitPortfolioRun = [bestFitPortfolio] // same iteration
                 self.chartDataCache.storedInputsHash    = newHash
 
                 // 13) Let the chart know we updated data
@@ -364,10 +361,9 @@ class SimulationCoordinator: ObservableObject {
                     
                     // Build BTC chart
                     self.simChartSelection.selectedChart = .btcPrice
-                    // In SimulationCoordinator.swift, when creating MonteCarloResultsView, provide the closure:
                     let btcChartView = MonteCarloResultsView(onSwitchToPortfolio: {
                         // If you have a navigateTo(.portfolio) or other code, call it here.
-                        // Otherwise, leave it empty if you don’t need to handle portfolio navigation at this moment.
+                        // Otherwise, leave it empty if you don’t need that.
                     })
                     .environmentObject(self)
                     .environmentObject(self.chartDataCache)
@@ -380,12 +376,8 @@ class SimulationCoordinator: ObservableObject {
 
                     // Then build portfolio chart
                     self.simChartSelection.selectedChart = .cumulativePortfolio
-                    // In SimulationCoordinator.swift, when creating the portfolioChartView,
-                    // provide the required onSwitchToPortfolio closure. For instance:
                     let portfolioChartView = MonteCarloResultsView(onSwitchToPortfolio: {
-                        // If you need to switch to the Portfolio from here,
-                        // call your parent’s navigateTo(.portfolio) or other logic.
-                        // Otherwise, leave it empty if there's no actual navigation to do here.
+                        // Similar closure as above, if needed
                     })
                     .environmentObject(self)
                     .environmentObject(self.chartDataCache)
@@ -414,12 +406,23 @@ class SimulationCoordinator: ObservableObject {
     private func calibrateGarchIfNeeded() {
         let adamCalibrator = GarchAdamCalibrator()
         
+        // NOTE: We look at simSettings.periodUnit. If .months, we clamp more aggressively.
+        // If you truly want to clamp GARCH for monthly, pass timeFrame: .monthly and set
+        // small maxVarianceClamp & small (alpha+beta) limit in GarchAdamCalibrator itself.
+        
         if simSettings.periodUnit == .months {
             if !historicalBTCMonthlyReturns.isEmpty {
+                // >>> TWEAK HERE <<< You can clamp further by lowering maxVarianceClamp,
+                // or scaling monthly returns more.
+                // e.g. scaleForMonthly: 0.05 => scale monthly returns to 5%.
+                // e.g. timeFrame: .monthly => alpha+beta <= 0.001 in the calibrator code.
                 let model = adamCalibrator.calibrate(
                     returns: historicalBTCMonthlyReturns,
                     iterations: 3000,
-                    baseLR: 1e-3
+                    baseLR: 1e-3,
+                    timeFrame: .monthly,         // Identify it's monthly for stronger clamp
+                    maxVarianceClamp: 0.0,       // <= clamp large variance
+                    scaleForMonthly: 0.8         // <= shrink monthly returns to 50%
                 )
                 fittedGarchModel = model
                 print("GARCH (Adam) Calibrated (Monthly): (ω, α, β) =", model.omega, model.alpha, model.beta)
@@ -428,10 +431,14 @@ class SimulationCoordinator: ObservableObject {
             }
         } else {
             if !historicalBTCWeeklyReturns.isEmpty {
+                // For weekly, we can be more lenient or turn it off completely if you want
                 let model = adamCalibrator.calibrate(
                     returns: historicalBTCWeeklyReturns,
                     iterations: 3000,
-                    baseLR: 1e-3
+                    baseLR: 1e-3,
+                    timeFrame: .weekly,
+                    maxVarianceClamp: 1.0, // you can clamp less for weekly
+                    scaleForMonthly: 1.0   // not used for weekly
                 )
                 fittedGarchModel = model
                 print("GARCH (Adam) Calibrated (Weekly): (ω, α, β) =", model.omega, model.alpha, model.beta)
@@ -454,6 +461,7 @@ class SimulationCoordinator: ObservableObject {
     func convertAllSimsToPortfolioWeekPoints() -> [SimulationRun] {
         allSimData.map { singleRun -> SimulationRun in
             let wpoints = singleRun.map { row in
+                // Decide EUR vs USD based on user preference:
                 let chosenPortfolio = (simSettings.currencyPreference == .eur)
                     ? row.portfolioValueEUR
                     : row.portfolioValueUSD

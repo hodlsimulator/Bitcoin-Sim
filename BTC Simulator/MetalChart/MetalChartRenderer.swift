@@ -291,7 +291,7 @@ class MetalChartRenderer: NSObject, MTKViewDelegate, ObservableObject {
             let chosenColor: Color = isBestFitRun ? .orange
             : customPalette[runIndex % customPalette.count]
             // Lighter alpha for non-best-fit
-            let chosenOpacity: Float = isBestFitRun ? 1.0 : 0.5
+            let chosenOpacity: Float = isBestFitRun ? 1.0 : 0.4
             
             // Convert color to RGBA
             let (r, g, b, a) = colorToFloats(chosenColor, opacity: Double(chosenOpacity))
