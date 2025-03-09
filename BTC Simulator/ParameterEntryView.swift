@@ -56,7 +56,7 @@ struct ParameterEntryView: View {
                             landscapeLayout
                         }
                     }
-                    .onChange(of: activeField) { newActive in
+                    .onChange(of: activeField, initial: false) { _, newActive in
                         isKeyboardVisible = (newActive != nil)
                     }
                     .onAppear {

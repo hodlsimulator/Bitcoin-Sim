@@ -227,7 +227,7 @@ class SimulationCoordinator: ObservableObject {
             print("DEBUG: Going to run simulation with userInputCAGR = \(userInputCAGR), userInputVolatility = \(userInputVol)")
             
             // 9) Actually run the simulation
-            let (medianRun, allIterations, stepMedianPrices) = runMonteCarloSimulationsWithProgress(
+            let (_, allIterations, stepMedianPrices) = runMonteCarloSimulationsWithProgress(
                 settings: self.simSettings,
                 monthlySettings: self.monthlySimSettings,
                 annualCAGR: userInputCAGR,

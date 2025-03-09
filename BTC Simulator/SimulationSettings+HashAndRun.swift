@@ -158,6 +158,7 @@ extension SimulationSettings {
             iterations: iterations,
             exchangeRateEURUSD: exchangeRateEURUSD
         )
+        print("Computed hash = \(newHash)")
         
         // e.g. printAllSettings() or similar
         printAllSettings()
