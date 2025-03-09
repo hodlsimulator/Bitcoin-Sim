@@ -8,6 +8,26 @@
 import SwiftUI
 
 struct AboutView: View {
+    
+    init() {
+            // Globally shift the default "Back" text off-screen so only the chevron shows.
+            let backItemAppearance = UIBarButtonItemAppearance(style: .plain)
+            backItemAppearance.normal.titlePositionAdjustment = UIOffset(horizontal: -3000, vertical: 0)
+            
+            // Set a chevron for the back indicator.
+            let navBarAppearance = UINavigationBarAppearance()
+            navBarAppearance.setBackIndicatorImage(UIImage(systemName: "chevron.left"),
+                                                   transitionMaskImage: UIImage(systemName: "chevron.left"))
+            
+            // Apply that "invisible text" back-item appearance.
+            navBarAppearance.backButtonAppearance = backItemAppearance
+            
+            // Assign to both standard and scrollEdge appearances:
+            UINavigationBar.appearance().standardAppearance = navBarAppearance
+            UINavigationBar.appearance().scrollEdgeAppearance = navBarAppearance
+            // (If you need a compact appearance, set that too.)
+        }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {

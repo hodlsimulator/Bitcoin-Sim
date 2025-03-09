@@ -8,48 +8,39 @@
 import SwiftUI
 
 struct ParameterEntryView: View {
-    // MARK: - Focus
     enum ActiveField {
         case iterations, annualCAGR, annualVolatility, standardDeviation
     }
 
     @FocusState private var activeField: ActiveField?
 
-    // MARK: - Observed Objects
     @ObservedObject var inputManager: PersistentInputManager
     @ObservedObject var simSettings: SimulationSettings
     @ObservedObject var coordinator: SimulationCoordinator
     @ObservedObject var monthlySimSettings: MonthlySimulationSettings
-    
-    // MARK: - Bindings
+
     @Binding var isKeyboardVisible: Bool
     @Binding var showPinnedColumns: Bool
 
-    // MARK: - Local copies
     @State private var localIterations: String       = "50"
     @State private var localAnnualCAGR: String       = "30"
     @State private var localAnnualVolatility: String = "80"
     @State private var localStandardDev: String      = "150"
 
-    // Ephemeral fields
     @State private var ephemeralIterations: String       = ""
     @State private var ephemeralAnnualCAGR: String       = ""
     @State private var ephemeralAnnualVolatility: String = ""
     @State private var ephemeralStandardDev: String      = ""
 
-    // If advanced settings are locked
     @AppStorage("advancedSettingsUnlocked") private var advancedSettingsUnlocked: Bool = false
-
-    // Delay for idleManager
     @State private var isLoaded = false
 
     var body: some View {
-        Group {
+        VStack {
             if isLoaded {
                 ZStack(alignment: .topTrailing) {
                     GeometryReader { geo in
                         let isLandscape = geo.size.width > geo.size.height
-                        
                         if !isLandscape {
                             originalPortraitLayout
                         } else {
@@ -70,8 +61,8 @@ struct ParameterEntryView: View {
                         ephemeralAnnualVolatility = localAnnualVolatility
                         ephemeralStandardDev      = localStandardDev
                     }
-                    
-                    // Slide button if results exist
+
+                    // The pinned columns button if we have results
                     if !coordinator.monteCarloResults.isEmpty {
                         Button {
                             showPinnedColumns = true
@@ -90,12 +81,23 @@ struct ParameterEntryView: View {
                 ProgressView()
             }
         }
+        // Give this screen its own navigation bar & title.
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
+        // Keep the system back button visible for edge-swipe.
+        .navigationBarBackButtonHidden(false)
+        // Instead of .navigationBarBackButtonDisplayMode(.minimal),
+        // we shift the text off screen.
         .onAppear {
             isLoaded = true
+            // Move "Back" label off-screen globally:
+            UIBarButtonItem.appearance().setBackButtonTitlePositionAdjustment(
+                UIOffset(horizontal: -1000, vertical: 0),
+                for: .default
+            )
         }
     }
 
-    // MARK: - Portrait
     private var originalPortraitLayout: some View {
         ZStack {
             LinearGradient(
@@ -187,7 +189,6 @@ struct ParameterEntryView: View {
         }
     }
 
-    // MARK: - Landscape
     private var landscapeLayout: some View {
         ZStack {
             LinearGradient(
@@ -391,14 +392,14 @@ struct ParameterEntryView: View {
         Binding(
             get: {
                 coordinator.useMonthly
-                    ? monthlySimSettings.lockedRandomSeedMonthly
-                    : simSettings.lockedRandomSeed
+                ? monthlySimSettings.lockedRandomSeedMonthly
+                : simSettings.lockedRandomSeed
             },
             set: { newVal in
                 if coordinator.useMonthly {
                     monthlySimSettings.lockedRandomSeedMonthly = newVal
                     if newVal {
-                        let newSeed = UInt64.random(in: 0 ..< UInt64.max)
+                        let newSeed = UInt64.random(in: 0..<UInt64.max)
                         monthlySimSettings.seedValueMonthly = newSeed
                         monthlySimSettings.useRandomSeedMonthly = false
                     } else {
@@ -408,7 +409,7 @@ struct ParameterEntryView: View {
                 } else {
                     simSettings.lockedRandomSeed = newVal
                     if newVal {
-                        let newSeed = UInt64.random(in: 0 ..< UInt64.max)
+                        let newSeed = UInt64.random(in: 0..<UInt64.max)
                         simSettings.seedValue = newSeed
                         simSettings.useRandomSeed = false
                     } else {
