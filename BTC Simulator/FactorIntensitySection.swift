@@ -162,7 +162,9 @@ struct FactorIntensitySection: View {
                     ? lockedAllMonthly()
                     : simSettings.isGlobalSliderDisabled
                 )
-                .onChange(of: factorIntensityBinding.wrappedValue) { _ in
+                // iOS 17+ style onChange with no parameters.
+                .onChange(of: factorIntensityBinding.wrappedValue, initial: false) {
+                    // No parameters here.
                     if monthlySimSettings.periodUnitMonthly == .months {
                         monthlySimSettings.recalcTiltBarValueMonthly(
                             bullishKeys: bullishKeys,
