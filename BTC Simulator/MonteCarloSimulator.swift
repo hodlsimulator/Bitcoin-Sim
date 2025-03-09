@@ -104,7 +104,7 @@ private func runWeeklySimulation(
     // Convert CAGR percentage to decimal (e.g., 30.0% => 0.30)
     let cagrDecimal = annualCAGR / 100.0
     // Compute base weekly volatility (annual volatility scaled to weekly)
-    var baseWeeklyVol = (annualVolatility / 100.0) / sqrt(52.0)
+    let baseWeeklyVol = (annualVolatility / 100.0) / sqrt(52.0)
     
     // GARCH setup
     var garchModelToUse: GarchModel
@@ -169,10 +169,10 @@ private func runWeeklySimulation(
         
         // Historical sampling
         if settings.useExtendedHistoricalSampling, !extendedBlock.isEmpty {
-            var sample = extendedBlock[currentWeek - 1]
+            let sample = extendedBlock[currentWeek - 1]
             totalReturn += dampenArctanWeekly(sample)
         } else if settings.useHistoricalSampling {
-            var sample = pickRandomReturn(from: historicalBTCWeeklyReturns, rng: rng)
+            let sample = pickRandomReturn(from: historicalBTCWeeklyReturns, rng: rng)
             totalReturn += dampenArctanWeekly(sample)
         }
         

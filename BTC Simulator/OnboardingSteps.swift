@@ -89,7 +89,7 @@ extension OnboardingView {
                 .foregroundColor(.white)
                 .frame(width: 200)
                 .multilineTextAlignment(.center)
-                .onChange(of: startingBalanceText) { newValue in
+                .onChange(of: startingBalanceText, initial: false) { _, newValue in
                     // Example live formatting
                     let digitsOnly = newValue.replacingOccurrences(of: "[^0-9.]", with: "", options: .regularExpression)
                     if let doubleVal = Double(digitsOnly) {
