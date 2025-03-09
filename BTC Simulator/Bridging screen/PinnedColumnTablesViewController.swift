@@ -111,7 +111,7 @@ class PinnedColumnTablesViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = UIColor(white: 0.12, alpha: 1.0)
+        view.backgroundColor = UIColor(white: 0.15, alpha: 1.0)
         
         // (A) pinned table
         pinnedTableView.contentInsetAdjustmentBehavior = .never

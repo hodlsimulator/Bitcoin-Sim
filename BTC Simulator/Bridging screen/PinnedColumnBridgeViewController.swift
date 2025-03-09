@@ -90,6 +90,19 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
     override func viewDidLoad() {
         super.viewDidLoad()
 
+        let bottomBg = UIView()
+        bottomBg.backgroundColor = .red  // or .yellow
+        bottomBg.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(bottomBg)
+        view.sendSubviewToBack(bottomBg)
+
+        NSLayoutConstraint.activate([
+            bottomBg.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            bottomBg.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            bottomBg.topAnchor.constraint(equalTo: view.topAnchor),
+            bottomBg.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ])
+        
         // Remove default "Back" text for the next screen
         navigationItem.backBarButtonItem = UIBarButtonItem(title: "", style: .plain, target: nil, action: nil)
         // Hide system nav bar on this screen
@@ -118,16 +131,11 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
             guard let vc = pinnedColumnTablesVC else { return }
             vc.previousColumnIndex = newIndex
             
-            // Debug
-            print("DEBUG: PinnedColumnBridgeViewController detected column snap to index => \(newIndex)")
-            
             // <-- ADDED HERE: Store the new column index in the SwiftUI binding so row/column memory persists
             if let rep = vc.representable {
                 rep.lastViewedColumnIndex = newIndex
             }
         }
-        
-        print("DEBUG: PinnedColumnBridgeViewController didLoad. lastViewedRow=\(lastViewedRowBinding?.wrappedValue ?? -999), lastViewedColumnIndex=\(lastViewedColumnIndexBinding?.wrappedValue ?? -999)")
     }
 
     override func viewDidAppear(_ animated: Bool) {
