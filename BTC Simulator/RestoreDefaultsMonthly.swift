@@ -95,7 +95,6 @@ extension MonthlySimulationSettings {
             defaults.removeObject(forKey: key)
         }
         defaults.synchronize()
-        print("[restoreDefaultsMonthly] Removed UserDefaults keys: \(keysToRemove)")
 
         // 4) Always remain in monthly mode
         periodUnitMonthly = .months
