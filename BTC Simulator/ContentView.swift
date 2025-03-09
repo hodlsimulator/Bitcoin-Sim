@@ -298,6 +298,7 @@ struct ContentView: View {
     @EnvironmentObject var simChartSelection: SimChartSelection
     @EnvironmentObject var textRendererManager: TextRendererManager
     @EnvironmentObject var idleManager: IdleManager
+    @EnvironmentObject var iapManager: IAPManager
     
     @State private var navPath: [ChartScreen] = []
 
@@ -345,6 +346,7 @@ struct ContentView: View {
                         .environmentObject(simSettings)
                         .environmentObject(monthlySimSettings)
                         .environmentObject(coordinator)
+                        .environmentObject(iapManager)
                         .onAppear {
                             removeNavBarHairline()
                         }
