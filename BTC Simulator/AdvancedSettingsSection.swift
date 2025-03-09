@@ -8,12 +8,27 @@
 import SwiftUI
 import StoreKit
 
-enum StoreError: Error {
-    case unverifiedTransaction
-}
-
+@MainActor
 class IAPManager: ObservableObject {
     @Published var product: Product?
+
+    init() {
+        listenForTransactions()
+    }
+    
+    /// Continuously listen for any transaction updates (e.g. pending, completed on another device).
+    private func listenForTransactions() {
+        Task {
+            for await verificationResult in Transaction.updates {
+                do {
+                    let transaction = try checkVerification(verificationResult)
+                    await transaction.finish()
+                } catch {
+                    print("Transaction verification failed: \(error)")
+                }
+            }
+        }
+    }
 
     /// Fetch the product from the App Store using its product ID.
     func fetchProduct() async {
@@ -26,6 +41,7 @@ class IAPManager: ObservableObject {
                 print("No matching in-app product found.")
                 return
             }
+            // Because this class is @MainActor, it's safe to assign directly here
             self.product = firstProduct
         } catch {
             print("Error fetching products: \(error)")
@@ -70,6 +86,11 @@ class IAPManager: ObservableObject {
         }
     }
 }
+
+enum StoreError: Error {
+    case unverifiedTransaction
+}
+
 
 struct AdvancedSettingsSection: View {
     @EnvironmentObject var weeklySimSettings: SimulationSettings

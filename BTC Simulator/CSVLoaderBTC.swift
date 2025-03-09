@@ -227,14 +227,19 @@ fileprivate let csvDateFormatter: DateFormatter = {
 
 // MARK: - Return Just BTC Returns (Weekly & Monthly)
 /// Returns an array of BTC weekly returns as [Double].
+// The single “weekly” function that does everything:
 func loadAndAlignWeeklyData() -> [Double] {
     let btcWeeklyDict = loadBTCWeeklyReturnsAsDict()
     let spWeeklyDict  = loadSP500WeeklyReturnsAsDict()
     let alignedWeekly = alignBTCandSPWeekly(btcDict: btcWeeklyDict, spDict: spWeeklyDict)
-    let justBtcWeekly = alignedWeekly.map { $0.1 } // index 1 is BTC
     
-    print("justBtcWeekly has \(justBtcWeekly.count) entries.")  // <-- Print length here
+    // Return the BTC portion
+    let justBtcWeekly = alignedWeekly.map { $0.1 }
+    print("justBtcWeekly has \(justBtcWeekly.count) entries.")
 
+    // Also store (btc, sp) if needed for block bootstrap
+    combinedWeeklyData = alignedWeekly.map { (_, btc, sp) in (btc, sp) }
+    
     return justBtcWeekly
 }
 

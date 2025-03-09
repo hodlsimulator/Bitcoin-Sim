@@ -4,7 +4,7 @@
 //
 //  Created by . . on 24/01/2025.
 //
-
+/*
 import Foundation
 
 func loadAndAlignWeeklyData() {
@@ -13,12 +13,9 @@ func loadAndAlignWeeklyData() {
     let alignedWeekly = alignBTCandSPWeekly(btcDict: btcWeeklyDict, spDict: spWeeklyDict)
     let justBtcWeekly = alignedWeekly.map { $0.1 }
 
-    // If you want separate arrays of Double:
-    let sortedBTC = alignedWeekly.map { $0.1 }  // .1 is btcReturn
-    let sortedSP  = alignedWeekly.map { $0.2 }  // .2 is spReturn
-
     // Or if you want a single (btc, sp) array for block bootstrap:
     let combinedWeeklyData = alignedWeekly.map { (_, btc, sp) in (btc, sp) }
     
-    // Store them somewhere or return them from the function.
+    return (justBtcWeekly, combinedWeeklyData)
 }
+*/
