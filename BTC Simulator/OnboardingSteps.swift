@@ -340,5 +340,6 @@ extension OnboardingView {
             }
             .foregroundColor(.white)
         }
+        .offset(y: 50) // Moved down slightly
     }
 }

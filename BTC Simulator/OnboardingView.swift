@@ -112,7 +112,7 @@ struct OnboardingView: View {
     }
     
     var body: some View {
-        let offsetForContent: CGFloat = (currentStep == 8) ? 0 : -30
+        let offsetForContent: CGFloat = -40
         
         let bottomPaddingForStep: CGFloat = {
             if currentStep != 8 {
@@ -139,6 +139,8 @@ struct OnboardingView: View {
                 Text(titleForStep(currentStep))
                     .font(.title)
                     .foregroundColor(.white)
+                    // Moves the title down slightly in step 6, further in step 8
+                    .offset(y: currentStep == 6 ? 20 : (currentStep == 8 ? 40 : 0))
                 
                 if !subtitleForStep(currentStep).isEmpty {
                     Text(subtitleForStep(currentStep))
@@ -188,14 +190,13 @@ struct OnboardingView: View {
         .overlay(
             landscapeOverlay
         )
-        // If user picks weeks->months or vice versa, change default periods & contributions.
         .onChange(of: chosenPeriodUnit, initial: false) { _, newVal in
             if newVal == .months {
                 totalPeriods = 240
-                contributionPerStep = 500 // monthly default
+                contributionPerStep = 500
             } else {
                 totalPeriods = 1040
-                contributionPerStep = 100 // weekly default
+                contributionPerStep = 100
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: UIDevice.orientationDidChangeNotification)) { _ in
@@ -207,7 +208,6 @@ struct OnboardingView: View {
         }
         .ignoresSafeArea(.keyboard, edges: .bottom)
         .task {
-            // fetch BTC price
             await fetchBTCPriceFromAPI()
             updateAverageCostBasisIfNeeded()
         }
@@ -218,10 +218,11 @@ struct OnboardingView: View {
 extension OnboardingView {
     @ViewBuilder
     var portraitLogoOverlay: some View {
+        // Shifted logo down a tiny bit:
         if !isLandscape {
             OfficialBitcoinLogo()
                 .frame(width: 80, height: 80)
-                .padding(.top, 67)
+                .padding(.top, 90) // was 67, increased so it's lower on the screen
         }
     }
     
@@ -327,13 +328,13 @@ extension OnboardingView {
             monthlySimSettings.averageCostBasisMonthly   = averageCostBasis
             monthlySimSettings.currencyPreferenceMonthly = currencyPreference
             monthlySimSettings.feePercentageMonthly      = feePercentage
-
+            
             inputManager.firstYearContribution  = String(contributionPerStep)
             inputManager.threshold1             = threshold1
             inputManager.withdrawAmount1        = withdraw1
             inputManager.threshold2             = threshold2
             inputManager.withdrawAmount2        = withdraw2
-
+            
             monthlySimSettings.saveToUserDefaultsMonthly()
             simSettings.periodUnit = .months
             simSettings.userPeriods = totalPeriods
@@ -341,7 +342,7 @@ extension OnboardingView {
         } else {
             monthlySimSettings.periodUnitMonthly = .weeks
             monthlySimSettings.userPeriodsMonthly = 1040
-
+            
             weeklySimSettings.periodUnit         = .weeks
             weeklySimSettings.userPeriods        = totalPeriods
             weeklySimSettings.initialBTCPriceUSD = finalBTCPrice
@@ -349,13 +350,13 @@ extension OnboardingView {
             weeklySimSettings.averageCostBasis   = averageCostBasis
             weeklySimSettings.currencyPreference = currencyPreference
             weeklySimSettings.feePercentage      = feePercentage
-
+            
             weeklySimSettings.saveToUserDefaults()
             simSettings.periodUnit = .weeks
             simSettings.userPeriods = totalPeriods
             coordinator.useMonthly = false
         }
-
+        
         UserDefaults.standard.set(chosenPeriodUnit.rawValue, forKey: "savedPeriodUnit")
         UserDefaults.standard.set(totalPeriods, forKey: "savedUserPeriods")
         UserDefaults.standard.set(finalBTCPrice, forKey: "savedInitialBTCPriceUSD")
@@ -431,4 +432,3 @@ extension View {
         )
     }
 }
-    
