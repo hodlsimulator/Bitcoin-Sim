@@ -158,14 +158,6 @@ class GarchAdamCalibrator {
         epsilon: Double = 1e-6
     ) -> (Double, Double, Double) {
         
-        // "Center" log-likelihood
-        let base = computeGarchLogLikelihood(
-            returns: returns,
-            omega: omega,
-            alpha: alpha,
-            beta: beta
-        )
-        
         // d/dOmega
         let upOmega = computeGarchLogLikelihood(
             returns: returns,

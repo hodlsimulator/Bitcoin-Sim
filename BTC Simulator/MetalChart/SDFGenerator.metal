@@ -149,7 +149,6 @@ bool isInsideGlyph(float2 point, device BezierCurve* curves, uint start, uint co
     // Real code would handle edge cases carefully.
 
     int winding = 0;
-    float2 rayEnd = float2(999999.0, point.y);
 
     for (uint i = 0; i < count; i++) {
         BezierCurve curve = curves[start + i];

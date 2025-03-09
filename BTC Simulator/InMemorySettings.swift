@@ -650,7 +650,7 @@ class InMemorySettings: ObservableObject {
     // (Unchanged except for your usual reading/writing; omitted for brevity)
     func loadFromUserDefaults() {
         print("[InMemorySettings] Loading from UserDefaults")
-        let defaults = UserDefaults.standard
+        _ = UserDefaults.standard
         
         // ... load values for all properties here ...
         // For brevity, we assume these are similar to the ones in SimulationSettings.
