@@ -42,8 +42,8 @@ class GarchAdamCalibrator {
         beta2: Double = 0.999,
         epsilon: Double = 1e-8,
         timeFrame: TimeFrame = .weekly,
-        maxVarianceClamp: Double = 0.5,   // >>> TWEAK HERE <<< e.g. 0.25 if monthly
-        scaleForMonthly: Double = 0.01     // >>> TWEAK HERE <<< e.g. 0.5 if monthly
+        maxVarianceClamp: Double = 0.5,
+        scaleForMonthly: Double = 0.01
     ) -> GarchModel {
         
         // If no returns, just return defaults:
@@ -57,8 +57,6 @@ class GarchAdamCalibrator {
         }
         
         // Optionally scale monthly returns so GARCH doesn't see huge jumps:
-        // >>> TWEAK HERE <<< If timeFrame == .monthly, you might do 0.5 or 0.3, etc.
-        // e.g. let scaledReturns = returns.map { $0 * 0.5 }
         let finalReturns: [Double]
         if timeFrame == .monthly && scaleForMonthly != 0.2 {
             finalReturns = returns.map { $0 * scaleForMonthly }
@@ -120,7 +118,7 @@ class GarchAdamCalibrator {
             if alpha < 0     { alpha = 0 }
             if beta  < 0     { beta  = 0 }
             
-            // >>> TWEAK HERE <<< If monthly, clamp alpha+beta to something smaller
+            // If monthly, clamp alpha+beta to something smaller
             let upperLimit = (timeFrame == .monthly) ? 0.6 : 0.999
             if alpha + beta >= upperLimit {
                 let sum = alpha + beta
@@ -141,7 +139,6 @@ class GarchAdamCalibrator {
         print("Final (ω, α, β) = (\(omega), \(alpha), \(beta))")
         
         // Return final parameters as a GarchModel.
-        // For the initial variance, we can just do something small:
         return GarchModel(
             omega: omega,
             alpha: alpha,
@@ -249,7 +246,7 @@ class GarchAdamCalibrator {
             if variance < 1e-15 {
                 variance = 1e-15
             }
-            // >>> TWEAK HERE <<< If you want to clamp big variance, do so:
+            // If you want to clamp big variance, do so:
             if maxVarianceClamp > 0.0 && variance > maxVarianceClamp {
                 variance = maxVarianceClamp
             }
