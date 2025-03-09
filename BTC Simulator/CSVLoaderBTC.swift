@@ -235,7 +235,6 @@ func loadAndAlignWeeklyData() -> [Double] {
     
     // Return the BTC portion
     let justBtcWeekly = alignedWeekly.map { $0.1 }
-    print("justBtcWeekly has \(justBtcWeekly.count) entries.")
 
     // Also store (btc, sp) if needed for block bootstrap
     combinedWeeklyData = alignedWeekly.map { (_, btc, sp) in (btc, sp) }

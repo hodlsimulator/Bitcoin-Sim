@@ -271,7 +271,6 @@ class PinnedColumnTablesViewController: UIViewController {
             let rowCount = rep.displayedData.count
             if rowCount > 0 {
                 let safeRow = min(rep.lastViewedRow, rowCount - 1)
-                print("Restoring pinned table to row = \(rep.lastViewedRow) => clamped => \(safeRow)")
                 pinnedTableView.scrollToRow(at: IndexPath(row: safeRow, section: 0), at: .top, animated: false)
             }
         }
@@ -333,8 +332,6 @@ class PinnedColumnTablesViewController: UIViewController {
             
             // Sync header offset
             self.columnHeadersVC.collectionView?.contentOffset.x = dataCV.contentOffset.x
-            
-            print("Restoring to lastViewedColumnIndex: \(rep.lastViewedColumnIndex) -> actually scrolling to \(safeIndex).")
         }
     }
     
@@ -458,7 +455,6 @@ extension PinnedColumnTablesViewController: UITableViewDelegate, UICollectionVie
         if let indexPath = cv.indexPathForItem(at: point),
            indexPath.item < columnsCollectionVC.columnsData.count {
             rep.lastViewedColumnIndex = indexPath.item
-            print("Storing lastViewedColumnIndex => \(indexPath.item)")
         }
     }
 }

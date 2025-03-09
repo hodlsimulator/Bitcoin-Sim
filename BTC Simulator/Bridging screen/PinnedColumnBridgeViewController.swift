@@ -160,7 +160,6 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
         }
 
         // Refresh data
-        print("DEBUG: PinnedColumnBridgeViewController viewWillAppear => Refreshing summary card and pinned table.")
         refreshSummaryCard()
         populatePinnedTable()
     }
@@ -348,7 +347,6 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
 
         // 4) Now that we have chartHostingController, define the real closure
         portfolioClosure = { [weak chartHostingController] in
-            print("Portfolio button tapped from bridging screen. Pushing portfolio chart.")
             chartHostingController?.pushPortfolioChart()
         }
 
@@ -592,11 +590,6 @@ class PinnedColumnBridgeViewController: UIViewController, UIGestureRecognizerDel
             self.pinnedColumnTablesVC.view.setNeedsLayout()
             self.pinnedColumnTablesVC.view.layoutIfNeeded()
         }
-        
-        // Debug
-        print("DEBUG: populatePinnedTable => data count = \(data.count). "
-              + "Passing row=\(lastViewedRowBinding?.wrappedValue ?? -999), "
-              + "col=\(lastViewedColumnIndexBinding?.wrappedValue ?? -999) to pinnedColumnTablesVC.")
     }
 
     private func growthCalcWithContributions(

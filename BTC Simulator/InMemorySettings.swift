@@ -19,7 +19,6 @@ class InMemorySettings: ObservableObject {
     init(weekly: SimulationSettings? = nil, monthly: MonthlySimulationSettings? = nil) {
         self.weeklySimSettings = weekly
         self.monthlySimSettings = monthly
-        print("[InMemorySettings] Initialized with weeklySimSettings: \(weekly != nil), monthlySimSettings: \(monthly != nil)")
     }
     
     // =============================
@@ -27,7 +26,6 @@ class InMemorySettings: ObservableObject {
     // =============================
     @Published var useHalvingWeekly: Bool = true {
         didSet {
-            print("[InMemorySettings] useHalvingWeekly changed to \(useHalvingWeekly)")
             weeklySimSettings?.setFactorEnabled(factorName: "Halving", enabled: useHalvingWeekly)
         }
     }

@@ -13,7 +13,6 @@ extension MonthlySimulationSettings {
         whenIn mode: PeriodUnit,
         preserveUserInputs: Bool = false
     ) {
-        print("[restoreDefaultsMonthly] Restoring all monthly defaults in one pass.")
         isRestoringDefaultsMonthly = true
         suspendUnifiedUpdates = true
 
@@ -98,7 +97,6 @@ extension MonthlySimulationSettings {
 
         // 4) Always remain in monthly mode
         periodUnitMonthly = .months
-        print("[restoreDefaultsMonthly] periodUnitMonthly set to: \(periodUnitMonthly)")
 
         // 5) Reset toggles to "factory" defaults
         useLognormalGrowthMonthly = true
@@ -119,15 +117,11 @@ extension MonthlySimulationSettings {
         useExtendedHistoricalSamplingMonthly = true
         lockHistoricalSamplingMonthly = false
 
-        print("[restoreDefaultsMonthly] Advanced toggles reset.")
-
         // 6) Done
         isRestoringDefaultsMonthly = false
-        print("[restoreDefaultsMonthly] Completed monthly defaults reset.")
 
         DispatchQueue.main.async {
             self.suspendUnifiedUpdates = false
-            print("[restoreDefaultsMonthly] suspendUnifiedUpdates set to false.")
         }
 
         // 7) Save the new state

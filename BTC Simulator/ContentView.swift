@@ -403,7 +403,6 @@ struct ContentView: View {
                 if newValue {
                     lastViewedColumnIndex = 2
                     lastViewedRow = 0
-                    print("DEBUG: Forcing lastViewedColumnIndex to default (2) and lastViewedRow to default (0) on new simulation start.")
                 }
             }
             .onChange(of: coordinator.isChartBuilding) { oldValue, newValue in

@@ -25,11 +25,9 @@ extension SimulationSettings {
             if periodUnit == .weeks {
                 useHalvingWeekly = isEnabled
                 halvingBumpWeekly = value
-                print("[updateSimulationSetting] For Halving (weeks), setting halvingBumpWeekly=\(halvingBumpWeekly)")
             } else {
                 useHalvingMonthly = isEnabled
                 halvingBumpMonthly = value
-                print("[updateSimulationSetting] For Halving (months), setting halvingBumpMonthly=\(halvingBumpMonthly)")
             }
             
         case "institutionaldemand":

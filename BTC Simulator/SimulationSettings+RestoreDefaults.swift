@@ -9,7 +9,6 @@ import SwiftUI
 
 extension SimulationSettings {
     func restoreDefaults() {
-        print("[restoreDefaults (weekly)] Restoring all weekly defaults in one pass.")
         isRestoringDefaults = true
 
         // 0) Clear locked factors
@@ -82,11 +81,9 @@ extension SimulationSettings {
             defaults.removeObject(forKey: key)
         }
         defaults.synchronize()
-        print("[restoreDefaults (weekly)] Removed UserDefaults keys.")
 
         // 4) Force periodUnit to weekly
         periodUnit = .weeks
-        print("[restoreDefaults (weekly)] periodUnit set to: \(periodUnit)")
 
         // 5) Reset your 'unified' slider properties to their midWeekly default
         halvingBumpUnified            = FactorCatalog.all["Halving"]?.midWeekly ?? 0.2773386887
@@ -139,7 +136,6 @@ extension SimulationSettings {
         // 7) Defer flipping isRestoringDefaults back to false
         DispatchQueue.main.async {
             self.isRestoringDefaults = false
-            print("[restoreDefaults (weekly)] Completed weekly defaults reset.")
         }
     }
 }

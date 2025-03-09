@@ -78,21 +78,12 @@ class SimulationCoordinator: ObservableObject {
     
     func runSimulation(generateGraphs: Bool, lockRandomSeed: Bool) {
         print("Coordinator ID in runSimulation =>", ObjectIdentifier(self))
-        print("DEBUG: runSimulation() - current simChartSelection.selectedChart = \(simChartSelection.selectedChart)")
         
         let isMonthly = self.useMonthly
 
         // 1) Apply factor tweaks + set random seed lock
         if isMonthly {
             monthlySimSettings.lockedRandomSeedMonthly = lockRandomSeed
-            print("""
-            DEBUG (Monthly Mode):
-              userPeriodsMonthly = \(monthlySimSettings.userPeriodsMonthly)
-              initialBTCPriceUSDMonthly = \(monthlySimSettings.initialBTCPriceUSDMonthly)
-              startingBalanceMonthly = \(monthlySimSettings.startingBalanceMonthly)
-              averageCostBasisMonthly = \(monthlySimSettings.averageCostBasisMonthly)
-              currencyPreferenceMonthly = \(monthlySimSettings.currencyPreferenceMonthly)
-            """)
         } else {
             simSettings.applyDictionaryFactorsToSim()
             simSettings.lockedRandomSeed = lockRandomSeed
@@ -296,9 +287,15 @@ class SimulationCoordinator: ObservableObject {
                 )
                 let bestFitRun = allIterations[bestFitRunIndexBTC]
 
+                // PRINT STATEMENTS FOR BEST-FIT RUN
+                print("Best-fit run index for BTC is \(bestFitRunIndexBTC)")
+                let finalBTCPrice = bestFitRun.last?.btcPriceUSD ?? Decimal.zero
+                let finalPortfolioVal = bestFitRun.last?.portfolioValueUSD ?? Decimal.zero
+                print("Best-fit run final BTC Price: \(finalBTCPrice)")
+                print("Best-fit run final Portfolio Value (USD): \(finalPortfolioVal)")
+
                 // *** B) We'll use THAT same run for the portfolio best-fit line (no separate aggregator for portfolio)
                 self.monteCarloResults = bestFitRun  // convenience storage
-                print("DEBUG: bestFitRun BTC => iteration #\(bestFitRunIndexBTC). Using same iteration for portfolio best-fit.")
 
                 self.selectedPercentile = .median
                 self.allSimData = allIterations

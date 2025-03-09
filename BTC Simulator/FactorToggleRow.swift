@@ -44,7 +44,6 @@ struct FactorToggleRow: View {
         let toggleBinding = Binding<Bool>(
             get: { factor.isEnabled },
             set: { newVal in
-                print("Toggle set for \(factorName): \(newVal)")
                 updateFactorToggle(newVal)
                 onFactorChange()
             }
@@ -60,10 +59,8 @@ struct FactorToggleRow: View {
                 
                 // Replace `if monthlySimSettings.periodUnitMonthly == .months` with:
                 if weeklySimSettings.periodUnit == .months {
-                    print("Calling monthly userDidDragFactorSliderMonthly for \(factorName)")
                     monthlySimSettings.userDidDragFactorSliderMonthly(factorName, to: clampedVal)
                 } else {
-                    print("Calling weekly userDidDragFactorSlider for \(factorName)")
                     weeklySimSettings.userDidDragFactorSlider(factorName, to: clampedVal)
                 }
                 
@@ -147,8 +144,7 @@ struct FactorToggleRow: View {
         }
     }
     
-    private func updateFactorToggle(_ enabled: Bool) {
-        print("[Debug] updateFactorToggle: bridging to setFactorEnabled(\(factorName), \(enabled))")
+    private func updateFactorToggle(_ enabled: Bool) {          
         if monthlySimSettings.periodUnitMonthly == .months {
             monthlySimSettings.setFactorEnabled(factorName: factorName, enabled: enabled)
         } else {

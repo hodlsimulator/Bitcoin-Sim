@@ -45,7 +45,6 @@ struct InteractiveMonteCarloChartView: View {
                 if showMenu {
                     VStack(spacing: 10) {
                         Button {
-                            print("Portfolio button tapped")
                             onSwitchToPortfolio()
                             showMenu = false
                         } label: {

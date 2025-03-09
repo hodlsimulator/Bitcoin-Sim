@@ -65,8 +65,7 @@ func loadBTCMonthlyData() -> [BitcoinHistoricalData] {
             
             result.append(rowData)
         }
-        
-        print("Loaded \(result.count) rows from 'Bitcoin Historical Data Monthly.csv'.")
+
         return result
 
     } catch {

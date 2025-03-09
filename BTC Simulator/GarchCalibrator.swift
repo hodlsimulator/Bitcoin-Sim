@@ -135,8 +135,6 @@ class GarchAdamCalibrator {
             beta: beta,
             maxVarianceClamp: maxVarianceClamp
         )
-        print("Adam-based GARCH calibration done. Final log-likelihood: \(finalLogL)")
-        print("Final (ω, α, β) = (\(omega), \(alpha), \(beta))")
         
         // Return final parameters as a GarchModel.
         return GarchModel(
