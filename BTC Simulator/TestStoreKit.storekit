@@ -9,7 +9,7 @@
       }
     ]
   },
-  "identifier" : "F1E67DAB",
+  "identifier" : "2D280770",
   "nonRenewingSubscriptions" : [
 
   ],
@@ -17,24 +17,24 @@
     {
       "displayPrice" : "2.99",
       "familyShareable" : false,
-      "internalID" : "6743049004",
+      "internalID" : "6743064618",
       "localizations" : [
         {
-          "description" : "Unlock advanced factors & deeper BTC sims.",
-          "displayName" : "Bitcoin Sim",
+          "description" : "Unlock advanced toggles & custom simulation.",
+          "displayName" : "Advanced Simulator Features",
           "locale" : "en_GB"
         }
       ],
-      "productID" : "com.conornolan.bitcoinsim.advancedsettings",
-      "referenceName" : "Bitcoin Sim – Monte Carlo BTC",
+      "productID" : "com.conornolan.bitcoinsim.advsettings",
+      "referenceName" : "Bitcoin Sim Adv Settings",
       "type" : "NonConsumable"
     }
   ],
   "settings" : {
-    "_applicationInternalID" : "6742476610",
+    "_applicationInternalID" : "6743064564",
     "_developerTeamID" : "92HEPEJ42Z",
     "_failTransactionsEnabled" : false,
-    "_lastSynchronizedDate" : 763210233.18748105,
+    "_lastSynchronizedDate" : 763271331.33642399,
     "_locale" : "en_US",
     "_storefront" : "USA",
     "_storeKitErrors" : [

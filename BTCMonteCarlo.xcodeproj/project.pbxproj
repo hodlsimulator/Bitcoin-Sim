@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		E10811812D7DA9F6005538A5 /* TestStoreKit.storekit in Resources */ = {isa = PBXBuildFile; fileRef = E10811802D7DA9F6005538A5 /* TestStoreKit.storekit */; };
 		E112E3712D58B00F00167E92 /* PocketSVG in Embed Frameworks */ = {isa = PBXBuildFile; productRef = E17DDF9B2D1BD13E008700A8 /* PocketSVG */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		E112E3762D58B73A00167E92 /* MailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E112E3752D58B73800167E92 /* MailView.swift */; };
 		E12687492D7650E100CCB818 /* PinnedAxesRenderer+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = E12687482D7650DF00CCB818 /* PinnedAxesRenderer+Extensions.swift */; };
@@ -71,6 +70,7 @@
 		E17B2F282D27505300ECE087 /* LandscapePlaceholderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E17B2F272D27505100ECE087 /* LandscapePlaceholderView.swift */; };
 		E17B2F802D2800D400ECE087 /* OrientationObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = E17B2F7F2D2800D100ECE087 /* OrientationObserver.swift */; };
 		E17DDF9C2D1BD13E008700A8 /* PocketSVG in Frameworks */ = {isa = PBXBuildFile; productRef = E17DDF9B2D1BD13E008700A8 /* PocketSVG */; };
+		E17F02DE2D7E98A100051CCB /* TestStoreKit.storekit in Resources */ = {isa = PBXBuildFile; fileRef = E17F02DD2D7E98A100051CCB /* TestStoreKit.storekit */; };
 		E1883F382D1DD4C8007AA90B /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1883F372D1DD4C5007AA90B /* SettingsView.swift */; };
 		E1883F3A2D1DD94F007AA90B /* SimulationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1883F392D1DD94C007AA90B /* SimulationSettings.swift */; };
 		E1883F3C2D1DDC78007AA90B /* ParametersFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1883F3B2D1DDC75007AA90B /* ParametersFormView.swift */; };
@@ -159,7 +159,6 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		E10811802D7DA9F6005538A5 /* TestStoreKit.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = TestStoreKit.storekit; sourceTree = "<group>"; };
 		E112E3752D58B73800167E92 /* MailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailView.swift; sourceTree = "<group>"; };
 		E11B459A2CEE8D53006B0594 /* BTCMonteCarlo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BTCMonteCarlo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E12687482D7650DF00CCB818 /* PinnedAxesRenderer+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PinnedAxesRenderer+Extensions.swift"; sourceTree = "<group>"; };
@@ -224,6 +223,7 @@
 		E17B2F212D26A9F000ECE087 /* SimulationCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulationCoordinator.swift; sourceTree = "<group>"; };
 		E17B2F272D27505100ECE087 /* LandscapePlaceholderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LandscapePlaceholderView.swift; sourceTree = "<group>"; };
 		E17B2F7F2D2800D100ECE087 /* OrientationObserver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrientationObserver.swift; sourceTree = "<group>"; };
+		E17F02DD2D7E98A100051CCB /* TestStoreKit.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = TestStoreKit.storekit; sourceTree = "<group>"; };
 		E1883F372D1DD4C5007AA90B /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		E1883F392D1DD94C007AA90B /* SimulationSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulationSettings.swift; sourceTree = "<group>"; };
 		E1883F3B2D1DDC75007AA90B /* ParametersFormView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParametersFormView.swift; sourceTree = "<group>"; };
@@ -421,7 +421,7 @@
 				E14D23F42D374258007CC11A /* SimulationSummaryCardView.swift */,
 				E1F1CB672D4F3366003DB24F /* SimulationUtilities.swift */,
 				E1A1E52C2D2E39E3008F7658 /* SnapshotExtensions.swift */,
-				E10811802D7DA9F6005538A5 /* TestStoreKit.storekit */,
+				E17F02DD2D7E98A100051CCB /* TestStoreKit.storekit */,
 				E1A1E5262D2E371B008F7658 /* TipsData.swift */,
 				E1B7B0A42D47532B00B60EC6 /* UIComponents.swift */,
 				E19D113B2D42F81A00E3A55E /* UtilityExtensions.swift */,
@@ -602,7 +602,7 @@
 				E12CCD922CF823610059931D /* Preview Assets.xcassets in Resources */,
 				E14D23FA2D3A2260007CC11A /* S&P 500 Historical Data Monthly.csv in Resources */,
 				E14D23FC2D3A2260007CC11A /* Bitcoin Historical Data Weekly.csv in Resources */,
-				E10811812D7DA9F6005538A5 /* TestStoreKit.storekit in Resources */,
+				E17F02DE2D7E98A100051CCB /* TestStoreKit.storekit in Resources */,
 				E14D23FD2D3A2260007CC11A /* S&P 500 Historical Data Weekly.csv in Resources */,
 				E12CCD8F2CF823610059931D /* Assets.xcassets in Resources */,
 			);
@@ -936,7 +936,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_ASSET_PATHS = "\"BTC Simulator/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -971,7 +971,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_ASSET_PATHS = "\"BTC Simulator/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
