@@ -128,7 +128,7 @@ class GarchAdamCalibrator {
         }
         
         // We'll compute the final log-likelihood using the final parameters:
-        let finalLogL = computeGarchLogLikelihood(
+        _ = computeGarchLogLikelihood(
             returns: finalReturns,
             omega: omega,
             alpha: alpha,

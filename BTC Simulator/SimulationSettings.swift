@@ -598,7 +598,7 @@ class SimulationSettings: ObservableObject {
             let newValue = baseline + factor.internalOffset * range
             let clamped = min(max(newValue, factor.minValue), factor.maxValue)
             if clamped != newValue {
-                let oldOffset = factor.internalOffset
+                _ = factor.internalOffset
                 factor.internalOffset = (clamped - baseline) / range
             }
             factor.currentValue = clamped
