@@ -940,7 +940,7 @@
 				DEVELOPMENT_ASSET_PATHS = "\"BTC Simulator/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Bitcoin Sim";
+				INFOPLIST_KEY_CFBundleDisplayName = "Bitcoin Simulator";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -975,7 +975,7 @@
 				DEVELOPMENT_ASSET_PATHS = "\"BTC Simulator/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Bitcoin Sim";
+				INFOPLIST_KEY_CFBundleDisplayName = "Bitcoin Simulator";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;

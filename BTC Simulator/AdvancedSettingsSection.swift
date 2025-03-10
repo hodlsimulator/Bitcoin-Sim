@@ -34,7 +34,7 @@ class IAPManager: ObservableObject {
     func fetchProduct() async {
         do {
             // Replace with your actual product ID from App Store Connect
-            let productIDs = ["com.conornolan.bitcoinsim.advancedsettings"]
+            let productIDs = ["com.conornolan.bitcoinsim.advsettings"]
             let storeProducts = try await Product.products(for: productIDs)
             
             guard let firstProduct = storeProducts.first else {
