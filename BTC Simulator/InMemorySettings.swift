@@ -153,7 +153,7 @@ class InMemorySettings: ObservableObject {
         }
     }
     @Published var maxEtfBoostMonthly: Double = 0.0057142851 {
-        didSet {
+        didSet { 
             print("[InMemorySettings] maxEtfBoostMonthly changed to \(maxEtfBoostMonthly)")
         }
     }
